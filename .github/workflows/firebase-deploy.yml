@@ -52,3 +52,5 @@ jobs:
           chmod +x android/gradlew
           cd android
           ./gradlew assembleRelease
+          apt-get install tree
+          tree .
