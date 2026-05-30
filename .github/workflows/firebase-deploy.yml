@@ -13,15 +13,6 @@ jobs:
         with:
           lfs: true
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-
-      - name: Set JAVA_HOME (for Gradle)
-        run: echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
-
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
