@@ -45,12 +45,6 @@ jobs:
           channelId: live
           projectId: codex-musicae
 
-      - name: Debug Java
-        run: |
-          java -version
-          javac -version
-          echo $JAVA_HOME
-
       - name: Build Android APK (Capacitor + Gradle)
         run: |
           npx cap add android
@@ -58,8 +52,6 @@ jobs:
           chmod +x android/gradlew
           cd android
           ./gradlew assembleRelease
-          apt-get install tree
-          tree .
 
       - name: Distribute APK to Firebase App Distribution
         run: |
