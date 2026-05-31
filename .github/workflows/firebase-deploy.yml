@@ -52,13 +52,16 @@ jobs:
           chmod +x android/gradlew
           cd android
           ./gradlew assembleRelease
+          ./gradlew bundleRelease
           cd -
 
-      - name: Upload APK Artifact
+      - name: Upload APK/AAB Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: codex-musicae-apk
-          path: android/app/build/outputs/apk/release/app-release-unsigned.apk
+          path: |
+            android/app/build/outputs/apk/release/app-release*.apk
+            android/app/build/outputs/bundle/release/app-release*.aab
 
       - name: Create service account file
         run: |
