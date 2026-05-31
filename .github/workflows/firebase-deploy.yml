@@ -58,7 +58,7 @@ jobs:
       - name: Upload APK/AAB Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: codex-musicae-apk
+          name: codex-musicae-android-release
           path: |
             android/app/build/outputs/apk/release/app-release*.apk
             android/app/build/outputs/bundle/release/app-release*.aab
