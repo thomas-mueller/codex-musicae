@@ -66,7 +66,6 @@ jobs:
       - name: Create Firebase service account file
         run: |
           echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_CODEX_MUSICAE }}' > firebase-service-account.json
-          cat firebase-service-account.json
 
       - name: Distribute APK to Firebase App Distribution
         env:
