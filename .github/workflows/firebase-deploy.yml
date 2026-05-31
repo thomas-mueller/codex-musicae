@@ -5,7 +5,7 @@ permissions:
   contents: read
   pull-requests: write
 jobs:
-  build_and_preview:
+  build_and_deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -52,6 +52,14 @@ jobs:
           chmod +x android/gradlew
           cd android
           ./gradlew assembleRelease
+          cd -
+          ls android/
+          ls android/app/
+          ls android/app/build/
+          ls android/app/build/outputs/
+          ls android/app/build/outputs/apk/
+          ls android/app/build/outputs/apk/release/
+          ls android/app/build/outputs/apk/release/app-release.apk
 
       - name: Create service account file
         run: |
