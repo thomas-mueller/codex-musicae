@@ -1,5 +1,10 @@
 <ngx-extended-pdf-viewer
   [src]="'/pdfs/test.pdf'"
   [zoom]="'page-fit'"
+  [showToolbar]=true
+  [showPresentationModeButton]=true
+  [showPrintButton]=false
+  [showRotateButton]=false
+  (pdfLoaded)="onPdfLoaded()"
   >
 </ngx-extended-pdf-viewer>

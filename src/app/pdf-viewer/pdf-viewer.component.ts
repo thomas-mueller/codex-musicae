@@ -29,4 +29,8 @@ export class PdfViewerComponent {
     // Increasing this setting allows your users to use higher zoom factors,
     // trading image quality for performance.
   }
+
+  public onPdfLoaded(): void {
+    console.log('onPdfLoaded');
+  }
 }
