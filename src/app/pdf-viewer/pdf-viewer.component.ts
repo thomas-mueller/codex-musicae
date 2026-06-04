@@ -1,8 +1,11 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  HostListener,
+} from '@angular/core';
 import {
   NgxExtendedPdfViewerModule,
   NgxExtendedPdfViewerService,
-  pdfDefaultOptions,
 } from 'ngx-extended-pdf-viewer';
 
 @Component({
@@ -15,22 +18,45 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PdfViewerComponent {
-  /** In most cases, you don't need the NgxExtendedPdfViewerService. It allows you
-   *  to use the "find" api, to extract text and images from a PDF file,
-   *  to print programmatically, and to show or hide layers by a method call.
-   */
-  constructor(private pdfService: NgxExtendedPdfViewerService) {
-    /* More likely than not you don't need to tweak the pdfDefaultOptions.
-       They are a collecton of less frequently used options.
-       To illustrate how they're used, here are two example settings: */
-    // pdfDefaultOptions.doubleTapZoomFactor = '150%'; // The default value is '200%'
-    // pdfDefaultOptions.maxCanvasPixels = 4096 * 4096 * 5; // The default value is 4096 * 4096 pixels,
-    // but most devices support much higher resolutions.
-    // Increasing this setting allows your users to use higher zoom factors,
-    // trading image quality for performance.
-  }
+  page = 0;
+  zoom = 100;
 
-  public onPdfLoaded(): void {
+  constructor(private pdfService: NgxExtendedPdfViewerService) {  }
+
+  onPdfLoaded(): void {
     console.log('onPdfLoaded');
   }
+
+  @HostListener('window:keydown', ['$event'])
+  onKeyDown(event: KeyboardEvent): void {
+    console.log('onKeyDown', event);
+    this.zoomToRect(3, 0.4, 0.4, 0.2, 0.2);
+  }
+
+  zoomToRect(
+    pageNumber: number,
+    x: number,
+    y: number,
+    w: number,
+    h: number
+  ): void {
+    this.page = pageNumber;
+
+    const zoomFactor = Math.floor(100 / Math.max(w, h));
+    console.log('zoomFactor', zoomFactor);
+    this.zoom = zoomFactor;
+
+    // this.pdfService.scrollPageIntoView(pageNumber, {
+    //   left: x + w / 2,
+    //   top: y + h / 2
+    // });
+
+    const viewer = document.querySelector('#viewerContainer') as HTMLElement;
+    viewer?.scrollTo({
+      top: 1200,
+      left: 800,
+      behavior: 'smooth'
+    });
+  }
+
 }
