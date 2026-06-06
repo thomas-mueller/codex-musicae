@@ -42,6 +42,7 @@ jobs:
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_CODEX_MUSICAE }}
+          channelId: live
           projectId: codex-musicae
 
       - name: Build Android APK (Capacitor + Gradle)
