@@ -3,7 +3,10 @@ import {
   AfterViewInit,
   ElementRef,
   ViewChild,
+  HostListener,
 } from '@angular/core';
+
+import { Router } from '@angular/router';
 
 import * as pdfjsLib from 'pdfjs-dist';
 
@@ -17,6 +20,13 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
   standalone: true,
 })
 export class PdfSlidesViewer implements AfterViewInit {
+
+  constructor(private router: Router) {}
+
+  @HostListener('document:keydown.escape')
+  onEscape() {
+    this.router.navigate(['/editor']);
+  }
 
   @ViewChild('canvas', { static: true })
   canvasRef!: ElementRef<HTMLCanvasElement>;
