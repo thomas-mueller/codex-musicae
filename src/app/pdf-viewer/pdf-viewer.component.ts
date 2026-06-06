@@ -18,8 +18,6 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PdfViewerComponent {
-  page = 0;
-  zoom = 100;
 
   constructor(private pdfService: NgxExtendedPdfViewerService) {  }
 
@@ -40,23 +38,31 @@ export class PdfViewerComponent {
     w: number,
     h: number
   ): void {
-    this.page = pageNumber;
+    // const iframe = this.pdfViewer.nativeElement.querySelector('iframe');
+    // const pdfApp = iframe.contentWindow.PDFViewerApplication;
+    // console.log(pdfApp);
 
-    const zoomFactor = Math.floor(100 / Math.max(w, h));
-    console.log('zoomFactor', zoomFactor);
-    this.zoom = zoomFactor;
+    // const pageView = pdfApp.pdfViewer.getPageView(pageNumber);
+    // const [xMin, yMin, xMax, yMax] = pageView.pdfPage.view;
+    // const pageWidth = xMax - xMin;
+    // const pageHeight = yMax - yMin;
 
-    // this.pdfService.scrollPageIntoView(pageNumber, {
-    //   left: x + w / 2,
-    //   top: y + h / 2
+    // const left   = pageWidth  * x;
+    // const bottom = pageHeight * y;
+    // const right  = pageWidth  * (x+w);
+    // const top    = pageHeight * (y+h);
+
+    // this.pdfService.scrollPageIntoView({
+    //   pageNumber: pageNumber,
+    //   destArray: [
+    //     null,
+    //     { name: 'FitR' },
+    //     left,
+    //     bottom,
+    //     right,
+    //     top
+    //   ]
     // });
-
-    const viewer = document.querySelector('#viewerContainer') as HTMLElement;
-    viewer?.scrollTo({
-      top: 1200,
-      left: 800,
-      behavior: 'smooth'
-    });
   }
 
 }

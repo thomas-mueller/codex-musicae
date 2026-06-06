@@ -1,13 +1,9 @@
 <ngx-extended-pdf-viewer
   [src]="'/pdfs/test.pdf'"
-  [(page)]="page"
-  [(zoom)]="zoom"
   [showToolbar]=true
   [showPresentationModeButton]=true
   [showPrintButton]=false
   [showRotateButton]=false
   (pdfLoaded)="onPdfLoaded()"
-  (keydown)="onKeyDown($event)"
-  tabindex="0"
   >
 </ngx-extended-pdf-viewer>
