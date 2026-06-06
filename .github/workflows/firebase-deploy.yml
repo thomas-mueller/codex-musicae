@@ -67,10 +67,18 @@ jobs:
         run: |
           echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_CODEX_MUSICAE }}' > firebase-service-account.json
 
+      # - name: Distribute APK to Firebase App Distribution
+      #   env:
+      #     GOOGLE_APPLICATION_CREDENTIALS: firebase-service-account.json
+      #   run: |
+      #     firebase appdistribution:distribute android/app/build/outputs/apk/release/app-release-unsigned.apk \
+      #       --app ${{ secrets.FIREBASE_APP_ID_ANDROID_CODEX_MUSICAE }} \
+      #       --groups "testers"
+
       - name: Distribute APK to Firebase App Distribution
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: firebase-service-account.json
-        run: |
-          firebase appdistribution:distribute android/app/build/outputs/apk/release/app-release-unsigned.apk \
-            --app ${{ secrets.FIREBASE_APP_ID_ANDROID_CODEX_MUSICAE }} \
-            --groups "testers"
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: ${{ secrets.FIREBASE_APP_ID_ANDROID_CODEX_MUSICAE }}
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_CODEX_MUSICAE }}
+          groups: testers
+          file: android/app/build/outputs/apk/release/app-release-unsigned.apk
