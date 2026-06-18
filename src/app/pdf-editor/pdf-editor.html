@@ -6,3 +6,66 @@
   [showRotateButton]=false
   >
 </ngx-extended-pdf-viewer>
+
+<!-- <pdf-shy-button
+  [cssClass]="'always-in-secondary-menu' | responsiveCSSClass"
+  title="long test title"
+  primaryToolbarId="test-123456789"
+  [action]="mainAction"
+  [order]="1"
+  [closeOnClick]="false"
+  image="<svg xmlns='http://www.w3.org/2000/svg' height='24' viewBox='0 0 24 24' width='24'>
+     <path fill='red' d='M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z'/>
+    </svg>"
+>
+    <button #nestedContent
+        class="toolbarButton"
+        title="export an image"
+        (click)="mainAction()">
+        test
+    </button>
+</pdf-shy-button> -->
+
+<pdf-shy-button
+  [cssClass]="'always-in-secondary-menu' | responsiveCSSClass"
+  class="newTab"
+  title="open PDF file in a new tab"
+  primaryToolbarId="test-123456789"
+  l10nId="test-123456789"
+  [action]="mainAction"
+  [order]="1"
+  [closeOnClick]="true"
+  image="<svg xmlns='http://www.w3.org/2000/svg' height='24' viewBox='0 0 24 24' width='24'>
+     <path fill='red' d='M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z'/>
+    </svg>"
+>
+</pdf-shy-button>
+
+<!-- <ng-template #additionalButtons>
+  <div id="toolbarViewer">
+    <pdf-paging-area></pdf-paging-area>
+    <pdf-zoom-toolbar></pdf-zoom-toolbar>
+    <div id="toolbarViewerRight">
+      <pdf-open-file></pdf-open-file>
+      <pdf-presentation-mode></pdf-presentation-mode>
+
+      <pdf-shy-button
+        [cssClass]="'lg' | responsiveCSSClass"
+        title="export an image"
+        primaryToolbarId="exportAsImageButton"
+        [order]="1"
+        [closeOnClick]="true"
+      >
+        <button #nestedContent
+          class="toolbarButton"
+          title="export an image"
+          (click)="mainAction()"
+        >test
+        </button>
+      </pdf-shy-button>
+
+      <pdf-download></pdf-download>
+      <pdf-toggle-secondary-toolbar></pdf-toggle-secondary-toolbar>
+    </div>
+  </div>
+</ng-template> -->

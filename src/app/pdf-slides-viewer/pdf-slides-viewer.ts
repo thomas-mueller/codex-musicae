@@ -9,6 +9,11 @@ import {
 import { Router } from '@angular/router';
 
 import * as pdfjsLib from 'pdfjs-dist';
+import {
+  EventBus,
+  PDFLinkService,
+  PDFViewer
+} from 'pdfjs-dist/web/pdf_viewer.mjs';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   '/assets/pdfjs-dist/build/pdf.worker.min.mjs';
@@ -21,6 +26,11 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 })
 export class PdfSlidesViewer implements AfterViewInit {
 
+  private pdfDocument!: pdfjsLib.PDFDocumentProxy;
+  private pdfViewer!: PDFViewer;
+  private linkService!: PDFLinkService;
+  private eventBus!: EventBus;
+
   constructor(private router: Router) {}
 
   @HostListener('document:keydown.escape')
@@ -28,12 +38,29 @@ export class PdfSlidesViewer implements AfterViewInit {
     this.router.navigate(['/editor']);
   }
 
-  @ViewChild('canvas', { static: true })
-  canvasRef!: ElementRef<HTMLCanvasElement>;
+  // @ViewChild('canvas', { static: true })
+  // canvasRef!: ElementRef<HTMLCanvasElement>;
+
+  @ViewChild('viewerContainer', { static: false })
+  viewerContainer!: ElementRef<HTMLDivElement>;
 
   pdfUrl = '/pdfs/test.pdf'; // später dynamisch über route param
 
   async ngAfterViewInit() {
+    this.eventBus = new EventBus();
+
+    this.linkService = new PDFLinkService({
+      eventBus: this.eventBus
+    });
+
+    this.pdfViewer = new PDFViewer({
+      container: this.viewerContainer.nativeElement,
+      eventBus: this.eventBus,
+      linkService: this.linkService
+    });
+    this.pdfViewer.currentScaleValue = 'page-width';
+    this.linkService.setViewer(this.pdfViewer);
+
     const loadingTask = pdfjsLib.getDocument({
       url: this.pdfUrl,
       cMapUrl: '/assets/cmaps/',
@@ -41,23 +68,9 @@ export class PdfSlidesViewer implements AfterViewInit {
       standardFontDataUrl: '/assets/standard_fonts/',
       wasmUrl: '/assets/wasm/'
     });
-    const pdf = await loadingTask.promise;
+    this.pdfDocument = await loadingTask.promise;
 
-    const page = await pdf.getPage(1);
-
-    const scale = 1.5;
-    const viewport = page.getViewport({ scale });
-
-    const canvas = this.canvasRef.nativeElement;
-    const context = canvas.getContext('2d')!;
-
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-
-    await page.render({
-      canvas: canvas,
-      canvasContext: context,
-      viewport: viewport
-    }).promise;
+    this.pdfViewer.setDocument(this.pdfDocument);
+    this.linkService.setDocument(this.pdfDocument);
   }
 }

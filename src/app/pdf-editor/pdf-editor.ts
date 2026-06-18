@@ -21,6 +21,10 @@ export class PdfEditor {
 
   constructor(private pdfService: NgxExtendedPdfViewerService) {  }
 
+  mainAction = () => {
+    console.log('Main action triggered');
+  };
+
   onPdfLoaded(): void {
     console.log('onPdfLoaded');
   }

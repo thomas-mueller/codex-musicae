@@ -1,14 +1,10 @@
-.viewer {
-  width: 100vw;
+.viewerContainer {
+  position: absolute;
+  width: 100%;
   height: 100vh;
   overflow: auto;
-  background: #2b2b2b;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
 }
 
-canvas {
-  margin: 20px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.5);
+.pdfViewer {
+  position: relative;
 }
