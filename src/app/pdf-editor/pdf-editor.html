@@ -11,7 +11,7 @@
   [cssClass]="'always-in-secondary-menu' | responsiveCSSClass"
   title="long test title"
   primaryToolbarId="test-123456789"
-  [action]="mainAction"
+  [action]="navigateToViewer"
   [order]="1"
   [closeOnClick]="false"
   image="<svg xmlns='http://www.w3.org/2000/svg' height='24' viewBox='0 0 24 24' width='24'>
@@ -21,7 +21,7 @@
     <button #nestedContent
         class="toolbarButton"
         title="export an image"
-        (click)="mainAction()">
+        (click)="navigateToViewer()">
         test
     </button>
 </pdf-shy-button> -->
@@ -29,10 +29,10 @@
 <pdf-shy-button
   [cssClass]="'always-in-secondary-menu' | responsiveCSSClass"
   class="newTab"
-  title="open PDF file in a new tab"
+  title="Slides Viewer"
   primaryToolbarId="test-123456789"
   l10nId="test-123456789"
-  [action]="mainAction"
+  [action]="navigateToViewer"
   [order]="1"
   [closeOnClick]="true"
   image="<svg xmlns='http://www.w3.org/2000/svg' height='24' viewBox='0 0 24 24' width='24'>
@@ -59,7 +59,7 @@
         <button #nestedContent
           class="toolbarButton"
           title="export an image"
-          (click)="mainAction()"
+          (click)="navigateToViewer()"
         >test
         </button>
       </pdf-shy-button>

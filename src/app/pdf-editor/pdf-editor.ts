@@ -3,6 +3,8 @@ import {
   Component,
 } from '@angular/core';
 
+import { Router } from '@angular/router';
+
 import {
   NgxExtendedPdfViewerModule,
   NgxExtendedPdfViewerService,
@@ -19,10 +21,14 @@ import {
 })
 export class PdfEditor {
 
-  constructor(private pdfService: NgxExtendedPdfViewerService) {  }
 
-  mainAction = () => {
-    console.log('Main action triggered');
+  constructor(
+    private router: Router,
+    private pdfService: NgxExtendedPdfViewerService
+  ) {  }
+
+  navigateToViewer = () => {
+    this.router.navigate(['/viewer']);
   };
 
   onPdfLoaded(): void {
