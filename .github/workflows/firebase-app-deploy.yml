@@ -1,5 +1,5 @@
-name: Deploy to Firebase
-on: push
+name: Deploy to Firebase App
+on: workflow_dispatch
 permissions:
   checks: write
   contents: read
@@ -36,14 +36,6 @@ jobs:
 
       - name: Build Angular app
         run: npx ng build -c production
-
-      - name: Firebase Hosting deploy
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_CODEX_MUSICAE }}
-          channelId: live
-          projectId: codex-musicae
 
       - name: Build Android APK (Capacitor + Gradle)
         run: |
