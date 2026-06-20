@@ -72,30 +72,48 @@ export class PdfSlidesViewer implements AfterViewInit {
     this.outputScale = window.devicePixelRatio || 1;
   }
 
-  async renderPage(pageNumber: number): Promise<void> {
+  async renderPage(
+    pageNumber: number,
+    cropRect?: [number, number, number, number] // [x0, y0, x1, y1] in 0..1
+  ): Promise<void> {
     const page = await this.pdfDocument.getPage(pageNumber);
 
     const canvas = this.canvasRef.nativeElement;
     const context = canvas.getContext('2d')!;
 
-    const cssViewport = page.getViewport({
-      scale: this.displayScale
-    });
-
-    const renderViewport = page.getViewport({
+    const viewport = page.getViewport({
       scale: this.displayScale * this.outputScale
     });
 
-    canvas.width = Math.floor(renderViewport.width);
-    canvas.height = Math.floor(renderViewport.height);
+    let offsetX = 0;
+    let offsetY = 0;
+    let renderWidth = viewport.width;
+    let renderHeight = viewport.height;
 
-    canvas.style.width = `${Math.floor(cssViewport.width)}px`;
-    canvas.style.height = `${Math.floor(cssViewport.height)}px`;
+    if (cropRect) {
+      const [x0, y0, x1, y1] = cropRect;
+
+      const cropW = x1 - x0;
+      const cropH = y1 - y0;
+
+      renderWidth = viewport.width * cropW;
+      renderHeight = viewport.height * cropH;
+
+      offsetX = -x0 * viewport.width;
+      offsetY = -y0 * viewport.height;
+    }
+
+    canvas.width = Math.floor(renderWidth);
+    canvas.height = Math.floor(renderHeight);
+
+    canvas.style.width = `${Math.floor(renderWidth / this.outputScale)}px`;
+    canvas.style.height = `${Math.floor(renderHeight / this.outputScale)}px`;
 
     await page.render({
       canvas,
       canvasContext: context,
-      viewport: renderViewport
+      viewport,
+      transform: [1, 0, 0, 1, offsetX, offsetY]
     }).promise;
   }
 
@@ -111,33 +129,6 @@ export class PdfSlidesViewer implements AfterViewInit {
   }
 
   async test(): Promise<void> {
-    // if (!this.pdfViewer || !this.pdfDocument) return;
-
-    // const pageNumber = 3;
-    // this.pdfViewer.currentPageNumber = pageNumber;
-  //   const page = await this.pdfDocument.getPage(pageNumber);
-
-  //   const [xMin, yMin, xMax, yMax] = page.view;
-
-  //   const width = xMax - xMin;
-  //   const height = yMax - yMin;
-
-  //   const left = xMin + width * 0.20;
-  //   const right = xMin + width * 0.60;
-
-  //   const bottom = yMin + height * 0.30;
-  //   const top = yMin + height * 0.50;
-
-  //   this.pdfViewer.scrollPageIntoView({
-  //     pageNumber,
-  //     // destArray: [
-  //     //   null,
-  //     //   { name: "FitR" },
-  //     //   left,
-  //     //   bottom,
-  //     //   right,
-  //     //   top
-  //     // ]
-  //   });
+    this.renderPage(1, [0.25, 0.25, 0.75, 0.75]);
   }
 }
