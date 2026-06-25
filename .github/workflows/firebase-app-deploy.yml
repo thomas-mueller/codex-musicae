@@ -1,5 +1,5 @@
 name: Deploy to Firebase App
-on: workflow_dispatch
+on: push
 permissions:
   checks: write
   contents: read
@@ -55,14 +55,14 @@ jobs:
             android/app/build/outputs/apk/release/app-release*.apk
             android/app/build/outputs/bundle/release/app-release*.aab
 
-      - name: Create Firebase service account file
-        run: |
-          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_CODEX_MUSICAE }}' > firebase-service-account.json
+      # - name: Create Firebase service account file
+      #   run: |
+      #     echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_CODEX_MUSICAE }}' > firebase-service-account.json
 
-      - name: Distribute APK to Firebase App Distribution
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: firebase-service-account.json
-        run: |
-          firebase appdistribution:distribute android/app/build/outputs/apk/release/app-release-unsigned.apk \
-            --app ${{ secrets.FIREBASE_APP_ID_ANDROID_CODEX_MUSICAE }} \
-            --groups "testers"
+      # - name: Distribute APK to Firebase App Distribution
+      #   env:
+      #     GOOGLE_APPLICATION_CREDENTIALS: firebase-service-account.json
+      #   run: |
+      #     firebase appdistribution:distribute android/app/build/outputs/apk/release/app-release-unsigned.apk \
+      #       --app ${{ secrets.FIREBASE_APP_ID_ANDROID_CODEX_MUSICAE }} \
+      #       --groups "testers"
