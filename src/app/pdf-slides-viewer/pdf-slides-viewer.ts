@@ -8,6 +8,7 @@ import {
 
 import { Router } from '@angular/router';
 
+// https://mozilla.github.io/pdf.js/api/
 import * as pdfjsLib from 'pdfjs-dist';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -84,6 +85,7 @@ export class PdfSlidesViewer implements AfterViewInit {
     const viewport = page.getViewport({
       scale: this.displayScale * this.outputScale
     });
+    console.log('viewport', viewport);
 
     let offsetX = 0;
     let offsetY = 0;
@@ -95,6 +97,9 @@ export class PdfSlidesViewer implements AfterViewInit {
 
       const cropW = x1 - x0;
       const cropH = y1 - y0;
+
+      const cropScale = 1 / Math.max(cropW, cropW);
+      console.log('cropScale', cropScale);
 
       renderWidth = viewport.width * cropW;
       renderHeight = viewport.height * cropH;
@@ -109,10 +114,15 @@ export class PdfSlidesViewer implements AfterViewInit {
     canvas.style.width = `${Math.floor(renderWidth / this.outputScale)}px`;
     canvas.style.height = `${Math.floor(renderHeight / this.outputScale)}px`;
 
+    console.log('canvas', canvas);
+    console.log('context', context);
+    console.log('viewport', viewport);
+    console.log('offsetX', offsetX);
+    console.log('offsetY', offsetY);
     await page.render({
-      canvas,
+      canvas: canvas,
+      viewport: viewport,
       canvasContext: context,
-      viewport,
       transform: [1, 0, 0, 1, offsetX, offsetY]
     }).promise;
   }
