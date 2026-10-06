@@ -14,7 +14,6 @@ import {
   type BoundingBox,
   detectBoundingBoxesInDocument,
   drawBoundingBoxes,
-  expandBoundingBox,
 } from './bounding-boxes';
 import { PdfStateService } from '../pdf-state.service';
 
@@ -210,9 +209,10 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
         drawBoundingBoxes(
           context,
           this.currentPage,
-          this.boundingBoxes.map((box) => expandBoundingBox(box, this.padding)),
+          this.boundingBoxes,
           canvas.width,
           canvas.height,
+          this.padding,
         );
       }
     } catch (error) {
