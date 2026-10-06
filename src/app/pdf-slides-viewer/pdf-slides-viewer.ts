@@ -1,9 +1,11 @@
 import {
   Component,
+  ChangeDetectorRef,
   AfterViewInit,
   ElementRef,
   ViewChild,
   HostListener,
+  OnDestroy,
 } from '@angular/core';
 
 import { Router } from '@angular/router';
@@ -20,7 +22,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
   styleUrl: './pdf-slides-viewer.css',
   standalone: true,
 })
-export class PdfSlidesViewer implements AfterViewInit {
+export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
 
   @ViewChild('pdfContainer')
   pdfContainerRef!: ElementRef<HTMLDivElement>;
@@ -29,34 +31,58 @@ export class PdfSlidesViewer implements AfterViewInit {
   canvasRef!: ElementRef<HTMLCanvasElement>;
 
   pdfUrl = '/pdfs/test.pdf'; // später dynamisch über route param
-  private pdfDocument!: pdfjsLib.PDFDocumentProxy;
+  private pdfDocument?: pdfjsLib.PDFDocumentProxy;
+  private loadingTask?: pdfjsLib.PDFDocumentLoadingTask;
 
   private basePageWidth = 0;
   private basePageHeight = 0;
 
   private displayScale = 1;
   private outputScale = 1;
+  loading = true;
+  errorMessage = '';
+  private destroyed = false;
 
-  constructor(private router: Router) {}
+  constructor(
+    private readonly router: Router,
+    private readonly changeDetector: ChangeDetectorRef,
+  ) {}
 
-  async ngAfterViewInit() {
-    const loadingTask = pdfjsLib.getDocument({
-      url: this.pdfUrl,
-      cMapUrl: '/assets/cmaps/',
-      cMapPacked: true,
-      standardFontDataUrl: '/assets/standard_fonts/',
-      wasmUrl: '/assets/wasm/'
-    });
-    this.pdfDocument = await loadingTask.promise;
+  async ngAfterViewInit(): Promise<void> {
+    try {
+      this.loadingTask = pdfjsLib.getDocument({
+        url: this.pdfUrl,
+        cMapUrl: '/assets/pdfjs-dist/cmaps/',
+        cMapPacked: true,
+        standardFontDataUrl: '/assets/pdfjs-dist/standard_fonts/',
+        wasmUrl: '/assets/pdfjs-dist/wasm/',
+      });
+      this.pdfDocument = await this.loadingTask.promise;
+      if (this.destroyed) {
+        return;
+      }
 
-    const firstPage = await this.pdfDocument.getPage(1);
-    const baseViewport = firstPage.getViewport({ scale: 1 });
-    this.basePageWidth = baseViewport.width;
-    this.basePageHeight = baseViewport.height;
-    this.updateScaleForContainer();
+      const firstPage = await this.pdfDocument.getPage(1);
+      const baseViewport = firstPage.getViewport({ scale: 1 });
+      this.basePageWidth = baseViewport.width;
+      this.basePageHeight = baseViewport.height;
+      this.updateScaleForContainer();
+      this.loading = false;
+      this.changeDetector.markForCheck();
+      await this.renderPage(1);
+    } catch (error) {
+      if (!this.destroyed) {
+        console.error('Unable to load or render the slides PDF.', error);
+        this.loading = false;
+        this.errorMessage = 'Unable to display this PDF.';
+        this.changeDetector.markForCheck();
+      }
+    }
+  }
 
-    const pageNumber = 1;
-    await this.renderPage(pageNumber);
+  ngOnDestroy(): void {
+    this.destroyed = true;
+    void this.loadingTask?.destroy();
   }
 
   private updateScaleForContainer(): void {
@@ -77,6 +103,9 @@ export class PdfSlidesViewer implements AfterViewInit {
     pageNumber: number,
     cropRect?: [number, number, number, number] // [x0, y0, x1, y1] in 0..1
   ): Promise<void> {
+    if (!this.pdfDocument || this.destroyed) {
+      return;
+    }
     const page = await this.pdfDocument.getPage(pageNumber);
 
     const canvas = this.canvasRef.nativeElement;

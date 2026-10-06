@@ -1,71 +1,36 @@
-<ngx-extended-pdf-viewer
-  [src]="'/pdfs/test.pdf'"
-  [showToolbar]=true
-  [showPresentationModeButton]=true
-  [showPrintButton]=false
-  [showRotateButton]=false
-  >
-</ngx-extended-pdf-viewer>
-
-<!-- <pdf-shy-button
-  [cssClass]="'always-in-secondary-menu' | responsiveCSSClass"
-  title="long test title"
-  primaryToolbarId="test-123456789"
-  [action]="navigateToViewer"
-  [order]="1"
-  [closeOnClick]="false"
-  image="<svg xmlns='http://www.w3.org/2000/svg' height='24' viewBox='0 0 24 24' width='24'>
-     <path fill='red' d='M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z'/>
-    </svg>"
->
-    <button #nestedContent
-        class="toolbarButton"
-        title="export an image"
-        (click)="navigateToViewer()">
-        test
-    </button>
-</pdf-shy-button> -->
-
-<pdf-shy-button
-  [cssClass]="'always-in-secondary-menu' | responsiveCSSClass"
-  class="newTab"
-  title="Slides Viewer"
-  primaryToolbarId="test-123456789"
-  l10nId="test-123456789"
-  [action]="navigateToViewer"
-  [order]="1"
-  [closeOnClick]="true"
-  image="<svg xmlns='http://www.w3.org/2000/svg' height='24' viewBox='0 0 24 24' width='24'>
-     <path fill='red' d='M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z'/>
-    </svg>"
->
-</pdf-shy-button>
-
-<!-- <ng-template #additionalButtons>
-  <div id="toolbarViewer">
-    <pdf-paging-area></pdf-paging-area>
-    <pdf-zoom-toolbar></pdf-zoom-toolbar>
-    <div id="toolbarViewerRight">
-      <pdf-open-file></pdf-open-file>
-      <pdf-presentation-mode></pdf-presentation-mode>
-
-      <pdf-shy-button
-        [cssClass]="'lg' | responsiveCSSClass"
-        title="export an image"
-        primaryToolbarId="exportAsImageButton"
-        [order]="1"
-        [closeOnClick]="true"
-      >
-        <button #nestedContent
-          class="toolbarButton"
-          title="export an image"
-          (click)="navigateToViewer()"
-        >test
-        </button>
-      </pdf-shy-button>
-
-      <pdf-download></pdf-download>
-      <pdf-toggle-secondary-toolbar></pdf-toggle-secondary-toolbar>
+<main class="pdf-editor">
+  <header class="toolbar" aria-label="PDF controls">
+    <div class="page-controls">
+      <button type="button" (click)="previousPage()" [disabled]="!canGoToPreviousPage">
+        Previous
+      </button>
+      <span aria-live="polite">Page {{ currentPage }} of {{ pageCount || '—' }}</span>
+      <button type="button" (click)="nextPage()" [disabled]="!canGoToNextPage">
+        Next
+      </button>
     </div>
-  </div>
-</ng-template> -->
+
+    <div class="view-controls">
+      <button type="button" (click)="zoomOut()" [disabled]="zoom <= 0.5" aria-label="Zoom out">
+        −
+      </button>
+      <span>{{ (zoom * 100) | number: '1.0-0' }}%</span>
+      <button type="button" (click)="zoomIn()" [disabled]="zoom >= 3" aria-label="Zoom in">
+        +
+      </button>
+      <button type="button" class="slides-button" (click)="navigateToViewer()">
+        Slides viewer
+      </button>
+    </div>
+  </header>
+
+  <section #pdfViewport class="pdf-viewport" aria-label="PDF page">
+    @if (loading) {
+      <p class="message" role="status">Loading PDF…</p>
+    } @else if (errorMessage) {
+      <p class="message error" role="alert">{{ errorMessage }}</p>
+    } @else {
+      <canvas #pdfCanvas aria-label="Current PDF page"></canvas>
+    }
+  </section>
+</main>

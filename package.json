@@ -23,7 +23,6 @@
     "@capacitor/core": "latest",
     "@capacitor/ios": "^8.3.4",
     "@techstark/opencv-js": "^5.0.0-release.1",
-    "ngx-extended-pdf-viewer": "^27.0.0",
     "pdfjs-dist": "^6.0.227",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"

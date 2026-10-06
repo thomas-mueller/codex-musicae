@@ -25,18 +25,18 @@
               },
               {
                 "glob": "**/*",
-                "input": "node_modules/ngx-extended-pdf-viewer/assets/",
-                "output": "assets"
-              },
-              {
-                "glob": "**/*",
                 "input": "node_modules/pdfjs-dist/build/",
                 "output": "assets/pdfjs-dist/build"
               },
               {
                 "glob": "**/*",
-                "input": "node_modules/pdfjs-dist/web/",
-                "output": "assets/pdfjs-dist/web"
+                "input": "node_modules/pdfjs-dist/cmaps/",
+                "output": "assets/pdfjs-dist/cmaps"
+              },
+              {
+                "glob": "**/*",
+                "input": "node_modules/pdfjs-dist/standard_fonts/",
+                "output": "assets/pdfjs-dist/standard_fonts"
               },
               {
                 "glob": "**/*",
@@ -47,10 +47,14 @@
                 "glob": "**/*",
                 "input": "node_modules/pdfjs-dist/image_decoders/",
                 "output": "assets/pdfjs-dist/image_decoders"
+              },
+              {
+                "glob": "**/*",
+                "input": "node_modules/pdfjs-dist/iccs/",
+                "output": "assets/pdfjs-dist/iccs"
               }
             ],
             "styles": [
-              "node_modules/pdfjs-dist/web/pdf_viewer.css",
               "src/styles.css"
             ]
           },

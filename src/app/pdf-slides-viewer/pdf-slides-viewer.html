@@ -1,3 +1,8 @@
 <div #pdfContainer class="pdf-container">
   <canvas #pdfCanvas></canvas>
+  @if (loading) {
+    <p class="message" role="status">Loading PDF…</p>
+  } @else if (errorMessage) {
+    <p class="message error" role="alert">{{ errorMessage }}</p>
+  }
 </div>
