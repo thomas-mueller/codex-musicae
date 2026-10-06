@@ -14,7 +14,9 @@ import {
   type BoundingBox,
   detectBoundingBoxesInDocument,
   drawBoundingBoxes,
+  expandBoundingBox,
 } from './bounding-boxes';
+import { PdfStateService } from '../pdf-state.service';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   '/assets/pdfjs-dist/build/pdf.worker.min.mjs';
@@ -34,13 +36,14 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
   @ViewChild('pdfCanvas')
   private canvasRef!: ElementRef<HTMLCanvasElement>;
 
-  readonly pdfUrl = '/pdfs/test.pdf';
+  readonly pdfUrl: string;
   currentPage = 1;
   pageCount = 0;
   zoom = 1;
   loading = true;
   errorMessage = '';
   boundingBoxes: BoundingBox[] = [];
+  padding = 0.025;
 
   private pdfDocument?: pdfjsLib.PDFDocumentProxy;
   private loadingTask?: pdfjsLib.PDFDocumentLoadingTask;
@@ -52,7 +55,8 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
   constructor(
     private readonly router: Router,
     private readonly changeDetector: ChangeDetectorRef,
-  ) {}
+    private readonly pdfState: PdfStateService,
+  ) { this.pdfUrl = pdfState.pdfUrl; }
 
   async ngAfterViewInit(): Promise<void> {
     this.resizeObserver = new ResizeObserver(() => {
@@ -146,7 +150,14 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
   }
 
   navigateToViewer(): void {
+    this.pdfState.setEditorState(this.boundingBoxes, this.padding);
     void this.router.navigate(['/viewer']);
+  }
+
+  setPadding(value: number | string): void {
+    const parsed = typeof value === 'string' ? Number(value) : value;
+    this.padding = Math.max(0, Math.min(Number.isFinite(parsed) ? parsed : 0.025, 0.5));
+    void this.renderCurrentPage();
   }
 
   private setZoom(zoom: number): void {
@@ -199,7 +210,7 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
         drawBoundingBoxes(
           context,
           this.currentPage,
-          this.boundingBoxes,
+          this.boundingBoxes.map((box) => expandBoundingBox(box, this.padding)),
           canvas.width,
           canvas.height,
         );

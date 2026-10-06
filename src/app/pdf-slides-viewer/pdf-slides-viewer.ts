@@ -1,173 +1,55 @@
-import {
-  Component,
-  ChangeDetectorRef,
-  AfterViewInit,
-  ElementRef,
-  ViewChild,
-  HostListener,
-  OnDestroy,
-} from '@angular/core';
-
+import { Component, ChangeDetectorRef, AfterViewInit, ElementRef, ViewChild, HostListener, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
-
-// https://mozilla.github.io/pdf.js/api/
 import * as pdfjsLib from 'pdfjs-dist';
+import { PdfStateService } from '../pdf-state.service';
+import { buildSlideGroups, type PageSize, type SlideGroup } from '../pdf-slides';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  '/assets/pdfjs-dist/build/pdf.worker.min.mjs';
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/pdfjs-dist/build/pdf.worker.min.mjs';
 
-@Component({
-  selector: 'app-pdf-slides-viewer',
-  templateUrl: './pdf-slides-viewer.html',
-  styleUrl: './pdf-slides-viewer.css',
-  standalone: true,
-})
+@Component({ selector: 'app-pdf-slides-viewer', templateUrl: './pdf-slides-viewer.html', styleUrl: './pdf-slides-viewer.css', standalone: true })
 export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
+  @ViewChild('pdfContainer') pdfContainerRef!: ElementRef<HTMLDivElement>;
+  @ViewChild('pdfCanvas') canvasRef!: ElementRef<HTMLCanvasElement>;
+  readonly pdfUrl: string;
+  loading = true; errorMessage = ''; currentSlide = 0; slideGroups: SlideGroup[] = [];
+  private pdfDocument?: pdfjsLib.PDFDocumentProxy; private loadingTask?: pdfjsLib.PDFDocumentLoadingTask;
+  private resizeObserver?: ResizeObserver; private destroyed = false; private pageSizes: PageSize[] = []; private renderSequence = 0;
 
-  @ViewChild('pdfContainer')
-  pdfContainerRef!: ElementRef<HTMLDivElement>;
-
-  @ViewChild('pdfCanvas')
-  canvasRef!: ElementRef<HTMLCanvasElement>;
-
-  pdfUrl = '/pdfs/test.pdf'; // später dynamisch über route param
-  private pdfDocument?: pdfjsLib.PDFDocumentProxy;
-  private loadingTask?: pdfjsLib.PDFDocumentLoadingTask;
-
-  private basePageWidth = 0;
-  private basePageHeight = 0;
-
-  private displayScale = 1;
-  private outputScale = 1;
-  loading = true;
-  errorMessage = '';
-  private destroyed = false;
-
-  constructor(
-    private readonly router: Router,
-    private readonly changeDetector: ChangeDetectorRef,
-  ) {}
+  constructor(private readonly router: Router, private readonly changeDetector: ChangeDetectorRef, private readonly pdfState: PdfStateService) { this.pdfUrl = pdfState.pdfUrl; }
+  get canGoPrevious(): boolean { return this.currentSlide > 0; }
+  get canGoNext(): boolean { return this.currentSlide + 1 < this.slideGroups.length; }
 
   async ngAfterViewInit(): Promise<void> {
+    if (typeof ResizeObserver !== 'undefined') { this.resizeObserver = new ResizeObserver(() => void this.rebuildSlides()); this.resizeObserver.observe(this.pdfContainerRef.nativeElement); }
+    if (!this.pdfState.hasEditorState) { this.loading = false; this.errorMessage = 'Open the PDF in the editor first to generate slides.'; this.changeDetector.markForCheck(); return; }
     try {
-      this.loadingTask = pdfjsLib.getDocument({
-        url: this.pdfUrl,
-        cMapUrl: '/assets/pdfjs-dist/cmaps/',
-        cMapPacked: true,
-        standardFontDataUrl: '/assets/pdfjs-dist/standard_fonts/',
-        wasmUrl: '/assets/pdfjs-dist/wasm/',
-      });
+      this.loadingTask = pdfjsLib.getDocument({ url: this.pdfUrl, cMapUrl: '/assets/pdfjs-dist/cmaps/', cMapPacked: true, standardFontDataUrl: '/assets/pdfjs-dist/standard_fonts/', wasmUrl: '/assets/pdfjs-dist/wasm/' });
       this.pdfDocument = await this.loadingTask.promise;
-      if (this.destroyed) {
-        return;
-      }
+      for (let i = 1; i <= this.pdfDocument.numPages; i++) { const page = await this.pdfDocument.getPage(i); const viewport = page.getViewport({ scale: 1 }); this.pageSizes.push({ width: viewport.width, height: viewport.height }); }
+      this.loading = false; await this.rebuildSlides();
+    } catch (error) { if (!this.destroyed) { console.error('Unable to load slides PDF.', error); this.loading = false; this.errorMessage = 'Unable to display this PDF.'; this.changeDetector.markForCheck(); } }
+  }
+  ngOnDestroy(): void { this.destroyed = true; this.resizeObserver?.disconnect(); void this.loadingTask?.destroy(); }
+  previousSlide(): void { if (this.canGoPrevious) { this.currentSlide--; void this.renderCurrentSlide(); } }
+  nextSlide(): void { if (this.canGoNext) { this.currentSlide++; void this.renderCurrentSlide(); } }
+  backToEditor(): void { void this.router.navigate(['/editor']); }
 
-      const firstPage = await this.pdfDocument.getPage(1);
-      const baseViewport = firstPage.getViewport({ scale: 1 });
-      this.basePageWidth = baseViewport.width;
-      this.basePageHeight = baseViewport.height;
-      this.updateScaleForContainer();
-      this.loading = false;
-      this.changeDetector.markForCheck();
-      await this.renderPage(1);
-    } catch (error) {
-      if (!this.destroyed) {
-        console.error('Unable to load or render the slides PDF.', error);
-        this.loading = false;
-        this.errorMessage = 'Unable to display this PDF.';
-        this.changeDetector.markForCheck();
-      }
+  private async rebuildSlides(): Promise<void> {
+    if (!this.pdfDocument || this.destroyed || !this.pageSizes.length) return;
+    const container = this.pdfContainerRef.nativeElement; const aspect = container.clientHeight ? container.clientWidth / container.clientHeight : 1.5;
+    this.slideGroups = buildSlideGroups(this.pdfState.boxes, this.pageSizes, this.pdfState.padding, aspect); this.currentSlide = Math.min(this.currentSlide, Math.max(0, this.slideGroups.length - 1)); this.changeDetector.markForCheck(); await this.renderCurrentSlide();
+  }
+
+  private async renderCurrentSlide(): Promise<void> {
+    const document = this.pdfDocument; const group = this.slideGroups[this.currentSlide]; if (!document || !group || this.destroyed) return;
+    const sequence = ++this.renderSequence; const outputScale = window.devicePixelRatio || 1; const width = Math.max(...group.map((r) => r.xMax - r.xMin)); const height = group.reduce((sum, r) => sum + r.yMax - r.yMin, 0); const container = this.pdfContainerRef.nativeElement; const scale = Math.min(container.clientWidth / width, container.clientHeight / height);
+    const canvas = this.canvasRef.nativeElement; canvas.width = Math.max(1, Math.floor(width * scale * outputScale)); canvas.height = Math.max(1, Math.floor(height * scale * outputScale)); canvas.style.width = `${Math.floor(width * scale)}px`; canvas.style.height = `${Math.floor(height * scale)}px`; const context = canvas.getContext('2d'); if (!context) return; context.fillStyle = 'white'; context.fillRect(0, 0, canvas.width, canvas.height);
+    let y = 0;
+    for (const rect of group) {
+      const page = await document.getPage(rect.pageIndex + 1); const viewport = page.getViewport({ scale: scale * outputScale }); const source = globalThis.document.createElement('canvas'); source.width = Math.ceil(viewport.width); source.height = Math.ceil(viewport.height); const sourceContext = source.getContext('2d'); if (!sourceContext) continue; await page.render({ canvas: source, canvasContext: sourceContext, viewport }).promise; if (sequence !== this.renderSequence) return;
+      const rectWidth = rect.xMax - rect.xMin; const rectHeight = rect.yMax - rect.yMin; const x = (width - rectWidth) * scale * outputScale / 2; context.drawImage(source, rect.xMin * scale * outputScale, rect.yMin * scale * outputScale, rectWidth * scale * outputScale, rectHeight * scale * outputScale, x, y * scale * outputScale, rectWidth * scale * outputScale, rectHeight * scale * outputScale); y += rectHeight;
     }
   }
-
-  ngOnDestroy(): void {
-    this.destroyed = true;
-    void this.loadingTask?.destroy();
-  }
-
-  private updateScaleForContainer(): void {
-    const container = this.pdfContainerRef.nativeElement;
-    const availableWidth = container.clientWidth;
-    const availableHeight = container.clientHeight;
-    const horizontalPadding = 0;
-    const verticalPadding = 0;
-
-    const horizontalDisplayScale = (availableWidth - horizontalPadding) / this.basePageWidth;
-    const verticalDisplayScale = (availableHeight - verticalPadding) / this.basePageHeight;
-    this.displayScale = Math.min(horizontalDisplayScale, verticalDisplayScale);
-    // this.displayScale = Math.max(0.25, Math.min(this.displayScale, 4));
-    this.outputScale = window.devicePixelRatio || 1;
-  }
-
-  async renderPage(
-    pageNumber: number,
-    cropRect?: [number, number, number, number] // [x0, y0, x1, y1] in 0..1
-  ): Promise<void> {
-    if (!this.pdfDocument || this.destroyed) {
-      return;
-    }
-    const page = await this.pdfDocument.getPage(pageNumber);
-
-    const canvas = this.canvasRef.nativeElement;
-    const context = canvas.getContext('2d')!;
-
-    const viewport = page.getViewport({
-      scale: this.displayScale * this.outputScale
-    });
-    console.log('viewport', viewport);
-
-    let offsetX = 0;
-    let offsetY = 0;
-    let renderWidth = viewport.width;
-    let renderHeight = viewport.height;
-
-    if (cropRect) {
-      const [x0, y0, x1, y1] = cropRect;
-
-      const cropW = x1 - x0;
-      const cropH = y1 - y0;
-
-      const cropScale = 1 / Math.max(cropW, cropW);
-      console.log('cropScale', cropScale);
-
-      renderWidth = viewport.width * cropW;
-      renderHeight = viewport.height * cropH;
-
-      offsetX = -x0 * viewport.width;
-      offsetY = -y0 * viewport.height;
-    }
-
-    canvas.width = Math.floor(renderWidth);
-    canvas.height = Math.floor(renderHeight);
-
-    canvas.style.width = `${Math.floor(renderWidth / this.outputScale)}px`;
-    canvas.style.height = `${Math.floor(renderHeight / this.outputScale)}px`;
-
-    console.log('canvas', canvas);
-    console.log('context', context);
-    console.log('viewport', viewport);
-    console.log('offsetX', offsetX);
-    console.log('offsetY', offsetY);
-    await page.render({
-      canvas: canvas,
-      viewport: viewport,
-      canvasContext: context,
-      transform: [1, 0, 0, 1, offsetX, offsetY]
-    }).promise;
-  }
-
-  @HostListener('document:keydown.escape')
-  onEscape() {
-    this.router.navigate(['/editor']);
-  }
-
-  @HostListener('window:keydown', ['$event'])
-  onKeyDown(event: KeyboardEvent): void {
-    console.log('onKeyDown', event);
-    this.test();
-  }
-
-  async test(): Promise<void> {
-    this.renderPage(1, [0.25, 0.25, 0.75, 0.75]);
-  }
+  @HostListener('document:keydown.escape') onEscape(): void { this.backToEditor(); }
+  @HostListener('window:keydown', ['$event']) onKeyDown(event: KeyboardEvent): void { if (event.key === 'ArrowLeft') this.previousSlide(); if (event.key === 'ArrowRight') this.nextSlide(); }
 }

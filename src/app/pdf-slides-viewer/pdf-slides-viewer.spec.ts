@@ -1,5 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
+vi.mock('pdfjs-dist', () => ({
+  GlobalWorkerOptions: {},
+  getDocument: vi.fn(),
+}));
+
 import { PdfSlidesViewer } from './pdf-slides-viewer';
 
 describe('PdfSlidesViewer', () => {

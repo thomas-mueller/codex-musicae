@@ -185,3 +185,13 @@ export function drawBoundingBoxes(
 
   context.restore();
 }
+
+export function expandBoundingBox(box: BoundingBox, padding: number): BoundingBox {
+  return {
+    ...box,
+    xMin: Math.max(0, box.xMin - padding),
+    yMin: Math.max(0, box.yMin - padding),
+    xMax: Math.min(1, box.xMax + padding),
+    yMax: Math.min(1, box.yMax + padding),
+  };
+}

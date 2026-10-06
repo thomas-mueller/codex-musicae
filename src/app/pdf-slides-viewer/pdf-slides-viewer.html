@@ -1,8 +1,17 @@
 <div #pdfContainer class="pdf-container">
+  <nav class="toolbar" aria-label="Slide controls">
+    <button type="button" (click)="previousSlide()" [disabled]="!canGoPrevious">Previous</button>
+    <span aria-live="polite">Slide {{ slideGroups.length ? currentSlide + 1 : '—' }} of {{ slideGroups.length || '—' }}</span>
+    <button type="button" (click)="nextSlide()" [disabled]="!canGoNext">Next</button>
+    <button type="button" (click)="backToEditor()">Editor</button>
+  </nav>
   <canvas #pdfCanvas></canvas>
   @if (loading) {
     <p class="message" role="status">Loading PDF…</p>
   } @else if (errorMessage) {
     <p class="message error" role="alert">{{ errorMessage }}</p>
+  }
+  @if (!loading && !errorMessage && !slideGroups.length) {
+    <p class="message">No slides could be generated from the detected bounding boxes.</p>
   }
 </div>
