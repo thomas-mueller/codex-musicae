@@ -10,6 +10,11 @@ import {
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import * as pdfjsLib from 'pdfjs-dist';
+import {
+  type BoundingBox,
+  detectBoundingBoxesInDocument,
+  drawBoundingBoxes,
+} from './bounding-boxes';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   '/assets/pdfjs-dist/build/pdf.worker.min.mjs';
@@ -35,6 +40,7 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
   zoom = 1;
   loading = true;
   errorMessage = '';
+  boundingBoxes: BoundingBox[] = [];
 
   private pdfDocument?: pdfjsLib.PDFDocumentProxy;
   private loadingTask?: pdfjsLib.PDFDocumentLoadingTask;
@@ -72,6 +78,7 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
       this.pageCount = this.pdfDocument.numPages;
       this.loading = false;
       this.changeDetector.markForCheck();
+      void this.detectDocumentBoundingBoxes(this.pdfDocument);
       await this.renderCurrentPage();
     } catch {
       if (!this.destroyed) {
@@ -87,6 +94,25 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
     this.resizeObserver?.disconnect();
     this.renderTask?.cancel();
     void this.loadingTask?.destroy();
+  }
+
+  private async detectDocumentBoundingBoxes(
+    document: pdfjsLib.PDFDocumentProxy,
+  ): Promise<void> {
+    try {
+      const boxes = await detectBoundingBoxesInDocument(document);
+      if (this.destroyed) {
+        return;
+      }
+
+      this.boundingBoxes = boxes;
+      this.changeDetector.markForCheck();
+      void this.renderCurrentPage();
+    } catch (error) {
+      if (!this.destroyed) {
+        console.error('Unable to detect PDF bounding boxes.', error);
+      }
+    }
   }
 
   get canGoToPreviousPage(): boolean {
@@ -170,6 +196,13 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
       await task.promise;
       if (sequence === this.renderSequence) {
         this.renderTask = undefined;
+        drawBoundingBoxes(
+          context,
+          this.currentPage,
+          this.boundingBoxes,
+          canvas.width,
+          canvas.height,
+        );
       }
     } catch (error) {
       if (
