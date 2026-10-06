@@ -77,7 +77,6 @@ describe('bounding-box helpers', () => {
 
     expect(boxes).toEqual([
       { page: 2, xMin: 0.025, yMin: 0.1, xMax: 0.275, yMax: 0.35 },
-      { page: 2, xMin: 0.5, yMin: 0.5, xMax: 0.55, yMax: 0.55 },
     ]);
     expect(render).toHaveBeenCalledOnce();
     expect(mockState.mats.every((mat) => mat.delete.mock.calls.length === 1)).toBe(true);

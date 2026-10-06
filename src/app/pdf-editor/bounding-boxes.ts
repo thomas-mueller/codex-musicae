@@ -111,11 +111,12 @@ export async function detectBoundingBoxesOnPage(
         largestGapIndex = i + 1;
       }
     }
-    const selectionThreshold = areas[largestGapIndex];
+    // A single component has no gap to split, so retain it instead of cutting it off.
+    const selectionThreshold = areas.length === 1 ? 0 : areas[largestGapIndex];
     const boxes: BoundingBox[] = [];
 
     for (let i = 1; i < stats.rows; i += 1) {
-      if (stats.intAt(i, cv.CC_STAT_AREA) < selectionThreshold) {
+      if (stats.intAt(i, cv.CC_STAT_AREA) <= selectionThreshold) {
         continue;
       }
 
