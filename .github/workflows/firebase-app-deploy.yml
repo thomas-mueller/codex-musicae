@@ -83,6 +83,7 @@ jobs:
 
       - name: Delete old App Distribution releases
         env:
+          GOOGLE_APPLICATION_CREDENTIALS: firebase-service-account.json
           APP_ID: ${{ secrets.FIREBASE_APP_ID_ANDROID_CODEX_MUSICAE }}
           RETENTION_DAYS: 10
         run: |
