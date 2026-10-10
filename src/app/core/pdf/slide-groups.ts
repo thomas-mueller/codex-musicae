@@ -10,7 +10,11 @@ export interface SlideRect {
   yMax: number;
 }
 export interface SlideCrop { xMin: number; yMin: number; xMax: number; yMax: number; }
-export interface SlideGroup extends Array<SlideRect> { crop?: SlideCrop; }
+export interface SlideGroup extends Array<SlideRect> {
+  crop?: SlideCrop;
+  renderWidth?: number;
+  renderHeight?: number;
+}
 
 function overlaps(a: SlideRect, b: SlideRect): boolean {
   return a.xMin < b.xMax && a.xMax > b.xMin && a.yMin < b.yMax && a.yMax > b.yMin;
@@ -38,22 +42,36 @@ function expandAroundCenter(xMin: number, xMax: number, width: number, page: Pag
   return { xMin: Math.max(0, xMin), xMax: Math.min(page.width, xMax) };
 }
 
-export function expandSlideGroup(group: SlideGroup, pageSizes: readonly PageSize[], aspectRatio: number): SlideGroup {
+export function expandSlideGroup(
+  group: SlideGroup,
+  pageSizes: readonly PageSize[],
+  aspectRatio: number,
+  cropAspectRatio = aspectRatio,
+): SlideGroup {
   if (!group.length || aspectRatio <= 0) return group;
 
   const height = group.reduce((sum, rect) => sum + rect.yMax - rect.yMin, 0);
-  const cropXMin = Math.min(...group.map((rect) => rect.xMin));
-  const cropXMax = Math.max(...group.map((rect) => rect.xMax));
-  const width = cropXMax - cropXMin;
-  const expandedWidth = Math.max(width, height * aspectRatio);
+  const pageBounds = new Map<number, { xMin: number; xMax: number }>();
+  for (const rect of group) {
+    const bounds = pageBounds.get(rect.pageIndex);
+    if (bounds) {
+      bounds.xMin = Math.min(bounds.xMin, rect.xMin);
+      bounds.xMax = Math.max(bounds.xMax, rect.xMax);
+    } else {
+      pageBounds.set(rect.pageIndex, { xMin: rect.xMin, xMax: rect.xMax });
+    }
+  }
+  const width = Math.max(...Array.from(pageBounds.values()).map((bounds) => bounds.xMax - bounds.xMin));
+  const expandedWidth = Math.max(width, height * cropAspectRatio);
   const horizontal = group.map((rect) => {
     const page = pageSizes[rect.pageIndex];
     if (!page) return { ...rect };
-    const expanded = expandAroundCenter(cropXMin, cropXMax, expandedWidth, page);
+    const bounds = pageBounds.get(rect.pageIndex)!;
+    const expanded = expandAroundCenter(bounds.xMin, bounds.xMax, expandedWidth, page);
     return { ...rect, xMin: expanded.xMin, xMax: expanded.xMax };
   });
   const actualWidth = Math.max(...horizontal.map((rect) => rect.xMax - rect.xMin));
-  const targetHeight = Math.max(height, actualWidth / aspectRatio);
+  const targetHeight = Math.max(height, actualWidth / cropAspectRatio);
   const expanded: SlideGroup = horizontal.map((rect) => ({ ...rect }));
   let remaining = targetHeight - height;
 
@@ -89,6 +107,8 @@ export function expandSlideGroup(group: SlideGroup, pageSizes: readonly PageSize
     xMax: Math.max(...expanded.map((rect) => rect.xMax)),
     yMax: Math.max(...expanded.map((rect) => rect.yMax)),
   };
+  expanded.renderWidth = actualWidth;
+  expanded.renderHeight = expanded.reduce((sum, rect) => sum + rect.yMax - rect.yMin, 0);
   return expanded;
 }
 
@@ -97,6 +117,7 @@ export function buildSlideGroups(
   pageSizes: readonly PageSize[],
   padding: number,
   aspectRatio: number,
+  cropAspectRatio = aspectRatio,
 ): SlideGroup[] {
   const groups: SlideGroup[] = [];
   let current: SlideGroup = [];
@@ -152,6 +173,6 @@ export function buildSlideGroups(
         }
       }
     }
-    return expandSlideGroup(merged, pageSizes, aspectRatio);
+    return expandSlideGroup(merged, pageSizes, aspectRatio, cropAspectRatio);
   });
 }

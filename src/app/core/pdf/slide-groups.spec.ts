@@ -57,6 +57,24 @@ describe('slide crop expansion', () => {
     expect(group.crop).toEqual({ xMin: 30, yMin: 10, xMax: 70, yMax: 50 });
   });
 
+  it('can widen a narrow grouping crop toward a separate display ratio', () => {
+    const group = expandSlideGroup([
+      { pageIndex: 0, xMin: 40, yMin: 10, xMax: 60, yMax: 20 },
+      { pageIndex: 0, xMin: 40, yMin: 40, xMax: 60, yMax: 70 },
+    ], page, 0.5, 1);
+    expect(group.map((rect) => [rect.xMin, rect.xMax])).toEqual([[30, 70], [30, 70]]);
+  });
+
+  it('records one final render geometry for the complete slide', () => {
+    const group = expandSlideGroup([
+      { pageIndex: 0, xMin: 40, yMin: 10, xMax: 60, yMax: 20 },
+      { pageIndex: 0, xMin: 40, yMin: 40, xMax: 60, yMax: 70 },
+    ], page, 0.5, 1);
+    expect(group.renderWidth).toBe(40);
+    expect(group.renderHeight).toBe(40);
+    expect(group.renderWidth! / group.renderHeight!).toBe(1);
+  });
+
   it('uses one shared horizontal crop for music systems with different centers', () => {
     const group = expandSlideGroup([
       { pageIndex: 0, xMin: 10, yMin: 10, xMax: 30, yMax: 20 },

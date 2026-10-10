@@ -41,6 +41,17 @@ describe('PdfSlidesViewer', () => {
     expect(rebuildSlides).toHaveBeenCalledTimes(2);
   });
 
+  it('snaps aspect-ratio zoom to absolute tenths', () => {
+    const rebuildSlides = vi.spyOn(component as any, 'rebuildSlides').mockResolvedValue(undefined);
+    component.aspectRatioAdjustment = 0.24;
+    component.zoomOut();
+    expect(component.selectedAspectRatio).toBeCloseTo(1.7);
+    component.aspectRatioAdjustment = 0.24;
+    component.zoomIn();
+    expect(component.selectedAspectRatio).toBeCloseTo(1.8);
+    expect(rebuildSlides).toHaveBeenCalledTimes(2);
+  });
+
   it('keeps the multiplier when the viewer aspect ratio changes', () => {
     component.aspectRatioAdjustment = 0.2;
     expect(component.selectedAspectRatio).toBeCloseTo(1.7);

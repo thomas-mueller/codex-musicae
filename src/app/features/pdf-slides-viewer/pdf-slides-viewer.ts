@@ -6,7 +6,7 @@ import { MusicSystemService } from '../../core/pdf/music-system.service';
 import { buildSlideGroups, type PageSize, type SlideGroup } from '../../core/pdf/slide-groups';
 import { PdfCanvasStage, type PageNavigationAction } from '../../shared/components/pdf-canvas-stage/pdf-canvas-stage';
 import { AppIcon } from '../../shared/components/app-icon/app-icon';
-import { orderMusicSystems } from '../../core/pdf/music-system.model';
+import { orderMusicSystems, type MusicSystem } from '../../core/pdf/music-system.model';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/pdfjs-dist/build/pdf.worker.min.mjs';
 
@@ -31,14 +31,15 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
   aspectRatioAdjustment = 0;
   private pdfDocument?: pdfjsLib.PDFDocumentProxy; private loadingTask?: pdfjsLib.PDFDocumentLoadingTask;
   private resizeObserver?: ResizeObserver; private destroyed = false; private pageSizes: PageSize[] = []; private renderSequence = 0; private activeRenderTask?: pdfjsLib.RenderTask;
-  private lastContainerSize = ''; private resizeFrame?: number;
+  private detectionController?: AbortController; private readonly detectedByPage = new Map<number, readonly MusicSystem[]>();
+  private lastContainerSize = ''; private resizeFrame?: number; private rebuildFrame?: number;
   private fullscreenExitRequested = false;
 
   constructor(private readonly router: Router, private readonly changeDetector: ChangeDetectorRef, private readonly pdfState: PdfStateService, private readonly musicSystemService: MusicSystemService) { this.pdfUrl = pdfState.pdfUrl(); }
   get canGoPrevious(): boolean { return this.currentSlide > 0; }
   get canGoNext(): boolean { return this.currentSlide + 1 < this.slideGroups.length; }
-  get canZoomOut(): boolean { return this.selectedAspectRatio > 0.5; }
-  get canZoomIn(): boolean { return this.selectedAspectRatio < 3; }
+  get canZoomOut(): boolean { return this.selectedAspectRatio > 0.5 + 0.0001; }
+  get canZoomIn(): boolean { return this.selectedAspectRatio < 2 - 0.0001; }
   get selectedAspectRatio(): number {
     const container = this.pdfContainerRef?.nativeElement;
     const baseAspectRatio = container?.clientHeight ? container.clientWidth / container.clientHeight : 1.5;
@@ -65,21 +66,30 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
       this.pdfDocument = await this.loadingTask.promise;
       this.pageSizes = [];
       for (let i = 1; i <= this.pdfDocument.numPages; i++) { const page = await this.pdfDocument.getPage(i); const viewport = page.getViewport({ scale: 1 }); this.pageSizes.push({ width: viewport.width, height: viewport.height }); }
+      this.detectedByPage.clear();
+      for (const musicSystem of this.musicSystemService.musicSystems()) {
+        const pageSystems = this.detectedByPage.get(musicSystem.page) ?? [];
+        this.detectedByPage.set(musicSystem.page, [...pageSystems, musicSystem]);
+      }
       this.loading = false; await this.rebuildSlides();
+      this.detectionController?.abort();
+      this.detectionController = new AbortController();
+      void this.detectRemainingPages(this.detectionController.signal);
     } catch (error) { if (!this.destroyed) { console.error('Unable to load slides PDF.', error); this.loading = false; this.errorMessage = 'Unable to display this PDF.'; this.changeDetector.markForCheck(); } }
   }
   ngOnDestroy(): void {
     this.destroyed = true;
+    this.detectionController?.abort();
     document.removeEventListener('fullscreenchange', this.onFullscreenChange);
-    this.resizeObserver?.disconnect(); if (this.resizeFrame !== undefined) cancelAnimationFrame(this.resizeFrame); this.activeRenderTask?.cancel(); void this.loadingTask?.destroy();
+    this.resizeObserver?.disconnect(); if (this.resizeFrame !== undefined) cancelAnimationFrame(this.resizeFrame); if (this.rebuildFrame !== undefined) cancelAnimationFrame(this.rebuildFrame); this.activeRenderTask?.cancel(); void this.loadingTask?.destroy();
     void this.exitFullscreen();
   }
   previousSlide(): void { if (this.canGoPrevious) { this.currentSlide--; void this.renderCurrentSlide(); } }
   nextSlide(): void { if (this.canGoNext) { this.currentSlide++; void this.renderCurrentSlide(); } }
   firstSlide(): void { this.goToSlide(0); }
   lastSlide(): void { this.goToSlide(this.slideGroups.length - 1); }
-  zoomOut(): void { this.setAspectRatio(this.selectedAspectRatio - 0.1); }
-  zoomIn(): void { this.setAspectRatio(this.selectedAspectRatio + 0.1); }
+  zoomOut(): void { this.setAspectRatio(Math.floor((this.selectedAspectRatio - 0.0001) * 10) / 10); }
+  zoomIn(): void { this.setAspectRatio(Math.ceil((this.selectedAspectRatio + 0.0001) * 10) / 10); }
   handleNavigation(action: PageNavigationAction): void {
     if (action === 'previous') this.previousSlide();
     else if (action === 'next') this.nextSlide();
@@ -100,7 +110,7 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
   private setAspectRatio(aspectRatio: number): void {
     const container = this.pdfContainerRef?.nativeElement;
     const baseAspectRatio = container?.clientHeight ? container.clientWidth / container.clientHeight : 1.5;
-    const nextAspectRatio = Math.max(0.5, Math.min(aspectRatio, 3));
+    const nextAspectRatio = Math.max(0.5, Math.min(aspectRatio, 2));
     if (Math.abs(nextAspectRatio - this.selectedAspectRatio) < 0.0001) return;
     this.aspectRatioAdjustment = nextAspectRatio - baseAspectRatio;
     void this.rebuildSlides();
@@ -128,6 +138,7 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
 
   private async exitViewer(): Promise<void> {
     this.fullscreenExitRequested = true;
+    this.detectionController?.abort();
     await this.exitFullscreen();
     await this.router.navigate(['/editor']);
   }
@@ -140,6 +151,14 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
       const size = `${container.clientWidth}x${container.clientHeight}`;
       if (size === this.lastContainerSize) return;
       this.lastContainerSize = size;
+      this.scheduleRebuild();
+    });
+  }
+
+  private scheduleRebuild(): void {
+    if (this.rebuildFrame !== undefined) return;
+    this.rebuildFrame = requestAnimationFrame(() => {
+      this.rebuildFrame = undefined;
       void this.rebuildSlides();
     });
   }
@@ -151,10 +170,37 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
     this.activeRenderTask = undefined;
     ++this.renderSequence;
     const aspect = this.selectedAspectRatio;
-    this.slideGroups = buildSlideGroups(orderMusicSystems(this.musicSystemService.musicSystems()), this.pageSizes, this.musicSystemService.padding(), aspect);
+    const container = this.pdfContainerRef.nativeElement;
+    const viewportAspect = container.clientHeight ? container.clientWidth / container.clientHeight : aspect;
+    const cropAspect = Math.max(aspect, viewportAspect);
+    const systems = orderMusicSystems(Array.from(this.detectedByPage.values()).flat());
+    this.slideGroups = buildSlideGroups(systems, this.pageSizes, this.musicSystemService.padding(), aspect, cropAspect);
     this.currentSlide = this.findSlideForAnchor(anchor);
     this.changeDetector.markForCheck();
     await this.renderCurrentSlide();
+  }
+
+  private async detectRemainingPages(signal: AbortSignal): Promise<void> {
+    if (!this.pdfDocument) return;
+    try {
+      await this.musicSystemService.detectMusicSystemsInDocument(this.pdfDocument, {
+        signal,
+        initialPage: 1,
+        onPageDetected: (systems, page) => {
+          if (this.destroyed || signal.aborted) return;
+          this.detectedByPage.set(page, systems);
+          this.musicSystemService.setEditorState(
+            orderMusicSystems(Array.from(this.detectedByPage.values()).flat()),
+            this.musicSystemService.padding(),
+          );
+          this.scheduleRebuild();
+        },
+      });
+    } catch (error) {
+      if (!this.destroyed && !(error instanceof DOMException && error.name === 'AbortError')) {
+        console.error('Unable to continue PDF music-system detection in viewer.', error);
+      }
+    }
   }
 
   private getCurrentSlideAnchor(): SlideAnchor | undefined {
@@ -175,14 +221,22 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
 
   private async renderCurrentSlide(): Promise<void> {
     const document = this.pdfDocument; const group = this.slideGroups[this.currentSlide]; if (!document || !group || this.destroyed) return;
-    const sequence = ++this.renderSequence; this.activeRenderTask?.cancel(); this.activeRenderTask = undefined; const outputScale = window.devicePixelRatio || 1; const width = Math.max(...group.map((r) => r.xMax - r.xMin)); const height = group.reduce((sum, r) => sum + r.yMax - r.yMin, 0); const container = this.pdfContainerRef.nativeElement; const scale = Math.min(container.clientWidth / width, container.clientHeight / height);
-    const canvas = this.canvasRef.nativeElement; canvas.width = Math.max(1, Math.floor(width * scale * outputScale)); canvas.height = Math.max(1, Math.floor(height * scale * outputScale)); canvas.style.width = `${Math.floor(width * scale)}px`; canvas.style.height = `${Math.floor(height * scale)}px`; const context = canvas.getContext('2d'); if (!context) return; context.fillStyle = 'white'; context.fillRect(0, 0, canvas.width, canvas.height);
+    const sequence = ++this.renderSequence; this.activeRenderTask?.cancel(); this.activeRenderTask = undefined; const outputScale = window.devicePixelRatio || 1; const width = group.renderWidth ?? Math.max(...group.map((r) => r.xMax - r.xMin)); const height = group.renderHeight ?? group.reduce((sum, r) => sum + r.yMax - r.yMin, 0); const container = this.pdfContainerRef.nativeElement; const scale = Math.min(container.clientWidth / width, container.clientHeight / height);
+    const canvas = this.canvasRef.nativeElement; const renderedWidth = Math.max(1, Math.floor(width * scale * outputScale)); const renderedHeight = Math.max(1, Math.floor(height * scale * outputScale)); const offscreen = globalThis.document.createElement('canvas'); offscreen.width = renderedWidth; offscreen.height = renderedHeight; const context = offscreen.getContext('2d'); if (!context) return; context.fillStyle = 'white'; context.fillRect(0, 0, renderedWidth, renderedHeight);
     let y = 0;
     try {
       for (const rect of [...group].sort((a, b) => (a.boxOrder ?? Number.MAX_SAFE_INTEGER) - (b.boxOrder ?? Number.MAX_SAFE_INTEGER))) {
         const page = await document.getPage(rect.pageIndex + 1); const viewport = page.getViewport({ scale: scale * outputScale }); const source = globalThis.document.createElement('canvas'); source.width = Math.ceil(viewport.width); source.height = Math.ceil(viewport.height); const sourceContext = source.getContext('2d'); if (!sourceContext) continue; const task = page.render({ canvas: source, canvasContext: sourceContext, viewport }); this.activeRenderTask = task; await task.promise; if (sequence !== this.renderSequence) return;
         const rectWidth = rect.xMax - rect.xMin; const rectHeight = rect.yMax - rect.yMin; const x = (width - rectWidth) * scale * outputScale / 2; context.drawImage(source, rect.xMin * scale * outputScale, rect.yMin * scale * outputScale, rectWidth * scale * outputScale, rectHeight * scale * outputScale, x, y * scale * outputScale, rectWidth * scale * outputScale, rectHeight * scale * outputScale); y += rectHeight;
       }
+      if (sequence !== this.renderSequence) return;
+      const visibleContext = canvas.getContext('2d');
+      if (!visibleContext) return;
+      canvas.width = renderedWidth;
+      canvas.height = renderedHeight;
+      canvas.style.width = `${Math.floor(width * scale)}px`;
+      canvas.style.height = `${Math.floor(height * scale)}px`;
+      visibleContext.drawImage(offscreen, 0, 0);
     } catch (error) {
       if (!(error instanceof Error && error.name === 'RenderingCancelledException')) throw error;
     } finally {
