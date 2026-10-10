@@ -1,4 +1,4 @@
-import type { BoundingBox } from './pdf-editor/bounding-boxes';
+import type { MusicSystem } from './pdf/music-system.model';
 
 export interface PageSize { width: number; height: number; }
 export interface SlideRect {
@@ -92,7 +92,7 @@ export function expandSlideGroup(group: SlideGroup, pageSizes: readonly PageSize
 }
 
 export function buildSlideGroups(
-  boxes: readonly BoundingBox[],
+  musicSystems: readonly MusicSystem[],
   pageSizes: readonly PageSize[],
   padding: number,
   aspectRatio: number,
@@ -102,17 +102,17 @@ export function buildSlideGroups(
   let currentWidth = 0;
   let currentHeight = 0;
 
-  for (const box of boxes) {
-    const pageIndex = box.page - 1;
+  for (const musicSystem of musicSystems) {
+    const pageIndex = musicSystem.page - 1;
     const page = pageSizes[pageIndex];
     if (!page) continue;
     const pad = padding * page.width;
     const rect: SlideRect = {
       pageIndex,
-      xMin: Math.max(0, box.xMin * page.width - pad),
-      yMin: Math.max(0, box.yMin * page.height - pad),
-      xMax: Math.min(page.width, box.xMax * page.width + pad),
-      yMax: Math.min(page.height, box.yMax * page.height + pad),
+      xMin: Math.max(0, musicSystem.xMin * page.width - pad),
+      yMin: Math.max(0, musicSystem.yMin * page.height - pad),
+      xMax: Math.min(page.width, musicSystem.xMax * page.width + pad),
+      yMax: Math.min(page.height, musicSystem.yMax * page.height + pad),
     };
     const newWidth = Math.max(currentWidth, rect.xMax - rect.xMin);
     const newHeight = currentHeight + rect.yMax - rect.yMin;

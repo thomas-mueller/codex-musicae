@@ -10,12 +10,8 @@ import {
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import * as pdfjsLib from 'pdfjs-dist';
-import {
-  type BoundingBox,
-  detectBoundingBoxesInDocument,
-  drawBoundingBoxes,
-} from './bounding-boxes';
-import { PdfStateService } from '../pdf-state.service';
+import { MusicSystemService } from '../pdf/music-system.service';
+import { drawMusicSystems } from '../pdf/music-system-renderer';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   '/assets/pdfjs-dist/build/pdf.worker.min.mjs';
@@ -41,8 +37,6 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
   zoom = 1;
   loading = true;
   errorMessage = '';
-  boundingBoxes: BoundingBox[] = [];
-  padding = 0.025;
 
   private pdfDocument?: pdfjsLib.PDFDocumentProxy;
   private loadingTask?: pdfjsLib.PDFDocumentLoadingTask;
@@ -54,8 +48,11 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
   constructor(
     private readonly router: Router,
     private readonly changeDetector: ChangeDetectorRef,
-    private readonly pdfState: PdfStateService,
-  ) { this.pdfUrl = pdfState.pdfUrl; }
+    private readonly musicSystemService: MusicSystemService,
+  ) { this.pdfUrl = '/pdfs/test.pdf'; }
+
+  get musicSystems() { return this.musicSystemService.musicSystems; }
+  get padding() { return this.musicSystemService.padding; }
 
   async ngAfterViewInit(): Promise<void> {
     this.resizeObserver = new ResizeObserver(() => {
@@ -81,7 +78,7 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
       this.pageCount = this.pdfDocument.numPages;
       this.loading = false;
       this.changeDetector.markForCheck();
-      void this.detectDocumentBoundingBoxes(this.pdfDocument);
+      void this.detectDocumentMusicSystems(this.pdfDocument);
       await this.renderCurrentPage();
     } catch {
       if (!this.destroyed) {
@@ -99,21 +96,21 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
     void this.loadingTask?.destroy();
   }
 
-  private async detectDocumentBoundingBoxes(
+  private async detectDocumentMusicSystems(
     document: pdfjsLib.PDFDocumentProxy,
   ): Promise<void> {
     try {
-      const boxes = await detectBoundingBoxesInDocument(document);
+      const musicSystems = await this.musicSystemService.detectMusicSystemsInDocument(document);
       if (this.destroyed) {
         return;
       }
 
-      this.boundingBoxes = boxes;
+      this.musicSystemService.setEditorState(musicSystems, this.padding());
       this.changeDetector.markForCheck();
       void this.renderCurrentPage();
     } catch (error) {
       if (!this.destroyed) {
-        console.error('Unable to detect PDF bounding boxes.', error);
+        console.error('Unable to detect PDF music systems.', error);
       }
     }
   }
@@ -149,13 +146,13 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
   }
 
   navigateToViewer(): void {
-    this.pdfState.setEditorState(this.boundingBoxes, this.padding);
+    this.musicSystemService.setEditorState(this.musicSystems(), this.padding());
     void this.router.navigate(['/viewer']);
   }
 
   setPadding(value: number | string): void {
     const parsed = typeof value === 'string' ? Number(value) : value;
-    this.padding = Math.max(0, Math.min(Number.isFinite(parsed) ? parsed : 0.025, 0.5));
+    this.musicSystemService.padding.set(Math.max(0, Math.min(Number.isFinite(parsed) ? parsed : 0.025, 0.5)));
     void this.renderCurrentPage();
   }
 
@@ -206,13 +203,13 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
       await task.promise;
       if (sequence === this.renderSequence) {
         this.renderTask = undefined;
-        drawBoundingBoxes(
+        drawMusicSystems(
           context,
           this.currentPage,
-          this.boundingBoxes,
+          this.musicSystems(),
           canvas.width,
           canvas.height,
-          this.padding,
+          this.padding(),
         );
       }
     } catch (error) {

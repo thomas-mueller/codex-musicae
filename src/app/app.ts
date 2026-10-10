@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, signal,  } from '@angular/core';
+import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { Router, RouterOutlet } from '@angular/router';
 import { App } from '@capacitor/app';
 
@@ -13,19 +13,19 @@ export class AppComponent implements OnInit, OnDestroy {
 
   constructor(private router: Router) {}
 
-  private backButtonListener?: any;
+  private backButtonListener?: { remove: () => Promise<void> };
 
   ngOnInit() {
-    this.backButtonListener = App.addListener('backButton', () => {
+    void App.addListener('backButton', () => {
       if (this.router.url === '/viewer') {
         this.router.navigate(['/editor']);
       } else {
         App.exitApp();
       }
-    });
+    }).then((listener) => { this.backButtonListener = listener; });
   }
 
   ngOnDestroy() {
-    this.backButtonListener?.remove();
+    void this.backButtonListener?.remove();
   }
 }

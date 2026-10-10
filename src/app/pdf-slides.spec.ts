@@ -3,23 +3,23 @@ import { buildSlideGroups, expandSlideGroup } from './pdf-slides';
 
 const page = [{ width: 100, height: 100 }];
 
-function boxes(...rects: Array<[number, number, number, number]>) {
+function musicSystems(...rects: Array<[number, number, number, number]>) {
   return rects.map(([xMin, yMin, xMax, yMax]) => ({ page: 1, xMin, yMin, xMax, yMax }));
 }
 
 describe('slide crop expansion', () => {
   it('expands a narrow crop horizontally to the requested aspect ratio', () => {
-    const [group] = buildSlideGroups(boxes([0.4, 0.4, 0.6, 0.6]), page, 0, 2);
+    const [group] = buildSlideGroups(musicSystems([0.4, 0.4, 0.6, 0.6]), page, 0, 2);
     expect(group[0]).toMatchObject({ xMin: 30, xMax: 70, yMin: 40, yMax: 60 });
   });
 
   it('expands vertically when the crop is too wide', () => {
-    const [group] = buildSlideGroups(boxes([0.4, 0.4, 0.6, 0.6]), page, 0, 0.5);
+    const [group] = buildSlideGroups(musicSystems([0.4, 0.4, 0.6, 0.6]), page, 0, 0.5);
     expect(group[0]).toMatchObject({ xMin: 40, xMax: 60, yMin: 30, yMax: 70 });
   });
 
   it('clamps expansion at the page edges', () => {
-    const [group] = buildSlideGroups(boxes([0, 0, 0.2, 0.2]), page, 0, 2);
+    const [group] = buildSlideGroups(musicSystems([0, 0, 0.2, 0.2]), page, 0, 2);
     expect(group[0]).toMatchObject({ xMin: 0, xMax: 40, yMin: 0, yMax: 20 });
   });
 
@@ -34,7 +34,7 @@ describe('slide crop expansion', () => {
     expect(group.crop).toEqual({ xMin: 30, yMin: 10, xMax: 70, yMax: 50 });
   });
 
-  it('uses one shared horizontal crop for boxes with different centers', () => {
+  it('uses one shared horizontal crop for music systems with different centers', () => {
     const group = expandSlideGroup([
       { pageIndex: 0, xMin: 10, yMin: 10, xMax: 30, yMax: 20 },
       { pageIndex: 0, xMin: 50, yMin: 40, xMax: 70, yMax: 50 },
@@ -62,7 +62,7 @@ describe('slide crop expansion', () => {
   });
 
   it('leaves an already matching crop unchanged', () => {
-    const [group] = buildSlideGroups(boxes([0.3, 0.4, 0.7, 0.6]), page, 0, 2);
+    const [group] = buildSlideGroups(musicSystems([0.3, 0.4, 0.7, 0.6]), page, 0, 2);
     expect(group[0]).toMatchObject({ xMin: 30, xMax: 70, yMin: 40, yMax: 60 });
   });
 });

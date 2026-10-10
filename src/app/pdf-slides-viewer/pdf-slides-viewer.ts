@@ -2,6 +2,7 @@ import { Component, ChangeDetectorRef, AfterViewInit, ElementRef, ViewChild, Hos
 import { Router } from '@angular/router';
 import * as pdfjsLib from 'pdfjs-dist';
 import { PdfStateService } from '../pdf-state.service';
+import { MusicSystemService } from '../pdf/music-system.service';
 import { buildSlideGroups, type PageSize, type SlideGroup } from '../pdf-slides';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/pdfjs-dist/build/pdf.worker.min.mjs';
@@ -15,13 +16,14 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
   private pdfDocument?: pdfjsLib.PDFDocumentProxy; private loadingTask?: pdfjsLib.PDFDocumentLoadingTask;
   private resizeObserver?: ResizeObserver; private destroyed = false; private pageSizes: PageSize[] = []; private renderSequence = 0;
 
-  constructor(private readonly router: Router, private readonly changeDetector: ChangeDetectorRef, private readonly pdfState: PdfStateService) { this.pdfUrl = pdfState.pdfUrl; }
+  constructor(private readonly router: Router, private readonly changeDetector: ChangeDetectorRef, private readonly pdfState: PdfStateService, private readonly musicSystemService: MusicSystemService) { this.pdfUrl = pdfState.pdfUrl; }
   get canGoPrevious(): boolean { return this.currentSlide > 0; }
   get canGoNext(): boolean { return this.currentSlide + 1 < this.slideGroups.length; }
 
   async ngAfterViewInit(): Promise<void> {
+    await Promise.resolve();
     if (typeof ResizeObserver !== 'undefined') { this.resizeObserver = new ResizeObserver(() => void this.rebuildSlides()); this.resizeObserver.observe(this.pdfContainerRef.nativeElement); }
-    if (!this.pdfState.hasEditorState) { this.loading = false; this.errorMessage = 'Open the PDF in the editor first to generate slides.'; this.changeDetector.markForCheck(); return; }
+    if (!this.musicSystemService.hasEditorState()) { this.loading = false; this.errorMessage = 'Open the PDF in the editor first to generate slides.'; this.changeDetector.markForCheck(); return; }
     try {
       this.loadingTask = pdfjsLib.getDocument({ url: this.pdfUrl, cMapUrl: '/assets/pdfjs-dist/cmaps/', cMapPacked: true, standardFontDataUrl: '/assets/pdfjs-dist/standard_fonts/', wasmUrl: '/assets/pdfjs-dist/wasm/' });
       this.pdfDocument = await this.loadingTask.promise;
@@ -37,7 +39,7 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
   private async rebuildSlides(): Promise<void> {
     if (!this.pdfDocument || this.destroyed || !this.pageSizes.length) return;
     const container = this.pdfContainerRef.nativeElement; const aspect = container.clientHeight ? container.clientWidth / container.clientHeight : 1.5;
-    this.slideGroups = buildSlideGroups(this.pdfState.boxes, this.pageSizes, this.pdfState.padding, aspect); this.currentSlide = Math.min(this.currentSlide, Math.max(0, this.slideGroups.length - 1)); this.changeDetector.markForCheck(); await this.renderCurrentSlide();
+    this.slideGroups = buildSlideGroups(this.musicSystemService.musicSystems(), this.pageSizes, this.musicSystemService.padding(), aspect); this.currentSlide = Math.min(this.currentSlide, Math.max(0, this.slideGroups.length - 1)); this.changeDetector.markForCheck(); await this.renderCurrentSlide();
   }
 
   private async renderCurrentSlide(): Promise<void> {

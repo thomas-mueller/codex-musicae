@@ -22,7 +22,7 @@
         Slides viewer
       </button>
       <label>Padding
-        <input type="number" min="0" max="0.5" step="0.005" [value]="padding"
+        <input type="number" min="0" max="0.5" step="0.005" [value]="padding()"
           (input)="setPadding($any($event.target).value)" />
       </label>
     </div>
