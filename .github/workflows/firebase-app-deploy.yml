@@ -71,4 +71,5 @@ jobs:
         run: |
           firebase appdistribution:distribute android/app/build/outputs/apk/release/app-release-unsigned.apk \
             --app ${{ secrets.FIREBASE_APP_ID_ANDROID_CODEX_MUSICAE }} \
-            --groups "testers"
+            --testers "secrets.FIREBASE_APP_TESTERS" \
+            # --groups "testers"
