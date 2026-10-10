@@ -74,12 +74,12 @@ jobs:
       - name: Distribute APK to Firebase App Distribution
         env:
           GOOGLE_APPLICATION_CREDENTIALS: firebase-service-account.json
+          FIREBASE_APP_TESTERS: ${{ secrets.FIREBASE_APP_TESTERS }}
         run: |
           firebase appdistribution:distribute android/app/build/outputs/apk/release/app-release-unsigned.apk \
             --app ${{ secrets.FIREBASE_APP_ID_ANDROID_CODEX_MUSICAE }} \
             --release-notes "Build ${{ github.run_number }} (${GITHUB_SHA::7}): $(git log -1 --pretty=%s)" \
-            --testers "secrets.FIREBASE_APP_TESTERS" \
-            # --groups "testers"
+            --testers "$FIREBASE_APP_TESTERS"
 
       - name: Delete old App Distribution releases
         env:
