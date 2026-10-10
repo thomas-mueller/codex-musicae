@@ -226,14 +226,22 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
     const contentHeight = group.renderHeight ?? group.reduce((sum, r) => sum + r.yMax - r.yMin, 0);
     const container = this.pdfContainerRef.nativeElement;
     const aspect = this.selectedAspectRatio;
-    const { width: canvasWidth, height: canvasHeight } = fitCanvasToViewport(
+    const { width: baseCanvasWidth, height: canvasHeight } = fitCanvasToViewport(
       container.clientWidth,
       container.clientHeight,
       aspect,
     );
-    if (!canvasWidth || !canvasHeight || !contentWidth || !contentHeight) return;
+    if (!baseCanvasWidth || !canvasHeight || !contentWidth || !contentHeight) return;
 
-    const scale = Math.min(canvasWidth / contentWidth, canvasHeight / contentHeight);
+    // The current canvas geometry determines the scale.  Any page margin
+    // outside that geometry is added around it without changing the boxes.
+    const scale = Math.min(baseCanvasWidth / contentWidth, canvasHeight / contentHeight);
+    const extraLeft = Math.max(...group.map((rect) => rect.xMin * scale));
+    const extraRight = Math.max(...group.map((rect) => {
+      const pageWidth = this.pageSizes[rect.pageIndex]?.width ?? 0;
+      return Math.max(0, (pageWidth - rect.xMax) * scale);
+    }));
+    const canvasWidth = baseCanvasWidth + extraLeft + extraRight;
     const renderedWidth = Math.max(1, Math.round(canvasWidth * outputScale));
     const renderedHeight = Math.max(1, Math.round(canvasHeight * outputScale));
     const canvas = this.canvasRef.nativeElement;
@@ -246,7 +254,8 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
     if (!context) return;
     context.fillStyle = 'white';
     context.fillRect(0, 0, renderedWidth, renderedHeight);
-    const contentOffsetX = (canvasWidth - contentWidth * scale) / 2;
+    const baseContentOffsetX = (baseCanvasWidth - contentWidth * scale) / 2;
+    const contentOffsetX = baseContentOffsetX + extraLeft;
     const contentOffsetY = (canvasHeight - contentHeight * scale) / 2;
     let y = 0;
     try {
@@ -266,16 +275,59 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
         const rectWidth = rect.xMax - rect.xMin;
         const rectHeight = rect.yMax - rect.yMin;
         const x = contentOffsetX + (contentWidth - rectWidth) * scale / 2;
+
+        // Keep the existing box placement unchanged, but use any material
+        // outside the box that is still available on the source PDF page.
+        // The target canvas remains white where the source page has no more
+        // horizontal material to provide.
+        const destinationY = (contentOffsetY + y * scale) * outputScale;
+        const destinationHeight = rectHeight * scale * outputScale;
+        const boxX = x * outputScale;
+        const boxWidth = rectWidth * scale * outputScale;
+        const sourceY = rect.yMin * scale * outputScale;
+        const sourceHeight = rectHeight * scale * outputScale;
+        const targetLeftWidth = Math.max(0, extraLeft * outputScale);
+        const targetRightWidth = Math.max(0, extraRight * outputScale);
+        const sourceLeftWidth = Math.min(source.width, rect.xMin * scale * outputScale);
+        const sourceRightX = rect.xMax * scale * outputScale;
+        const sourceRightWidth = Math.max(0, Math.min(source.width - sourceRightX, source.width));
+
+        if (sourceLeftWidth > 0 && targetLeftWidth > 0) {
+          context.drawImage(
+            source,
+            0,
+            sourceY,
+            sourceLeftWidth,
+            sourceHeight,
+            0,
+            destinationY,
+            targetLeftWidth,
+            destinationHeight,
+          );
+        }
+        if (sourceRightWidth > 0 && targetRightWidth > 0) {
+          context.drawImage(
+            source,
+            sourceRightX,
+            sourceY,
+            sourceRightWidth,
+            sourceHeight,
+            (extraLeft + baseCanvasWidth) * outputScale,
+            destinationY,
+            targetRightWidth,
+            destinationHeight,
+          );
+        }
         context.drawImage(
           source,
           rect.xMin * scale * outputScale,
           rect.yMin * scale * outputScale,
           rectWidth * scale * outputScale,
           rectHeight * scale * outputScale,
-          x * outputScale,
-          (contentOffsetY + y * scale) * outputScale,
-          rectWidth * scale * outputScale,
-          rectHeight * scale * outputScale,
+          boxX,
+          destinationY,
+          boxWidth,
+          destinationHeight,
         );
         y += rectHeight;
       }
