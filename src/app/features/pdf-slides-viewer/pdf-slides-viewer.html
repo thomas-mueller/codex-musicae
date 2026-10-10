@@ -11,9 +11,12 @@
     }
   </div>
   <nav stage-controls class="toolbar" aria-label="Slide controls">
-    <button type="button" (click)="previousSlide()" [disabled]="!canGoPrevious">Previous</button>
+    <button type="button" (click)="previousSlide()" [disabled]="!canGoPrevious" aria-label="Previous slide" title="Previous slide"><app-icon name="arrow-left" /></button>
     <span aria-live="polite">Slide {{ slideGroups.length ? currentSlide + 1 : '—' }} of {{ slideGroups.length || '—' }}</span>
-    <button type="button" (click)="nextSlide()" [disabled]="!canGoNext">Next</button>
-    <button type="button" (click)="backToEditor()">Editor</button>
+    <button type="button" (click)="nextSlide()" [disabled]="!canGoNext" aria-label="Next slide" title="Next slide"><app-icon name="arrow-right" /></button>
+    <button type="button" (click)="backToEditor()" aria-label="Open editor" title="Open editor"><app-icon name="edit" /></button>
+    <button type="button" (click)="pdfFileInput.click()" aria-label="Open PDF" title="Open PDF"><app-icon name="file-open" /></button>
+    <input #pdfFileInput hidden type="file" accept="application/pdf,.pdf" (change)="openFile($any($event.target).files?.[0]); $any($event.target).value = ''" />
+    <button type="button" (click)="openExternally()" aria-label="Open PDF externally" title="Open PDF externally"><app-icon name="external-link" /></button>
   </nav>
 </app-pdf-canvas-stage>

@@ -14,6 +14,8 @@ import { MusicSystemService } from '../../core/pdf/music-system.service';
 import type { MusicSystem } from '../../core/pdf/music-system.model';
 import { drawMusicSystems } from '../../core/pdf/music-system-renderer';
 import { PdfCanvasStage, type PageNavigationAction } from '../../shared/components/pdf-canvas-stage/pdf-canvas-stage';
+import { PdfStateService } from '../../core/pdf/pdf-state.service';
+import { AppIcon } from '../../shared/components/app-icon/app-icon';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   '/assets/pdfjs-dist/build/pdf.worker.min.mjs';
@@ -23,7 +25,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
   templateUrl: './pdf-editor.html',
   styleUrl: './pdf-editor.css',
   standalone: true,
-  imports: [CommonModule, PdfCanvasStage],
+  imports: [CommonModule, PdfCanvasStage, AppIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PdfEditor implements AfterViewInit, OnDestroy {
@@ -33,7 +35,7 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
   @ViewChild('pdfCanvas')
   private canvasRef!: ElementRef<HTMLCanvasElement>;
 
-  readonly pdfUrl: string;
+  pdfUrl: string;
   currentPage = 1;
   pageCount = 0;
   zoom = 1;
@@ -54,7 +56,8 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
     private readonly router: Router,
     private readonly changeDetector: ChangeDetectorRef,
     private readonly musicSystemService: MusicSystemService,
-  ) { this.pdfUrl = '/pdfs/test.pdf'; }
+    private readonly pdfState: PdfStateService,
+  ) { this.pdfUrl = this.pdfState.pdfUrl(); }
 
   get musicSystems() { return this.musicSystemService.musicSystems; }
   get padding() { return this.musicSystemService.padding; }
@@ -76,6 +79,12 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
     });
     this.resizeObserver.observe(this.pdfViewportRef.nativeElement);
 
+    await this.loadDocument();
+  }
+
+  private async loadDocument(): Promise<void> {
+    this.loading = true; this.errorMessage = ''; this.currentPage = 1; this.pageCount = 0;
+    this.renderTask?.cancel(); await this.loadingTask?.destroy();
     try {
       const loadingTask = pdfjsLib.getDocument({
         url: this.pdfUrl,
@@ -106,6 +115,13 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
       }
     }
   }
+
+  openFile(file: File): void {
+    if (!file.type.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) return;
+    this.pdfState.openFile(file); this.pdfUrl = this.pdfState.pdfUrl(); void this.loadDocument();
+  }
+
+  openExternally(): void { this.pdfState.openExternally(); }
 
   ngOnDestroy(): void {
     this.destroyed = true;

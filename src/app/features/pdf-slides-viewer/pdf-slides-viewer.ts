@@ -5,6 +5,7 @@ import { PdfStateService } from '../../core/pdf/pdf-state.service';
 import { MusicSystemService } from '../../core/pdf/music-system.service';
 import { buildSlideGroups, type PageSize, type SlideGroup } from '../../core/pdf/slide-groups';
 import { PdfCanvasStage, type PageNavigationAction } from '../../shared/components/pdf-canvas-stage/pdf-canvas-stage';
+import { AppIcon } from '../../shared/components/app-icon/app-icon';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/pdfjs-dist/build/pdf.worker.min.mjs';
 
@@ -13,18 +14,18 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/pdfjs-dist/build/pdf.worker.mi
   templateUrl: './pdf-slides-viewer.html',
   styleUrl: './pdf-slides-viewer.css',
   standalone: true,
-  imports: [PdfCanvasStage],
+  imports: [PdfCanvasStage, AppIcon],
 })
 export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
   @ViewChild('pdfContainer') pdfContainerRef!: ElementRef<HTMLDivElement>;
   @ViewChild('pdfCanvas') canvasRef!: ElementRef<HTMLCanvasElement>;
-  readonly pdfUrl: string;
+  pdfUrl: string;
   loading = true; errorMessage = ''; currentSlide = 0; slideGroups: SlideGroup[] = [];
   private pdfDocument?: pdfjsLib.PDFDocumentProxy; private loadingTask?: pdfjsLib.PDFDocumentLoadingTask;
   private resizeObserver?: ResizeObserver; private destroyed = false; private pageSizes: PageSize[] = []; private renderSequence = 0; private activeRenderTask?: pdfjsLib.RenderTask;
   private lastContainerSize = ''; private resizeFrame?: number;
 
-  constructor(private readonly router: Router, private readonly changeDetector: ChangeDetectorRef, private readonly pdfState: PdfStateService, private readonly musicSystemService: MusicSystemService) { this.pdfUrl = pdfState.pdfUrl; }
+  constructor(private readonly router: Router, private readonly changeDetector: ChangeDetectorRef, private readonly pdfState: PdfStateService, private readonly musicSystemService: MusicSystemService) { this.pdfUrl = pdfState.pdfUrl(); }
   get canGoPrevious(): boolean { return this.currentSlide > 0; }
   get canGoNext(): boolean { return this.currentSlide + 1 < this.slideGroups.length; }
 
@@ -61,6 +62,8 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
     }
   }
   backToEditor(): void { void this.router.navigate(['/editor']); }
+  openFile(file: File): void { if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) { this.pdfState.openFile(file); void this.router.navigate(['/editor']); } }
+  openExternally(): void { this.pdfState.openExternally(); }
 
   private scheduleResizeRebuild(): void {
     if (this.resizeFrame !== undefined) cancelAnimationFrame(this.resizeFrame);
