@@ -11,6 +11,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import * as pdfjsLib from 'pdfjs-dist';
 import { MusicSystemService } from '../pdf/music-system.service';
+import type { MusicSystem } from '../pdf/music-system.model';
 import { drawMusicSystems } from '../pdf/music-system-renderer';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -44,6 +45,7 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
   private resizeObserver?: ResizeObserver;
   private destroyed = false;
   private renderSequence = 0;
+  private detectionController?: AbortController;
 
   constructor(
     private readonly router: Router,
@@ -78,7 +80,9 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
       this.pageCount = this.pdfDocument.numPages;
       this.loading = false;
       this.changeDetector.markForCheck();
-      void this.detectDocumentMusicSystems(this.pdfDocument);
+      this.detectionController?.abort();
+      this.detectionController = new AbortController();
+      void this.detectDocumentMusicSystems(this.pdfDocument, this.detectionController.signal);
       await this.renderCurrentPage();
     } catch {
       if (!this.destroyed) {
@@ -91,6 +95,7 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.destroyed = true;
+    this.detectionController?.abort();
     this.resizeObserver?.disconnect();
     this.renderTask?.cancel();
     void this.loadingTask?.destroy();
@@ -98,18 +103,33 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
 
   private async detectDocumentMusicSystems(
     document: pdfjsLib.PDFDocumentProxy,
+    signal: AbortSignal,
   ): Promise<void> {
+    const detectedByPage = new Map<number, readonly MusicSystem[]>();
     try {
-      const musicSystems = await this.musicSystemService.detectMusicSystemsInDocument(document);
+      await this.musicSystemService.detectMusicSystemsInDocument(document, {
+        signal,
+        initialPage: this.currentPage,
+        onPageDetected: (musicSystems, page) => {
+          if (this.destroyed || signal.aborted) {
+            return;
+          }
+          detectedByPage.set(page, musicSystems);
+          this.musicSystemService.setEditorState(
+            Array.from(detectedByPage.values()).flat(),
+            this.padding(),
+          );
+          this.changeDetector.markForCheck();
+          if (page === this.currentPage) {
+            void this.renderCurrentPage();
+          }
+        },
+      });
       if (this.destroyed) {
         return;
       }
-
-      this.musicSystemService.setEditorState(musicSystems, this.padding());
-      this.changeDetector.markForCheck();
-      void this.renderCurrentPage();
     } catch (error) {
-      if (!this.destroyed) {
+      if (!this.destroyed && !(error instanceof DOMException && error.name === 'AbortError')) {
         console.error('Unable to detect PDF music systems.', error);
       }
     }
