@@ -11,11 +11,12 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import * as pdfjsLib from 'pdfjs-dist';
 import { MusicSystemService } from '../../core/pdf/music-system.service';
-import type { MusicSystem } from '../../core/pdf/music-system.model';
+import { orderMusicSystems, type MusicSystem } from '../../core/pdf/music-system.model';
 import { drawMusicSystems } from '../../core/pdf/music-system-renderer';
 import { PdfCanvasStage, type PageNavigationAction } from '../../shared/components/pdf-canvas-stage/pdf-canvas-stage';
 import { PdfStateService } from '../../core/pdf/pdf-state.service';
 import { AppIcon } from '../../shared/components/app-icon/app-icon';
+import type { MusicSystemOverlayLabel } from '../../core/pdf/music-system-renderer';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   '/assets/pdfjs-dist/build/pdf.worker.min.mjs';
@@ -84,6 +85,7 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
 
   private async loadDocument(): Promise<void> {
     this.loading = true; this.errorMessage = ''; this.currentPage = 1; this.pageCount = 0;
+    this.musicSystemService.clearEditorState();
     this.renderTask?.cancel(); await this.loadingTask?.destroy();
     try {
       const loadingTask = pdfjsLib.getDocument({
@@ -149,7 +151,7 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
           }
           detectedByPage.set(page, musicSystems);
           this.musicSystemService.setEditorState(
-            Array.from(detectedByPage.values()).flat(),
+            orderMusicSystems(Array.from(detectedByPage.values()).flat()),
             this.padding(),
           );
           this.changeDetector.markForCheck();
@@ -279,14 +281,11 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
       await task.promise;
       if (sequence === this.renderSequence) {
         this.renderTask = undefined;
-        drawMusicSystems(
-          context,
-          this.currentPage,
-          this.musicSystems(),
-          canvas.width,
-          canvas.height,
-          this.padding(),
-        );
+        try {
+          drawMusicSystems(context, this.currentPage, this.musicSystems(), canvas.width, canvas.height, this.padding(), this.getOverlayLabels());
+        } catch (error) {
+          console.error('Unable to draw PDF editor overlays.', error);
+        }
       }
     } catch (error) {
       if (
@@ -298,5 +297,10 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
         this.changeDetector.markForCheck();
       }
     }
+  }
+
+  private getOverlayLabels(): MusicSystemOverlayLabel[] {
+    return orderMusicSystems(this.musicSystems())
+      .map((musicSystem) => ({ ...musicSystem, boxNumber: musicSystem.boxOrder! }));
   }
 }

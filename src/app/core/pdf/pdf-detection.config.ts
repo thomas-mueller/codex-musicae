@@ -1,0 +1,7 @@
+/** Central configuration for PDF/OpenCV music-system detection. */
+export const PDF_DETECTION_CONFIG = {
+  renderScale: 50 / 72,
+  minimumBoxWidthRatio: 0.5,
+  forcedSelectionWidthRatio: 0.75,
+  overlayAlpha: 0.25,
+} as const;

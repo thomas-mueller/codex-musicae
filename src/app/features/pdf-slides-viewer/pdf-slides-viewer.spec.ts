@@ -33,4 +33,22 @@ describe('PdfSlidesViewer', () => {
     component.lastSlide();
     expect(component.currentSlide).toBe(2);
   });
+
+  it('advances exactly one slide through stage keyboard navigation', () => {
+    component.slideGroups = [[{} as never], [{} as never], [{} as never]];
+    component.currentSlide = 0;
+    component.handleNavigation('next');
+    expect(component.currentSlide).toBe(1);
+    component.handleNavigation('previous');
+    expect(component.currentSlide).toBe(0);
+  });
+
+  it('advances exactly one slide through button navigation', () => {
+    component.slideGroups = [[{} as never], [{} as never], [{} as never]];
+    component.currentSlide = 0;
+    component.nextSlide();
+    expect(component.currentSlide).toBe(1);
+    component.previousSlide();
+    expect(component.currentSlide).toBe(0);
+  });
 });

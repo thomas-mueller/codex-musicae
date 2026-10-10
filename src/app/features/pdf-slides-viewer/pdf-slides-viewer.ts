@@ -1,4 +1,4 @@
-import { Component, ChangeDetectorRef, AfterViewInit, ElementRef, ViewChild, HostListener, OnDestroy } from '@angular/core';
+import { Component, ChangeDetectorRef, AfterViewInit, ElementRef, ViewChild, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import * as pdfjsLib from 'pdfjs-dist';
 import { PdfStateService } from '../../core/pdf/pdf-state.service';
@@ -6,6 +6,7 @@ import { MusicSystemService } from '../../core/pdf/music-system.service';
 import { buildSlideGroups, type PageSize, type SlideGroup } from '../../core/pdf/slide-groups';
 import { PdfCanvasStage, type PageNavigationAction } from '../../shared/components/pdf-canvas-stage/pdf-canvas-stage';
 import { AppIcon } from '../../shared/components/app-icon/app-icon';
+import { orderMusicSystems } from '../../core/pdf/music-system.model';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/pdfjs-dist/build/pdf.worker.min.mjs';
 
@@ -31,6 +32,9 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
 
   async ngAfterViewInit(): Promise<void> {
     await Promise.resolve();
+    this.pageSizes = [];
+    this.slideGroups = [];
+    this.currentSlide = 0;
     if (typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver(() => this.scheduleResizeRebuild());
       this.resizeObserver.observe(this.pdfContainerRef.nativeElement);
@@ -39,6 +43,7 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
     try {
       this.loadingTask = pdfjsLib.getDocument({ url: this.pdfUrl, cMapUrl: '/assets/pdfjs-dist/cmaps/', cMapPacked: true, standardFontDataUrl: '/assets/pdfjs-dist/standard_fonts/', wasmUrl: '/assets/pdfjs-dist/wasm/' });
       this.pdfDocument = await this.loadingTask.promise;
+      this.pageSizes = [];
       for (let i = 1; i <= this.pdfDocument.numPages; i++) { const page = await this.pdfDocument.getPage(i); const viewport = page.getViewport({ scale: 1 }); this.pageSizes.push({ width: viewport.width, height: viewport.height }); }
       this.loading = false; await this.rebuildSlides();
     } catch (error) { if (!this.destroyed) { console.error('Unable to load slides PDF.', error); this.loading = false; this.errorMessage = 'Unable to display this PDF.'; this.changeDetector.markForCheck(); } }
@@ -80,7 +85,7 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
   private async rebuildSlides(): Promise<void> {
     if (!this.pdfDocument || this.destroyed || !this.pageSizes.length) return;
     const container = this.pdfContainerRef.nativeElement; const aspect = container.clientHeight ? container.clientWidth / container.clientHeight : 1.5;
-    this.slideGroups = buildSlideGroups(this.musicSystemService.musicSystems(), this.pageSizes, this.musicSystemService.padding(), aspect); this.currentSlide = Math.min(this.currentSlide, Math.max(0, this.slideGroups.length - 1)); this.changeDetector.markForCheck(); await this.renderCurrentSlide();
+    this.slideGroups = buildSlideGroups(orderMusicSystems(this.musicSystemService.musicSystems()), this.pageSizes, this.musicSystemService.padding(), aspect); this.currentSlide = Math.min(this.currentSlide, Math.max(0, this.slideGroups.length - 1)); this.changeDetector.markForCheck(); await this.renderCurrentSlide();
   }
 
   private async renderCurrentSlide(): Promise<void> {
@@ -89,7 +94,7 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
     const canvas = this.canvasRef.nativeElement; canvas.width = Math.max(1, Math.floor(width * scale * outputScale)); canvas.height = Math.max(1, Math.floor(height * scale * outputScale)); canvas.style.width = `${Math.floor(width * scale)}px`; canvas.style.height = `${Math.floor(height * scale)}px`; const context = canvas.getContext('2d'); if (!context) return; context.fillStyle = 'white'; context.fillRect(0, 0, canvas.width, canvas.height);
     let y = 0;
     try {
-      for (const rect of group) {
+      for (const rect of [...group].sort((a, b) => (a.boxOrder ?? Number.MAX_SAFE_INTEGER) - (b.boxOrder ?? Number.MAX_SAFE_INTEGER))) {
         const page = await document.getPage(rect.pageIndex + 1); const viewport = page.getViewport({ scale: scale * outputScale }); const source = globalThis.document.createElement('canvas'); source.width = Math.ceil(viewport.width); source.height = Math.ceil(viewport.height); const sourceContext = source.getContext('2d'); if (!sourceContext) continue; const task = page.render({ canvas: source, canvasContext: sourceContext, viewport }); this.activeRenderTask = task; await task.promise; if (sequence !== this.renderSequence) return;
         const rectWidth = rect.xMax - rect.xMin; const rectHeight = rect.yMax - rect.yMin; const x = (width - rectWidth) * scale * outputScale / 2; context.drawImage(source, rect.xMin * scale * outputScale, rect.yMin * scale * outputScale, rectWidth * scale * outputScale, rectHeight * scale * outputScale, x, y * scale * outputScale, rectWidth * scale * outputScale, rectHeight * scale * outputScale); y += rectHeight;
       }
@@ -99,5 +104,4 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
       if (sequence === this.renderSequence) this.activeRenderTask = undefined;
     }
   }
-  @HostListener('window:keydown', ['$event']) onKeyDown(event: KeyboardEvent): void { if (event.key === 'ArrowLeft') this.previousSlide(); if (event.key === 'ArrowRight') this.nextSlide(); }
 }

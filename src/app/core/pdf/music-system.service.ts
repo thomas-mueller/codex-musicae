@@ -2,8 +2,9 @@ import { Injectable, signal } from '@angular/core';
 import type { CV } from '@techstark/opencv-js';
 import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist';
 import type { MusicSystem } from './music-system.model';
+import { PDF_DETECTION_CONFIG } from './pdf-detection.config';
 
-export const MUSIC_SYSTEM_DETECTION_SCALE = 50 / 72;
+export const MUSIC_SYSTEM_DETECTION_SCALE = PDF_DETECTION_CONFIG.renderScale;
 let openCvPromise: Promise<CV> | undefined;
 
 export interface MusicSystemDetectionOptions {
@@ -19,6 +20,17 @@ export interface MusicSystemDetectionMetrics {
   processingMs: number;
   canvasWidth: number;
   canvasHeight: number;
+}
+
+export function shouldSelectConnectedComponent(
+  area: number,
+  width: number,
+  canvasWidth: number,
+  selectionThreshold: number,
+): boolean {
+  const widthRatio = width / canvasWidth;
+  if (widthRatio < PDF_DETECTION_CONFIG.minimumBoxWidthRatio) return false;
+  return widthRatio >= PDF_DETECTION_CONFIG.forcedSelectionWidthRatio || area > selectionThreshold;
 }
 
 interface DetectionCache {
@@ -83,6 +95,11 @@ export class MusicSystemService {
     this.hasEditorState.set(true);
   }
 
+  clearEditorState(): void {
+    this.musicSystems.set([]);
+    this.hasEditorState.set(false);
+  }
+
   private async detectMusicSystemsOnPage(
     page: PDFPageProxy,
     pageNumber: number,
@@ -131,9 +148,14 @@ export class MusicSystemService {
       const selectionThreshold = areas.length === 1 ? 0 : areas[largestGapIndex];
       const musicSystems: MusicSystem[] = [];
       for (let row = 1; row < stats.rows; row += 1) {
-        if (stats.intAt(row, cv.CC_STAT_AREA) <= selectionThreshold) continue;
         const x = stats.intAt(row, cv.CC_STAT_LEFT); const y = stats.intAt(row, cv.CC_STAT_TOP);
         const width = stats.intAt(row, cv.CC_STAT_WIDTH); const height = stats.intAt(row, cv.CC_STAT_HEIGHT);
+        if (!shouldSelectConnectedComponent(
+          stats.intAt(row, cv.CC_STAT_AREA),
+          width,
+          canvas.width,
+          selectionThreshold,
+        )) continue;
         musicSystems.push({ page: pageNumber, xMin: x / canvas.width, yMin: y / canvas.height, xMax: (x + width) / canvas.width, yMax: (y + height) / canvas.height });
       }
       return { musicSystems, renderMs, processingMs: performance.now() - processingStartedAt };
@@ -177,3 +199,4 @@ export class MusicSystemService {
     return openCvPromise;
   }
 }
+

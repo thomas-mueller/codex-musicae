@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildSlideGroups, expandSlideGroup } from './slide-groups';
+import { compareMusicSystemsInPdfOrder } from './music-system.model';
 
 const page = [{ width: 100, height: 100 }];
 
@@ -8,6 +9,28 @@ function musicSystems(...rects: Array<[number, number, number, number]>) {
 }
 
 describe('slide crop expansion', () => {
+  it('preserves PDF page indices and source order across empty pages', () => {
+    const groups = buildSlideGroups([
+      { page: 3, xMin: 0.1, yMin: 0.4, xMax: 0.9, yMax: 0.5 },
+      { page: 1, xMin: 0.1, yMin: 0.1, xMax: 0.9, yMax: 0.2 },
+    ], [
+      { width: 100, height: 100 },
+      { width: 100, height: 100 },
+      { width: 100, height: 100 },
+    ], 0, 10);
+    expect(groups.flat().map((rect) => [rect.pageIndex, rect.boxOrder])).toEqual([[0, 1], [2, 2]]);
+  });
+
+  it('orders systems in PDF reading order before grouping', () => {
+    const systems = [
+      { page: 2, xMin: 0.1, yMin: 0.1, xMax: 0.9, yMax: 0.2 },
+      { page: 1, xMin: 0.8, yMin: 0.1, xMax: 0.9, yMax: 0.2 },
+      { page: 1, xMin: 0.1, yMin: 0.1, xMax: 0.2, yMax: 0.2 },
+      { page: 1, xMin: 0.1, yMin: 0.4, xMax: 0.2, yMax: 0.5 },
+    ];
+    expect([...systems].sort(compareMusicSystemsInPdfOrder)).toEqual([systems[2], systems[1], systems[3], systems[0]]);
+  });
+
   it('expands a narrow crop horizontally to the requested aspect ratio', () => {
     const [group] = buildSlideGroups(musicSystems([0.4, 0.4, 0.6, 0.6]), page, 0, 2);
     expect(group[0]).toMatchObject({ xMin: 30, xMax: 70, yMin: 40, yMax: 60 });

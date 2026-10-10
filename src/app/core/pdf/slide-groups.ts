@@ -1,8 +1,9 @@
-import type { MusicSystem } from './music-system.model';
+import { compareMusicSystemsInPdfOrder, orderMusicSystems, type MusicSystem } from './music-system.model';
 
 export interface PageSize { width: number; height: number; }
 export interface SlideRect {
   pageIndex: number;
+  boxOrder?: number;
   xMin: number;
   yMin: number;
   xMax: number;
@@ -102,13 +103,15 @@ export function buildSlideGroups(
   let currentWidth = 0;
   let currentHeight = 0;
 
-  for (const musicSystem of musicSystems) {
+  const orderedMusicSystems = orderMusicSystems(musicSystems);
+  for (const musicSystem of orderedMusicSystems) {
     const pageIndex = musicSystem.page - 1;
     const page = pageSizes[pageIndex];
     if (!page) continue;
     const pad = padding * page.width;
     const rect: SlideRect = {
       pageIndex,
+      boxOrder: musicSystem.boxOrder,
       xMin: Math.max(0, musicSystem.xMin * page.width - pad),
       yMin: Math.max(0, musicSystem.yMin * page.height - pad),
       xMax: Math.min(page.width, musicSystem.xMax * page.width + pad),
