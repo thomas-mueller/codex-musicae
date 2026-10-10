@@ -13,6 +13,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import { MusicSystemService } from '../pdf/music-system.service';
 import type { MusicSystem } from '../pdf/music-system.model';
 import { drawMusicSystems } from '../pdf/music-system-renderer';
+import { PdfCanvasStage } from '../pdf-canvas-stage';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   '/assets/pdfjs-dist/build/pdf.worker.min.mjs';
@@ -22,7 +23,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
   templateUrl: './pdf-editor.html',
   styleUrl: './pdf-editor.css',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, PdfCanvasStage],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PdfEditor implements AfterViewInit, OnDestroy {
@@ -46,6 +47,8 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
   private destroyed = false;
   private renderSequence = 0;
   private detectionController?: AbortController;
+  private lastViewportSize = '';
+  private resizeFrame?: number;
 
   constructor(
     private readonly router: Router,
@@ -58,7 +61,18 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
 
   async ngAfterViewInit(): Promise<void> {
     this.resizeObserver = new ResizeObserver(() => {
-      void this.renderCurrentPage();
+      if (this.resizeFrame !== undefined) {
+        cancelAnimationFrame(this.resizeFrame);
+      }
+      this.resizeFrame = requestAnimationFrame(() => {
+        this.resizeFrame = undefined;
+        const viewport = this.pdfViewportRef.nativeElement;
+        const size = `${viewport.clientWidth}x${viewport.clientHeight}`;
+        if (size !== this.lastViewportSize) {
+          this.lastViewportSize = size;
+          void this.renderCurrentPage();
+        }
+      });
     });
     this.resizeObserver.observe(this.pdfViewportRef.nativeElement);
 
@@ -97,6 +111,9 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
     this.destroyed = true;
     this.detectionController?.abort();
     this.resizeObserver?.disconnect();
+    if (this.resizeFrame !== undefined) {
+      cancelAnimationFrame(this.resizeFrame);
+    }
     this.renderTask?.cancel();
     void this.loadingTask?.destroy();
   }

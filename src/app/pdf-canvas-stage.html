@@ -1,0 +1,9 @@
+<div class="canvas-stage" (click)="onStageClick($event)">
+  <div class="canvas-content">
+    <ng-content select="[stage-content]" />
+  </div>
+
+  <div class="controls-overlay" [class.controls-hidden]="!controlsVisible()" [attr.aria-hidden]="!controlsVisible()">
+    <ng-content select="[stage-controls]" />
+  </div>
+</div>

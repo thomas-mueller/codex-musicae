@@ -1,5 +1,6 @@
 <main class="pdf-editor">
-  <header class="toolbar" aria-label="PDF controls">
+  <app-pdf-canvas-stage [controlsVisibleInitially]="true">
+    <header stage-controls class="toolbar" aria-label="PDF controls">
     <div class="page-controls">
       <button type="button" (click)="previousPage()" [disabled]="!canGoToPreviousPage">
         Previous
@@ -26,9 +27,9 @@
           (input)="setPadding($any($event.target).value)" />
       </label>
     </div>
-  </header>
+    </header>
 
-  <section #pdfViewport class="pdf-viewport" aria-label="PDF page">
+    <section stage-content #pdfViewport class="pdf-viewport" aria-label="PDF page">
     @if (loading) {
       <p class="message" role="status">Loading PDF…</p>
     } @else if (errorMessage) {
@@ -36,5 +37,6 @@
     } @else {
       <canvas #pdfCanvas aria-label="Current PDF page"></canvas>
     }
-  </section>
+    </section>
+  </app-pdf-canvas-stage>
 </main>
