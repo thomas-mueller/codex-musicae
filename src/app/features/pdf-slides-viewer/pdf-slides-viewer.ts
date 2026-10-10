@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import * as pdfjsLib from 'pdfjs-dist';
 import { PdfStateService } from '../../core/pdf/pdf-state.service';
 import { MusicSystemService } from '../../core/pdf/music-system.service';
-import { buildSlideGroups, type PageSize, type SlideGroup } from '../../core/pdf/slide-groups';
+import { buildSlideGroups, fitCanvasToViewport, type PageSize, type SlideGroup } from '../../core/pdf/slide-groups';
 import { PdfCanvasStage, type PageNavigationAction } from '../../shared/components/pdf-canvas-stage/pdf-canvas-stage';
 import { AppIcon } from '../../shared/components/app-icon/app-icon';
 import { orderMusicSystems, type MusicSystem } from '../../core/pdf/music-system.model';
@@ -170,11 +170,8 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
     this.activeRenderTask = undefined;
     ++this.renderSequence;
     const aspect = this.selectedAspectRatio;
-    const container = this.pdfContainerRef.nativeElement;
-    const viewportAspect = container.clientHeight ? container.clientWidth / container.clientHeight : aspect;
-    const cropAspect = Math.max(aspect, viewportAspect);
     const systems = orderMusicSystems(Array.from(this.detectedByPage.values()).flat());
-    this.slideGroups = buildSlideGroups(systems, this.pageSizes, this.musicSystemService.padding(), aspect, cropAspect);
+    this.slideGroups = buildSlideGroups(systems, this.pageSizes, this.musicSystemService.padding(), aspect);
     this.currentSlide = this.findSlideForAnchor(anchor);
     this.changeDetector.markForCheck();
     await this.renderCurrentSlide();
@@ -221,21 +218,72 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
 
   private async renderCurrentSlide(): Promise<void> {
     const document = this.pdfDocument; const group = this.slideGroups[this.currentSlide]; if (!document || !group || this.destroyed) return;
-    const sequence = ++this.renderSequence; this.activeRenderTask?.cancel(); this.activeRenderTask = undefined; const outputScale = window.devicePixelRatio || 1; const width = group.renderWidth ?? Math.max(...group.map((r) => r.xMax - r.xMin)); const height = group.renderHeight ?? group.reduce((sum, r) => sum + r.yMax - r.yMin, 0); const container = this.pdfContainerRef.nativeElement; const scale = Math.min(container.clientWidth / width, container.clientHeight / height);
-    const canvas = this.canvasRef.nativeElement; const renderedWidth = Math.max(1, Math.floor(width * scale * outputScale)); const renderedHeight = Math.max(1, Math.floor(height * scale * outputScale)); const offscreen = globalThis.document.createElement('canvas'); offscreen.width = renderedWidth; offscreen.height = renderedHeight; const context = offscreen.getContext('2d'); if (!context) return; context.fillStyle = 'white'; context.fillRect(0, 0, renderedWidth, renderedHeight);
+    const sequence = ++this.renderSequence;
+    this.activeRenderTask?.cancel();
+    this.activeRenderTask = undefined;
+    const outputScale = window.devicePixelRatio || 1;
+    const contentWidth = group.renderWidth ?? Math.max(...group.map((r) => r.xMax - r.xMin));
+    const contentHeight = group.renderHeight ?? group.reduce((sum, r) => sum + r.yMax - r.yMin, 0);
+    const container = this.pdfContainerRef.nativeElement;
+    const aspect = this.selectedAspectRatio;
+    const { width: canvasWidth, height: canvasHeight } = fitCanvasToViewport(
+      container.clientWidth,
+      container.clientHeight,
+      aspect,
+    );
+    if (!canvasWidth || !canvasHeight || !contentWidth || !contentHeight) return;
+
+    const scale = Math.min(canvasWidth / contentWidth, canvasHeight / contentHeight);
+    const renderedWidth = Math.max(1, Math.round(canvasWidth * outputScale));
+    const renderedHeight = Math.max(1, Math.round(canvasHeight * outputScale));
+    const canvas = this.canvasRef.nativeElement;
+    canvas.style.width = `${canvasWidth}px`;
+    canvas.style.height = `${canvasHeight}px`;
+    const offscreen = globalThis.document.createElement('canvas');
+    offscreen.width = renderedWidth;
+    offscreen.height = renderedHeight;
+    const context = offscreen.getContext('2d');
+    if (!context) return;
+    context.fillStyle = 'white';
+    context.fillRect(0, 0, renderedWidth, renderedHeight);
+    const contentOffsetX = (canvasWidth - contentWidth * scale) / 2;
+    const contentOffsetY = (canvasHeight - contentHeight * scale) / 2;
     let y = 0;
     try {
       for (const rect of [...group].sort((a, b) => (a.boxOrder ?? Number.MAX_SAFE_INTEGER) - (b.boxOrder ?? Number.MAX_SAFE_INTEGER))) {
-        const page = await document.getPage(rect.pageIndex + 1); const viewport = page.getViewport({ scale: scale * outputScale }); const source = globalThis.document.createElement('canvas'); source.width = Math.ceil(viewport.width); source.height = Math.ceil(viewport.height); const sourceContext = source.getContext('2d'); if (!sourceContext) continue; const task = page.render({ canvas: source, canvasContext: sourceContext, viewport }); this.activeRenderTask = task; await task.promise; if (sequence !== this.renderSequence) return;
-        const rectWidth = rect.xMax - rect.xMin; const rectHeight = rect.yMax - rect.yMin; const x = (width - rectWidth) * scale * outputScale / 2; context.drawImage(source, rect.xMin * scale * outputScale, rect.yMin * scale * outputScale, rectWidth * scale * outputScale, rectHeight * scale * outputScale, x, y * scale * outputScale, rectWidth * scale * outputScale, rectHeight * scale * outputScale); y += rectHeight;
+        const page = await document.getPage(rect.pageIndex + 1);
+        const viewport = page.getViewport({ scale: scale * outputScale });
+        const source = globalThis.document.createElement('canvas');
+        source.width = Math.ceil(viewport.width);
+        source.height = Math.ceil(viewport.height);
+        const sourceContext = source.getContext('2d');
+        if (!sourceContext) continue;
+        const task = page.render({ canvas: source, canvasContext: sourceContext, viewport });
+        this.activeRenderTask = task;
+        await task.promise;
+        if (sequence !== this.renderSequence) return;
+
+        const rectWidth = rect.xMax - rect.xMin;
+        const rectHeight = rect.yMax - rect.yMin;
+        const x = contentOffsetX + (contentWidth - rectWidth) * scale / 2;
+        context.drawImage(
+          source,
+          rect.xMin * scale * outputScale,
+          rect.yMin * scale * outputScale,
+          rectWidth * scale * outputScale,
+          rectHeight * scale * outputScale,
+          x * outputScale,
+          (contentOffsetY + y * scale) * outputScale,
+          rectWidth * scale * outputScale,
+          rectHeight * scale * outputScale,
+        );
+        y += rectHeight;
       }
       if (sequence !== this.renderSequence) return;
-      const visibleContext = canvas.getContext('2d');
-      if (!visibleContext) return;
       canvas.width = renderedWidth;
       canvas.height = renderedHeight;
-      canvas.style.width = `${Math.floor(width * scale)}px`;
-      canvas.style.height = `${Math.floor(height * scale)}px`;
+      const visibleContext = canvas.getContext('2d');
+      if (!visibleContext) return;
       visibleContext.drawImage(offscreen, 0, 0);
     } catch (error) {
       if (!(error instanceof Error && error.name === 'RenderingCancelledException')) throw error;

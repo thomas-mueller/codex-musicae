@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildSlideGroups, expandSlideGroup } from './slide-groups';
+import { buildSlideGroups, expandSlideGroup, fitCanvasToViewport } from './slide-groups';
 import { compareMusicSystemsInPdfOrder } from './music-system.model';
 
 const page = [{ width: 100, height: 100 }];
@@ -57,22 +57,14 @@ describe('slide crop expansion', () => {
     expect(group.crop).toEqual({ xMin: 30, yMin: 10, xMax: 70, yMax: 50 });
   });
 
-  it('can widen a narrow grouping crop toward a separate display ratio', () => {
-    const group = expandSlideGroup([
-      { pageIndex: 0, xMin: 40, yMin: 10, xMax: 60, yMax: 20 },
-      { pageIndex: 0, xMin: 40, yMin: 40, xMax: 60, yMax: 70 },
-    ], page, 0.5, 1);
-    expect(group.map((rect) => [rect.xMin, rect.xMax])).toEqual([[30, 70], [30, 70]]);
-  });
-
   it('records one final render geometry for the complete slide', () => {
     const group = expandSlideGroup([
       { pageIndex: 0, xMin: 40, yMin: 10, xMax: 60, yMax: 20 },
       { pageIndex: 0, xMin: 40, yMin: 40, xMax: 60, yMax: 70 },
-    ], page, 0.5, 1);
-    expect(group.renderWidth).toBe(40);
+    ], page, 0.5);
+    expect(group.renderWidth).toBe(20);
     expect(group.renderHeight).toBe(40);
-    expect(group.renderWidth! / group.renderHeight!).toBe(1);
+    expect(group.renderWidth! / group.renderHeight!).toBe(0.5);
   });
 
   it('uses one shared horizontal crop for music systems with different centers', () => {
@@ -105,5 +97,19 @@ describe('slide crop expansion', () => {
   it('leaves an already matching crop unchanged', () => {
     const [group] = buildSlideGroups(musicSystems([0.3, 0.4, 0.7, 0.6]), page, 0, 2);
     expect(group[0]).toMatchObject({ xMin: 30, xMax: 70, yMin: 40, yMax: 60 });
+  });
+
+  it.each([
+    { viewport: [1200, 600], ratio: 2, expected: [1200, 600] },
+    { viewport: [600, 1200], ratio: 0.5, expected: [600, 1200] },
+    { viewport: [1200, 600], ratio: 1, expected: [600, 600] },
+    { viewport: [600, 1200], ratio: 1, expected: [600, 600] },
+  ])('fits ratio $ratio inside viewport $viewport', ({ viewport, ratio, expected }) => {
+    const size = fitCanvasToViewport(viewport[0], viewport[1], ratio);
+    expect(size.width).toBe(expected[0]);
+    expect(size.height).toBe(expected[1]);
+    expect(size.width / size.height).toBeCloseTo(ratio);
+    expect(size.width).toBeLessThanOrEqual(viewport[0]);
+    expect(size.height).toBeLessThanOrEqual(viewport[1]);
   });
 });
