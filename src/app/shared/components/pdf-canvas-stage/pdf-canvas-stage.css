@@ -20,6 +20,7 @@
   align-items: center;
   justify-content: center;
   overflow: auto;
+  touch-action: pan-y;
 }
 
 .controls-overlay {

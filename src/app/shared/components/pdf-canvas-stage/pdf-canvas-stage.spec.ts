@@ -69,12 +69,24 @@ describe('PdfCanvasStage', () => {
 
   it('maps horizontal swipes to previous and next and ignores vertical swipes', () => {
     const stage = fixture.debugElement.children[0].componentInstance as PdfCanvasStage;
+    const stageElement = fixture.nativeElement.querySelector('.canvas-stage') as HTMLElement;
     const navigation = vi.fn();
     stage.navigate.subscribe(navigation);
-    const pointer = (type: string, x: number, y: number) => new PointerEvent(type, {
-      pointerId: 1, pointerType: 'touch', clientX: x, clientY: y, bubbles: true,
-      cancelable: true,
+    const captures = vi.fn();
+    const releases = vi.fn();
+    Object.defineProperties(stageElement, {
+      setPointerCapture: { configurable: true, value: captures },
+      hasPointerCapture: { configurable: true, value: () => true },
+      releasePointerCapture: { configurable: true, value: releases },
     });
+    const pointer = (type: string, x: number, y: number) => {
+      const event = new PointerEvent(type, {
+        pointerId: 1, pointerType: 'touch', clientX: x, clientY: y, bubbles: true,
+        cancelable: true,
+      });
+      Object.defineProperty(event, 'currentTarget', { value: stageElement });
+      return event;
+    };
 
     stage.onPointerDown(pointer('pointerdown', 300, 200));
     stage.onPointerUp(pointer('pointerup', 220, 205));
@@ -83,6 +95,35 @@ describe('PdfCanvasStage', () => {
     stage.onPointerDown(pointer('pointerdown', 100, 100));
     stage.onPointerUp(pointer('pointerup', 105, 200));
     expect(navigation.mock.calls).toEqual([['next'], ['previous']]);
+    expect(captures).toHaveBeenCalledTimes(3);
+    expect(releases).toHaveBeenCalledTimes(3);
+  });
+
+  it('ignores swipes that start on controls and clears canceled gestures', () => {
+    const stage = fixture.debugElement.children[0].componentInstance as PdfCanvasStage;
+    const stageElement = fixture.nativeElement.querySelector('.canvas-stage') as HTMLElement;
+    const controls = fixture.nativeElement.querySelector('[stage-controls]') as HTMLElement;
+    const navigation = vi.fn();
+    stage.navigate.subscribe(navigation);
+    const pointer = (pointerId: number, x: number, target: EventTarget) => {
+      const event = new PointerEvent('pointerdown', {
+        pointerId, pointerType: 'touch', clientX: x, clientY: 100, bubbles: true,
+      });
+      Object.defineProperty(event, 'currentTarget', { value: stageElement });
+      Object.defineProperty(event, 'target', { value: target });
+      return event;
+    };
+    const capture = vi.fn();
+    Object.defineProperty(stageElement, 'setPointerCapture', { configurable: true, value: capture });
+
+    stage.onPointerDown(pointer(1, 300, controls));
+    stage.onPointerUp(pointer(1, 220, stageElement));
+    stage.onPointerDown(pointer(2, 300, stageElement));
+    stage.onPointerCancel(pointer(2, 220, stageElement));
+    stage.onPointerUp(pointer(2, 220, stageElement));
+
+    expect(navigation).not.toHaveBeenCalled();
+    expect(capture).toHaveBeenCalledTimes(1);
   });
 
   it('does not toggle when a control is clicked', () => {

@@ -44,12 +44,15 @@ export class PdfCanvasStage {
       this.pointerStart = undefined;
       return;
     }
+    const stage = event.currentTarget as HTMLElement;
+    stage.setPointerCapture?.(event.pointerId);
     this.pointerStart = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
   }
 
   onPointerUp(event: PointerEvent): void {
     const start = this.pointerStart;
     this.pointerStart = undefined;
+    this.releasePointerCapture(event);
     if (!start || start.pointerId !== event.pointerId || this.isControlTarget(event.target)) {
       return;
     }
@@ -64,8 +67,16 @@ export class PdfCanvasStage {
     this.navigate.emit(deltaX < 0 ? 'next' : 'previous');
   }
 
-  onPointerCancel(): void {
+  onPointerCancel(event?: PointerEvent): void {
     this.pointerStart = undefined;
+    if (event) this.releasePointerCapture(event);
+  }
+
+  private releasePointerCapture(event: PointerEvent): void {
+    const stage = event.currentTarget as HTMLElement;
+    if (stage.hasPointerCapture?.(event.pointerId)) {
+      stage.releasePointerCapture(event.pointerId);
+    }
   }
 
   private isControlTarget(target: EventTarget | null): boolean {
