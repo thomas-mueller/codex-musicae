@@ -10,6 +10,7 @@
   height: 100%;
   overflow: hidden;
   background: #525659;
+  touch-action: pan-y;
 }
 
 .canvas-content {

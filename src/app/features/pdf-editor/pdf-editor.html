@@ -1,5 +1,5 @@
 <main class="pdf-editor">
-  <app-pdf-canvas-stage [controlsVisibleInitially]="true">
+  <app-pdf-canvas-stage [controlsVisibleInitially]="true" (navigate)="handleNavigation($event)">
     <header stage-controls class="toolbar" aria-label="PDF controls">
     <div class="page-controls">
       <button type="button" (click)="previousPage()" [disabled]="!canGoToPreviousPage">

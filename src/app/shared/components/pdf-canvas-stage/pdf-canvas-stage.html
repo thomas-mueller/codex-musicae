@@ -1,4 +1,4 @@
-<div class="canvas-stage" (click)="onStageClick($event)">
+<div class="canvas-stage" (click)="onStageClick($event)" (pointerdown)="onPointerDown($event)" (pointerup)="onPointerUp($event)" (pointercancel)="onPointerCancel()">
   <div class="canvas-content">
     <ng-content select="[stage-content]" />
   </div>

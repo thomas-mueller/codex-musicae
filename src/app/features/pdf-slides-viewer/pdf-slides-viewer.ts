@@ -4,7 +4,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import { PdfStateService } from '../../core/pdf/pdf-state.service';
 import { MusicSystemService } from '../../core/pdf/music-system.service';
 import { buildSlideGroups, type PageSize, type SlideGroup } from '../../core/pdf/slide-groups';
-import { PdfCanvasStage } from '../../shared/components/pdf-canvas-stage/pdf-canvas-stage';
+import { PdfCanvasStage, type PageNavigationAction } from '../../shared/components/pdf-canvas-stage/pdf-canvas-stage';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/pdfjs-dist/build/pdf.worker.min.mjs';
 
@@ -45,6 +45,21 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
   ngOnDestroy(): void { this.destroyed = true; this.resizeObserver?.disconnect(); if (this.resizeFrame !== undefined) cancelAnimationFrame(this.resizeFrame); this.activeRenderTask?.cancel(); void this.loadingTask?.destroy(); }
   previousSlide(): void { if (this.canGoPrevious) { this.currentSlide--; void this.renderCurrentSlide(); } }
   nextSlide(): void { if (this.canGoNext) { this.currentSlide++; void this.renderCurrentSlide(); } }
+  firstSlide(): void { this.goToSlide(0); }
+  lastSlide(): void { this.goToSlide(this.slideGroups.length - 1); }
+  handleNavigation(action: PageNavigationAction): void {
+    if (action === 'previous') this.previousSlide();
+    else if (action === 'next') this.nextSlide();
+    else if (action === 'first') this.firstSlide();
+    else this.lastSlide();
+  }
+  private goToSlide(slide: number): void {
+    const target = Math.max(0, Math.min(slide, this.slideGroups.length - 1));
+    if (this.slideGroups.length && target !== this.currentSlide) {
+      this.currentSlide = target;
+      void this.renderCurrentSlide();
+    }
+  }
   backToEditor(): void { void this.router.navigate(['/editor']); }
 
   private scheduleResizeRebuild(): void {

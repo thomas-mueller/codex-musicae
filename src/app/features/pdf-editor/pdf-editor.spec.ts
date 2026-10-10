@@ -37,6 +37,15 @@ describe('PdfEditor', () => {
     expect(component.canGoToNextPage).toBe(false);
   });
 
+  it('supports first and last page navigation', () => {
+    component.pageCount = 5;
+    component.currentPage = 3;
+    component.firstPage();
+    expect(component.currentPage).toBe(1);
+    component.lastPage();
+    expect(component.currentPage).toBe(5);
+  });
+
   it('shows a page error when rendering fails', async () => {
     const page = {
       getViewport: vi.fn(() => ({ width: 100, height: 100 })),

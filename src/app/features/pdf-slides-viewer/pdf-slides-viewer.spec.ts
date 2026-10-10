@@ -24,4 +24,13 @@ describe('PdfSlidesViewer', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  it('supports first and last slide navigation', () => {
+    component.slideGroups = [[{} as never], [{} as never], [{} as never]];
+    component.currentSlide = 1;
+    component.firstSlide();
+    expect(component.currentSlide).toBe(0);
+    component.lastSlide();
+    expect(component.currentSlide).toBe(2);
+  });
 });

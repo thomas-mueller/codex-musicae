@@ -13,7 +13,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import { MusicSystemService } from '../../core/pdf/music-system.service';
 import type { MusicSystem } from '../../core/pdf/music-system.model';
 import { drawMusicSystems } from '../../core/pdf/music-system-renderer';
-import { PdfCanvasStage } from '../../shared/components/pdf-canvas-stage/pdf-canvas-stage';
+import { PdfCanvasStage, type PageNavigationAction } from '../../shared/components/pdf-canvas-stage/pdf-canvas-stage';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   '/assets/pdfjs-dist/build/pdf.worker.min.mjs';
@@ -170,6 +170,29 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
   nextPage(): void {
     if (this.canGoToNextPage) {
       this.currentPage += 1;
+      void this.renderCurrentPage();
+    }
+  }
+
+  firstPage(): void {
+    this.goToPage(1);
+  }
+
+  lastPage(): void {
+    this.goToPage(this.pageCount);
+  }
+
+  handleNavigation(action: PageNavigationAction): void {
+    if (action === 'previous') this.previousPage();
+    else if (action === 'next') this.nextPage();
+    else if (action === 'first') this.firstPage();
+    else this.lastPage();
+  }
+
+  private goToPage(page: number): void {
+    const target = Math.max(1, Math.min(page, this.pageCount));
+    if (target !== this.currentPage && this.pageCount > 0) {
+      this.currentPage = target;
       void this.renderCurrentPage();
     }
   }

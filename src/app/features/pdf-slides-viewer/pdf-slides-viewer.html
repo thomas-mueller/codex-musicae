@@ -1,4 +1,4 @@
-<app-pdf-canvas-stage [controlsVisibleInitially]="false" (escapeWhileHidden)="backToEditor()">
+<app-pdf-canvas-stage [controlsVisibleInitially]="false" (escapeWhileHidden)="backToEditor()" (navigate)="handleNavigation($event)">
   <div stage-content #pdfContainer class="pdf-container">
     <canvas #pdfCanvas></canvas>
     @if (loading) {
