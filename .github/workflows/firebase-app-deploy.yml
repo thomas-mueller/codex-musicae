@@ -80,3 +80,35 @@ jobs:
             --release-notes "Build ${{ github.run_number }} (${GITHUB_SHA::7}): $(git log -1 --pretty=%s)" \
             --testers "secrets.FIREBASE_APP_TESTERS" \
             # --groups "testers"
+
+      - name: Delete old App Distribution releases
+        env:
+          APP_ID: ${{ secrets.FIREBASE_APP_ID_ANDROID_CODEX_MUSICAE }}
+          RETENTION_DAYS: 10
+        run: |
+          gcloud auth activate-service-account --key-file="$GOOGLE_APPLICATION_CREDENTIALS"
+          TOKEN=$(gcloud auth print-access-token)
+          PROJECT_NUMBER=$(echo "$APP_ID" | cut -d: -f2)
+          PARENT="projects/$PROJECT_NUMBER/apps/$APP_ID"
+          CUTOFF=$(date -u -d "-$RETENTION_DAYS days" +%Y-%m-%dT%H:%M:%S)
+
+          PAGE=""
+          NAMES="[]"
+          while : ; do
+            RESP=$(curl -s -H "Authorization: Bearer $TOKEN" \
+              "https://firebaseappdistribution.googleapis.com/v1/$PARENT/releases?pageSize=100&pageToken=$PAGE")
+            OLD=$(echo "$RESP" | jq -c --arg c "$CUTOFF" '[.releases[]? | select(.createTime[0:19] < $c) | .name]')
+            NAMES=$(jq -c -n --argjson a "$NAMES" --argjson b "$OLD" '$a + $b')
+            PAGE=$(echo "$RESP" | jq -r '.nextPageToken // empty')
+            [ -z "$PAGE" ] && break
+          done
+
+          COUNT=$(echo "$NAMES" | jq length)
+          echo "Deleting $COUNT old releases"
+
+          # batchDelete accepts at most 100 names per call
+          echo "$NAMES" | jq -c '_nwise(100)' | while read -r CHUNK; do
+            curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+              -d "{\"names\": $CHUNK}" \
+              "https://firebaseappdistribution.googleapis.com/v1/$PARENT/releases:batchDelete"
+          done
