@@ -30,6 +30,8 @@
 .toolbar { display: flex; gap: .75rem; align-items: center; justify-content: center; padding: .5rem; background: rgb(50 54 57 / 85%); color: #f5f5f5; }
 .toolbar button { min-height: 2rem; padding: .25rem .7rem; background: #45494c; border: 1px solid #73777a; border-radius: 4px; color: inherit; font: inherit; }
 .toolbar button:disabled { opacity: .45; }
+.zoom-control { display: inline-flex; align-items: center; gap: .45rem; white-space: nowrap; }
+.zoom-control button { min-width: 2rem; padding-inline: .45rem; font-size: 1.1rem; line-height: 1.2; }
 
 .message {
   position: absolute;

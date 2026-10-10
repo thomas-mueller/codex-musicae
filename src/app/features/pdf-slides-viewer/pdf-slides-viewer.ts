@@ -10,6 +10,11 @@ import { orderMusicSystems } from '../../core/pdf/music-system.model';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/pdfjs-dist/build/pdf.worker.min.mjs';
 
+interface SlideAnchor {
+  pageIndex: number;
+  boxOrder?: number;
+}
+
 @Component({
   selector: 'app-pdf-slides-viewer',
   templateUrl: './pdf-slides-viewer.html',
@@ -23,6 +28,7 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
   @ViewChild('pdfCanvas') canvasRef!: ElementRef<HTMLCanvasElement>;
   pdfUrl: string;
   loading = true; errorMessage = ''; currentSlide = 0; slideGroups: SlideGroup[] = [];
+  aspectRatioAdjustment = 0;
   private pdfDocument?: pdfjsLib.PDFDocumentProxy; private loadingTask?: pdfjsLib.PDFDocumentLoadingTask;
   private resizeObserver?: ResizeObserver; private destroyed = false; private pageSizes: PageSize[] = []; private renderSequence = 0; private activeRenderTask?: pdfjsLib.RenderTask;
   private lastContainerSize = ''; private resizeFrame?: number;
@@ -31,6 +37,17 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
   constructor(private readonly router: Router, private readonly changeDetector: ChangeDetectorRef, private readonly pdfState: PdfStateService, private readonly musicSystemService: MusicSystemService) { this.pdfUrl = pdfState.pdfUrl(); }
   get canGoPrevious(): boolean { return this.currentSlide > 0; }
   get canGoNext(): boolean { return this.currentSlide + 1 < this.slideGroups.length; }
+  get canZoomOut(): boolean { return this.selectedAspectRatio > 0.5; }
+  get canZoomIn(): boolean { return this.selectedAspectRatio < 3; }
+  get selectedAspectRatio(): number {
+    const container = this.pdfContainerRef?.nativeElement;
+    const baseAspectRatio = container?.clientHeight ? container.clientWidth / container.clientHeight : 1.5;
+    return baseAspectRatio + this.aspectRatioAdjustment;
+  }
+  get selectedAspectRatioLabel(): string {
+    const ratio = this.selectedAspectRatio;
+    return Number.isFinite(ratio) && ratio > 0 ? Number(ratio.toFixed(2)).toString() : '—';
+  }
 
   async ngAfterViewInit(): Promise<void> {
     await this.enterPresentationMode();
@@ -61,6 +78,8 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
   nextSlide(): void { if (this.canGoNext) { this.currentSlide++; void this.renderCurrentSlide(); } }
   firstSlide(): void { this.goToSlide(0); }
   lastSlide(): void { this.goToSlide(this.slideGroups.length - 1); }
+  zoomOut(): void { this.setAspectRatio(this.selectedAspectRatio - 0.1); }
+  zoomIn(): void { this.setAspectRatio(this.selectedAspectRatio + 0.1); }
   handleNavigation(action: PageNavigationAction): void {
     if (action === 'previous') this.previousSlide();
     else if (action === 'next') this.nextSlide();
@@ -77,6 +96,15 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
   backToEditor(): void { void this.exitViewer(); }
   openFile(file: File): void { if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) { this.pdfState.openFile(file); void this.exitViewer(); } }
   openExternally(): void { this.pdfState.openExternally(); }
+
+  private setAspectRatio(aspectRatio: number): void {
+    const container = this.pdfContainerRef?.nativeElement;
+    const baseAspectRatio = container?.clientHeight ? container.clientWidth / container.clientHeight : 1.5;
+    const nextAspectRatio = Math.max(0.5, Math.min(aspectRatio, 3));
+    if (Math.abs(nextAspectRatio - this.selectedAspectRatio) < 0.0001) return;
+    this.aspectRatioAdjustment = nextAspectRatio - baseAspectRatio;
+    void this.rebuildSlides();
+  }
 
   private async enterPresentationMode(): Promise<void> {
     document.addEventListener('fullscreenchange', this.onFullscreenChange);
@@ -118,8 +146,31 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
 
   private async rebuildSlides(): Promise<void> {
     if (!this.pdfDocument || this.destroyed || !this.pageSizes.length) return;
-    const container = this.pdfContainerRef.nativeElement; const aspect = container.clientHeight ? container.clientWidth / container.clientHeight : 1.5;
-    this.slideGroups = buildSlideGroups(orderMusicSystems(this.musicSystemService.musicSystems()), this.pageSizes, this.musicSystemService.padding(), aspect); this.currentSlide = Math.min(this.currentSlide, Math.max(0, this.slideGroups.length - 1)); this.changeDetector.markForCheck(); await this.renderCurrentSlide();
+    const anchor = this.getCurrentSlideAnchor();
+    this.activeRenderTask?.cancel();
+    this.activeRenderTask = undefined;
+    ++this.renderSequence;
+    const aspect = this.selectedAspectRatio;
+    this.slideGroups = buildSlideGroups(orderMusicSystems(this.musicSystemService.musicSystems()), this.pageSizes, this.musicSystemService.padding(), aspect);
+    this.currentSlide = this.findSlideForAnchor(anchor);
+    this.changeDetector.markForCheck();
+    await this.renderCurrentSlide();
+  }
+
+  private getCurrentSlideAnchor(): SlideAnchor | undefined {
+    const rect = this.slideGroups[this.currentSlide]?.[0];
+    return rect ? { pageIndex: rect.pageIndex, boxOrder: rect.boxOrder } : undefined;
+  }
+
+  private findSlideForAnchor(anchor: SlideAnchor | undefined): number {
+    if (!this.slideGroups.length) return 0;
+    if (anchor) {
+      const anchoredSlide = this.slideGroups.findIndex((group) => group.some((rect) =>
+        rect.pageIndex === anchor.pageIndex &&
+        (anchor.boxOrder === undefined || rect.boxOrder === anchor.boxOrder)));
+      if (anchoredSlide >= 0) return anchoredSlide;
+    }
+    return Math.min(this.currentSlide, this.slideGroups.length - 1);
   }
 
   private async renderCurrentSlide(): Promise<void> {

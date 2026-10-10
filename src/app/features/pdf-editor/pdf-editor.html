@@ -5,7 +5,7 @@
       <button type="button" (click)="previousPage()" [disabled]="!canGoToPreviousPage" aria-label="Previous page" title="Previous page">
         <app-icon name="arrow-left" />
       </button>
-      <span aria-live="polite">Page {{ currentPage }} of {{ pageCount || '—' }}</span>
+      <span [attr.title]="'Page ' + currentPage + ' of ' + (pageCount || '—')" aria-live="polite">{{ currentPage }} of {{ pageCount || '—' }}</span>
       <button type="button" (click)="nextPage()" [disabled]="!canGoToNextPage" aria-label="Next page" title="Next page">
         <app-icon name="arrow-right" />
       </button>
