@@ -14,6 +14,8 @@ export interface SlideGroup extends Array<SlideRect> {
   crop?: SlideCrop;
   renderWidth?: number;
   renderHeight?: number;
+  topExpansion?: number;
+  bottomExpansion?: number;
 }
 
 export function fitCanvasToViewport(
@@ -69,6 +71,8 @@ export function expandSlideGroup(group: SlideGroup, pageSizes: readonly PageSize
   const actualWidth = Math.max(...horizontal.map((rect) => rect.xMax - rect.xMin));
   const targetHeight = Math.max(height, actualWidth / aspectRatio);
   const expanded: SlideGroup = horizontal.map((rect) => ({ ...rect }));
+  const originalFirstYMin = expanded[0].yMin;
+  const originalLastYMax = expanded[expanded.length - 1].yMax;
   let remaining = targetHeight - height;
 
   // Split the extra height evenly between the outer edges first. Only use a
@@ -103,6 +107,8 @@ export function expandSlideGroup(group: SlideGroup, pageSizes: readonly PageSize
     xMax: Math.max(...expanded.map((rect) => rect.xMax)),
     yMax: Math.max(...expanded.map((rect) => rect.yMax)),
   };
+  expanded.topExpansion = Math.max(0, originalFirstYMin - expanded[0].yMin);
+  expanded.bottomExpansion = Math.max(0, expanded[expanded.length - 1].yMax - originalLastYMax);
   expanded.renderWidth = Math.max(...expanded.map((rect) => rect.xMax - rect.xMin));
   expanded.renderHeight = expanded.reduce((sum, rect) => sum + rect.yMax - rect.yMin, 0);
   return expanded;

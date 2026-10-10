@@ -7,6 +7,7 @@ import { buildSlideGroups, fitCanvasToViewport, type PageSize, type SlideGroup }
 import { PdfCanvasStage, type PageNavigationAction } from '../../shared/components/pdf-canvas-stage/pdf-canvas-stage';
 import { AppIcon } from '../../shared/components/app-icon/app-icon';
 import { orderMusicSystems, type MusicSystem } from '../../core/pdf/music-system.model';
+import { PDF_DETECTION_CONFIG } from '../../core/pdf/pdf-detection.config';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/pdfjs-dist/build/pdf.worker.min.mjs';
 
@@ -329,6 +330,27 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
           boxWidth,
           destinationHeight,
         );
+
+        const firstRect = group[0];
+        const lastRect = group[group.length - 1];
+        if (rect === firstRect && (group.topExpansion ?? 0) > 0) {
+          context.fillStyle = `rgb(0 0 0 / ${PDF_DETECTION_CONFIG.shadeAlpha * 100}%)`;
+          context.fillRect(
+            0,
+            destinationY,
+            renderedWidth,
+            (group.topExpansion ?? 0) * scale * outputScale,
+          );
+        }
+        if (rect === lastRect && (group.bottomExpansion ?? 0) > 0) {
+          context.fillStyle = `rgb(0 0 0 / ${PDF_DETECTION_CONFIG.shadeAlpha * 100}%)`;
+          context.fillRect(
+            0,
+            destinationY + destinationHeight - (group.bottomExpansion ?? 0) * scale * outputScale,
+            renderedWidth,
+            (group.bottomExpansion ?? 0) * scale * outputScale,
+          );
+        }
         y += rectHeight;
       }
       if (sequence !== this.renderSequence) return;

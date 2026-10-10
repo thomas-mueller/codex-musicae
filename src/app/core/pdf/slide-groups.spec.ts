@@ -81,6 +81,40 @@ describe('slide crop expansion', () => {
       { pageIndex: 0, xMin: 40, yMin: 40, xMax: 60, yMax: 50 },
     ], page, 0.5);
     expect(group.map((rect) => [rect.yMin, rect.yMax])).toEqual([[0, 20], [40, 60]]);
+    expect(group.topExpansion).toBe(10);
+    expect(group.bottomExpansion).toBe(10);
+  });
+
+  it('records top-only vertical expansion', () => {
+    const group = expandSlideGroup([
+      { pageIndex: 0, xMin: 40, yMin: 80, xMax: 60, yMax: 100 },
+    ], page, 0.5);
+    expect(group.topExpansion).toBe(20);
+    expect(group.bottomExpansion).toBe(0);
+  });
+
+  it('records bottom-only vertical expansion', () => {
+    const group = expandSlideGroup([
+      { pageIndex: 0, xMin: 40, yMin: 0, xMax: 60, yMax: 20 },
+    ], page, 0.5);
+    expect(group.topExpansion).toBe(0);
+    expect(group.bottomExpansion).toBe(20);
+  });
+
+  it('records only the available expansion when page edges clamp it', () => {
+    const group = expandSlideGroup([
+      { pageIndex: 0, xMin: 40, yMin: 0, xMax: 60, yMax: 20 },
+    ], page, 0.5);
+    expect(group.topExpansion).toBe(0);
+    expect(group.bottomExpansion).toBe(20);
+  });
+
+  it('records no vertical expansion when the crop already matches', () => {
+    const group = expandSlideGroup([
+      { pageIndex: 0, xMin: 25, yMin: 40, xMax: 75, yMax: 60 },
+    ], page, 2.5);
+    expect(group.topExpansion).toBe(0);
+    expect(group.bottomExpansion).toBe(0);
   });
 
   it('splits vertical expansion evenly before using an edge fallback', () => {

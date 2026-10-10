@@ -35,7 +35,7 @@ export function drawMusicSystems(
       const paddedY = Math.max(0, y - yPadding * canvasHeight);
       const paddedRight = Math.min(canvasWidth, x + width + padding * canvasWidth);
       const paddedBottom = Math.min(canvasHeight, y + height + yPadding * canvasHeight);
-      context.fillStyle = `rgb(229 57 53 / ${PDF_DETECTION_CONFIG.overlayAlpha * 100}%)`;
+      context.fillStyle = `rgb(229 57 53 / ${PDF_DETECTION_CONFIG.paddingAlpha * 100}%)`;
       context.fillRect(paddedX, paddedY, paddedRight - paddedX, y - paddedY);
       context.fillRect(paddedX, y + height, paddedRight - paddedX, paddedBottom - (y + height));
       context.fillRect(paddedX, y, x - paddedX, height);
@@ -52,7 +52,7 @@ export function drawMusicSystems(
       && Math.abs(item.xMax - musicSystem.xMax) < 0.0001
       && Math.abs(item.yMax - musicSystem.yMax) < 0.0001);
     if (label) {
-      context.fillStyle = `rgb(229 57 53 / ${PDF_DETECTION_CONFIG.overlayAlpha * 100}%)`;
+      context.fillStyle = `rgb(229 57 53 / ${PDF_DETECTION_CONFIG.paddingAlpha * 100}%)`;
       context.font = `${Math.max(1, height * 0.8)}px sans-serif`;
       context.textAlign = 'center';
       context.textBaseline = 'middle';
