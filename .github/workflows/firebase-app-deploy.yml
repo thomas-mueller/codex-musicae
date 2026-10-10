@@ -12,6 +12,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           lfs: true
+          fetch-depth: 0
 
       - name: Setup Android SDK
         # uses: android-actions/setup-android@v3
@@ -44,26 +45,46 @@ jobs:
         run: npx ng build -c production
 
       - name: Build Android APK (Capacitor + Gradle)
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+          GITHUB_REF_TYPE: ${{ github.ref_type }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
         run: |
           npx cap add android
           npx cap sync android
-          SHORT_SHA=${GITHUB_SHA::7}
-          sed -i "s/versionCode [0-9]*/versionCode ${{ github.run_number }}/" android/app/build.gradle
-          sed -i "s/versionName \".*\"/versionName \"1.0-$SHORT_SHA\"/" android/app/build.gradle
-          grep -E "versionCode|versionName" android/app/build.gradle
+          test -n "$ANDROID_KEYSTORE_BASE64"
+          test -n "$ANDROID_KEYSTORE_PASSWORD"
+          test -n "$ANDROID_KEY_ALIAS"
+          test -n "$ANDROID_KEY_PASSWORD"
+          export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/codex-musicae-release.keystore"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$ANDROID_KEYSTORE_PATH"
+          python3 scripts/configure-android-ci.py
           chmod +x android/gradlew
           cd android
-          ./gradlew assembleRelease
-          ./gradlew bundleRelease
+          ./gradlew --parallel assembleDebug assembleRelease
           cd -
+          APK_SIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          AAPT="$ANDROID_HOME/build-tools/35.0.0/aapt"
+          "$APK_SIGNER" verify --verbose --print-certs android/app/build/outputs/apk/release/app-release.apk
+          RELEASE_BADGING=$("$AAPT" dump badging android/app/build/outputs/apk/release/app-release.apk | head -n 1)
+          DEBUG_BADGING=$("$AAPT" dump badging android/app/build/outputs/apk/debug/app-debug.apk | head -n 1)
+          echo "$RELEASE_BADGING"
+          echo "$DEBUG_BADGING"
+          [[ "$RELEASE_BADGING" == *"name='app.web.codexmusicae'"* ]]
+          [[ "$DEBUG_BADGING" == *"name='app.web.codexmusicae.debug'"* ]]
 
-      - name: Upload APK/AAB Artifacts
+      - name: Upload release and debug APK artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: codex-musicae-android-release
+          name: codex-musicae-android-builds
           path: |
-            android/app/build/outputs/apk/release/app-release*.apk
-            android/app/build/outputs/bundle/release/app-release*.aab
+            android/app/build/outputs/apk/release/app-release.apk
+            android/app/build/outputs/apk/debug/app-debug.apk
 
       - name: Create Firebase service account file
         run: |
@@ -76,7 +97,7 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: firebase-service-account.json
           FIREBASE_APP_TESTERS: ${{ secrets.FIREBASE_APP_TESTERS }}
         run: |
-          firebase appdistribution:distribute android/app/build/outputs/apk/release/app-release-unsigned.apk \
+          firebase appdistribution:distribute android/app/build/outputs/apk/release/app-release.apk \
             --app ${{ secrets.FIREBASE_APP_ID_ANDROID_CODEX_MUSICAE }} \
             --release-notes "Build ${{ github.run_number }} (${GITHUB_SHA::7}): $(git log -1 --pretty=%s)" \
             --testers "$FIREBASE_APP_TESTERS"
