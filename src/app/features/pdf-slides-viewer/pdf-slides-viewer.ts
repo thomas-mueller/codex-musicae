@@ -18,6 +18,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/pdfjs-dist/build/pdf.worker.mi
   imports: [PdfCanvasStage, AppIcon],
 })
 export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
+  @ViewChild('viewerRoot') viewerRootRef!: ElementRef<HTMLElement>;
   @ViewChild('pdfContainer') pdfContainerRef!: ElementRef<HTMLDivElement>;
   @ViewChild('pdfCanvas') canvasRef!: ElementRef<HTMLCanvasElement>;
   pdfUrl: string;
@@ -25,12 +26,14 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
   private pdfDocument?: pdfjsLib.PDFDocumentProxy; private loadingTask?: pdfjsLib.PDFDocumentLoadingTask;
   private resizeObserver?: ResizeObserver; private destroyed = false; private pageSizes: PageSize[] = []; private renderSequence = 0; private activeRenderTask?: pdfjsLib.RenderTask;
   private lastContainerSize = ''; private resizeFrame?: number;
+  private fullscreenExitRequested = false;
 
   constructor(private readonly router: Router, private readonly changeDetector: ChangeDetectorRef, private readonly pdfState: PdfStateService, private readonly musicSystemService: MusicSystemService) { this.pdfUrl = pdfState.pdfUrl(); }
   get canGoPrevious(): boolean { return this.currentSlide > 0; }
   get canGoNext(): boolean { return this.currentSlide + 1 < this.slideGroups.length; }
 
   async ngAfterViewInit(): Promise<void> {
+    await this.enterPresentationMode();
     await Promise.resolve();
     this.pageSizes = [];
     this.slideGroups = [];
@@ -48,7 +51,12 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
       this.loading = false; await this.rebuildSlides();
     } catch (error) { if (!this.destroyed) { console.error('Unable to load slides PDF.', error); this.loading = false; this.errorMessage = 'Unable to display this PDF.'; this.changeDetector.markForCheck(); } }
   }
-  ngOnDestroy(): void { this.destroyed = true; this.resizeObserver?.disconnect(); if (this.resizeFrame !== undefined) cancelAnimationFrame(this.resizeFrame); this.activeRenderTask?.cancel(); void this.loadingTask?.destroy(); }
+  ngOnDestroy(): void {
+    this.destroyed = true;
+    document.removeEventListener('fullscreenchange', this.onFullscreenChange);
+    this.resizeObserver?.disconnect(); if (this.resizeFrame !== undefined) cancelAnimationFrame(this.resizeFrame); this.activeRenderTask?.cancel(); void this.loadingTask?.destroy();
+    void this.exitFullscreen();
+  }
   previousSlide(): void { if (this.canGoPrevious) { this.currentSlide--; void this.renderCurrentSlide(); } }
   nextSlide(): void { if (this.canGoNext) { this.currentSlide++; void this.renderCurrentSlide(); } }
   firstSlide(): void { this.goToSlide(0); }
@@ -66,9 +74,35 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
       void this.renderCurrentSlide();
     }
   }
-  backToEditor(): void { void this.router.navigate(['/editor']); }
-  openFile(file: File): void { if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) { this.pdfState.openFile(file); void this.router.navigate(['/editor']); } }
+  backToEditor(): void { void this.exitViewer(); }
+  openFile(file: File): void { if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) { this.pdfState.openFile(file); void this.exitViewer(); } }
   openExternally(): void { this.pdfState.openExternally(); }
+
+  private async enterPresentationMode(): Promise<void> {
+    document.addEventListener('fullscreenchange', this.onFullscreenChange);
+    const element = this.viewerRootRef?.nativeElement;
+    if (!element?.requestFullscreen || this.fullscreenExitRequested || document.fullscreenElement) return;
+    try { await element.requestFullscreen(); } catch { /* Fullscreen is optional; the CSS layout remains usable. */ }
+  }
+
+  private readonly onFullscreenChange = (): void => {
+    if (!document.fullscreenElement) {
+      if (!this.fullscreenExitRequested && !this.destroyed) void this.router.navigate(['/editor']);
+      this.fullscreenExitRequested = true;
+    }
+  };
+
+  private async exitFullscreen(): Promise<void> {
+    if (document.fullscreenElement && document.exitFullscreen) {
+      try { await document.exitFullscreen(); } catch { /* The route is still allowed to change. */ }
+    }
+  }
+
+  private async exitViewer(): Promise<void> {
+    this.fullscreenExitRequested = true;
+    await this.exitFullscreen();
+    await this.router.navigate(['/editor']);
+  }
 
   private scheduleResizeRebuild(): void {
     if (this.resizeFrame !== undefined) cancelAnimationFrame(this.resizeFrame);

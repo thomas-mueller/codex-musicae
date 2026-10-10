@@ -1,4 +1,5 @@
-<app-pdf-canvas-stage [controlsVisibleInitially]="false" (escapeWhileHidden)="backToEditor()" (navigate)="handleNavigation($event)">
+<main #viewerRoot class="slides-viewer" [class.presentation-mode]="true">
+<app-pdf-canvas-stage [controlsVisibleInitially]="false" [presentationMode]="true" (exitPresentation)="backToEditor()" (escapeWhileHidden)="backToEditor()" (navigate)="handleNavigation($event)">
   <div stage-content #pdfContainer class="pdf-container">
     <canvas #pdfCanvas></canvas>
     @if (loading) {
@@ -20,3 +21,4 @@
     <button type="button" (click)="openExternally()" aria-label="Open PDF externally" title="Open PDF externally"><app-icon name="external-link" /></button>
   </nav>
 </app-pdf-canvas-stage>
+</main>

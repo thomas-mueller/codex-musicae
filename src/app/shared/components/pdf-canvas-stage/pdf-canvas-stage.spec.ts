@@ -16,6 +16,15 @@ class HostComponent {
   initiallyVisible = true;
 }
 
+@Component({
+  standalone: true,
+  imports: [PdfCanvasStage],
+  template: `<app-pdf-canvas-stage [presentationMode]="true" (exitPresentation)="exited = true" />`,
+})
+class PresentationHostComponent {
+  exited = false;
+}
+
 describe('PdfCanvasStage', () => {
   let fixture: ComponentFixture<HostComponent>;
 
@@ -172,5 +181,23 @@ describe('PdfCanvasStage', () => {
     expect(stage.controlsVisible()).toBe(false);
     stage.onEscape(escape);
     expect(hiddenEscape).toHaveBeenCalledOnce();
+  });
+
+  it('exits presentation mode immediately on Escape and Backspace', () => {
+    const presentationFixture = TestBed.createComponent(PresentationHostComponent);
+    presentationFixture.detectChanges();
+    const stage = presentationFixture.debugElement.children[0].componentInstance as PdfCanvasStage;
+    const escape = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
+    const backspace = new KeyboardEvent('keydown', { key: 'Backspace', cancelable: true });
+    const navigation = vi.fn();
+    stage.navigate.subscribe(navigation);
+
+    stage.onEscape(escape);
+    stage.onToggleShortcut(backspace);
+
+    expect(presentationFixture.componentInstance.exited).toBe(true);
+    expect(escape.defaultPrevented).toBe(true);
+    expect(backspace.defaultPrevented).toBe(true);
+    expect(navigation).not.toHaveBeenCalled();
   });
 });

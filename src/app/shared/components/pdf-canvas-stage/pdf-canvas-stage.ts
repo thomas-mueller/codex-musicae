@@ -10,7 +10,9 @@ export type PageNavigationAction = 'previous' | 'next' | 'first' | 'last';
 })
 export class PdfCanvasStage {
   readonly controlsVisibleInitially = input(true);
+  readonly presentationMode = input(false);
   readonly escapeWhileHidden = output<void>();
+  readonly exitPresentation = output<void>();
   readonly navigate = output<PageNavigationAction>();
   readonly controlsVisible = linkedSignal(() => this.controlsVisibleInitially());
   private pointerStart?: { x: number; y: number; pointerId: number };
@@ -93,6 +95,12 @@ export class PdfCanvasStage {
 
   @HostListener('document:keydown.escape', ['$event'])
   onEscape(event: Event): void {
+    if (this.presentationMode()) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.exitPresentation.emit();
+      return;
+    }
     if (this.controlsVisible()) {
       this.hideControls();
       event.preventDefault();
@@ -114,6 +122,11 @@ export class PdfCanvasStage {
     }
 
     const key = event.key.toLowerCase();
+    if (this.presentationMode() && key === 'backspace') {
+      event.preventDefault();
+      this.exitPresentation.emit();
+      return;
+    }
     if (key === 'c') {
       event.preventDefault();
       this.toggleControls();
