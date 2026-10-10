@@ -6,7 +6,7 @@ import { App } from '@capacitor/app';
   selector: 'app-root',
   imports: [RouterOutlet],
   templateUrl: './app.html',
-  styleUrl: './app.css'
+  styleUrl: './app.css',
 })
 export class AppComponent implements OnInit, OnDestroy {
   protected readonly title = signal('codex-musicae');

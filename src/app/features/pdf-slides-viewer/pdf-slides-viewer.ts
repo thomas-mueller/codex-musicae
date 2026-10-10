@@ -1,14 +1,20 @@
 import { Component, ChangeDetectorRef, AfterViewInit, ElementRef, ViewChild, HostListener, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import * as pdfjsLib from 'pdfjs-dist';
-import { PdfStateService } from '../pdf-state.service';
-import { MusicSystemService } from '../pdf/music-system.service';
-import { buildSlideGroups, type PageSize, type SlideGroup } from '../pdf-slides';
-import { PdfCanvasStage } from '../pdf-canvas-stage';
+import { PdfStateService } from '../../core/pdf/pdf-state.service';
+import { MusicSystemService } from '../../core/pdf/music-system.service';
+import { buildSlideGroups, type PageSize, type SlideGroup } from '../../core/pdf/slide-groups';
+import { PdfCanvasStage } from '../../shared/components/pdf-canvas-stage/pdf-canvas-stage';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/pdfjs-dist/build/pdf.worker.min.mjs';
 
-@Component({ selector: 'app-pdf-slides-viewer', templateUrl: './pdf-slides-viewer.html', styleUrl: './pdf-slides-viewer.css', standalone: true, imports: [PdfCanvasStage] })
+@Component({
+  selector: 'app-pdf-slides-viewer',
+  templateUrl: './pdf-slides-viewer.html',
+  styleUrl: './pdf-slides-viewer.css',
+  standalone: true,
+  imports: [PdfCanvasStage],
+})
 export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
   @ViewChild('pdfContainer') pdfContainerRef!: ElementRef<HTMLDivElement>;
   @ViewChild('pdfCanvas') canvasRef!: ElementRef<HTMLCanvasElement>;

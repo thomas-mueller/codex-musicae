@@ -10,10 +10,10 @@ import {
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import * as pdfjsLib from 'pdfjs-dist';
-import { MusicSystemService } from '../pdf/music-system.service';
-import type { MusicSystem } from '../pdf/music-system.model';
-import { drawMusicSystems } from '../pdf/music-system-renderer';
-import { PdfCanvasStage } from '../pdf-canvas-stage';
+import { MusicSystemService } from '../../core/pdf/music-system.service';
+import type { MusicSystem } from '../../core/pdf/music-system.model';
+import { drawMusicSystems } from '../../core/pdf/music-system-renderer';
+import { PdfCanvasStage } from '../../shared/components/pdf-canvas-stage/pdf-canvas-stage';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   '/assets/pdfjs-dist/build/pdf.worker.min.mjs';

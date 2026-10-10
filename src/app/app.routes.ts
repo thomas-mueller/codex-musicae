@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
-import { PdfEditor } from './pdf-editor/pdf-editor';
-import { PdfSlidesViewer } from './pdf-slides-viewer/pdf-slides-viewer';
+import { PdfEditor } from './features/pdf-editor/pdf-editor';
+import { PdfSlidesViewer } from './features/pdf-slides-viewer/pdf-slides-viewer';
 
 export const routes: Routes = [
   {

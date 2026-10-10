@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildSlideGroups, expandSlideGroup } from './pdf-slides';
+import { buildSlideGroups, expandSlideGroup } from './slide-groups';
 
 const page = [{ width: 100, height: 100 }];
 

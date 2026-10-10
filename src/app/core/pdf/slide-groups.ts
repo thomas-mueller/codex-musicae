@@ -1,4 +1,4 @@
-import type { MusicSystem } from './pdf/music-system.model';
+import type { MusicSystem } from './music-system.model';
 
 export interface PageSize { width: number; height: number; }
 export interface SlideRect {
