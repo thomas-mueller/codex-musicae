@@ -79,23 +79,52 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
       this.resizeObserver = new ResizeObserver(() => this.scheduleResizeRebuild());
       this.resizeObserver.observe(this.pdfContainerRef.nativeElement);
     }
-    if (!this.musicSystemService.hasEditorState()) { this.loading = false; this.isProcessing = false; this.errorMessage = 'Open the PDF in the editor first to generate slides.'; this.changeDetector.markForCheck(); return; }
     try {
       this.loadingTask = pdfjsLib.getDocument({ url: this.pdfUrl, cMapUrl: '/assets/pdfjs-dist/cmaps/', cMapPacked: true, standardFontDataUrl: '/assets/pdfjs-dist/standard_fonts/', wasmUrl: '/assets/pdfjs-dist/wasm/' });
       this.pdfDocument = await this.loadingTask.promise;
       this.pageSizes = [];
       for (let i = 1; i <= this.pdfDocument.numPages; i++) { const page = await this.pdfDocument.getPage(i); const viewport = page.getViewport({ scale: 1 }); this.pageSizes.push({ width: viewport.width, height: viewport.height }); }
+
+      let hasEmbeddedSettings = false;
+      const cachedBytes = this.pdfState.pdfBytes();
+      let pdfBytes = cachedBytes;
+      try {
+        if (!pdfBytes) {
+          const response = await fetch(this.pdfUrl);
+          const buffer = await response.arrayBuffer();
+          pdfBytes = new Uint8Array(buffer);
+          this.pdfState.pdfBytes.set(pdfBytes);
+        }
+        const extractedSettings = await this.pdfPersistence.loadAndExtractSettings(pdfBytes);
+        if (extractedSettings) {
+          hasEmbeddedSettings = true;
+          console.log('PDF metadata loaded; skipping OpenCV detection');
+        }
+      } catch (error) {
+        console.warn('Unable to inspect PDF metadata; continuing with detection fallback.', error);
+      }
+
+      if (!hasEmbeddedSettings && !this.musicSystemService.hasEditorState()) {
+        this.loading = false;
+        this.isProcessing = false;
+        this.errorMessage = 'Open the PDF in the editor first to generate slides.';
+        this.changeDetector.markForCheck();
+        return;
+      }
+
       this.detectedByPage.clear();
       for (const musicSystem of this.musicSystemService.musicSystems()) {
         const pageSystems = this.detectedByPage.get(musicSystem.page) ?? [];
         this.detectedByPage.set(musicSystem.page, [...pageSystems, musicSystem]);
       }
       this.loading = false; await this.rebuildSlides();
-      this.detectionController?.abort();
-      this.detectionController = new AbortController();
-      this.detectionPromise = this.detectRemainingPages(this.detectionController.signal);
-      await this.detectionPromise;
-      await this.rebuildSlides();
+      if (!hasEmbeddedSettings) {
+        this.detectionController?.abort();
+        this.detectionController = new AbortController();
+        this.detectionPromise = this.detectRemainingPages(this.detectionController.signal);
+        await this.detectionPromise;
+        await this.rebuildSlides();
+      }
       this.isProcessing = false;
       this.changeDetector.markForCheck();
     } catch (error) { if (!this.destroyed) { console.error('Unable to load slides PDF.', error); this.loading = false; this.isProcessing = false; this.errorMessage = 'Unable to display this PDF.'; this.changeDetector.markForCheck(); } }
@@ -195,6 +224,7 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
 
   private async rebuildSlides(): Promise<void> {
     if (!this.pdfDocument || this.destroyed || !this.pageSizes.length) return;
+    console.log('Slide organization started');
     const anchor = this.getCurrentSlideAnchor();
     this.activeRenderTask?.cancel();
     this.activeRenderTask = undefined;
@@ -202,19 +232,23 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
     const aspect = this.selectedAspectRatio;
     const systems = orderMusicSystems(Array.from(this.detectedByPage.values()).flat());
     this.slideGroups = buildSlideGroups(systems, this.pageSizes, this.musicSystemService.padding(), aspect);
+    console.log(`Slide organization progress: ${this.slideGroups.length}/${this.slideGroups.length} slides`);
     this.currentSlide = this.findSlideForAnchor(anchor);
     this.changeDetector.markForCheck();
     await this.renderCurrentSlide();
+    console.log('Slide organization finished');
   }
 
   private async detectRemainingPages(signal: AbortSignal): Promise<void> {
     if (!this.pdfDocument) return;
+    console.log('OpenCV detection started');
     try {
       await this.musicSystemService.detectMusicSystemsInDocument(this.pdfDocument, {
         signal,
         initialPage: 1,
         onPageDetected: (systems, page) => {
           if (this.destroyed || signal.aborted) return;
+          console.log(`OpenCV detection page ${page}/${this.pdfDocument?.numPages ?? 0}`);
           this.detectedByPage.set(page, systems);
           this.musicSystemService.setEditorState(
             orderMusicSystems(Array.from(this.detectedByPage.values()).flat()),
@@ -227,6 +261,8 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
       if (!this.destroyed && !(error instanceof DOMException && error.name === 'AbortError')) {
         console.error('Unable to continue PDF music-system detection in viewer.', error);
       }
+    } finally {
+      console.log('OpenCV detection finished');
     }
     await this.rebuildSlides();
   }
