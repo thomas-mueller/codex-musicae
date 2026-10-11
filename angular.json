@@ -59,6 +59,9 @@
                 "output": "assets/opencv"
               }
             ],
+            "allowedCommonJsDependencies": [
+              "pako"
+            ],
             "styles": [
               "src/styles.css"
             ]
@@ -68,7 +71,7 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "1MB",
+                  "maximumWarning": "1.5MB",
                   "maximumError": "2MB"
                 },
                 {

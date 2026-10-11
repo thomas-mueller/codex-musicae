@@ -36,7 +36,10 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
   private lastContainerSize = ''; private resizeFrame?: number; private rebuildFrame?: number;
   private fullscreenExitRequested = false;
 
-  constructor(private readonly router: Router, private readonly changeDetector: ChangeDetectorRef, private readonly pdfState: PdfStateService, private readonly musicSystemService: MusicSystemService) { this.pdfUrl = pdfState.pdfUrl(); }
+  constructor(private readonly router: Router, private readonly changeDetector: ChangeDetectorRef, private readonly pdfState: PdfStateService, private readonly musicSystemService: MusicSystemService) {
+    this.pdfUrl = pdfState.pdfUrl();
+    this.aspectRatioAdjustment = musicSystemService.aspectRatioAdjustment();
+  }
   get canGoPrevious(): boolean { return this.currentSlide > 0; }
   get canGoNext(): boolean { return this.currentSlide + 1 < this.slideGroups.length; }
   get canZoomOut(): boolean { return this.selectedAspectRatio > 0.5 + 0.0001; }
@@ -113,6 +116,7 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
     const nextAspectRatio = Math.max(0.5, Math.min(aspectRatio, 2));
     if (Math.abs(nextAspectRatio - this.selectedAspectRatio) < 0.0001) return;
     this.aspectRatioAdjustment = nextAspectRatio - baseAspectRatio;
+    this.musicSystemService.aspectRatioAdjustment.set(this.aspectRatioAdjustment);
     void this.rebuildSlides();
   }
 

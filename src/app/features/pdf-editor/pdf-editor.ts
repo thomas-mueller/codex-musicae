@@ -15,6 +15,7 @@ import { orderMusicSystems, type MusicSystem } from '../../core/pdf/music-system
 import { drawMusicSystems } from '../../core/pdf/music-system-renderer';
 import { PdfCanvasStage, type PageNavigationAction } from '../../shared/components/pdf-canvas-stage/pdf-canvas-stage';
 import { PdfStateService } from '../../core/pdf/pdf-state.service';
+import { PdfPersistenceService } from '../../core/pdf/pdf-persistence.service';
 import { AppIcon } from '../../shared/components/app-icon/app-icon';
 import type { MusicSystemOverlayLabel } from '../../core/pdf/music-system-renderer';
 
@@ -58,10 +59,13 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
     private readonly changeDetector: ChangeDetectorRef,
     private readonly musicSystemService: MusicSystemService,
     private readonly pdfState: PdfStateService,
+    private readonly pdfPersistence: PdfPersistenceService,
   ) { this.pdfUrl = this.pdfState.pdfUrl(); }
 
   get musicSystems() { return this.musicSystemService.musicSystems; }
   get padding() { return this.musicSystemService.padding; }
+  get saveStatus() { return this.pdfPersistence.saveStatus; }
+  get isSaving() { return this.pdfPersistence.saveStatus() === 'saving'; }
 
   async ngAfterViewInit(): Promise<void> {
     this.resizeObserver = new ResizeObserver(() => {
@@ -105,9 +109,38 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
       this.pageCount = this.pdfDocument.numPages;
       this.loading = false;
       this.changeDetector.markForCheck();
-      this.detectionController?.abort();
-      this.detectionController = new AbortController();
-      void this.detectDocumentMusicSystems(this.pdfDocument, this.detectionController.signal);
+
+      // Check if the PDF has embedded settings
+      let hasEmbeddedSettings = false;
+      const cachedBytes = this.pdfState.pdfBytes();
+      if (cachedBytes) {
+        const extracted = await this.pdfPersistence.loadAndExtractSettings(cachedBytes);
+        if (extracted) {
+          hasEmbeddedSettings = true;
+          this.changeDetector.markForCheck();
+        }
+      } else {
+        try {
+          const response = await fetch(this.pdfUrl);
+          const buffer = await response.arrayBuffer();
+          const bytes = new Uint8Array(buffer);
+          this.pdfState.pdfBytes.set(bytes);
+          const extracted = await this.pdfPersistence.loadAndExtractSettings(bytes);
+          if (extracted) {
+            hasEmbeddedSettings = true;
+            this.changeDetector.markForCheck();
+          }
+        } catch {
+          // If fetch fails or has no embedded settings, continue with detection
+        }
+      }
+
+      if (!hasEmbeddedSettings) {
+        this.detectionController?.abort();
+        this.detectionController = new AbortController();
+        void this.detectDocumentMusicSystems(this.pdfDocument, this.detectionController.signal);
+      }
+
       await this.renderCurrentPage();
     } catch {
       if (!this.destroyed) {
@@ -121,6 +154,11 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
   openFile(file: File): void {
     if (!file.type.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) return;
     this.pdfState.openFile(file); this.pdfUrl = this.pdfState.pdfUrl(); void this.loadDocument();
+  }
+
+  async savePdf(): Promise<void> {
+    await this.pdfPersistence.save();
+    this.changeDetector.markForCheck();
   }
 
   ngOnDestroy(): void {

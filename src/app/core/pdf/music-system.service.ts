@@ -47,6 +47,7 @@ interface DetectedPage {
 export class MusicSystemService {
   readonly musicSystems = signal<readonly MusicSystem[]>([]);
   readonly padding = signal(0.025);
+  readonly aspectRatioAdjustment = signal(0);
   readonly hasEditorState = signal(false);
   private readonly detectionCache = new WeakMap<PDFDocumentProxy, DetectionCache>();
   private detectionCanvas?: HTMLCanvasElement;
@@ -89,14 +90,16 @@ export class MusicSystemService {
     return musicSystems;
   }
 
-  setEditorState(musicSystems: readonly MusicSystem[], padding: number): void {
+  setEditorState(musicSystems: readonly MusicSystem[], padding: number, aspectRatioAdjustment = 0): void {
     this.musicSystems.set(musicSystems.map((musicSystem) => ({ ...musicSystem })));
     this.padding.set(padding);
+    this.aspectRatioAdjustment.set(aspectRatioAdjustment);
     this.hasEditorState.set(true);
   }
 
   clearEditorState(): void {
     this.musicSystems.set([]);
+    this.aspectRatioAdjustment.set(0);
     this.hasEditorState.set(false);
   }
 

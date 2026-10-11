@@ -5,6 +5,15 @@
         <button type="button" (click)="pdfFileInput.click()" aria-label="Open PDF" title="Open PDF">
           <app-icon name="file-open" />
         </button>
+        <button
+          type="button"
+          (click)="savePdf()"
+          [disabled]="loading || isSaving"
+          [attr.aria-label]="saveStatus() === 'saved' ? 'Saved' : 'Save PDF'"
+          [attr.title]="saveStatus() === 'saved' ? 'Settings saved inside PDF' : 'Save settings inside PDF'"
+        >
+          <app-icon [name]="saveStatus() === 'saved' ? 'check' : 'save'" />
+        </button>
         <input
           #pdfFileInput
           hidden
