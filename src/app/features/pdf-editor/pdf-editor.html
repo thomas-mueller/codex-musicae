@@ -8,7 +8,7 @@
         <button
           type="button"
           (click)="savePdf()"
-          [disabled]="loading || isSaving"
+          [disabled]="!canSave"
           [attr.aria-label]="saveStatus() === 'saved' ? 'Saved' : 'Save PDF'"
           [attr.title]="saveStatus() === 'saved' ? 'Settings saved inside PDF' : 'Save settings inside PDF'"
         >

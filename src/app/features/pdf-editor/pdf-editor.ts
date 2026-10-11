@@ -43,6 +43,7 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
   zoom = 1;
   loading = true;
   errorMessage = '';
+  isProcessing = true;
 
   private pdfDocument?: pdfjsLib.PDFDocumentProxy;
   private loadingTask?: pdfjsLib.PDFDocumentLoadingTask;
@@ -53,6 +54,7 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
   private detectionController?: AbortController;
   private lastViewportSize = '';
   private resizeFrame?: number;
+  private detectionPromise?: Promise<void>;
 
   constructor(
     private readonly router: Router,
@@ -66,6 +68,7 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
   get padding() { return this.musicSystemService.padding; }
   get saveStatus() { return this.pdfPersistence.saveStatus; }
   get isSaving() { return this.pdfPersistence.saveStatus() === 'saving'; }
+  get canSave() { return !this.loading && !this.isProcessing && !this.isSaving; }
 
   async ngAfterViewInit(): Promise<void> {
     this.resizeObserver = new ResizeObserver(() => {
@@ -88,7 +91,7 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
   }
 
   private async loadDocument(): Promise<void> {
-    this.loading = true; this.errorMessage = ''; this.currentPage = 1; this.pageCount = 0;
+    this.loading = true; this.isProcessing = true; this.errorMessage = ''; this.currentPage = 1; this.pageCount = 0;
     this.musicSystemService.clearEditorState();
     this.renderTask?.cancel(); await this.loadingTask?.destroy();
     try {
@@ -138,10 +141,15 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
       if (!hasEmbeddedSettings) {
         this.detectionController?.abort();
         this.detectionController = new AbortController();
-        void this.detectDocumentMusicSystems(this.pdfDocument, this.detectionController.signal);
+        this.detectionPromise = this.detectDocumentMusicSystems(this.pdfDocument, this.detectionController.signal);
+      } else {
+        this.isProcessing = false;
       }
 
       await this.renderCurrentPage();
+      if (!hasEmbeddedSettings) await this.detectionPromise;
+      this.isProcessing = false;
+      this.changeDetector.markForCheck();
     } catch {
       if (!this.destroyed) {
         this.loading = false;
@@ -157,6 +165,7 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
   }
 
   async savePdf(): Promise<void> {
+    if (!this.canSave) return;
     await this.pdfPersistence.save();
     this.changeDetector.markForCheck();
   }
@@ -337,6 +346,6 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
 
   private getOverlayLabels(): MusicSystemOverlayLabel[] {
     return orderMusicSystems(this.musicSystems())
-      .map((musicSystem) => ({ ...musicSystem, boxNumber: musicSystem.boxOrder! }));
+      .map((musicSystem) => ({ ...musicSystem, boxNumber: musicSystem.selectedPosition! }));
   }
 }

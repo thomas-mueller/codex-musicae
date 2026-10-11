@@ -18,7 +18,7 @@ describe('slide crop expansion', () => {
       { width: 100, height: 100 },
       { width: 100, height: 100 },
     ], 0, 10);
-    expect(groups.flat().map((rect) => [rect.pageIndex, rect.boxOrder])).toEqual([[0, 1], [2, 2]]);
+    expect(groups.flat().map((rect) => [rect.pageIndex, rect.selectedPosition])).toEqual([[0, 1], [2, 2]]);
   });
 
   it('orders systems in PDF reading order before grouping', () => {

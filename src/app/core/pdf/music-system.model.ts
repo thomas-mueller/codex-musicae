@@ -4,7 +4,7 @@ export interface MusicSystem {
   yMin: number;
   xMax: number;
   yMax: number;
-  boxOrder?: number;
+  selectedPosition?: number;
 }
 
 export function compareMusicSystemsInPdfOrder(a: MusicSystem, b: MusicSystem): number {
@@ -14,5 +14,5 @@ export function compareMusicSystemsInPdfOrder(a: MusicSystem, b: MusicSystem): n
 export function orderMusicSystems(musicSystems: readonly MusicSystem[]): MusicSystem[] {
   return [...musicSystems]
     .sort(compareMusicSystemsInPdfOrder)
-    .map((musicSystem, index) => ({ ...musicSystem, boxOrder: index + 1 }));
+    .map((musicSystem, index) => ({ ...musicSystem, selectedPosition: index + 1 }));
 }

@@ -3,7 +3,7 @@ import { compareMusicSystemsInPdfOrder, orderMusicSystems, type MusicSystem } fr
 export interface PageSize { width: number; height: number; }
 export interface SlideRect {
   pageIndex: number;
-  boxOrder?: number;
+  selectedPosition?: number;
   xMin: number;
   yMin: number;
   xMax: number;
@@ -133,7 +133,7 @@ export function buildSlideGroups(
     const pad = padding * page.width;
     const rect: SlideRect = {
       pageIndex,
-      boxOrder: musicSystem.boxOrder,
+      selectedPosition: musicSystem.selectedPosition,
       xMin: Math.max(0, musicSystem.xMin * page.width - pad),
       yMin: Math.max(0, musicSystem.yMin * page.height - pad),
       xMax: Math.min(page.width, musicSystem.xMax * page.width + pad),

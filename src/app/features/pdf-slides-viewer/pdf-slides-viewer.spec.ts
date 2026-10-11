@@ -31,6 +31,13 @@ describe('PdfSlidesViewer', () => {
     expect(component.selectedAspectRatioLabel).toBe('1.5');
   });
 
+  it('keeps a saved absolute ratio when the container dimensions change', () => {
+    component['musicSystemService'].aspectRatio.set(1.1);
+    component['pdfContainerRef'] = { nativeElement: { clientWidth: 1780, clientHeight: 1000 } } as never;
+    expect(component.selectedAspectRatio).toBe(1.1);
+    expect(component.selectedAspectRatioLabel).toBe('1.1');
+  });
+
   it('changes the selected aspect ratio with the zoom controls', () => {
     const rebuildSlides = vi.spyOn(component as any, 'rebuildSlides').mockResolvedValue(undefined);
     const defaultRatio = component.selectedAspectRatio;
@@ -70,21 +77,21 @@ describe('PdfSlidesViewer', () => {
 
   it('anchors regrouped slides to the first system of the current slide', () => {
     component.slideGroups = [
-      [{ pageIndex: 0, boxOrder: 1 } as never],
-      [{ pageIndex: 0, boxOrder: 2 } as never],
+      [{ pageIndex: 0, selectedPosition: 1 } as never],
+      [{ pageIndex: 0, selectedPosition: 2 } as never],
     ];
     component.currentSlide = 1;
     const anchor = (component as any).getCurrentSlideAnchor();
     component.slideGroups = [
-      [{ pageIndex: 0, boxOrder: 1 } as never, { pageIndex: 0, boxOrder: 2 } as never],
+      [{ pageIndex: 0, selectedPosition: 1 } as never, { pageIndex: 0, selectedPosition: 2 } as never],
     ];
     expect((component as any).findSlideForAnchor(anchor)).toBe(0);
   });
 
   it('falls back to the nearest valid slide when an anchor disappears', () => {
-    component.slideGroups = [[{ pageIndex: 0, boxOrder: 1 } as never]];
+    component.slideGroups = [[{ pageIndex: 0, selectedPosition: 1 } as never]];
     component.currentSlide = 3;
-    expect((component as any).findSlideForAnchor({ pageIndex: 0, boxOrder: 9 })).toBe(0);
+    expect((component as any).findSlideForAnchor({ pageIndex: 0, selectedPosition: 9 })).toBe(0);
     expect((component as any).findSlideForAnchor(undefined)).toBe(0);
   });
 

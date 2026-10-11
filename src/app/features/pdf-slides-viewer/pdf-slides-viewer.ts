@@ -8,12 +8,13 @@ import { PdfCanvasStage, type PageNavigationAction } from '../../shared/componen
 import { AppIcon } from '../../shared/components/app-icon/app-icon';
 import { orderMusicSystems, type MusicSystem } from '../../core/pdf/music-system.model';
 import { PDF_DETECTION_CONFIG } from '../../core/pdf/pdf-detection.config';
+import { PdfPersistenceService } from '../../core/pdf/pdf-persistence.service';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/pdfjs-dist/build/pdf.worker.min.mjs';
 
 interface SlideAnchor {
   pageIndex: number;
-  boxOrder?: number;
+  selectedPosition?: number;
 }
 
 @Component({
@@ -30,21 +31,28 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
   pdfUrl: string;
   loading = true; errorMessage = ''; currentSlide = 0; slideGroups: SlideGroup[] = [];
   aspectRatioAdjustment = 0;
+  isProcessing = true;
   private pdfDocument?: pdfjsLib.PDFDocumentProxy; private loadingTask?: pdfjsLib.PDFDocumentLoadingTask;
   private resizeObserver?: ResizeObserver; private destroyed = false; private pageSizes: PageSize[] = []; private renderSequence = 0; private activeRenderTask?: pdfjsLib.RenderTask;
   private detectionController?: AbortController; private readonly detectedByPage = new Map<number, readonly MusicSystem[]>();
   private lastContainerSize = ''; private resizeFrame?: number; private rebuildFrame?: number;
   private fullscreenExitRequested = false;
+  private detectionPromise?: Promise<void>;
 
-  constructor(private readonly router: Router, private readonly changeDetector: ChangeDetectorRef, private readonly pdfState: PdfStateService, private readonly musicSystemService: MusicSystemService) {
+  constructor(private readonly router: Router, private readonly changeDetector: ChangeDetectorRef, private readonly pdfState: PdfStateService, private readonly musicSystemService: MusicSystemService, private readonly pdfPersistence: PdfPersistenceService) {
     this.pdfUrl = pdfState.pdfUrl();
     this.aspectRatioAdjustment = musicSystemService.aspectRatioAdjustment();
   }
+  get saveStatus() { return this.pdfPersistence.saveStatus; }
+  get isSaving() { return this.pdfPersistence.saveStatus() === 'saving'; }
+  get canSave(): boolean { return !this.loading && !this.isProcessing && !this.isSaving; }
   get canGoPrevious(): boolean { return this.currentSlide > 0; }
   get canGoNext(): boolean { return this.currentSlide + 1 < this.slideGroups.length; }
   get canZoomOut(): boolean { return this.selectedAspectRatio > 0.5 + 0.0001; }
   get canZoomIn(): boolean { return this.selectedAspectRatio < 2 - 0.0001; }
   get selectedAspectRatio(): number {
+    const savedAspectRatio = this.musicSystemService.aspectRatio();
+    if (savedAspectRatio !== null) return savedAspectRatio;
     const container = this.pdfContainerRef?.nativeElement;
     const baseAspectRatio = container?.clientHeight ? container.clientWidth / container.clientHeight : 1.5;
     return baseAspectRatio + this.aspectRatioAdjustment;
@@ -57,6 +65,13 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
   async ngAfterViewInit(): Promise<void> {
     await this.enterPresentationMode();
     await Promise.resolve();
+    const savedAspectRatio = this.musicSystemService.aspectRatio();
+    if (savedAspectRatio !== null) {
+      const container = this.pdfContainerRef?.nativeElement;
+      const baseAspectRatio = container?.clientHeight ? container.clientWidth / container.clientHeight : 1.5;
+      this.aspectRatioAdjustment = savedAspectRatio - baseAspectRatio;
+      this.musicSystemService.aspectRatioAdjustment.set(this.aspectRatioAdjustment);
+    }
     this.pageSizes = [];
     this.slideGroups = [];
     this.currentSlide = 0;
@@ -64,7 +79,7 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
       this.resizeObserver = new ResizeObserver(() => this.scheduleResizeRebuild());
       this.resizeObserver.observe(this.pdfContainerRef.nativeElement);
     }
-    if (!this.musicSystemService.hasEditorState()) { this.loading = false; this.errorMessage = 'Open the PDF in the editor first to generate slides.'; this.changeDetector.markForCheck(); return; }
+    if (!this.musicSystemService.hasEditorState()) { this.loading = false; this.isProcessing = false; this.errorMessage = 'Open the PDF in the editor first to generate slides.'; this.changeDetector.markForCheck(); return; }
     try {
       this.loadingTask = pdfjsLib.getDocument({ url: this.pdfUrl, cMapUrl: '/assets/pdfjs-dist/cmaps/', cMapPacked: true, standardFontDataUrl: '/assets/pdfjs-dist/standard_fonts/', wasmUrl: '/assets/pdfjs-dist/wasm/' });
       this.pdfDocument = await this.loadingTask.promise;
@@ -78,8 +93,12 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
       this.loading = false; await this.rebuildSlides();
       this.detectionController?.abort();
       this.detectionController = new AbortController();
-      void this.detectRemainingPages(this.detectionController.signal);
-    } catch (error) { if (!this.destroyed) { console.error('Unable to load slides PDF.', error); this.loading = false; this.errorMessage = 'Unable to display this PDF.'; this.changeDetector.markForCheck(); } }
+      this.detectionPromise = this.detectRemainingPages(this.detectionController.signal);
+      await this.detectionPromise;
+      await this.rebuildSlides();
+      this.isProcessing = false;
+      this.changeDetector.markForCheck();
+    } catch (error) { if (!this.destroyed) { console.error('Unable to load slides PDF.', error); this.loading = false; this.isProcessing = false; this.errorMessage = 'Unable to display this PDF.'; this.changeDetector.markForCheck(); } }
   }
   ngOnDestroy(): void {
     this.destroyed = true;
@@ -108,6 +127,12 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
     }
   }
   backToEditor(): void { void this.exitViewer(); }
+  async savePdf(): Promise<void> {
+    if (!this.canSave) return;
+    this.musicSystemService.aspectRatio.set(this.selectedAspectRatio);
+    await this.pdfPersistence.save();
+    this.changeDetector.markForCheck();
+  }
   openFile(file: File): void { if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) { this.pdfState.openFile(file); void this.exitViewer(); } }
 
   private setAspectRatio(aspectRatio: number): void {
@@ -116,6 +141,7 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
     const nextAspectRatio = Math.max(0.5, Math.min(aspectRatio, 2));
     if (Math.abs(nextAspectRatio - this.selectedAspectRatio) < 0.0001) return;
     this.aspectRatioAdjustment = nextAspectRatio - baseAspectRatio;
+    this.musicSystemService.aspectRatio.set(nextAspectRatio);
     this.musicSystemService.aspectRatioAdjustment.set(this.aspectRatioAdjustment);
     void this.rebuildSlides();
   }
@@ -202,11 +228,12 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
         console.error('Unable to continue PDF music-system detection in viewer.', error);
       }
     }
+    await this.rebuildSlides();
   }
 
   private getCurrentSlideAnchor(): SlideAnchor | undefined {
     const rect = this.slideGroups[this.currentSlide]?.[0];
-    return rect ? { pageIndex: rect.pageIndex, boxOrder: rect.boxOrder } : undefined;
+    return rect ? { pageIndex: rect.pageIndex, selectedPosition: rect.selectedPosition } : undefined;
   }
 
   private findSlideForAnchor(anchor: SlideAnchor | undefined): number {
@@ -214,7 +241,7 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
     if (anchor) {
       const anchoredSlide = this.slideGroups.findIndex((group) => group.some((rect) =>
         rect.pageIndex === anchor.pageIndex &&
-        (anchor.boxOrder === undefined || rect.boxOrder === anchor.boxOrder)));
+        (anchor.selectedPosition === undefined || rect.selectedPosition === anchor.selectedPosition)));
       if (anchoredSlide >= 0) return anchoredSlide;
     }
     return Math.min(this.currentSlide, this.slideGroups.length - 1);
@@ -263,7 +290,7 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
     const contentOffsetY = (canvasHeight - contentHeight * scale) / 2;
     let y = 0;
     try {
-      for (const rect of [...group].sort((a, b) => (a.boxOrder ?? Number.MAX_SAFE_INTEGER) - (b.boxOrder ?? Number.MAX_SAFE_INTEGER))) {
+      for (const rect of [...group].sort((a, b) => (a.selectedPosition ?? Number.MAX_SAFE_INTEGER) - (b.selectedPosition ?? Number.MAX_SAFE_INTEGER))) {
         const page = await document.getPage(rect.pageIndex + 1);
         const viewport = page.getViewport({ scale: scale * outputScale });
         const source = globalThis.document.createElement('canvas');
