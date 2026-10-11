@@ -8,7 +8,9 @@ import { PdfCanvasStage } from './pdf-canvas-stage';
   template: `
     <app-pdf-canvas-stage [controlsVisibleInitially]="initiallyVisible">
       <div stage-content>Canvas</div>
-      <div stage-controls>Controls</div>
+      <div stage-controls>
+        <button type="button" class="control-btn">Action</button>
+      </div>
     </app-pdf-canvas-stage>
   `,
 })
@@ -135,12 +137,16 @@ describe('PdfCanvasStage', () => {
     expect(capture).toHaveBeenCalledTimes(1);
   });
 
-  it('does not toggle when a control is clicked', () => {
-    const controls = fixture.nativeElement.querySelector('[stage-controls]') as HTMLElement;
-    controls.click();
+  it('does not toggle when a button on the bar is clicked, but toggles when bar area is clicked', () => {
+    const button = fixture.nativeElement.querySelector('.control-btn') as HTMLButtonElement;
+    button.click();
     fixture.detectChanges();
-
     expect(fixture.nativeElement.querySelector('.controls-overlay').classList.contains('controls-hidden')).toBe(false);
+
+    const controlsBar = fixture.nativeElement.querySelector('.controls-bar') as HTMLElement;
+    controlsBar.click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.controls-overlay').classList.contains('controls-hidden')).toBe(true);
   });
 
   it('toggles with C and ignores editable fields', () => {

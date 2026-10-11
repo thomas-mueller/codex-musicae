@@ -1,4 +1,4 @@
-import { Component, HostListener, input, linkedSignal, output } from '@angular/core';
+import { Component, ElementRef, HostListener, ViewChild, input, linkedSignal, output } from '@angular/core';
 
 export type PageNavigationAction = 'previous' | 'next' | 'first' | 'last';
 
@@ -18,18 +18,21 @@ export class PdfCanvasStage {
   private pointerStart?: { x: number; y: number; pointerId: number };
   private readonly swipeThreshold = 50;
   private readonly verticalSwipeTolerance = 35;
+  @ViewChild('topBar') private readonly topBarRef?: ElementRef<HTMLElement>;
+  @ViewChild('bottomBar') private readonly bottomBarRef?: ElementRef<HTMLElement>;
 
   onStageClick(event: MouseEvent): void {
     const target = event.target;
-    if (!(target instanceof Element) || target.closest('[stage-controls]')) {
+    if (this.isInteractiveTarget(target)) {
       return;
     }
 
     const stage = event.currentTarget as HTMLElement;
     const bounds = stage.getBoundingClientRect();
-    const edgeBand = bounds.height * 0.14;
+    const topBarHeight = this.topBarRef?.nativeElement.offsetHeight || 44;
+    const bottomBarHeight = this.bottomBarRef?.nativeElement.offsetHeight || 44;
     const y = event.clientY - bounds.top;
-    if (y <= edgeBand || y >= bounds.height - edgeBand) {
+    if (y <= topBarHeight || y >= bounds.height - bottomBarHeight) {
       this.toggleControls();
       return;
     }
@@ -82,7 +85,11 @@ export class PdfCanvasStage {
   }
 
   private isControlTarget(target: EventTarget | null): boolean {
-    return target instanceof Element && !!target.closest('[stage-controls]');
+    return target instanceof Element && !!target.closest('.controls-bar, [stage-controls], [stage-top-controls], [stage-bottom-controls]');
+  }
+
+  private isInteractiveTarget(target: EventTarget | null): boolean {
+    return target instanceof Element && !!target.closest('button, input, select, textarea, label, [role="button"], a');
   }
 
   toggleControls(): void {

@@ -123,8 +123,6 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
     this.pdfState.openFile(file); this.pdfUrl = this.pdfState.pdfUrl(); void this.loadDocument();
   }
 
-  openExternally(): void { this.pdfState.openExternally(); }
-
   ngOnDestroy(): void {
     this.destroyed = true;
     this.detectionController?.abort();

@@ -11,19 +11,59 @@
       <p class="message">No slides could be generated from the detected music systems.</p>
     }
   </div>
-  <nav stage-controls class="toolbar" aria-label="Slide controls">
-    <button type="button" (click)="previousSlide()" [disabled]="!canGoPrevious" aria-label="Previous slide" title="Previous slide"><app-icon name="arrow-left" /></button>
-    <span [attr.title]="'Slide ' + (slideGroups.length ? currentSlide + 1 : '—') + ' of ' + (slideGroups.length || '—')" aria-live="polite">{{ slideGroups.length ? currentSlide + 1 : '—' }} of {{ slideGroups.length || '—' }}</span>
-    <button type="button" (click)="nextSlide()" [disabled]="!canGoNext" aria-label="Next slide" title="Next slide"><app-icon name="arrow-right" /></button>
-    <span class="zoom-control" role="group" aria-label="Aspect ratio controls">
-      <button type="button" (click)="zoomOut()" [disabled]="!canZoomOut" aria-label="Show more systems" title="Show more systems"><app-icon name="zoom-out" /></button>
-      <span [attr.title]="'Aspect ratio: ' + selectedAspectRatioLabel" aria-live="polite">{{ selectedAspectRatioLabel }}</span>
-      <button type="button" (click)="zoomIn()" [disabled]="!canZoomIn" aria-label="Show fewer systems" title="Show fewer systems"><app-icon name="zoom-in" /></button>
-    </span>
-    <button type="button" (click)="backToEditor()" aria-label="Open editor" title="Open editor"><app-icon name="edit" /></button>
-    <button type="button" (click)="pdfFileInput.click()" aria-label="Open PDF" title="Open PDF"><app-icon name="file-open" /></button>
-    <input #pdfFileInput hidden type="file" accept="application/pdf,.pdf" (change)="openFile($any($event.target).files?.[0]); $any($event.target).value = ''" />
-    <button type="button" (click)="openExternally()" aria-label="Open PDF externally" title="Open PDF externally"><app-icon name="external-link" /></button>
-  </nav>
+  <header stage-top-controls class="toolbar top-toolbar" aria-label="Slide top controls">
+    <div class="toolbar-section start">
+      <button type="button" (click)="pdfFileInput.click()" aria-label="Open PDF" title="Open PDF">
+        <app-icon name="file-open" />
+      </button>
+      <input
+        #pdfFileInput
+        hidden
+        type="file"
+        accept="application/pdf,.pdf"
+        (change)="openFile($any($event.target).files?.[0]); $any($event.target).value = ''"
+      />
+    </div>
+
+    <div class="toolbar-section center">
+      <div class="zoom-controls" role="group" aria-label="Aspect ratio controls">
+        <button type="button" (click)="zoomOut()" [disabled]="!canZoomOut" aria-label="Show more systems" title="Show more systems">
+          <app-icon name="zoom-out" />
+        </button>
+        <span class="zoom-label" [attr.title]="'Aspect ratio: ' + selectedAspectRatioLabel" aria-live="polite">
+          {{ selectedAspectRatioLabel }}
+        </span>
+        <button type="button" (click)="zoomIn()" [disabled]="!canZoomIn" aria-label="Show fewer systems" title="Show fewer systems">
+          <app-icon name="zoom-in" />
+        </button>
+      </div>
+    </div>
+
+    <div class="toolbar-section end"></div>
+  </header>
+
+  <footer stage-bottom-controls class="toolbar bottom-toolbar" aria-label="Slide bottom controls">
+    <div class="toolbar-section start"></div>
+
+    <div class="toolbar-section center">
+      <div class="page-controls">
+        <button type="button" (click)="previousSlide()" [disabled]="!canGoPrevious" aria-label="Previous slide" title="Previous slide">
+          <app-icon name="arrow-left" />
+        </button>
+        <span [attr.title]="'Slide ' + (slideGroups.length ? currentSlide + 1 : '—') + ' of ' + (slideGroups.length || '—')" aria-live="polite">
+          {{ slideGroups.length ? currentSlide + 1 : '—' }} of {{ slideGroups.length || '—' }}
+        </span>
+        <button type="button" (click)="nextSlide()" [disabled]="!canGoNext" aria-label="Next slide" title="Next slide">
+          <app-icon name="arrow-right" />
+        </button>
+      </div>
+    </div>
+
+    <div class="toolbar-section end">
+      <button type="button" (click)="backToEditor()" aria-label="Open editor" title="Open editor">
+        <app-icon name="edit" />
+      </button>
+    </div>
+  </footer>
 </app-pdf-canvas-stage>
 </main>

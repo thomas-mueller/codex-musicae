@@ -4,6 +4,11 @@
   </div>
 
   <div class="controls-overlay" [class.controls-hidden]="!controlsVisible()" [attr.aria-hidden]="!controlsVisible()">
-    <ng-content select="[stage-controls]" />
+    <div #topBar class="controls-bar top-bar">
+      <ng-content select="[stage-top-controls],[stage-controls]" />
+    </div>
+    <div #bottomBar class="controls-bar bottom-bar">
+      <ng-content select="[stage-bottom-controls]" />
+    </div>
   </div>
 </div>

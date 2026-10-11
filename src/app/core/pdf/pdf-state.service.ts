@@ -12,10 +12,6 @@ export class PdfStateService {
     this.pdfName.set(file.name);
   }
 
-  openExternally(): void {
-    window.open(this.pdfUrl(), '_blank', 'noopener,noreferrer');
-  }
-
   ngOnDestroy(): void {
     this.revokeObjectUrl();
   }

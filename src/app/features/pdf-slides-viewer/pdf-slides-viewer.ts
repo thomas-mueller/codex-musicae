@@ -106,7 +106,6 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
   }
   backToEditor(): void { void this.exitViewer(); }
   openFile(file: File): void { if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) { this.pdfState.openFile(file); void this.exitViewer(); } }
-  openExternally(): void { this.pdfState.openExternally(); }
 
   private setAspectRatio(aspectRatio: number): void {
     const container = this.pdfContainerRef?.nativeElement;
