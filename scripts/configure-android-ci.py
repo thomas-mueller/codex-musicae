@@ -88,25 +88,26 @@ if activity_file.suffix == ".java":
     if "WindowCompat.setDecorFitsSystemWindows" not in activity:
         activity = activity.replace(
             "import com.getcapacitor.BridgeActivity;",
-            "import android.os.Bundle;\nimport androidx.core.view.WindowCompat;\nimport androidx.core.view.WindowInsetsCompat;\nimport androidx.core.view.WindowInsetsControllerCompat;\nimport com.getcapacitor.BridgeActivity;",
+            "import android.os.Bundle;\nimport android.webkit.WebView;\nimport androidx.core.view.ViewCompat;\nimport androidx.core.view.WindowCompat;\nimport androidx.core.view.WindowInsetsCompat;\nimport androidx.core.view.WindowInsetsControllerCompat;\nimport com.getcapacitor.BridgeActivity;",
             1,
         )
         activity = activity.replace(
             "public class MainActivity extends BridgeActivity {",
-            "public class MainActivity extends BridgeActivity {\n    @Override\n    public void onCreate(Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);\n        WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());\n        controller.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);\n        controller.hide(WindowInsetsCompat.Type.systemBars());\n    }",
+            "public class MainActivity extends BridgeActivity {\n    @Override\n    public void onCreate(Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        configureImmersiveWindow();\n    }\n\n    @Override\n    public void onWindowFocusChanged(boolean hasFocus) {\n        super.onWindowFocusChanged(hasFocus);\n        if (hasFocus) configureImmersiveWindow();\n    }\n\n    private void configureImmersiveWindow() {\n        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);\n        WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());\n        controller.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);\n        controller.hide(WindowInsetsCompat.Type.systemBars());\n        WebView webView = getBridge().getWebView();\n        ViewCompat.setOnApplyWindowInsetsListener(webView, (view, insets) -> {\n            int top = Math.max(insets.getInsets(WindowInsetsCompat.Type.statusBars()).top, insets.getInsets(WindowInsetsCompat.Type.displayCutout()).top);\n            int bottom = Math.max(insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom, insets.getInsets(WindowInsetsCompat.Type.displayCutout()).bottom);\n            String script = \"document.documentElement.style.setProperty('--system-inset-top', '\" + top + \"px');document.documentElement.style.setProperty('--system-inset-bottom', '\" + bottom + \"px');\";\n            webView.post(() -> webView.evaluateJavascript(script, null));\n            return insets;\n        });\n        ViewCompat.requestApplyInsets(webView);\n    }",
             1,
         )
 else:
     if "WindowCompat.setDecorFitsSystemWindows" not in activity:
         activity = activity.replace(
             "import com.getcapacitor.BridgeActivity",
-            "import android.os.Bundle\nimport androidx.core.view.WindowCompat\nimport androidx.core.view.WindowInsetsCompat\nimport androidx.core.view.WindowInsetsControllerCompat\nimport com.getcapacitor.BridgeActivity",
+            "import android.os.Bundle\nimport android.webkit.WebView\nimport androidx.core.view.ViewCompat\nimport androidx.core.view.WindowCompat\nimport androidx.core.view.WindowInsetsCompat\nimport androidx.core.view.WindowInsetsControllerCompat\nimport com.getcapacitor.BridgeActivity",
             1,
         )
         activity = activity.replace(
             "class MainActivity : BridgeActivity()",
-            "class MainActivity : BridgeActivity() {\n    override fun onCreate(savedInstanceState: Bundle?) {\n        super.onCreate(savedInstanceState)\n        WindowCompat.setDecorFitsSystemWindows(window, false)\n        val controller = WindowCompat.getInsetsController(window, window.decorView)\n        controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE\n        controller.hide(WindowInsetsCompat.Type.systemBars())\n    }",
+            "class MainActivity : BridgeActivity() {\n    override fun onCreate(savedInstanceState: Bundle?) {\n        super.onCreate(savedInstanceState)\n        configureImmersiveWindow()\n    }\n\n    override fun onWindowFocusChanged(hasFocus: Boolean) {\n        super.onWindowFocusChanged(hasFocus)\n        if (hasFocus) configureImmersiveWindow()\n    }\n\n    private fun configureImmersiveWindow() {\n        WindowCompat.setDecorFitsSystemWindows(window, false)\n        val controller = WindowCompat.getInsetsController(window, window.decorView)\n        controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE\n        controller.hide(WindowInsetsCompat.Type.systemBars())\n        val webView = bridge.webView as WebView\n        ViewCompat.setOnApplyWindowInsetsListener(webView) { _, insets ->\n            val top = maxOf(insets.getInsets(WindowInsetsCompat.Type.statusBars()).top, insets.getInsets(WindowInsetsCompat.Type.displayCutout()).top)\n            val bottom = maxOf(insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom, insets.getInsets(WindowInsetsCompat.Type.displayCutout()).bottom)\n            val script = \"document.documentElement.style.setProperty('--system-inset-top', '\${top}px');document.documentElement.style.setProperty('--system-inset-bottom', '\${bottom}px');\"\n            webView.post { webView.evaluateJavascript(script, null) }\n            insets\n        }\n        ViewCompat.requestApplyInsets(webView)\n    }",
             1,
         )
+activity = activity.replace("\\${", "${")
 activity_file.write_text(activity, encoding="utf-8")
 print(f"Configured edge-to-edge window in {activity_file}")
