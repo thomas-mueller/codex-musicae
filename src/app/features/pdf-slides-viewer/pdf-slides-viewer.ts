@@ -9,6 +9,7 @@ import { AppIcon } from '../../shared/components/app-icon/app-icon';
 import { orderMusicSystems, type MusicSystem } from '../../core/pdf/music-system.model';
 import { PDF_DETECTION_CONFIG } from '../../core/pdf/pdf-detection.config';
 import { PdfPersistenceService } from '../../core/pdf/pdf-persistence.service';
+import { canRequestFullscreen, getFullscreenEnvironment, isAndroidBrowser } from '../../core/platform/fullscreen.util';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/pdfjs-dist/build/pdf.worker.min.mjs';
 
@@ -178,7 +179,11 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
   private async enterPresentationMode(): Promise<void> {
     document.addEventListener('fullscreenchange', this.onFullscreenChange);
     const element = this.viewerRootRef?.nativeElement;
-    if (!element?.requestFullscreen || this.fullscreenExitRequested || document.fullscreenElement) return;
+    if (this.fullscreenExitRequested || document.fullscreenElement || getFullscreenEnvironment() === 'standalone' || isAndroidBrowser()) return;
+    // Android browsers generally reject automatic fullscreen because route entry is
+    // not a user activation. The layout remains usable until an explicit action
+    // requests fullscreen.
+    if (!canRequestFullscreen(element)) return;
     try { await element.requestFullscreen(); } catch { /* Fullscreen is optional; the CSS layout remains usable. */ }
   }
 

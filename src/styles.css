@@ -5,3 +5,17 @@ body {
   height: 100%;
   overflow: hidden;
 }
+
+html {
+  --app-viewport-height: 100vh;
+}
+
+@supports (height: 100dvh) {
+  html {
+    --app-viewport-height: 100dvh;
+  }
+}
+
+body {
+  min-height: var(--app-viewport-height);
+}

@@ -71,3 +71,42 @@ gradle_file.write_text(contents, encoding="utf-8")
 
 print(f"Configured Android versionCode={version_code}, versionName={version_name}")
 print("Configured app.web.codexmusicae.debug for the debug build")
+
+# Capacitor generates the Android project in CI. Keep the WebView edge-to-edge
+# configuration here so the web app can account for system-bar safe areas via
+# env(safe-area-inset-*), without committing generated Android sources.
+activity_candidates = [
+    Path("android/app/src/main/java/app/web/codexmusicae/MainActivity.java"),
+    Path("android/app/src/main/java/app/web/codexmusicae/MainActivity.kt"),
+]
+activity_file = next((path for path in activity_candidates if path.is_file()), None)
+if activity_file is None:
+    raise SystemExit("Generated Capacitor MainActivity was not found")
+
+activity = activity_file.read_text(encoding="utf-8")
+if activity_file.suffix == ".java":
+    if "WindowCompat.setDecorFitsSystemWindows" not in activity:
+        activity = activity.replace(
+            "import com.getcapacitor.BridgeActivity;",
+            "import android.os.Bundle;\nimport androidx.core.view.WindowCompat;\nimport androidx.core.view.WindowInsetsCompat;\nimport androidx.core.view.WindowInsetsControllerCompat;\nimport com.getcapacitor.BridgeActivity;",
+            1,
+        )
+        activity = activity.replace(
+            "public class MainActivity extends BridgeActivity {",
+            "public class MainActivity extends BridgeActivity {\n    @Override\n    public void onCreate(Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);\n        WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());\n        controller.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);\n        controller.hide(WindowInsetsCompat.Type.systemBars());\n    }",
+            1,
+        )
+else:
+    if "WindowCompat.setDecorFitsSystemWindows" not in activity:
+        activity = activity.replace(
+            "import com.getcapacitor.BridgeActivity",
+            "import android.os.Bundle\nimport androidx.core.view.WindowCompat\nimport androidx.core.view.WindowInsetsCompat\nimport androidx.core.view.WindowInsetsControllerCompat\nimport com.getcapacitor.BridgeActivity",
+            1,
+        )
+        activity = activity.replace(
+            "class MainActivity : BridgeActivity()",
+            "class MainActivity : BridgeActivity() {\n    override fun onCreate(savedInstanceState: Bundle?) {\n        super.onCreate(savedInstanceState)\n        WindowCompat.setDecorFitsSystemWindows(window, false)\n        val controller = WindowCompat.getInsetsController(window, window.decorView)\n        controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE\n        controller.hide(WindowInsetsCompat.Type.systemBars())\n    }",
+            1,
+        )
+activity_file.write_text(activity, encoding="utf-8")
+print(f"Configured edge-to-edge window in {activity_file}")
