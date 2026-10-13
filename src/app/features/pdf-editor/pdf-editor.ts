@@ -18,6 +18,9 @@ import { PdfStateService } from '../../core/pdf/pdf-state.service';
 import { PdfPersistenceService } from '../../core/pdf/pdf-persistence.service';
 import { PdfDocumentService } from '../../core/pdf/pdf-document.service';
 import { AppIcon } from '../../shared/components/app-icon/app-icon';
+import { PdfAnnotationService } from '../../core/pdf/pdf-annotation.service';
+import { drawAnnotations, normalizePoint } from '../../core/pdf/pdf-annotation.util';
+import type { PdfAnnotationStroke, AnnotationPoint } from '../../core/pdf/pdf-annotations.model';
 import type { MusicSystemOverlayLabel } from '../../core/pdf/music-system-renderer';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -55,6 +58,9 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
   private lastViewportSize = '';
   private resizeFrame?: number;
   private detectionPromise?: Promise<void>;
+  annotationMode = false;
+  private drawing?: { pointerId: number; points: AnnotationPoint[] };
+  private pageWidth = 1; private pageHeight = 1; private displayScale = 1;
 
   constructor(
     private readonly router: Router,
@@ -63,6 +69,7 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
     private readonly pdfState: PdfStateService,
     private readonly pdfPersistence: PdfPersistenceService,
     private readonly pdfDocuments: PdfDocumentService,
+    private readonly annotations: PdfAnnotationService,
   ) { this.pdfUrl = this.pdfState.pdfUrl(); }
 
   get musicSystems() { return this.musicSystemService.musicSystems; }
@@ -160,7 +167,7 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
   openFile(file: File): void {
     if (!file.type.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) return;
     const previousUrl = this.pdfUrl;
-    this.pdfState.openFile(file); this.pdfUrl = this.pdfState.pdfUrl(); void this.loadDocument();
+    this.annotations.clear(); this.pdfState.openFile(file); this.pdfUrl = this.pdfState.pdfUrl(); void this.loadDocument();
     void this.pdfDocuments.clear(previousUrl);
   }
 
@@ -168,6 +175,27 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
     if (!this.canSave) return;
     await this.pdfPersistence.save();
     this.changeDetector.markForCheck();
+  }
+
+  toggleAnnotationMode(): void { this.annotationMode = !this.annotationMode; }
+  onPointerDown(event: PointerEvent): void {
+    if (!this.annotationMode || event.button > 0) return;
+    const canvas = this.canvasRef.nativeElement; const r = canvas.getBoundingClientRect();
+    canvas.setPointerCapture(event.pointerId);
+    this.drawing = { pointerId: event.pointerId, points: [normalizePoint(event.clientX - r.left, event.clientY - r.top, r.width, r.height)] };
+    event.preventDefault();
+  }
+  onPointerMove(event: PointerEvent): void {
+    if (!this.drawing || this.drawing.pointerId !== event.pointerId) return;
+    const canvas = this.canvasRef.nativeElement; const r = canvas.getBoundingClientRect();
+    this.drawing.points.push(normalizePoint(event.clientX - r.left, event.clientY - r.top, r.width, r.height));
+    void this.renderCurrentPage(); event.preventDefault();
+  }
+  onPointerUp(event: PointerEvent): void {
+    if (!this.drawing || this.drawing.pointerId !== event.pointerId) return;
+    this.annotations.add({ page: this.currentPage, points: this.drawing.points, color: '#d11', width: 1.5 });
+    this.drawing = undefined; this.drawAnnotationOverlay(); event.preventDefault();
+    void this.renderCurrentPage();
   }
 
   ngOnDestroy(): void {
@@ -307,6 +335,7 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
         viewportElement.clientHeight / baseViewport.height,
       );
       const displayScale = Math.max(0.1, fitScale * this.zoom);
+      this.pageWidth = baseViewport.width; this.pageHeight = baseViewport.height; this.displayScale = displayScale;
       const outputScale = window.devicePixelRatio || 1;
       const viewport = page.getViewport({ scale: displayScale * outputScale });
       const canvas = this.canvasRef.nativeElement;
@@ -327,6 +356,7 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
         this.renderTask = undefined;
         try {
           drawMusicSystems(context, this.currentPage, this.musicSystems(), canvas.width, canvas.height, this.padding(), this.getOverlayLabels());
+          this.drawAnnotationOverlay();
         } catch (error) {
           console.error('Unable to draw PDF editor overlays.', error);
         }
@@ -340,6 +370,15 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
         this.errorMessage = 'Unable to render this PDF page.';
         this.changeDetector.markForCheck();
       }
+    }
+  }
+
+  private drawAnnotationOverlay(): void {
+    const canvas = this.canvasRef?.nativeElement; const context = canvas?.getContext('2d');
+    if (!canvas || !context) return;
+    drawAnnotations(context, this.annotations.strokes(), this.currentPage, canvas.width, canvas.height, canvas.width / this.pageWidth);
+    if (this.drawing) {
+      drawAnnotations(context, [{ page: this.currentPage, points: this.drawing.points, color: '#d11', width: 1.5 }], this.currentPage, canvas.width, canvas.height, canvas.width / this.pageWidth);
     }
   }
 

@@ -95,6 +95,13 @@ button:disabled {
   cursor: default;
 }
 
+.annotation-toggle.active {
+  background: #b3261e;
+  border-color: #ffb4ab;
+  color: white;
+  box-shadow: 0 0 0 2px rgb(255 180 171 / 35%);
+}
+
 .pdf-viewport {
   display: flex;
   width: 100%;
@@ -111,6 +118,8 @@ canvas {
   background: white;
   box-shadow: 0 2px 8px rgb(0 0 0 / 35%);
 }
+
+canvas.annotation-active { cursor: crosshair; touch-action: none; }
 
 .message {
   margin: 0;

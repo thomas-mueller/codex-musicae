@@ -1,10 +1,11 @@
-import { Injectable, signal, OnDestroy } from '@angular/core';
+import { Injectable, signal, OnDestroy, Optional } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem } from '@capacitor/filesystem';
 import { App } from '@capacitor/app';
 import { PdfStateService } from './pdf-state.service';
 import { MusicSystemService } from './music-system.service';
-import { embedSettingsInPdf, extractSettingsFromPdf } from './pdf-embed.util';
+import { drawAnnotationsInPdf, embedSettingsInPdf, extractSettingsFromPdf } from './pdf-embed.util';
+import { PdfAnnotationService } from './pdf-annotation.service';
 import type { CodexPdfSettings } from './pdf-settings.model';
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
@@ -23,6 +24,7 @@ export class PdfPersistenceService implements OnDestroy {
   constructor(
     private readonly pdfState: PdfStateService,
     private readonly musicSystemService: MusicSystemService,
+    @Optional() private readonly annotations?: PdfAnnotationService,
   ) {
     this.initAutoSave();
   }
@@ -104,7 +106,8 @@ export class PdfPersistenceService implements OnDestroy {
         musicSystems: [...this.musicSystemService.musicSystems()],
       };
 
-      const updatedBytes = await embedSettingsInPdf(bytes, settings);
+      const annotatedBytes = await drawAnnotationsInPdf(bytes, this.annotations?.strokes() ?? []);
+      const updatedBytes = await embedSettingsInPdf(annotatedBytes, settings);
       this.pdfState.setDocumentBytes(updatedBytes);
 
       if (Capacitor.isNativePlatform()) {
@@ -119,6 +122,7 @@ export class PdfPersistenceService implements OnDestroy {
       if (!options.silent) {
         this.setTransientStatus('saved');
       }
+      this.annotations?.markSaved();
       return true;
     } catch (error) {
       console.error('Failed to save PDF settings', error);

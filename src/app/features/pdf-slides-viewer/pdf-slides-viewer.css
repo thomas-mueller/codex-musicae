@@ -82,8 +82,8 @@
 .toolbar button {
   min-height: 1.85rem;
   padding: 0.2rem 0.55rem;
-  background: #45494c;
   border: 1px solid #73777a;
+  background: #45494c;
   border-radius: 4px;
   color: inherit;
   font: inherit;
@@ -96,6 +96,13 @@
 .toolbar button:disabled {
   opacity: 0.45;
   cursor: default;
+}
+
+.annotation-toggle.active {
+  background: #b3261e;
+  border-color: #ffb4ab;
+  color: white;
+  box-shadow: 0 0 0 2px rgb(255 180 171 / 35%);
 }
 
 .message {
@@ -112,5 +119,16 @@
 
 .pdf-container canvas {
   display: block;
+  max-height: 100%;
+}
+
+.pdf-container canvas.annotation-active { cursor: crosshair; touch-action: none; }
+
+.pdf-container canvas.annotation-canvas {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
   max-height: 100%;
 }

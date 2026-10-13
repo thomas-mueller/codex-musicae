@@ -6,6 +6,7 @@ import {
   PDFString,
   PDFHexString,
   PDFRawStream,
+  rgb,
   decodePDFRawStream,
   encodeToBase64,
 } from 'pdf-lib';
@@ -15,6 +16,32 @@ import {
   type CodexPdfSettings,
 } from './pdf-settings.model';
 import type { MusicSystem } from './music-system.model';
+import type { PdfAnnotationStroke } from './pdf-annotations.model';
+
+export async function drawAnnotationsInPdf(pdfBytes: Uint8Array, strokes: readonly PdfAnnotationStroke[]): Promise<Uint8Array> {
+  const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+  for (const stroke of strokes) {
+    const page = pdfDoc.getPage(stroke.page - 1);
+    const { width, height } = page.getSize();
+    for (let i = 1; i < stroke.points.length; i++) {
+      const a = stroke.points[i - 1]; const b = stroke.points[i];
+      page.drawLine({
+        start: { x: a.x * width, y: height - a.y * height },
+        end: { x: b.x * width, y: height - b.y * height },
+        thickness: stroke.width,
+        color: pdfColor(stroke.color),
+        opacity: 1,
+      });
+    }
+  }
+  return pdfDoc.save();
+}
+
+function pdfColor(value: string): ReturnType<typeof rgb> {
+  const hex = value.replace('#', '');
+  const n = Number.parseInt(hex.length === 3 ? hex.split('').map((c) => c + c).join('') : hex, 16);
+  return rgb(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255);
+}
 
 export async function embedSettingsInPdf(
   pdfBytes: Uint8Array,

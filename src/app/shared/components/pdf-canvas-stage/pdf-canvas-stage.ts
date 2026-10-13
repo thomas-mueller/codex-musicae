@@ -11,6 +11,7 @@ export type PageNavigationAction = 'previous' | 'next' | 'first' | 'last';
 export class PdfCanvasStage {
   readonly controlsVisibleInitially = input(true);
   readonly presentationMode = input(false);
+  readonly drawingMode = input(false);
   readonly escapeWhileHidden = output<void>();
   readonly exitPresentation = output<void>();
   readonly navigate = output<PageNavigationAction>();
@@ -22,6 +23,7 @@ export class PdfCanvasStage {
   @ViewChild('bottomBar') private readonly bottomBarRef?: ElementRef<HTMLElement>;
 
   onStageClick(event: MouseEvent): void {
+    if (this.drawingMode()) return;
     const target = event.target;
     if (this.isInteractiveTarget(target)) {
       return;
@@ -45,6 +47,7 @@ export class PdfCanvasStage {
   }
 
   onPointerDown(event: PointerEvent): void {
+    if (this.drawingMode()) { this.pointerStart = undefined; return; }
     if (event.pointerType === 'mouse' || this.isControlTarget(event.target)) {
       this.pointerStart = undefined;
       return;
@@ -55,6 +58,7 @@ export class PdfCanvasStage {
   }
 
   onPointerUp(event: PointerEvent): void {
+    if (this.drawingMode()) { this.pointerStart = undefined; return; }
     const start = this.pointerStart;
     this.pointerStart = undefined;
     this.releasePointerCapture(event);

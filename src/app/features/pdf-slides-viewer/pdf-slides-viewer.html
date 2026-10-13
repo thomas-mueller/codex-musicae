@@ -1,7 +1,8 @@
 <main #viewerRoot class="slides-viewer" [class.presentation-mode]="true">
-<app-pdf-canvas-stage [controlsVisibleInitially]="false" [presentationMode]="true" (exitPresentation)="backToEditor()" (escapeWhileHidden)="backToEditor()" (navigate)="handleNavigation($event)">
+<app-pdf-canvas-stage [controlsVisibleInitially]="false" [presentationMode]="true" [drawingMode]="annotationMode" (exitPresentation)="backToEditor()" (escapeWhileHidden)="backToEditor()" (navigate)="handleNavigation($event)">
   <div stage-content #pdfContainer class="pdf-container">
     <canvas #pdfCanvas></canvas>
+    <canvas #annotationCanvas class="annotation-canvas" [class.annotation-active]="annotationMode" (pointerdown)="onPointerDown($event)" (pointermove)="onPointerMove($event)" (pointerup)="onPointerUp($event)" (pointercancel)="onPointerUp($event)"></canvas>
     @if (loading) {
       <p class="message" role="status">Loading PDF…</p>
     } @else if (errorMessage) {
@@ -45,7 +46,9 @@
       </div>
     </div>
 
-    <div class="toolbar-section end"></div>
+    <div class="toolbar-section end">
+      <button type="button" class="annotation-toggle" [class.active]="annotationMode" (click)="toggleAnnotationMode()" [attr.aria-pressed]="annotationMode" aria-label="Draw annotation" [title]="annotationMode ? 'Stop drawing annotations' : 'Draw annotation'"><app-icon name="pencil" /></button>
+    </div>
   </header>
 
   <footer stage-bottom-controls class="toolbar bottom-toolbar" aria-label="Slide bottom controls">

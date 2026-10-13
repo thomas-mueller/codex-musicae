@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-export type AppIconName = 'arrow-left' | 'arrow-right' | 'zoom-in' | 'zoom-out' | 'presentation' | 'file-open' | 'edit' | 'save' | 'check';
+export type AppIconName = 'arrow-left' | 'arrow-right' | 'zoom-in' | 'zoom-out' | 'presentation' | 'file-open' | 'edit' | 'pencil' | 'save' | 'check';
 
 @Component({
   selector: 'app-icon',
@@ -17,6 +17,7 @@ export type AppIconName = 'arrow-left' | 'arrow-right' | 'zoom-in' | 'zoom-out' 
         @case ('save') { <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/> }
         @case ('check') { <polyline points="20 6 9 17 4 12"/> }
         @case ('edit') { <path d="M12 17v4"/><path d="m14.305 7.53.923-.382"/><path d="m15.228 4.852-.923-.383"/><path d="m16.852 3.228-.383-.924"/><path d="m16.852 8.772-.383.923"/><path d="m19.148 3.228.383-.924"/><path d="m19.53 9.696-.382-.924"/><path d="m20.772 4.852.924-.383"/><path d="m20.772 7.148.924.383"/><path d="M22 13v2a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/><path d="M8 21h8"/><circle cx="18" cy="6" r="3"/> }
+        @case ('pencil') { <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.2 4.2a.5.5 0 0 0 .62.62l4.2-1.2a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/> }
       }
     </svg>
   `,

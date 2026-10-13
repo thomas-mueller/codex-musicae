@@ -11,12 +11,19 @@ import { PDF_DETECTION_CONFIG } from '../../core/pdf/pdf-detection.config';
 import { PdfPersistenceService } from '../../core/pdf/pdf-persistence.service';
 import { PdfDocumentService } from '../../core/pdf/pdf-document.service';
 import { canRequestFullscreen, getFullscreenEnvironment, isAndroidBrowser } from '../../core/platform/fullscreen.util';
+import { PdfAnnotationService } from '../../core/pdf/pdf-annotation.service';
+import type { AnnotationPoint } from '../../core/pdf/pdf-annotations.model';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/pdfjs-dist/build/pdf.worker.min.mjs';
 
 interface SlideAnchor {
   pageIndex: number;
   selectedPosition?: number;
+}
+
+interface RenderedBox {
+  page: number; x: number; y: number; width: number; height: number;
+  source: { xMin: number; yMin: number; xMax: number; yMax: number };
 }
 
 @Component({
@@ -30,6 +37,7 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
   @ViewChild('viewerRoot') viewerRootRef!: ElementRef<HTMLElement>;
   @ViewChild('pdfContainer') pdfContainerRef!: ElementRef<HTMLDivElement>;
   @ViewChild('pdfCanvas') canvasRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('annotationCanvas') annotationCanvasRef!: ElementRef<HTMLCanvasElement>;
   pdfUrl: string;
   loading = true; errorMessage = ''; currentSlide = 0; slideGroups: SlideGroup[] = [];
   aspectRatioAdjustment = 0;
@@ -40,10 +48,40 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
   private lastContainerSize = ''; private resizeFrame?: number; private rebuildFrame?: number;
   private fullscreenExitRequested = false;
   private detectionPromise?: Promise<void>;
+  annotationMode = false;
+  private drawing?: { pointerId: number; page: number; points: AnnotationPoint[]; box: RenderedBox };
+  private renderedBoxes: RenderedBox[] = [];
 
-  constructor(private readonly router: Router, private readonly changeDetector: ChangeDetectorRef, private readonly pdfState: PdfStateService, private readonly musicSystemService: MusicSystemService, private readonly pdfPersistence: PdfPersistenceService, private readonly pdfDocuments: PdfDocumentService) {
+  constructor(private readonly router: Router, private readonly changeDetector: ChangeDetectorRef, private readonly pdfState: PdfStateService, private readonly musicSystemService: MusicSystemService, private readonly pdfPersistence: PdfPersistenceService, private readonly pdfDocuments: PdfDocumentService, private readonly annotations: PdfAnnotationService) {
     this.pdfUrl = pdfState.pdfUrl();
     this.aspectRatioAdjustment = musicSystemService.aspectRatioAdjustment();
+  }
+  toggleAnnotationMode(): void { this.annotationMode = !this.annotationMode; }
+  onPointerDown(event: PointerEvent): void {
+    if (!this.annotationMode || event.button > 0) return;
+    const canvas = this.annotationCanvasRef.nativeElement; const r = canvas.getBoundingClientRect();
+    const x = event.clientX - r.left; const y = event.clientY - r.top;
+    const box = this.renderedBoxes.find((item) => x >= item.x && x <= item.x + item.width && y >= item.y && y <= item.y + item.height);
+    if (!box) return;
+    canvas.setPointerCapture(event.pointerId);
+    this.drawing = { pointerId: event.pointerId, page: box.page, box, points: [this.toPagePoint(x, y, box)] };
+    event.preventDefault();
+  }
+  onPointerMove(event: PointerEvent): void {
+    if (!this.drawing || event.pointerId !== this.drawing.pointerId) return;
+    const canvas = this.annotationCanvasRef.nativeElement; const r = canvas.getBoundingClientRect();
+    const box = this.drawing.box;
+    const x = event.clientX - r.left; const y = event.clientY - r.top;
+    if (x >= box.x && x <= box.x + box.width && y >= box.y && y <= box.y + box.height) {
+      this.drawing.points.push(this.toPagePoint(x, y, box));
+    }
+    this.renderAnnotationOverlay(); event.preventDefault();
+  }
+  onPointerUp(event: PointerEvent): void {
+    if (!this.drawing || event.pointerId !== this.drawing.pointerId) return;
+    this.annotations.add({ page: this.drawing.page, points: this.drawing.points, color: '#d11', width: 2.5 });
+    this.drawing = undefined; event.preventDefault();
+    this.renderAnnotationOverlay();
   }
   get saveStatus() { return this.pdfPersistence.saveStatus; }
   get isSaving() { return this.pdfPersistence.saveStatus() === 'saving'; }
@@ -168,6 +206,7 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
   openFile(file: File): void {
     if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) {
       const previousUrl = this.pdfUrl;
+      this.annotations.clear();
       this.pdfState.openFile(file);
       void this.pdfDocuments.clear(previousUrl);
       void this.exitViewer();
@@ -326,6 +365,7 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
     const renderedWidth = Math.max(1, Math.round(canvasWidth * outputScale));
     const renderedHeight = Math.max(1, Math.round(canvasHeight * outputScale));
     const canvas = this.canvasRef.nativeElement;
+    const renderedBoxes: RenderedBox[] = [];
     canvas.style.width = `${canvasWidth}px`;
     canvas.style.height = `${canvasHeight}px`;
     const offscreen = globalThis.document.createElement('canvas');
@@ -366,6 +406,7 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
         const destinationHeight = rectHeight * scale * outputScale;
         const boxX = x * outputScale;
         const boxWidth = rectWidth * scale * outputScale;
+        renderedBoxes.push({ page: rect.pageIndex + 1, x, y: destinationY / outputScale, width: rectWidth * scale, height: destinationHeight / outputScale, source: rect });
         const sourceY = rect.yMin * scale * outputScale;
         const sourceHeight = rectHeight * scale * outputScale;
         const targetLeftWidth = Math.max(0, extraLeft * outputScale);
@@ -439,9 +480,16 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
       if (sequence !== this.renderSequence) return;
       canvas.width = renderedWidth;
       canvas.height = renderedHeight;
+      const annotationCanvas = this.annotationCanvasRef.nativeElement;
+      annotationCanvas.width = renderedWidth;
+      annotationCanvas.height = renderedHeight;
+      annotationCanvas.style.width = `${canvasWidth}px`;
+      annotationCanvas.style.height = `${canvasHeight}px`;
       const visibleContext = canvas.getContext('2d');
       if (!visibleContext) return;
       visibleContext.drawImage(offscreen, 0, 0);
+      this.renderedBoxes = renderedBoxes;
+      this.renderAnnotationOverlay();
     } catch (error) {
       if (!(error instanceof Error && error.name === 'RenderingCancelledException')) throw error;
     } finally {
@@ -449,5 +497,57 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
       offscreen.height = 0;
       if (sequence === this.renderSequence) this.activeRenderTask = undefined;
     }
+  }
+
+  private drawViewerAnnotations(context: CanvasRenderingContext2D, outputScale: number): void {
+    context.save(); context.strokeStyle = '#d11'; context.lineWidth = 2.5 * outputScale;
+    context.lineCap = 'round'; context.lineJoin = 'round';
+    for (const box of this.renderedBoxes) {
+      context.save();
+      context.beginPath();
+      context.rect(box.x * outputScale, box.y * outputScale, box.width * outputScale, box.height * outputScale);
+      context.clip();
+      for (const stroke of this.annotations.strokes().filter((item) => item.page === box.page)) {
+        if (stroke.points.length < 2) continue;
+        context.beginPath();
+        stroke.points.forEach((point, index) => {
+          const x = (box.x + ((point.x - box.source.xMin) / (box.source.xMax - box.source.xMin)) * box.width) * outputScale;
+          const y = (box.y + ((point.y - box.source.yMin) / (box.source.yMax - box.source.yMin)) * box.height) * outputScale;
+          if (index === 0) context.moveTo(x, y); else context.lineTo(x, y);
+        });
+        context.stroke();
+      }
+      context.restore();
+    }
+    if (this.drawing) {
+      const box = this.drawing.box;
+      if (box && this.drawing.points.length > 1) {
+        context.beginPath();
+        this.drawing.points.forEach((point, index) => {
+          const x = (box.x + ((point.x - box.source.xMin) / (box.source.xMax - box.source.xMin)) * box.width) * outputScale;
+          const y = (box.y + ((point.y - box.source.yMin) / (box.source.yMax - box.source.yMin)) * box.height) * outputScale;
+          if (index === 0) context.moveTo(x, y); else context.lineTo(x, y);
+        });
+        context.stroke();
+      }
+    }
+    context.restore();
+  }
+
+  private renderAnnotationOverlay(): void {
+    const canvas = this.annotationCanvasRef?.nativeElement;
+    if (!canvas) return;
+    const context = canvas.getContext('2d');
+    if (!context) return;
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    this.drawViewerAnnotations(context, window.devicePixelRatio || 1);
+  }
+
+  private toPagePoint(x: number, y: number, box: { x: number; y: number; width: number; height: number; source: { xMin: number; yMin: number; xMax: number; yMax: number } }): AnnotationPoint {
+    const source = box.source;
+    return {
+      x: source.xMin + ((x - box.x) / box.width) * (source.xMax - source.xMin),
+      y: source.yMin + ((y - box.y) / box.height) * (source.yMax - source.yMin),
+    };
   }
 }
