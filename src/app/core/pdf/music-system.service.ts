@@ -75,7 +75,14 @@ export class MusicSystemService {
 
       const pdfPage = await documentProxy.getPage(page);
       this.throwIfAborted(options.signal);
-      const detected = await this.detectMusicSystemsOnPage(pdfPage, page, options.signal);
+      let detected: DetectedPage;
+      try {
+        detected = await this.detectMusicSystemsOnPage(pdfPage, page, options.signal);
+      } finally {
+        pdfPage.cleanup();
+        this.detectionCanvas?.getContext('2d')?.clearRect(0, 0, this.detectionCanvas.width, this.detectionCanvas.height);
+        if (this.detectionCanvas) { this.detectionCanvas.width = 0; this.detectionCanvas.height = 0; }
+      }
       cache.pages.set(page, detected.musicSystems);
       musicSystems.push(...detected.musicSystems);
       options.onPageDetected?.(detected.musicSystems, page);

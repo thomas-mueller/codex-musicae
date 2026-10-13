@@ -9,6 +9,7 @@ import { AppIcon } from '../../shared/components/app-icon/app-icon';
 import { orderMusicSystems, type MusicSystem } from '../../core/pdf/music-system.model';
 import { PDF_DETECTION_CONFIG } from '../../core/pdf/pdf-detection.config';
 import { PdfPersistenceService } from '../../core/pdf/pdf-persistence.service';
+import { PdfDocumentService } from '../../core/pdf/pdf-document.service';
 import { canRequestFullscreen, getFullscreenEnvironment, isAndroidBrowser } from '../../core/platform/fullscreen.util';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/pdfjs-dist/build/pdf.worker.min.mjs';
@@ -33,14 +34,14 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
   loading = true; errorMessage = ''; currentSlide = 0; slideGroups: SlideGroup[] = [];
   aspectRatioAdjustment = 0;
   isProcessing = true;
-  private pdfDocument?: pdfjsLib.PDFDocumentProxy; private loadingTask?: pdfjsLib.PDFDocumentLoadingTask;
+  private pdfDocument?: pdfjsLib.PDFDocumentProxy;
   private resizeObserver?: ResizeObserver; private destroyed = false; private pageSizes: PageSize[] = []; private renderSequence = 0; private activeRenderTask?: pdfjsLib.RenderTask;
   private detectionController?: AbortController; private readonly detectedByPage = new Map<number, readonly MusicSystem[]>();
   private lastContainerSize = ''; private resizeFrame?: number; private rebuildFrame?: number;
   private fullscreenExitRequested = false;
   private detectionPromise?: Promise<void>;
 
-  constructor(private readonly router: Router, private readonly changeDetector: ChangeDetectorRef, private readonly pdfState: PdfStateService, private readonly musicSystemService: MusicSystemService, private readonly pdfPersistence: PdfPersistenceService) {
+  constructor(private readonly router: Router, private readonly changeDetector: ChangeDetectorRef, private readonly pdfState: PdfStateService, private readonly musicSystemService: MusicSystemService, private readonly pdfPersistence: PdfPersistenceService, private readonly pdfDocuments: PdfDocumentService) {
     this.pdfUrl = pdfState.pdfUrl();
     this.aspectRatioAdjustment = musicSystemService.aspectRatioAdjustment();
   }
@@ -81,10 +82,13 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
       this.resizeObserver.observe(this.pdfContainerRef.nativeElement);
     }
     try {
-      this.loadingTask = pdfjsLib.getDocument({ url: this.pdfUrl, cMapUrl: '/assets/pdfjs-dist/cmaps/', cMapPacked: true, standardFontDataUrl: '/assets/pdfjs-dist/standard_fonts/', wasmUrl: '/assets/pdfjs-dist/wasm/' });
-      this.pdfDocument = await this.loadingTask.promise;
+      this.pdfDocument = await this.pdfDocuments.load(this.pdfUrl);
       this.pageSizes = [];
-      for (let i = 1; i <= this.pdfDocument.numPages; i++) { const page = await this.pdfDocument.getPage(i); const viewport = page.getViewport({ scale: 1 }); this.pageSizes.push({ width: viewport.width, height: viewport.height }); }
+      for (let i = 1; i <= this.pdfDocument.numPages; i++) {
+        const page = await this.pdfDocument.getPage(i);
+        try { const viewport = page.getViewport({ scale: 1 }); this.pageSizes.push({ width: viewport.width, height: viewport.height }); }
+        finally { page.cleanup(); }
+      }
 
       let hasEmbeddedSettings = false;
       const cachedBytes = this.pdfState.pdfBytes();
@@ -103,14 +107,6 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
         }
       } catch (error) {
         console.warn('Unable to inspect PDF metadata; continuing with detection fallback.', error);
-      }
-
-      if (!hasEmbeddedSettings && !this.musicSystemService.hasEditorState()) {
-        this.loading = false;
-        this.isProcessing = false;
-        this.errorMessage = 'Open the PDF in the editor first to generate slides.';
-        this.changeDetector.markForCheck();
-        return;
       }
 
       this.detectedByPage.clear();
@@ -134,7 +130,7 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
     this.destroyed = true;
     this.detectionController?.abort();
     document.removeEventListener('fullscreenchange', this.onFullscreenChange);
-    this.resizeObserver?.disconnect(); if (this.resizeFrame !== undefined) cancelAnimationFrame(this.resizeFrame); if (this.rebuildFrame !== undefined) cancelAnimationFrame(this.rebuildFrame); this.activeRenderTask?.cancel(); void this.loadingTask?.destroy();
+    this.resizeObserver?.disconnect(); if (this.resizeFrame !== undefined) cancelAnimationFrame(this.resizeFrame); if (this.rebuildFrame !== undefined) cancelAnimationFrame(this.rebuildFrame); this.activeRenderTask?.cancel();
     void this.exitFullscreen();
   }
   previousSlide(): void { if (this.canGoPrevious) { this.currentSlide--; void this.renderCurrentSlide(); } }
@@ -163,7 +159,14 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
     await this.pdfPersistence.save();
     this.changeDetector.markForCheck();
   }
-  openFile(file: File): void { if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) { this.pdfState.openFile(file); void this.exitViewer(); } }
+  openFile(file: File): void {
+    if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) {
+      const previousUrl = this.pdfUrl;
+      this.pdfState.openFile(file);
+      void this.pdfDocuments.clear(previousUrl);
+      void this.exitViewer();
+    }
+  }
 
   private setAspectRatio(aspectRatio: number): void {
     const container = this.pdfContainerRef?.nativeElement;
@@ -342,6 +345,7 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
         const task = page.render({ canvas: source, canvasContext: sourceContext, viewport });
         this.activeRenderTask = task;
         await task.promise;
+        page.cleanup();
         if (sequence !== this.renderSequence) return;
 
         const rectWidth = rect.xMax - rect.xMin;
@@ -423,6 +427,8 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
           );
         }
         y += rectHeight;
+        source.width = 0;
+        source.height = 0;
       }
       if (sequence !== this.renderSequence) return;
       canvas.width = renderedWidth;
@@ -433,6 +439,8 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
     } catch (error) {
       if (!(error instanceof Error && error.name === 'RenderingCancelledException')) throw error;
     } finally {
+      offscreen.width = 0;
+      offscreen.height = 0;
       if (sequence === this.renderSequence) this.activeRenderTask = undefined;
     }
   }

@@ -16,6 +16,7 @@ import { drawMusicSystems } from '../../core/pdf/music-system-renderer';
 import { PdfCanvasStage, type PageNavigationAction } from '../../shared/components/pdf-canvas-stage/pdf-canvas-stage';
 import { PdfStateService } from '../../core/pdf/pdf-state.service';
 import { PdfPersistenceService } from '../../core/pdf/pdf-persistence.service';
+import { PdfDocumentService } from '../../core/pdf/pdf-document.service';
 import { AppIcon } from '../../shared/components/app-icon/app-icon';
 import type { MusicSystemOverlayLabel } from '../../core/pdf/music-system-renderer';
 
@@ -46,7 +47,6 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
   isProcessing = true;
 
   private pdfDocument?: pdfjsLib.PDFDocumentProxy;
-  private loadingTask?: pdfjsLib.PDFDocumentLoadingTask;
   private renderTask?: pdfjsLib.RenderTask;
   private resizeObserver?: ResizeObserver;
   private destroyed = false;
@@ -62,6 +62,7 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
     private readonly musicSystemService: MusicSystemService,
     private readonly pdfState: PdfStateService,
     private readonly pdfPersistence: PdfPersistenceService,
+    private readonly pdfDocuments: PdfDocumentService,
   ) { this.pdfUrl = this.pdfState.pdfUrl(); }
 
   get musicSystems() { return this.musicSystemService.musicSystems; }
@@ -93,19 +94,10 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
   private async loadDocument(): Promise<void> {
     this.loading = true; this.isProcessing = true; this.errorMessage = ''; this.currentPage = 1; this.pageCount = 0;
     this.musicSystemService.clearEditorState();
-    this.renderTask?.cancel(); await this.loadingTask?.destroy();
+    this.renderTask?.cancel();
     try {
-      const loadingTask = pdfjsLib.getDocument({
-        url: this.pdfUrl,
-        cMapUrl: '/assets/pdfjs-dist/cmaps/',
-        cMapPacked: true,
-        standardFontDataUrl: '/assets/pdfjs-dist/standard_fonts/',
-        wasmUrl: '/assets/pdfjs-dist/wasm/',
-      });
-      this.loadingTask = loadingTask;
-      this.pdfDocument = await loadingTask.promise;
+      this.pdfDocument = await this.pdfDocuments.load(this.pdfUrl);
       if (this.destroyed) {
-        await loadingTask.destroy();
         return;
       }
 
@@ -161,7 +153,9 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
 
   openFile(file: File): void {
     if (!file.type.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) return;
+    const previousUrl = this.pdfUrl;
     this.pdfState.openFile(file); this.pdfUrl = this.pdfState.pdfUrl(); void this.loadDocument();
+    void this.pdfDocuments.clear(previousUrl);
   }
 
   async savePdf(): Promise<void> {
@@ -178,7 +172,6 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
       cancelAnimationFrame(this.resizeFrame);
     }
     this.renderTask?.cancel();
-    void this.loadingTask?.destroy();
   }
 
   private async detectDocumentMusicSystems(
