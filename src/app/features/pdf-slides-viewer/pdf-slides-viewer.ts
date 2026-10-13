@@ -77,6 +77,12 @@ export class PdfSlidesViewer implements AfterViewInit, OnDestroy {
     this.pageSizes = [];
     this.slideGroups = [];
     this.currentSlide = 0;
+    if (!this.pdfUrl) {
+      this.loading = false;
+      this.isProcessing = false;
+      this.changeDetector.markForCheck();
+      return;
+    }
     if (typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver(() => this.scheduleResizeRebuild());
       this.resizeObserver.observe(this.pdfContainerRef.nativeElement);

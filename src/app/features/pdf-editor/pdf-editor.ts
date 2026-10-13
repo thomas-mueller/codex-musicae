@@ -95,6 +95,12 @@ export class PdfEditor implements AfterViewInit, OnDestroy {
     this.loading = true; this.isProcessing = true; this.errorMessage = ''; this.currentPage = 1; this.pageCount = 0;
     this.musicSystemService.clearEditorState();
     this.renderTask?.cancel();
+    if (!this.pdfUrl) {
+      this.loading = false;
+      this.isProcessing = false;
+      this.changeDetector.markForCheck();
+      return;
+    }
     try {
       this.pdfDocument = await this.pdfDocuments.load(this.pdfUrl);
       if (this.destroyed) {

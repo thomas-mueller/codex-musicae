@@ -95,7 +95,7 @@
       <p class="message" role="status">Loading PDF…</p>
     } @else if (errorMessage) {
       <p class="message error" role="alert">{{ errorMessage }}</p>
-    } @else {
+    } @else if (pdfUrl) {
       <canvas #pdfCanvas aria-label="Current PDF page"></canvas>
     }
     </section>

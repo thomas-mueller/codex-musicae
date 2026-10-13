@@ -7,9 +7,6 @@
     } @else if (errorMessage) {
       <p class="message error" role="alert">{{ errorMessage }}</p>
     }
-    @if (!loading && !errorMessage && !slideGroups.length) {
-      <p class="message">No slides could be generated from the detected music systems.</p>
-    }
   </div>
   <header stage-top-controls class="toolbar top-toolbar" aria-label="Slide top controls">
     <div class="toolbar-section start">
