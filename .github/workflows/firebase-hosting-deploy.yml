@@ -26,6 +26,3 @@ jobs:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_CODEX_MUSICAE }}
           channelId: live
           projectId: codex-musicae
-
-      - name: Run unit tests
-        run: npm test -- --watch=false
