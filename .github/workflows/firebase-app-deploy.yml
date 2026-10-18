@@ -1,0 +1,136 @@
+name: Deploy to Firebase App
+on: push
+permissions:
+  checks: write
+  contents: read
+  pull-requests: write
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 0
+
+      - name: Setup Android SDK
+        # uses: android-actions/setup-android@v3
+        run: |
+          SDKMANAGER_BIN=$(ls -d $ANDROID_HOME/cmdline-tools/*/bin | sort -V | tail -n 1)
+          echo "$SDKMANAGER_BIN" >> $GITHUB_PATH
+          export PATH="$SDKMANAGER_BIN:$PATH"
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Angular app
+        run: npx ng build -c production
+
+      - name: Build Android APK (Capacitor + Gradle)
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+          GITHUB_REF_TYPE: ${{ github.ref_type }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+        run: |
+          npx cap add android
+          npx cap sync android
+          test -n "$ANDROID_KEYSTORE_BASE64"
+          test -n "$ANDROID_KEYSTORE_PASSWORD"
+          test -n "$ANDROID_KEY_ALIAS"
+          test -n "$ANDROID_KEY_PASSWORD"
+          export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/codex-musicae-release.keystore"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$ANDROID_KEYSTORE_PATH"
+          python3 scripts/configure-android-ci.py
+          chmod +x android/gradlew
+          cd android
+          ./gradlew --parallel assembleDebug assembleRelease
+          cd -
+          APK_SIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          AAPT="$ANDROID_HOME/build-tools/35.0.0/aapt"
+          "$APK_SIGNER" verify --verbose --print-certs android/app/build/outputs/apk/release/app-release.apk
+          RELEASE_BADGING=$("$AAPT" dump badging android/app/build/outputs/apk/release/app-release.apk | head -n 1)
+          DEBUG_BADGING=$("$AAPT" dump badging android/app/build/outputs/apk/debug/app-debug.apk | head -n 1)
+          echo "$RELEASE_BADGING"
+          echo "$DEBUG_BADGING"
+          [[ "$RELEASE_BADGING" == *"name='app.web.codexmusicae'"* ]]
+          [[ "$DEBUG_BADGING" == *"name='app.web.codexmusicae.debug'"* ]]
+
+      - name: Upload release and debug APK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-musicae-android-builds
+          path: |
+            android/app/build/outputs/apk/release/app-release.apk
+            android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Create Firebase service account file
+        run: |
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_CODEX_MUSICAE }}' > firebase-service-account.json
+
+      # Add "Administrator für Firebase-App-Deployments" to "github-action-1253684117@codex-musicae.iam.gserviceaccount.com" first in IAM
+      # https://console.cloud.google.com/iam-admin/iam?authuser=0&hl=de&project=codex-musicae
+      - name: Distribute APK to Firebase App Distribution
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: firebase-service-account.json
+          FIREBASE_APP_TESTERS: ${{ secrets.FIREBASE_APP_TESTERS }}
+        run: |
+          firebase appdistribution:distribute android/app/build/outputs/apk/release/app-release.apk \
+            --app ${{ secrets.FIREBASE_APP_ID_ANDROID_CODEX_MUSICAE }} \
+            --release-notes "Build ${{ github.run_number }} (${GITHUB_SHA::7}): $(git log -1 --pretty=%s)" \
+            --testers "$FIREBASE_APP_TESTERS"
+
+      - name: Delete old App Distribution releases
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: firebase-service-account.json
+          APP_ID: ${{ secrets.FIREBASE_APP_ID_ANDROID_CODEX_MUSICAE }}
+          RETENTION_DAYS: 10
+        run: |
+          gcloud auth activate-service-account --key-file="$GOOGLE_APPLICATION_CREDENTIALS"
+          TOKEN=$(gcloud auth print-access-token)
+          PROJECT_NUMBER=$(echo "$APP_ID" | cut -d: -f2)
+          PARENT="projects/$PROJECT_NUMBER/apps/$APP_ID"
+          CUTOFF=$(date -u -d "-$RETENTION_DAYS days" +%Y-%m-%dT%H:%M:%S)
+
+          PAGE=""
+          NAMES="[]"
+          while : ; do
+            RESP=$(curl -s -H "Authorization: Bearer $TOKEN" \
+              "https://firebaseappdistribution.googleapis.com/v1/$PARENT/releases?pageSize=100&pageToken=$PAGE")
+            OLD=$(echo "$RESP" | jq -c --arg c "$CUTOFF" '[.releases[]? | select(.createTime[0:19] < $c) | .name]')
+            NAMES=$(jq -c -n --argjson a "$NAMES" --argjson b "$OLD" '$a + $b')
+            PAGE=$(echo "$RESP" | jq -r '.nextPageToken // empty')
+            [ -z "$PAGE" ] && break
+          done
+
+          COUNT=$(echo "$NAMES" | jq length)
+          echo "Deleting $COUNT old releases"
+
+          # batchDelete accepts at most 100 names per call
+          echo "$NAMES" | jq -c '_nwise(100)' | while read -r CHUNK; do
+            curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+              -d "{\"names\": $CHUNK}" \
+              "https://firebaseappdistribution.googleapis.com/v1/$PARENT/releases:batchDelete"
+          done
