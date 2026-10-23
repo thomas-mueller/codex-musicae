@@ -6,7 +6,9 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "lint": "eslint .",
+    "lint:selftest": "node scripts/lint-selftest.mjs"
   },
   "private": true,
   "packageManager": "npm@11.13.0",
@@ -26,9 +28,13 @@
     "@angular/compiler-cli": "^21.2.0",
     "@capacitor/android": "^8.5.3",
     "@capacitor/cli": "^8.4.3",
+    "@eslint/js": "^10.0.1",
+    "angular-eslint": "^22.6.0",
+    "eslint-plugin-boundaries": "^7.3.0",
     "jsdom": "^28.0.0",
     "prettier": "^3.8.1",
     "typescript": "~5.9.2",
+    "typescript-eslint": "^8.72.0",
     "vitest": "^4.0.8"
   }
 }
