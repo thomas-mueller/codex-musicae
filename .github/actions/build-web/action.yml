@@ -1,0 +1,16 @@
+name: Build web app
+description: Install dependencies and build the production web application
+runs:
+  using: composite
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version-file: .nvmrc
+        cache: npm
+    - name: Install dependencies
+      shell: bash
+      run: npm ci
+    - name: Build web app
+      shell: bash
+      run: npm run build

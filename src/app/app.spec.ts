@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { App } from './app';
+import { TUNABLES } from '../config/tunables';
 
 describe('App', () => {
   beforeEach(async () => {
@@ -14,10 +15,14 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should render title', async () => {
+  it('I18-001 placeholder has no visible text', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Hello, codex-musicae');
+    expect(compiled.querySelector('main')?.textContent?.trim()).toBe('');
+  });
+
+  it('ARC-004 tunables export the canonical app identity', () => {
+    expect(TUNABLES.identity.appName).toBe('CodexMusicae');
   });
 });

@@ -29,12 +29,12 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 
 ## GEN — General
 
-- **GEN-001** [v1·todo·M1] The app title, PWA name and launcher name are `T:identity.appName`.
+- **GEN-001** [v1·done·M1] The app title, PWA name and launcher name are `T:identity.appName`.
 - **GEN-002** [v1·todo·M3] The Android applicationId and Capacitor appId are `T:identity.appId`.
 - **GEN-003** [v1-optional·todo·M18] The iOS bundle ID is `T:identity.appId`.
 - **GEN-004** [v1·todo·M0] The GitHub repository is private and has no license file; only built apps (web, Android, optionally iOS) are distributed.
 - **GEN-005** [v1·todo·M8] PDF content is processed on the device only; no network request carries PDF content or PDF-derived data.
-- **GEN-006** [v1·todo·M1] The app has no account, no backend beyond static hosting, no analytics and no crash reporting.
+- **GEN-006** [v1·done·M1] The app has no account, no backend beyond static hosting, no analytics and no crash reporting.
 - **GEN-007** [v1·todo·M7] The app has a single light theme; there is no dark mode.
 - **GEN-008** [v1·todo·M7] Every area not covered by PDF content (around the slide, filler outside the page, the empty state) uses `T:colors.canvasGrey`.
 - **GEN-009** [v1·todo·M7] Every control is an icon from the icon set; visible text is limited to numbers, the version string and error codes.
@@ -42,8 +42,8 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 
 ## I18 — Localization
 
-- **I18-001** [v1·todo·M1] All user-visible strings come from translation files through the translation layer; a lint rule fails the build on text literals in templates.
-- **I18-002** [v1·todo·M1] A second language can be added by adding one translation file, without code changes. v1 ships English only.
+- **I18-001** [v1·done·M1] All user-visible strings come from translation files through the translation layer; a lint rule fails the build on text literals in templates.
+- **I18-002** [v1·done·M1] A second language can be added by adding one translation file, without code changes. v1 ships English only.
 
 ## FIL — Files and tabs
 
@@ -239,7 +239,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 
 ## PLT — Platforms
 
-- **PLT-001** [v1·todo·M1] Supported browsers: latest two versions of Chrome, Edge, Firefox and Safari (min 16.4) on desktop; Chrome, Firefox, Samsung Internet, Edge on Android; Safari on iPad and iPhone. The targets live in one `browserslist` config.
+- **PLT-001** [v1·done·M1] Supported browsers: latest two versions of Chrome, Edge, Firefox and Safari (min 16.4) on desktop; Chrome, Firefox, Samsung Internet, Edge on Android; Safari on iPad and iPhone. The targets live in one `browserslist` config.
 - **PLT-002** [v1·todo·M3] The Android app has `minSdk` 29 (Android 10) in one Gradle location.
 - **PLT-003** [v1·todo·M1] Platform APIs (Fullscreen API, Wake Lock, File System Access, localStorage, IndexedDB, Capacitor plugins) may be used only in `adapters/` and the composition root; lint fails otherwise. The ports are PdfRenderer, PdfWriter, DetectionEngine, FileAccess, Fullscreen, WakeLock, Preferences, AppLifecycle, OpenWith, BackButton; each gets its implementations in the milestone that first needs it (see `architecture.md`).
 - **PLT-004** [v1·todo·M16] Presentation mode in browsers uses the Fullscreen API on entry (user gesture); leaving fullscreen with Esc switches to annotation mode; where the API is missing (iPhone Safari) only the app UI is hidden.
@@ -269,7 +269,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **NFR-011** [v1·todo·M10] Every OpenCV object is released in a `finally` block.
 - **NFR-012** [v1·todo·M10] OpenCV.js is loaded only inside the detection worker, lazily on first use, from the app's own assets (no CDN).
 - **NFR-013** [v1·todo·M15] There is no hard PDF size limit; a failed save shows the error icon and does not crash.
-- **NFR-014** [v1·todo·M1] The initial bundle stays within `T:budgets.initialBundleKbGzip` (Angular build budget).
+- **NFR-014** [v1·done·M1] The initial bundle stays within `T:budgets.initialBundleKbGzip` (Angular build budget).
 - **NFR-015** [v1·todo·M16] After the OS kills the WebView, the next start restores tabs and positions; unsaved loss is limited to the autosave delay.
 - **NFR-016** [v1·todo·M17] A reference PDF with 100+ pages (one scanned) runs within the budgets on a mid-range small tablet.
 
@@ -278,19 +278,19 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **ARC-001** [v1·todo·M1] The folders `core/`, `ports/`, `adapters/`, `state/`, `input/`, `features/`, `config/` exist; ESLint boundary rules allow only inward dependencies and CI fails on violations.
 - **ARC-002** [v1·todo·M1] `core/` imports nothing from Angular, the DOM or third-party libraries and is deterministic.
 - **ARC-003** [v1·todo·M1] The app uses standalone components, signals, OnPush, zoneless change detection and strict TypeScript, following the current official Angular style guide and `ng generate` naming.
-- **ARC-004** [v1·todo·M1] All numbers, colors, icon names and key bindings come from `src/config/tunables.ts`.
+- **ARC-004** [v1·done·M1] All numbers, colors, icon names and key bindings come from `src/config/tunables.ts`.
 - **ARC-005** [v1·todo·M4] Errors cross port boundaries as typed results; the UI shows icons, not messages.
 - **ARC-006** [v1·todo·M13] A single place in the input layer decides whether a pointer draws or navigates.
 
 ## PIP — Pipelines and versioning
 
-- **PIP-001** [v1·todo·M1] Pipeline `lint-test` runs on every push to every branch: lint, unit tests, E2E on three engines.
-- **PIP-002** [v1·todo·M1] Pipeline `deploy-web` builds and deploys to Firebase Hosting, triggered by `workflow_run` after a successful `lint-test` on `main`.
+- **PIP-001** [v1·done·M1] Pipeline `lint-test` runs on every push to every branch: lint, unit tests, E2E on three engines.
+- **PIP-002** [v1·done·M1] Pipeline `deploy-web` builds and deploys to Firebase Hosting, triggered by `workflow_run` after a successful `lint-test` on `main`.
 - **PIP-003** [v1·todo·M3] Pipeline `android` builds a signed APK/AAB and uploads it to Firebase App Distribution, triggered like PIP-002.
 - **PIP-004** [v1-optional·todo·M18] Pipeline `ios-compile` runs an unsigned simulator build on a macOS runner, triggered like PIP-002.
 - **PIP-005** [v1·todo·M2] The version string is `git describe --tags --always --long` (checkout with full history), injected at build time and shown in the app (UIX-015).
 - **PIP-006** [v1·todo·M3] Android `versionName` is the version string and `versionCode` is the commit count.
-- **PIP-007** [v1·todo·M1] Pipelines 2–4 share a composite action that builds the web app.
+- **PIP-007** [v1·done·M1] Pipelines 2–4 share a composite action that builds the web app.
 - **PIP-008** [v1·todo·M0] Signing keys and Firebase credentials exist only as GitHub secrets; their names are listed in `docs/milestones/V1-M00.md`.
 - **PIP-009** [v1·todo·M2] Milestone `V1-M<m>` is tagged `v0.<m>.0` and fixes `v0.<m>.<p>`; the release of v1 additionally tags the commit of the last included milestone `v1.0.0`; a tag deploys nothing by itself.
 
@@ -299,8 +299,8 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **TST-001** [v1·todo·M4] Every `core/` function has unit tests written before its implementation; test names contain the requirement ID.
 - **TST-002** [v1·todo·M17] A golden detection corpus (engraved and scanned PDFs with expected system counts per page) runs in CI; every reported problem PDF joins it.
 - **TST-003** [v1·todo·M17] A round-trip test annotates, saves, reopens and checks that strokes and embedded data survive and the PDF still loads.
-- **TST-004** [v1·todo·M1] Playwright is configured with Chromium, Firefox and WebKit projects and phone and tablet device profiles.
-- **TST-005** [v1·todo·M1] Code that exists only for Safari/WebKit changes only together with a Playwright WebKit test.
+- **TST-004** [v1·done·M1] Playwright is configured with Chromium, Firefox and WebKit projects and phone and tablet device profiles.
+- **TST-005** [v1·done·M1] Code that exists only for Safari/WebKit changes only together with a Playwright WebKit test.
 - **TST-006** [v1·todo·M17] A manual device checklist covers pedals, full screen, wake lock, "open with", in-place save and performance on a real Android tablet.
 - **TST-007** [v1·todo·M17] A tester checklist for iOS Safari (open, scroll, draw, save a copy, presentation mode, pedal) is delivered with the hosted URL.
 - **TST-008** [v1·todo·M17] A performance test on the reference PDF fails the pipeline when a budget in `T:budgets` is exceeded.
