@@ -38,7 +38,7 @@ export const TUNABLES = {
       '#FB8C00',
       '#6D4C41',
     ], // ORG-018: colors are assigned cyclically by jump id
-    penPresets: ['#000000', '#D32F2F', '#1565C0', '#2E7D32', '#EF6C00', '#6A1B9A'], // ANN-004
+    penPresets: ['#D32F2F', '#1565C0', '#2E7D32', '#EF6C00', '#6A1B9A'], // ANN-004
     highlighterPresets: ['#FDD835', '#9CCC65', '#FFA726', '#F06292', '#4FC3F7', '#BA68C8'], // ANN-004
   },
 
