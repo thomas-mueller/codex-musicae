@@ -39,7 +39,13 @@ Angular (standalone, signals, zoneless, OnPush, strict TypeScript), Capacitor, p
 
 ## Commands
 
-Fill in during M1 (the agent keeps this list current): install, dev server, lint, unit tests, E2E (`npx playwright test`), production build.
+- Install: `npm ci`
+- Dev server: `npm start`
+- Lint: `npm run lint`
+- Lint self-test: `npm run lint:selftest`
+- Unit tests: `npm test -- --watch=false`
+- E2E: `npx playwright test`
+- Production build: `npm run build`
 
 ## Workflow
 
