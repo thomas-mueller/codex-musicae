@@ -7,7 +7,7 @@ Goal: an independent check that the documents are atomic, consistent, precise, c
 
 ## Scope (read)
 
-`CLAUDE.md`, `docs/requirements.md`, `docs/roadmap.md`, `docs/milestones/*`, `docs/decisions.md`, `docs/limitations.md`, `docs/architecture.md`, `docs/changelog.md`, `src/config/tunables.ts`.
+`AGENTS.md`, `docs/requirements.md`, `docs/roadmap.md`, `docs/milestones/*`, `docs/decisions.md`, `docs/limitations.md`, `docs/architecture.md`, `docs/changelog.md`, `src/config/tunables.ts`.
 
 ## Checks
 

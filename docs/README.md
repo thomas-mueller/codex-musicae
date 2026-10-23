@@ -4,7 +4,7 @@ A PDF score viewer for instrumentalists: slide-by-slide navigation by music syst
 
 ## Read first (agents)
 
-1. `/CLAUDE.md` — standing rules.
+1. `/AGENTS.md` — standing rules.
 2. `docs/roadmap.md` — milestones, tags, model guidance.
 3. The milestone file you were given in `docs/milestones/`.
 4. Only the requirement IDs it lists (`grep -n "DET-005" docs/requirements.md`).
