@@ -29,12 +29,12 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 
 ## GEN — General
 
-- **GEN-001** [v1·todo·M1] The app title, PWA name and launcher name are `T:identity.appName`.
+- **GEN-001** [v1·done·M1] The app title, PWA name and launcher name are `T:identity.appName`.
 - **GEN-002** [v1·todo·M3] The Android applicationId and Capacitor appId are `T:identity.appId`.
 - **GEN-003** [v1-optional·todo·M18] The iOS bundle ID is `T:identity.appId`.
 - **GEN-004** [v1·todo·M0] The GitHub repository is private and has no license file; only built apps (web, Android, optionally iOS) are distributed.
 - **GEN-005** [v1·todo·M8] PDF content is processed on the device only; no network request carries PDF content or PDF-derived data.
-- **GEN-006** [v1·todo·M1] The app has no account, no backend beyond static hosting, no analytics and no crash reporting.
+- **GEN-006** [v1·done·M1] The app has no account, no backend beyond static hosting, no analytics and no crash reporting.
 - **GEN-007** [v1·todo·M7] The app has a single light theme; there is no dark mode.
 - **GEN-008** [v1·todo·M7] Every area not covered by PDF content (around the slide, filler outside the page, the empty state) uses `T:colors.canvasGrey`.
 - **GEN-009** [v1·todo·M7] Every control is an icon from the icon set; visible text is limited to numbers, the version string and error codes.
@@ -42,8 +42,8 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 
 ## I18 — Localization
 
-- **I18-001** [v1·todo·M1] All user-visible strings come from translation files through the translation layer; a lint rule fails the build on text literals in templates.
-- **I18-002** [v1·todo·M1] A second language can be added by adding one translation file, without code changes. v1 ships English only.
+- **I18-001** [v1·done·M1] All user-visible strings come from translation files through the translation layer; a lint rule fails the build on text literals in templates.
+- **I18-002** [v1·done·M1] A second language can be added by adding one translation file, without code changes. v1 ships English only.
 
 ## FIL — Files and tabs
 
@@ -278,7 +278,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **ARC-001** [v1·todo·M1] The folders `core/`, `ports/`, `adapters/`, `state/`, `input/`, `features/`, `config/` exist; ESLint boundary rules allow only inward dependencies and CI fails on violations.
 - **ARC-002** [v1·todo·M1] `core/` imports nothing from Angular, the DOM or third-party libraries and is deterministic.
 - **ARC-003** [v1·todo·M1] The app uses standalone components, signals, OnPush, zoneless change detection and strict TypeScript, following the current official Angular style guide and `ng generate` naming.
-- **ARC-004** [v1·todo·M1] All numbers, colors, icon names and key bindings come from `src/config/tunables.ts`.
+- **ARC-004** [v1·done·M1] All numbers, colors, icon names and key bindings come from `src/config/tunables.ts`.
 - **ARC-005** [v1·todo·M4] Errors cross port boundaries as typed results; the UI shows icons, not messages.
 - **ARC-006** [v1·todo·M13] A single place in the input layer decides whether a pointer draws or navigates.
 

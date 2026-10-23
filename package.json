@@ -3,11 +3,12 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
+    "start": "node scripts/generate-index-metadata.mjs && ng serve",
     "build": "ng build",
-    "watch": "ng build --watch --configuration development",
+    "prebuild": "node scripts/generate-index-metadata.mjs",
+    "watch": "node scripts/generate-index-metadata.mjs && ng build --watch --configuration development",
     "test": "ng test",
-    "lint": "eslint .",
+    "lint": "eslint . && node scripts/check-templates.mjs && node scripts/check-static-compliance.mjs",
     "lint:selftest": "node scripts/lint-selftest.mjs"
   },
   "private": true,
@@ -19,6 +20,7 @@
     "@angular/forms": "^21.2.0",
     "@angular/platform-browser": "^21.2.0",
     "@angular/router": "^21.2.0",
+    "@jsverse/transloco": "^8.4.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },

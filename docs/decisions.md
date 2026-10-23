@@ -61,6 +61,7 @@ Settled decisions. Do not reopen them in an agent session; if one blocks you, wr
 - **DEC-068** Ink is drawn by the app from its own stroke model (PDF user space). Until M15 pdf.js still renders existing annotations; from M15 the renderer disables annotations (`annotationMode` disabled) and the app loads all existing `/Ink` annotations into the model, so every stroke can be erased and nothing is drawn twice. Other annotation types (text, highlight, stamps of other apps) are preserved in the file but not displayed (LIM-025).
 - **DEC-069** Strokes saved by this app get `/NM = strokeId`; erasing a stroke removes the annotation by `nm:<id>` (own) or `obj:<n>` (foreign) reference.
 - **DEC-070** The M0 baseline uses Angular 21.2.0, Vitest 4.0.8, Node 24.16.0 and npm with `package-lock.json`; it started without a linter. M1 uses flat ESLint with `angular-eslint` and `eslint-plugin-boundaries`, because the architecture rules require lint-enforced layer boundaries.
+- **DEC-071** Runtime translations use `@jsverse/transloco` with an app-local HTTP loader. Static identity metadata is generated from `TUNABLES.identity.appName` into ignored Angular build output, so the source of truth remains `src/config/tunables.ts` without mutating tracked files during builds.
 - **DEC-066** A jump may start at junction N (D.C. at the end of a piece): the replay checks jumps before ending at N. Found while verifying the fixtures.
 
 ## Assumptions to review

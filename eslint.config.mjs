@@ -36,23 +36,35 @@ export default tseslint.config(
       'boundaries/elements': layerElements,
     },
     rules: {
-      'boundaries/element-types': [
+      'boundaries/dependencies': [
         'error',
         {
           default: 'disallow',
           checkAllOrigins: true,
-          rules: [
-            { from: 'core', allow: ['core'] },
-            { from: 'ports', allow: ['core', 'ports'] },
-            { from: 'adapters', allow: ['core', 'ports', 'adapters'] },
-            { from: 'state', allow: ['core', 'ports'] },
-            { from: 'input', allow: ['core', 'state', 'input'] },
-            { from: 'features', allow: ['core', 'state', 'input', 'ports', 'features'] },
-            {
-              from: { element: { type: 'core' } },
-              disallow: { to: { module: { origin: 'external' } } },
-            },
+          policies: [
+            { from: { element: { type: 'core' } }, allow: { to: { element: { type: 'core' } } } },
+            { from: { element: { type: 'ports' } }, allow: { to: { element: { types: { anyOf: ['core', 'ports'] } } } } },
+            { from: { element: { type: 'adapters' } }, allow: { to: { element: { types: { anyOf: ['core', 'ports', 'adapters'] } } } } },
+            { from: { element: { type: 'state' } }, allow: { to: { element: { types: { anyOf: ['core', 'ports'] } } } } },
+            { from: { element: { type: 'input' } }, allow: { to: { element: { types: { anyOf: ['core', 'state', 'input'] } } } } },
+            { from: { element: { type: 'features' } }, allow: { to: { element: { types: { anyOf: ['core', 'state', 'input', 'ports', 'features'] } } } } },
+            { from: { element: { type: 'ports' } }, allow: { to: { module: { origin: 'external' } } } },
+            { from: { element: { type: 'adapters' } }, allow: { to: { module: { origin: 'external' } } } },
+            { from: { element: { type: 'state' } }, allow: { to: { module: { origin: 'external' } } } },
+            { from: { element: { type: 'input' } }, allow: { to: { module: { origin: 'external' } } } },
+            { from: { element: { type: 'features' } }, allow: { to: { module: { origin: 'external' } } } },
           ],
+        },
+      ],
+      '@typescript-eslint/no-magic-numbers': [
+        'error',
+        { ignore: [0, 1, -1, 2], ignoreEnums: true, ignoreNumericLiteralTypes: true },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'Literal[value=/^#[0-9A-Fa-f]{3,8}$/]',
+          message: 'Colors belong in src/config/tunables.ts.',
         },
       ],
       'no-restricted-globals': [
@@ -99,6 +111,13 @@ export default tseslint.config(
     files: ['capacitor.config.ts'],
     rules: {
       'no-restricted-imports': 'off',
+    },
+  },
+  {
+    files: ['src/config/**/*.ts', '**/*.spec.ts'],
+    rules: {
+      '@typescript-eslint/no-magic-numbers': 'off',
+      'no-restricted-syntax': 'off',
     },
   },
   {

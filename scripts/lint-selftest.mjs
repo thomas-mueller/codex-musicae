@@ -10,6 +10,8 @@ const fixtures = [
   ['core-angular', 'core/violates-core-import.ts', "import { Component } from '@angular/core';\n"],
   ['platform-global', 'state/violates-platform.ts', 'export const width = window.innerWidth;\n'],
   ['capacitor-import', 'state/violates-capacitor.ts', "import { Preferences } from '@capacitor/preferences';\n"],
+  ['magic-number', 'state/violates-magic-number.ts', 'export const value = 3 + 4;\n'],
+  ['color-literal', 'state/violates-color.ts', "export const color = '#FFFFFF';\n"],
 ];
 
 const runEslint = (file) => new Promise((resolve, reject) => {
@@ -23,6 +25,18 @@ const runEslint = (file) => new Promise((resolve, reject) => {
   eslint.stderr.on('data', (chunk) => { output += chunk; });
   eslint.on('error', reject);
   eslint.on('close', (code) => resolve({ code: code ?? 1, output }));
+});
+
+const runNode = (script, file) => new Promise((resolve, reject) => {
+  const child = spawn(process.execPath, [script, file], {
+    cwd: repositoryRoot,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let output = '';
+  child.stdout.on('data', (chunk) => { output += chunk; });
+  child.stderr.on('data', (chunk) => { output += chunk; });
+  child.on('error', reject);
+  child.on('close', (code) => resolve({ code: code ?? 1, output }));
 });
 
 try {
@@ -39,7 +53,16 @@ try {
       throw new Error(`lint self-test fixture passed unexpectedly: ${name}\n${result.output}`);
     }
   }
-  console.log(`lint self-test passed (${fixtures.length} deliberate violations rejected)`);
+  const rawTemplate = join(fixtureRoot, 'raw.html');
+  const translatedTemplate = join(fixtureRoot, 'translated.html');
+  await writeFile(rawTemplate, '<p>Raw text</p>\n', 'utf8');
+  await writeFile(translatedTemplate, "<p>{{ 'app.placeholder' | transloco }}</p>\n", 'utf8');
+  const rawResult = await runNode('scripts/check-templates.mjs', relative(repositoryRoot, rawTemplate));
+  const translatedResult = await runNode('scripts/check-templates.mjs', relative(repositoryRoot, translatedTemplate));
+  if (rawResult.code === 0 || translatedResult.code !== 0) {
+    throw new Error('template translation self-test did not enforce raw text and allow Transloco text');
+  }
+  console.log(`lint self-test passed (${fixtures.length} deliberate violations plus template checks)`);
 } finally {
   await rm(fixtureRoot, { recursive: true, force: true });
 }
