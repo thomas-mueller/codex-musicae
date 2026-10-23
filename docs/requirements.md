@@ -239,7 +239,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 
 ## PLT — Platforms
 
-- **PLT-001** [v1·todo·M1] Supported browsers: latest two versions of Chrome, Edge, Firefox and Safari (min 16.4) on desktop; Chrome, Firefox, Samsung Internet, Edge on Android; Safari on iPad and iPhone. The targets live in one `browserslist` config.
+- **PLT-001** [v1·done·M1] Supported browsers: latest two versions of Chrome, Edge, Firefox and Safari (min 16.4) on desktop; Chrome, Firefox, Samsung Internet, Edge on Android; Safari on iPad and iPhone. The targets live in one `browserslist` config.
 - **PLT-002** [v1·todo·M3] The Android app has `minSdk` 29 (Android 10) in one Gradle location.
 - **PLT-003** [v1·todo·M1] Platform APIs (Fullscreen API, Wake Lock, File System Access, localStorage, IndexedDB, Capacitor plugins) may be used only in `adapters/` and the composition root; lint fails otherwise. The ports are PdfRenderer, PdfWriter, DetectionEngine, FileAccess, Fullscreen, WakeLock, Preferences, AppLifecycle, OpenWith, BackButton; each gets its implementations in the milestone that first needs it (see `architecture.md`).
 - **PLT-004** [v1·todo·M16] Presentation mode in browsers uses the Fullscreen API on entry (user gesture); leaving fullscreen with Esc switches to annotation mode; where the API is missing (iPhone Safari) only the app UI is hidden.
@@ -299,8 +299,8 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **TST-001** [v1·todo·M4] Every `core/` function has unit tests written before its implementation; test names contain the requirement ID.
 - **TST-002** [v1·todo·M17] A golden detection corpus (engraved and scanned PDFs with expected system counts per page) runs in CI; every reported problem PDF joins it.
 - **TST-003** [v1·todo·M17] A round-trip test annotates, saves, reopens and checks that strokes and embedded data survive and the PDF still loads.
-- **TST-004** [v1·todo·M1] Playwright is configured with Chromium, Firefox and WebKit projects and phone and tablet device profiles.
-- **TST-005** [v1·todo·M1] Code that exists only for Safari/WebKit changes only together with a Playwright WebKit test.
+- **TST-004** [v1·done·M1] Playwright is configured with Chromium, Firefox and WebKit projects and phone and tablet device profiles.
+- **TST-005** [v1·done·M1] Code that exists only for Safari/WebKit changes only together with a Playwright WebKit test.
 - **TST-006** [v1·todo·M17] A manual device checklist covers pedals, full screen, wake lock, "open with", in-place save and performance on a real Android tablet.
 - **TST-007** [v1·todo·M17] A tester checklist for iOS Safari (open, scroll, draw, save a copy, presentation mode, pedal) is delivered with the hosted URL.
 - **TST-008** [v1·todo·M17] A performance test on the reference PDF fails the pipeline when a budget in `T:budgets` is exceeded.

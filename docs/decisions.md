@@ -62,6 +62,8 @@ Settled decisions. Do not reopen them in an agent session; if one blocks you, wr
 - **DEC-069** Strokes saved by this app get `/NM = strokeId`; erasing a stroke removes the annotation by `nm:<id>` (own) or `obj:<n>` (foreign) reference.
 - **DEC-070** The M0 baseline uses Angular 21.2.0, Vitest 4.0.8, Node 24.16.0 and npm with `package-lock.json`; it started without a linter. M1 uses flat ESLint with `angular-eslint` and `eslint-plugin-boundaries`, because the architecture rules require lint-enforced layer boundaries.
 - **DEC-071** Runtime translations use `@jsverse/transloco` with an app-local HTTP loader. Static identity metadata is generated from `TUNABLES.identity.appName` into ignored Angular build output, so the source of truth remains `src/config/tunables.ts` without mutating tracked files during builds.
+- **DEC-072** M1 browser E2E uses Playwright against the production Angular build served by the repository's Node standard-library static server; no development server or additional static-server dependency is used. The configured device projects use descriptors exposed by the installed Playwright version.
+- **DEC-073** Safari/WebKit-only behavior must be introduced together with a Playwright WebKit test. Browserslist targets Safari and iOS Safari 16.4 or newer; Browserslist has no separate Edge Android dataset, so Edge's supported versions are represented by the shared Edge target.
 - **DEC-066** A jump may start at junction N (D.C. at the end of a piece): the replay checks jumps before ending at N. Found while verifying the fixtures.
 
 ## Assumptions to review
