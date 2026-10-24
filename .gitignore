@@ -3,6 +3,7 @@
 .editorconfig
 playwright-report
 test-results
+favicon-*.png
 
 # Compiled output
 /dist
