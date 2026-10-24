@@ -26,6 +26,11 @@
             "index": ".angular/generated/index.html",
             "assets": [
               {
+                "glob": "manifest.webmanifest",
+                "input": ".angular/generated",
+                "output": "."
+              },
+              {
                 "glob": "**/*",
                 "input": "public"
               },
@@ -41,6 +46,7 @@
           },
           "configurations": {
             "production": {
+              "serviceWorker": "ngsw-config.json",
               "budgets": [
                 {
                   "type": "initial",
