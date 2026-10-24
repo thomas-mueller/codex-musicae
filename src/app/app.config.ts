@@ -6,6 +6,8 @@ import {
 import { provideHttpClient } from '@angular/common/http';
 import { provideTransloco } from '@jsverse/transloco';
 import { provideRouter } from '@angular/router';
+import { APP_VERSION_RAW } from '../config/version.generated';
+import { APP_VERSION } from './ports/app-version';
 
 import { provideAppIdentity } from './adapters/web/app-identity';
 import { AppTranslocoLoader } from './adapters/web/transloco-loader';
@@ -16,6 +18,7 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideZonelessChangeDetection(),
     provideHttpClient(),
+    { provide: APP_VERSION, useValue: APP_VERSION_RAW },
     ...provideTransloco({
       config: {
         availableLangs: ['en'],

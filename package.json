@@ -3,9 +3,10 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "node scripts/generate-index-metadata.mjs && ng serve",
+    "start": "node scripts/generate-version.mjs && node scripts/generate-index-metadata.mjs && ng serve",
     "build": "ng build",
-    "prebuild": "node scripts/generate-index-metadata.mjs",
+    "prebuild": "node scripts/generate-version.mjs && node scripts/generate-index-metadata.mjs",
+    "pretest": "node scripts/generate-version.mjs",
     "watch": "node scripts/generate-index-metadata.mjs && ng build --watch --configuration development",
     "test": "ng test",
     "e2e": "playwright test",
