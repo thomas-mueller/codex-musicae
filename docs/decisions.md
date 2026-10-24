@@ -65,6 +65,7 @@ Settled decisions. Do not reopen them in an agent session; if one blocks you, wr
 - **DEC-072** M1 browser E2E uses Playwright against the production Angular build served by the repository's Node standard-library static server; no development server or additional static-server dependency is used. The configured device projects use descriptors exposed by the installed Playwright version.
 - **DEC-073** Safari/WebKit-only behavior must be introduced together with a Playwright WebKit test. Browserslist targets Safari and iOS Safari 16.4 or newer; Browserslist has no separate Edge Android dataset, so Edge's supported versions are represented by the shared Edge target.
 - **DEC-074** Angular's M1 `initial` budget is set to `600kB`, matching `T:budgets.initialBundleKbGzip` as an Angular build-budget threshold. Angular measures this budget using the raw JavaScript/CSS `Initial Total` reported by the application builder, not gzip transfer size.
+- **DEC-075** The web service worker is registered only for production web builds. Startup may check for an update, but the app never activates an update, reloads, or blocks use; a downloaded version is used on the next app start. Capacitor bundles do not register the web worker.
 - **DEC-066** A jump may start at junction N (D.C. at the end of a piece): the replay checks jumps before ending at N. Found while verifying the fixtures.
 
 ## Assumptions to review

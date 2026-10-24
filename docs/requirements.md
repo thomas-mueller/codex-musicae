@@ -247,7 +247,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **PLT-006** [v1·todo·M16] Android presentation uses sticky immersive mode and draws under display cutouts (`shortEdges`); exiting restores the system bars.
 - **PLT-007** [v1·todo·M16] The Android back button closes popups first, in presentation mode returns to annotation mode, and otherwise has the default behavior.
 - **PLT-008** [v1·todo·M16] Android opens files through the Storage Access Framework with persistable read-write permission and writes in place; if write access is not granted the file is read-only (FIL-016). _Risk: the write is a truncating write, not atomic._
-- **PLT-009** [v1·todo·M2] The web app is a PWA: it works offline after the first load, and a new version activates only at the next app start, never mid-use.
+- **PLT-009** [v1·done·M2] The web app is a PWA: it works offline after the first load, and a new version activates only at the next app start, never mid-use.
 - **PLT-010** [v1·todo·M15] Safari and Firefox have no in-place save; saving offers "save a copy".
 - **PLT-011** [v1·todo·M17] On every push the E2E suite runs on Chromium, Firefox and WebKit, including Android and iPad/iPhone device profiles.
 - **PLT-012** [v1-optional·todo·M18] The `ios` Capacitor shell is committed; deployment target iOS 16.4; Info.plist declares PDF as a supported document type with open-in-place.
