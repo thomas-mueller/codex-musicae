@@ -22,6 +22,7 @@
           "builder": "@angular/build:application",
           "options": {
             "browser": "src/main.ts",
+            "outputPath": "dist/codexmusicae",
             "tsConfig": "tsconfig.app.json",
             "index": ".angular/generated/index.html",
             "assets": [

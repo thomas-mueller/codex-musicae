@@ -46,6 +46,8 @@ Angular (standalone, signals, zoneless, OnPush, strict TypeScript), Capacitor, p
 - Unit tests: `npm test -- --watch=false`
 - E2E: `npx playwright test`
 - Production build: `npm run build`
+- Capacitor sync: `npm run cap:sync`
+- Android debug APK: `npm run android:debug`
 
 ## Workflow
 
