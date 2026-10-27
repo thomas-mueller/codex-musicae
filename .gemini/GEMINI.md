@@ -39,7 +39,15 @@ Angular (standalone, signals, zoneless, OnPush, strict TypeScript), Capacitor, p
 
 ## Commands
 
-Fill in during M1 (the agent keeps this list current): install, dev server, lint, unit tests, E2E (`npx playwright test`), production build.
+- Install: `npm ci`
+- Dev server: `npm start`
+- Lint: `npm run lint`
+- Lint self-test: `npm run lint:selftest`
+- Unit tests: `npm test -- --watch=false`
+- E2E: `npx playwright test`
+- Production build: `npm run build`
+- Capacitor sync: `npm run cap:sync`
+- Android debug APK: `npm run android:debug`
 
 ## Workflow
 
@@ -53,6 +61,7 @@ Fill in during M1 (the agent keeps this list current): install, dev server, lint
 
 - Milestone `V1-M<n>` → tag `v0.<n>.0`; fixes `v0.<n>.<p>`; the release of v1 additionally tags the last milestone's commit `v1.0.0` (annotated). The owner tags; you never do. Tags deploy nothing by themselves. Details: `docs/roadmap.md`.
 - Version string: `git describe --tags --always --long`.
+- The build runs `scripts/generate-version.mjs`; read the generated raw value through the `APP_VERSION` injection token (the generated file is ignored and must not be edited).
 - Requirement IDs `TOPIC-nnn`, never reused; `target` v1 | v1-optional | v2 | backlog; `status` todo | done | changed | dropped.
 
 ## Layout of the documents
