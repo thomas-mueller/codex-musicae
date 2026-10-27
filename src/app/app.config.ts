@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { provideServiceWorker } from '@angular/service-worker';
 import { provideHttpClient } from '@angular/common/http';
+import { Capacitor } from '@capacitor/core';
 import { provideTransloco } from '@jsverse/transloco';
 import { provideRouter } from '@angular/router';
 import { APP_VERSION_RAW } from '../config/version.generated';
@@ -25,7 +26,7 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(),
     { provide: APP_VERSION, useValue: APP_VERSION_RAW },
     provideServiceWorker('ngsw-worker.js', {
-      enabled: !isDevMode() && !isCapacitorNative(),
+      enabled: shouldRegisterServiceWorker(isDevMode(), Capacitor),
       registrationStrategy: 'registerWhenStable:30000',
     }),
     provideEnvironmentInitializer(() => {
@@ -45,7 +46,13 @@ export const appConfig: ApplicationConfig = {
   ]
 };
 
-function isCapacitorNative(): boolean {
-  const capacitor = (globalThis as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
-  return capacitor?.isNativePlatform?.() ?? false;
+export interface CapacitorPlatform {
+  isNativePlatform(): boolean;
+}
+
+export function shouldRegisterServiceWorker(
+  developmentBuild: boolean,
+  capacitor: CapacitorPlatform,
+): boolean {
+  return !developmentBuild && !capacitor.isNativePlatform();
 }
