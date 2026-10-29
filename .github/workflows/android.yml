@@ -106,7 +106,7 @@ jobs:
 
           badging="$($aapt2_path dump badging "$apk_path")"
           package_line="$(printf '%s\n' "$badging" | sed -n "s/^package: name='\([^']*\)' versionCode='\([^']*\)' versionName='\([^']*\)'.*/\1 \2 \3/p")"
-          sdk_line="$(printf '%s\n' "$badging" | sed -n "s/^sdkVersion:'\([^']*\)'.*/\1/p" | head -n 1)"
+          sdk_line="$(printf '%s\n' "$badging" | sed -n "s/.*sdkVersion:'\([^']*\)'.*/\1/p" | head -n 1)"
           expected_line="$EXPECTED_PACKAGE $APP_VERSION_CODE $APP_VERSION_NAME"
 
           if [ "$package_line" != "$expected_line" ]; then
