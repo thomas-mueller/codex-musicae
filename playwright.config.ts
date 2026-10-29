@@ -41,7 +41,7 @@ export default defineConfig({
     ...deviceProjects,
   ],
   webServer: {
-    command: 'npm run build && node scripts/serve-static.mjs dist/codex-musicae/browser',
+    command: 'npm run build && node scripts/serve-static.mjs dist/codexmusicae/browser',
     url: E2E_BASE_URL,
     reuseExistingServer: !process.env.CI,
   },
