@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "public": "dist/codex-musicae/browser",
+    "public": "dist/codexmusicae/browser",
     "ignore": [
       "firebase.json",
       "**/.*",
