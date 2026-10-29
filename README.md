@@ -12,6 +12,24 @@ ng serve
 
 Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
 
+## Android local setup
+
+Before building the Android debug APK, load the repository setup script into your current shell:
+
+```bash
+source ./init.sh
+```
+
+The script selects JDK 21 for Gradle, discovers the local Android SDK, exports `JAVA_HOME`, `ANDROID_HOME`, and `ANDROID_SDK_ROOT`, and generates the ignored `android/local.properties` file required by the Android Gradle plugin. It checks existing SDK environment variables first, then common Android Studio SDK locations.
+
+After setup, build the APK with:
+
+```bash
+npm run android:debug
+```
+
+If JDK 21 or the Android SDK is installed elsewhere, set `JAVA_HOME` or `ANDROID_HOME` before sourcing `init.sh`.
+
 ## Code scaffolding
 
 Angular CLI includes powerful code scaffolding tools. To generate a new component, run:

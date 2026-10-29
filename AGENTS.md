@@ -48,6 +48,7 @@ Angular (standalone, signals, zoneless, OnPush, strict TypeScript), Capacitor, p
 - Production build: `npm run build`
 - Capacitor sync: `npm run cap:sync`
 - Android debug APK: `npm run android:debug`
+- Android local setup: `source ./init.sh` (selects JDK 21 and configures the local Android SDK)
 
 ## Workflow
 
