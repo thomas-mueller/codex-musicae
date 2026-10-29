@@ -4,9 +4,9 @@ def appVersionName = System.getenv('APP_VERSION_NAME') ?: '0.0.0-local'
 def appVersionCode = Integer.parseInt(System.getenv('APP_VERSION_CODE') ?: '1')
 def keystorePath = System.getenv('ANDROID_KEYSTORE_PATH')
 def keystorePassword = System.getenv('ANDROID_KEYSTORE_PASSWORD')
-def keyAlias = System.getenv('ANDROID_KEY_ALIAS')
-def keyPassword = System.getenv('ANDROID_KEY_PASSWORD')
-def hasReleaseSigning = [keystorePath, keystorePassword, keyAlias, keyPassword].every { value -> value }
+def signingKeyAlias = System.getenv('ANDROID_KEY_ALIAS')
+def signingKeyPassword = System.getenv('ANDROID_KEY_PASSWORD')
+def hasReleaseSigning = [keystorePath, keystorePassword, signingKeyAlias, signingKeyPassword].every { value -> value }
 
 android {
     namespace = "app.web.codexmusicae"
@@ -29,8 +29,8 @@ android {
             release {
                 storeFile file(keystorePath)
                 storePassword keystorePassword
-                keyAlias = keyAlias
-                keyPassword = keyPassword
+                keyAlias = signingKeyAlias
+                keyPassword = signingKeyPassword
             }
         }
     }
