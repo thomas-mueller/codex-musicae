@@ -106,9 +106,9 @@ jobs:
 
           badging="$($aapt2_path dump badging "$apk_path")"
           package_line="$(printf '%s\n' "$badging" | sed -n "s/^package: name='\([^']*\)' versionCode='\([^']*\)' versionName='\([^']*\)'.*/\1 \2 \3/p")"
-          sdk_line="$(printf '%s\n' "$badging" | awk '/sdkVersion:/ { value = $0; sub(/^.*sdkVersion:[^0-9]*/, "", value); sub(/[^0-9].*$/, "", value); print value; exit }')"
-          if [ -z "$sdk_line" ]; then
-            echo 'Could not read sdkVersion from aapt2 badging output:' >&2
+          min_sdk_line="$(printf '%s\n' "$badging" | awk '/minSdkVersion:/ { value = $0; sub(/^.*minSdkVersion:[^0-9]*/, "", value); sub(/[^0-9].*$/, "", value); print value; exit }')"
+          if [ -z "$min_sdk_line" ]; then
+            echo 'Could not read minSdkVersion from aapt2 badging output:' >&2
             printf '%s\n' "$badging" >&2
             exit 1
           fi
@@ -119,8 +119,8 @@ jobs:
             echo "Expected APK identity: $expected_line" >&2
             exit 1
           fi
-          if [ "$sdk_line" != '29' ]; then
-            echo "Unexpected APK minSdkVersion: $sdk_line" >&2
+          if [ "$min_sdk_line" != '29' ]; then
+            echo "Unexpected minSdkVersion: $min_sdk_line" >&2
             exit 1
           fi
 
