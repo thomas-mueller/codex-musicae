@@ -1,0 +1,145 @@
+name: android
+
+on:
+  workflow_run:
+    workflows:
+      - lint-test
+    types:
+      - completed
+    # branches:
+    #   - main
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout validated commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+          lfs: true
+
+      - name: Build web app
+        uses: ./.github/actions/build-web
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android SDK packages
+        shell: bash
+        run: sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Sync Capacitor Android project
+        run: npx cap sync android
+
+      - name: Compute Android version
+        shell: bash
+        run: |
+          version_string="$(git describe --tags --always --long)"
+          version_name="${version_string#v}"
+          version_code="$(git rev-list --count HEAD)"
+          commit_subject="$(git log -1 --pretty=%s)"
+
+          {
+            printf 'APP_VERSION_NAME=%s\n' "$version_name"
+            printf 'APP_VERSION_CODE=%s\n' "$version_code"
+            printf 'APP_VERSION_STRING=%s\n' "$version_string"
+            printf 'APP_RELEASE_NOTES=%s — %s\n' "$version_string" "$commit_subject"
+          } >> "$GITHUB_ENV"
+
+      - name: Prepare signing credentials
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ vars.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_CODEX_MUSICAE }}
+        run: |
+          keystore_path="$RUNNER_TEMP/codexmusicae-release.jks"
+          service_account_path="$RUNNER_TEMP/codexmusicae-firebase-service-account.json"
+
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$keystore_path"
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$service_account_path"
+          chmod 600 "$keystore_path" "$service_account_path"
+
+          {
+            printf 'ANDROID_KEYSTORE_PATH=%s\n' "$keystore_path"
+            printf 'ANDROID_KEYSTORE_PASSWORD=%s\n' "$ANDROID_KEYSTORE_PASSWORD"
+            printf 'ANDROID_KEY_ALIAS=%s\n' "$ANDROID_KEY_ALIAS"
+            printf 'ANDROID_KEY_PASSWORD=%s\n' "$ANDROID_KEY_PASSWORD"
+            printf 'GOOGLE_APPLICATION_CREDENTIALS=%s\n' "$service_account_path"
+          } >> "$GITHUB_ENV"
+
+      - name: Build signed release APK
+        working-directory: android
+        run: ./gradlew assembleRelease
+
+      - name: Validate release APK
+        id: validate-apk
+        shell: bash
+        env:
+          EXPECTED_PACKAGE: app.web.codexmusicae
+        run: |
+          apk_path="$(find android/app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print -quit)"
+          if [ -z "$apk_path" ]; then
+            echo 'Release APK was not produced' >&2
+            exit 1
+          fi
+
+          aapt2_path="$(find "$ANDROID_HOME/build-tools" -type f -name aapt2 -print | sort -V | tail -n 1)"
+          if [ -z "$aapt2_path" ]; then
+            echo 'aapt2 was not found in the Android SDK' >&2
+            exit 1
+          fi
+
+          badging="$($aapt2_path dump badging "$apk_path")"
+          package_line="$(printf '%s\n' "$badging" | sed -n "s/^package: name='\([^']*\)' versionCode='\([^']*\)' versionName='\([^']*\)'.*/\1 \2 \3/p")"
+          min_sdk_line="$(printf '%s\n' "$badging" | awk '/minSdkVersion:/ { value = $0; sub(/^.*minSdkVersion:[^0-9]*/, "", value); sub(/[^0-9].*$/, "", value); print value; exit }')"
+          if [ -z "$min_sdk_line" ]; then
+            echo 'Could not read minSdkVersion from aapt2 badging output:' >&2
+            printf '%s\n' "$badging" >&2
+            exit 1
+          fi
+          expected_line="$EXPECTED_PACKAGE $APP_VERSION_CODE $APP_VERSION_NAME"
+
+          if [ "$package_line" != "$expected_line" ]; then
+            echo "Unexpected APK identity: $package_line" >&2
+            echo "Expected APK identity: $expected_line" >&2
+            exit 1
+          fi
+          if [ "$min_sdk_line" != '29' ]; then
+            echo "Unexpected minSdkVersion: $min_sdk_line" >&2
+            exit 1
+          fi
+
+          printf 'apk_path=%s\n' "$apk_path" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK to Firebase App Distribution
+        env:
+          FIREBASE_ANDROID_APP_ID: ${{ vars.FIREBASE_ANDROID_APP_ID }}
+          FIREBASE_ANDROID_TESTER_GROUPS: ${{ vars.FIREBASE_ANDROID_TESTER_GROUPS }}
+        run: |
+          npm install --global firebase-tools
+          firebase appdistribution:distribute "${{ steps.validate-apk.outputs.apk_path }}" \
+            --app "$FIREBASE_ANDROID_APP_ID" \
+            --groups "$FIREBASE_ANDROID_TESTER_GROUPS" \
+            --release-notes "$APP_RELEASE_NOTES"
+
+      - name: Remove temporary credentials
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          rm -f -- "$RUNNER_TEMP/codexmusicae-release.jks" \
+            "$RUNNER_TEMP/codexmusicae-firebase-service-account.json"

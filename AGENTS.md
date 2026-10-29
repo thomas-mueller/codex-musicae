@@ -4,6 +4,8 @@ A PDF viewer for instrumentalists: steps through scores by music system ("slides
 
 These instructions are tool-neutral. If your tool expects `AGENTS.md`, copy this file.
 
+Keep this file synchronized with the active counterparts `CLAUDE.md`, `.claude/CLAUDE.md`, and `.gemini/GEMINI.md`; update all four together whenever these standing instructions change.
+
 ## Read in this order
 
 1. This file.
@@ -46,6 +48,9 @@ Angular (standalone, signals, zoneless, OnPush, strict TypeScript), Capacitor, p
 - Unit tests: `npm test -- --watch=false`
 - E2E: `npx playwright test`
 - Production build: `npm run build`
+- Capacitor sync: `npm run cap:sync`
+- Android debug APK: `npm run android:debug`
+- Android local setup: `source ./init.sh` (selects JDK 21 and configures the local Android SDK)
 
 ## Workflow
 

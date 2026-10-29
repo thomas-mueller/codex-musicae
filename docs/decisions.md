@@ -67,6 +67,7 @@ Settled decisions. Do not reopen them in an agent session; if one blocks you, wr
 - **DEC-074** Angular's M1 `initial` budget is set to `600kB`, matching `T:budgets.initialBundleKbGzip` as an Angular build-budget threshold. Angular measures this budget using the raw JavaScript/CSS `Initial Total` reported by the application builder, not gzip transfer size.
 - **DEC-075** The web service worker is registered only for production web builds. Startup may check for an update, but the app never activates an update, reloads, or blocks use; a downloaded version is used on the next app start. Capacitor bundles do not register the web worker.
 - **DEC-066** A jump may start at junction N (D.C. at the end of a piece): the replay checks jumps before ending at N. Found while verifying the fixtures.
+- **DEC-076** Local Android builds use the repository `init.sh` setup script. It selects JDK 21 because the project targets Java 21 and the pinned Gradle 8.14.3 does not support running on JDK 25; it discovers the Android SDK from existing environment variables or common Android Studio locations, exports the SDK variables, and generates ignored `android/local.properties`. Machine-specific SDK paths are not committed to the repository.
 
 ## Assumptions to review
 

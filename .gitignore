@@ -4,6 +4,8 @@
 playwright-report
 test-results
 favicon-*.png
+codexmusicae.jks
+codexmusicae.jks.base64
 
 # Compiled output
 /dist
