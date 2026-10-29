@@ -106,7 +106,7 @@ jobs:
 
           badging="$($aapt2_path dump badging "$apk_path")"
           package_line="$(printf '%s\n' "$badging" | sed -n "s/^package: name='\([^']*\)' versionCode='\([^']*\)' versionName='\([^']*\)'.*/\1 \2 \3/p")"
-          sdk_line="$(printf '%s\n' "$badging" | awk -F\"'\" '/sdkVersion:/ { print $2; exit }')"
+          sdk_line="$(printf '%s\n' "$badging" | awk '/sdkVersion:/ { value = $0; sub(/^.*sdkVersion:[^0-9]*/, "", value); sub(/[^0-9].*$/, "", value); print value; exit }')"
           if [ -z "$sdk_line" ]; then
             echo 'Could not read sdkVersion from aapt2 badging output:' >&2
             printf '%s\n' "$badging" >&2
