@@ -129,12 +129,12 @@ jobs:
       - name: Upload APK to Firebase App Distribution
         env:
           FIREBASE_ANDROID_APP_ID: ${{ vars.FIREBASE_ANDROID_APP_ID }}
-          FIREBASE_TESTER_GROUPS: ${{ vars.FIREBASE_TESTER_GROUPS }}
+          FIREBASE_ANDROID_TESTER_GROUPS: ${{ vars.FIREBASE_ANDROID_TESTER_GROUPS }}
         run: |
           npm install --global firebase-tools
           firebase appdistribution:distribute "${{ steps.validate-apk.outputs.apk_path }}" \
             --app "$FIREBASE_ANDROID_APP_ID" \
-            --groups "$FIREBASE_TESTER_GROUPS" \
+            --groups "$FIREBASE_ANDROID_TESTER_GROUPS" \
             --release-notes "$APP_RELEASE_NOTES"
 
       - name: Remove temporary credentials
