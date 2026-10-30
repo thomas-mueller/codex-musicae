@@ -35,8 +35,8 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **GEN-004** [v1·done·M0] The GitHub repository is private and has no license file; only built apps (web, Android, optionally iOS) are distributed.
 - **GEN-005** [v1·todo·M8] PDF content is processed on the device only; no network request carries PDF content or PDF-derived data.
 - **GEN-006** [v1·done·M1] The app has no account, no backend beyond static hosting, no analytics and no crash reporting.
-- **GEN-007** [v1·todo·M7] The app has a single light theme; there is no dark mode.
-- **GEN-008** [v1·todo·M7] Every area not covered by PDF content (around the slide, filler outside the page, the empty state) uses `T:colors.canvasGrey`.
+- **GEN-007** [v1·done·M7] The app has a single light theme; there is no dark mode.
+- **GEN-008** [v1·done·M7] Every area not covered by PDF content (around the slide, filler outside the page, the empty state) uses `T:colors.canvasGrey`.
 - **GEN-009** [v1·todo·M7] Every control is an icon from the icon set; visible text is limited to numbers, the version string and error codes.
 - **GEN-010** [v1·todo·M7] Every icon-only control has an accessible label from the translation files.
 
@@ -216,14 +216,14 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 
 ## UIX — Layout and modes
 
-- **UIX-001** [v1·todo·M7] The modes are organization, annotation and presentation; the current mode is global state.
+- **UIX-001** [v1·done·M7] The modes are organization, annotation and presentation; the current mode is global state.
 - **UIX-002** [v1·todo·M7] A segmented three-icon control switches modes, in the same place in both layouts; the active mode is filled, the others outlined; it is hidden in presentation mode.
-- **UIX-003** [v1·todo·M7] The layout is compact if viewport width < `T:layout.compactMaxWidthPx` or height < `compactMaxHeightPx`, else expanded.
+- **UIX-003** [v1·done·M7] The layout is compact if viewport width < `T:layout.compactMaxWidthPx` or height < `compactMaxHeightPx`, else expanded.
 - **UIX-004** [v1·todo·M7] Compact annotation layout: top bar with tab switcher, open-file, mode switch, undo, redo; bottom bar with previous, "slide x of n", next, zoom −, zoom +, zoom reset; one floating button expands to pen, highlighter, eraser; aspect-ratio buttons and the version info sit in the overflow menu.
 - **UIX-005** [v1·todo·M7] Expanded annotation layout: tab bar on top; vertical tool strip on `T:layout.toolStripSide` with pen, highlighter, eraser, undo, redo; popup next to it; the same bottom bar plus the aspect-ratio buttons.
 - **UIX-006** [v1·todo·M7] Organization layout uses the same frame; the tool strip is replaced by level selector, jump-list button and overflow; the bottom bar shows "page x of n", previous, next and zoom buttons. In compact layout the organization controls sit behind one overflow button that opens a sheet.
 - **UIX-007** [v1·todo·M7] Bars are `T:layout.barHeightPx` high, touch targets are at least `minTouchTargetPx`, icons are monochrome, bars never grow; additional controls go into overflow menus.
-- **UIX-008** [v1·todo·M7] Bars stay visible in annotation and organization mode; there is no auto-hide.
+- **UIX-008** [v1·done·M7] Bars stay visible in annotation and organization mode; there is no auto-hide.
 - **UIX-009** [v1·todo·M13] Presentation mode shows only the slide and the progress line, with no bars.
 - **UIX-010** [v1·todo·M7] One icon set (Material Symbols Outlined, self-hosted) provides all icons; names are in `T:icons`.
 - **UIX-011** [v1·todo·M7] A toggled control has a filled `T:colors.accent` background and `onAccent` icon; an untoggled control has a transparent background.
@@ -231,8 +231,8 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **UIX-013** [v1·todo·M7] Popups close on outside tap, Esc or Android back.
 - **UIX-014** [v1·todo·M7] Tooltips appear after `T:layout.tooltipHoverDelayMs` hover or `longPressMs` long press.
 - **UIX-015** [v1·todo·M7] An info icon shows the version string (PIP-005) in a small popover.
-- **UIX-016** [v1·todo·M7] The layout works from `T:layout.minSupportedWidthPx` to `maxSupportedWidthPx` without page-level horizontal scrolling.
-- **UIX-017** [v1·todo·M7] Bars respect safe-area insets; the orientation follows the OS and is never locked.
+- **UIX-016** [v1·done·M7] The layout works from `T:layout.minSupportedWidthPx` to `maxSupportedWidthPx` without page-level horizontal scrolling.
+- **UIX-017** [v1·done·M7] Bars respect safe-area insets; the orientation follows the OS and is never locked.
 - **UIX-018** [v1·todo·M13] Entering presentation mode keeps the current slide; it deactivates the drawing tool and resets zoom.
 - **UIX-019** [v1·todo·M13] In presentation mode the mouse cursor hides after `T:layout.cursorHideMs` without movement.
 - **UIX-020** [v1·todo·M13] A green line of `T:layout.progressLineHeightPx` at the bottom edge shows progress = index / (n − 1) of the current slide (100% when n = 1); it is not interactive.
