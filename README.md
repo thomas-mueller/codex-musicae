@@ -75,3 +75,7 @@ Angular CLI does not come with an end-to-end testing framework by default. You c
 ## Additional Resources
 
 For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+
+## Working with coding agents
+
+Standing instructions for coding agents are in `AGENTS.md` (mirrored in `CLAUDE.md`, `.claude/CLAUDE.md` and `.gemini/GEMINI.md`). The repository owner commits and pushes all code personally; agents never run `git commit`, `git push` or `git tag`. They leave changes in the working tree and propose a commit message.

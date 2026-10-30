@@ -17,3 +17,4 @@ To implement changes, tell the agent: "Implement the requirement changes listed 
 |---|---|---|---|---|
 | 2026-10-21 | PLY-002, PLY-007 | A jump may start at junction N; the replay checks jumps before ending at N | Found while verifying fixtures: D.C. at the end of a piece could never fire | M6, fixtures O05–O07, O19–O21 |
 | 2026-10-21 | DET-005, DET-006 | Zero-size rectangles are ignored; equal areas give threshold 0; tie rules specified | Edge cases found while writing the contract | M5, fixtures D08, D14 |
+| 2026-10-30 | PIP-001, PIP-002, PIP-003 | `lint-test` ignores tag pushes; `deploy-web` and `android` run after a successful `lint-test` on any branch, not only `main`; PIP-003 says APK instead of APK/AAB | Owner tests every branch and commit during implementation; tags would only redeploy an already deployed commit; M3 forbids an AAB | M1, M3, workflows |

@@ -12,7 +12,7 @@ Milestone files live in `docs/milestones/V1-Mnn.md` (one per milestone, self-con
 
 ## Sizing rule
 
-A **step** is one agent session: one layer or feature area, about 15 requirement IDs at most, ending with passing tests and a commit. Dense milestones (M7, M10, M13, M15, M16) are split into steps `S1…Sn` inside their file; commit after each step; the owner tags after the last.
+A **step** is one agent session: one layer or feature area, about 15 requirement IDs at most, ending with passing tests and a suggested commit message. Dense milestones (M7, M10, M13, M15, M16) are split into steps `S1…Sn` inside their file; the owner commits after each step and tags after the last.
 
 ## Milestones
 
@@ -46,8 +46,8 @@ v1 ends at the last milestone you decide to include (M17 at minimum). M18 and M1
 
 1. Fresh session. Start in plan mode with only `CLAUDE.md` and the milestone file.
 2. Review the plan, approve.
-3. The agent writes tests first (where logic exists), implements, runs lint and tests until green, updates requirement statuses, commits per step.
-4. The agent stops. The owner reviews the diff, tags (`v0.<n>.0`) and merges to `main`.
+3. The agent writes tests first (where logic exists), implements, runs lint and tests until green, updates requirement statuses, and proposes a commit message per step. The agent never commits or pushes (`AGENTS.md`, "Git").
+4. The agent stops. The owner reviews the diff, commits, pushes, tags (`v0.<n>.0`) and merges to `main`.
 5. After any larger requirement change, rerun M0c on the changed files.
 
 ## Cost guidance (~20 € monthly plan)

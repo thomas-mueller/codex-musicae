@@ -12,8 +12,9 @@
     "watch": "node scripts/generate-index-metadata.mjs && ng build --watch --configuration development",
     "test": "ng test",
     "e2e": "playwright test",
-    "lint": "eslint . && node scripts/check-templates.mjs && node scripts/check-static-compliance.mjs",
-    "lint:selftest": "node scripts/lint-selftest.mjs"
+    "lint": "eslint . && node scripts/check-templates.mjs && node scripts/check-static-compliance.mjs && node scripts/sync-agent-instructions.mjs --check",
+    "lint:selftest": "node scripts/lint-selftest.mjs",
+    "sync:agents": "node scripts/sync-agent-instructions.mjs"
   },
   "private": true,
   "packageManager": "npm@11.13.0",

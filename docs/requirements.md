@@ -30,9 +30,9 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 ## GEN — General
 
 - **GEN-001** [v1·done·M1] The app title, PWA name and launcher name are `T:identity.appName`.
-- **GEN-002** [v1·todo·M3] The Android applicationId and Capacitor appId are `T:identity.appId`.
+- **GEN-002** [v1·done·M3] The Android applicationId and Capacitor appId are `T:identity.appId`.
 - **GEN-003** [v1-optional·todo·M18] The iOS bundle ID is `T:identity.appId`.
-- **GEN-004** [v1·todo·M0] The GitHub repository is private and has no license file; only built apps (web, Android, optionally iOS) are distributed.
+- **GEN-004** [v1·done·M0] The GitHub repository is private and has no license file; only built apps (web, Android, optionally iOS) are distributed.
 - **GEN-005** [v1·todo·M8] PDF content is processed on the device only; no network request carries PDF content or PDF-derived data.
 - **GEN-006** [v1·done·M1] The app has no account, no backend beyond static hosting, no analytics and no crash reporting.
 - **GEN-007** [v1·todo·M7] The app has a single light theme; there is no dark mode.
@@ -240,8 +240,8 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 ## PLT — Platforms
 
 - **PLT-001** [v1·done·M1] Supported browsers: latest two versions of Chrome, Edge, Firefox and Safari (min 16.4) on desktop; Chrome, Firefox, Samsung Internet, Edge on Android; Safari on iPad and iPhone. The targets live in one `browserslist` config.
-- **PLT-002** [v1·todo·M3] The Android app has `minSdk` 29 (Android 10) in one Gradle location.
-- **PLT-003** [v1·todo·M1] Platform APIs (Fullscreen API, Wake Lock, File System Access, localStorage, IndexedDB, Capacitor plugins) may be used only in `adapters/` and the composition root; lint fails otherwise. The ports are PdfRenderer, PdfWriter, DetectionEngine, FileAccess, Fullscreen, WakeLock, Preferences, AppLifecycle, OpenWith, BackButton; each gets its implementations in the milestone that first needs it (see `architecture.md`).
+- **PLT-002** [v1·done·M3] The Android app has `minSdk` 29 (Android 10) in one Gradle location.
+- **PLT-003** [v1·done·M1] Platform APIs (Fullscreen API, Wake Lock, File System Access, localStorage, IndexedDB, Capacitor plugins) may be used only in `adapters/` and the composition root; lint fails otherwise. The ports are PdfRenderer, PdfWriter, DetectionEngine, FileAccess, Fullscreen, WakeLock, Preferences, AppLifecycle, OpenWith, BackButton; each gets its implementations in the milestone that first needs it (see `architecture.md`).
 - **PLT-004** [v1·todo·M16] Presentation mode in browsers uses the Fullscreen API on entry (user gesture); leaving fullscreen with Esc switches to annotation mode; where the API is missing (iPhone Safari) only the app UI is hidden.
 - **PLT-005** [v1·todo·M16] Presentation mode holds a wake lock (browser Screen Wake Lock, Android keep-awake), releases it on exit and re-acquires it when the app becomes visible again.
 - **PLT-006** [v1·todo·M16] Android presentation uses sticky immersive mode and draws under display cutouts (`shortEdges`); exiting restores the system bars.
@@ -275,28 +275,28 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 
 ## ARC — Architecture rules
 
-- **ARC-001** [v1·todo·M1] The folders `core/`, `ports/`, `adapters/`, `state/`, `input/`, `features/`, `config/` exist; ESLint boundary rules allow only inward dependencies and CI fails on violations.
-- **ARC-002** [v1·todo·M1] `core/` imports nothing from Angular, the DOM or third-party libraries and is deterministic.
-- **ARC-003** [v1·todo·M1] The app uses standalone components, signals, OnPush, zoneless change detection and strict TypeScript, following the current official Angular style guide and `ng generate` naming.
+- **ARC-001** [v1·done·M1] The folders `core/`, `ports/`, `adapters/`, `state/`, `input/`, `features/`, `config/` exist; ESLint boundary rules allow only inward dependencies and CI fails on violations.
+- **ARC-002** [v1·done·M1] `core/` imports nothing from Angular, the DOM or third-party libraries and is deterministic.
+- **ARC-003** [v1·done·M1] The app uses standalone components, signals, OnPush, zoneless change detection and strict TypeScript, following the current official Angular style guide and `ng generate` naming.
 - **ARC-004** [v1·done·M1] All numbers, colors, icon names and key bindings come from `src/config/tunables.ts`.
-- **ARC-005** [v1·todo·M4] Errors cross port boundaries as typed results; the UI shows icons, not messages.
+- **ARC-005** [v1·done·M4] Errors cross port boundaries as typed results; the UI shows icons, not messages.
 - **ARC-006** [v1·todo·M13] A single place in the input layer decides whether a pointer draws or navigates.
 
 ## PIP — Pipelines and versioning
 
-- **PIP-001** [v1·done·M1] Pipeline `lint-test` runs on every push to every branch: lint, unit tests, E2E on three engines.
-- **PIP-002** [v1·done·M1] Pipeline `deploy-web` builds and deploys to Firebase Hosting, triggered by `workflow_run` after a successful `lint-test` on `main`.
-- **PIP-003** [v1·todo·M3] Pipeline `android` builds a signed APK/AAB and uploads it to Firebase App Distribution, triggered like PIP-002.
+- **PIP-001** [v1·done·M1] Pipeline `lint-test` runs on every push to every branch (not on tag pushes): lint, unit tests, E2E on three engines.
+- **PIP-002** [v1·done·M1] Pipeline `deploy-web` builds and deploys to Firebase Hosting, triggered by `workflow_run` after a successful `lint-test` on any branch (each branch push deploys to the live channel).
+- **PIP-003** [v1·done·M3] Pipeline `android` builds a signed APK and uploads it to Firebase App Distribution, triggered like PIP-002.
 - **PIP-004** [v1-optional·todo·M18] Pipeline `ios-compile` runs an unsigned simulator build on a macOS runner, triggered like PIP-002.
 - **PIP-005** [v1·done·M2] The version string is `git describe --tags --always --long` (checkout with full history), injected at build time and shown in the app (UIX-015).
-- **PIP-006** [v1·todo·M3] Android `versionName` is the version string and `versionCode` is the commit count.
+- **PIP-006** [v1·done·M3] Android `versionName` is the version string and `versionCode` is the commit count.
 - **PIP-007** [v1·done·M1] Pipelines 2–4 share a composite action that builds the web app.
-- **PIP-008** [v1·todo·M0] Signing keys and Firebase credentials exist only as GitHub secrets; their names are listed in `docs/milestones/V1-M00.md`.
-- **PIP-009** [v1·todo·M2] Milestone `V1-M<m>` is tagged `v0.<m>.0` and fixes `v0.<m>.<p>`; the release of v1 additionally tags the commit of the last included milestone `v1.0.0`; a tag deploys nothing by itself.
+- **PIP-008** [v1·done·M0] Signing keys and Firebase credentials exist only as GitHub secrets; their names are listed in `docs/milestones/V1-M00.md`.
+- **PIP-009** [v1·done·M2] Milestone `V1-M<m>` is tagged `v0.<m>.0` and fixes `v0.<m>.<p>`; the release of v1 additionally tags the commit of the last included milestone `v1.0.0`; a tag deploys nothing by itself.
 
 ## TST — Testing
 
-- **TST-001** [v1·todo·M4] Every `core/` function has unit tests written before its implementation; test names contain the requirement ID.
+- **TST-001** [v1·done·M4] Every `core/` function has unit tests written before its implementation; test names contain the requirement ID.
 - **TST-002** [v1·todo·M17] A golden detection corpus (engraved and scanned PDFs with expected system counts per page) runs in CI; every reported problem PDF joins it.
 - **TST-003** [v1·todo·M17] A round-trip test annotates, saves, reopens and checks that strokes and embedded data survive and the PDF still loads.
 - **TST-004** [v1·done·M1] Playwright is configured with Chromium, Firefox and WebKit projects and phone and tablet device profiles.
