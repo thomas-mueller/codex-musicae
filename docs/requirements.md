@@ -90,13 +90,13 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **DET-002** [v1·todo·M10] Detection runs in one dedicated web worker, one page at a time, and never blocks the UI thread.
 - **DET-003** [v1·todo·M10] A page is rendered to a bitmap at the level's `renderScale`; if width×height exceeds `T:resources.maxCanvasPixels` the scale is reduced to fit.
 - **DET-004** [v1·todo·M10] The bitmap is binarized with Otsu (ink = foreground); the bounding rectangle and area of every connected component are collected, including the background component (label 0), whose rectangle is the whole page.
-- **DET-005** [v1·todo·M5] Filter step 0: rectangles with zero width or zero height are ignored. Filter step 1: the single rectangle with the largest area is dropped (the page); on equal areas the first in input order is dropped.
-- **DET-006** [v1·todo·M5] Filter step 2: among the remaining rectangles, sort by area, find the largest gap between consecutive areas, and keep rectangles whose area is strictly greater than the middle of that gap; among equal gaps the one between the largest areas is used; with fewer than two remaining rectangles, or when all remaining areas are equal (largest gap 0), the threshold is 0.
-- **DET-007** [v1·todo·M5] Filter step 3: from the kept rectangles, discard those narrower than `minSystemWidthRatio` × page width.
-- **DET-008** [v1·todo·M5] Filter step 4: add every rectangle remaining after step 1 whose width is at least `fullWidthSystemRatio` × page width.
-- **DET-009** [v1·todo·M5] The result is sorted top to bottom (ties left to right) and converted to page display space.
-- **DET-010** [v1·todo·M5] The padding of a page is the median gap between consecutive systems on that page; a page with fewer than two systems uses the median over all pages; if no gap exists, `T:detection.fallbackPaddingPageHeightRatio` × page height.
-- **DET-011** [v1·todo·M5] A system's padded area is its box expanded by the padding on all four sides, clamped to the page bounds.
+- **DET-005** [v1·done·M5] Filter step 0: rectangles with zero width or zero height are ignored. Filter step 1: the single rectangle with the largest area is dropped (the page); on equal areas the first in input order is dropped.
+- **DET-006** [v1·done·M5] Filter step 2: among the remaining rectangles, sort by area, find the largest gap between consecutive areas, and keep rectangles whose area is strictly greater than the middle of that gap; among equal gaps the one between the largest areas is used; with fewer than two remaining rectangles, or when all remaining areas are equal (largest gap 0), the threshold is 0.
+- **DET-007** [v1·done·M5] Filter step 3: from the kept rectangles, discard those narrower than `minSystemWidthRatio` × page width.
+- **DET-008** [v1·done·M5] Filter step 4: add every rectangle remaining after step 1 whose width is at least `fullWidthSystemRatio` × page width.
+- **DET-009** [v1·done·M5] The result is sorted top to bottom (ties left to right) and converted to page display space.
+- **DET-010** [v1·done·M5] The padding of a page is the median gap between consecutive systems on that page; a page with fewer than two systems uses the median over all pages; if no gap exists, `T:detection.fallbackPaddingPageHeightRatio` × page height.
+- **DET-011** [v1·done·M5] A system's padded area is its box expanded by the padding on all four sides, clamped to the page bounds.
 - **DET-012** [v1·todo·M10] Pages without systems take no part in junctions, slides or the playing order; organization mode shows them as plain PDF pages.
 - **DET-013** [v1·todo·M10] Three levels `fast`, `standard`, `fine` each define `minSystemWidthRatio`, `fullWidthSystemRatio` and `renderScale` (`T:detection.levels`); the default is `T:detection.defaultLevel`.
 - **DET-014** [v1·todo·M11] Organization mode offers a level selector (three icon steps); choosing a level asks for confirmation and then re-runs detection.
@@ -109,11 +109,11 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **DET-021** [v1·todo·M10] Navigating to an unfinished page in organization mode makes it the next page processed; its bars are drawn provisional (`T:colors.orgBar.provisionalOpacity`, no numbers, not selectable) until all earlier pages are finished.
 - **DET-022** [v1·todo·M10] Detection results are cached in runtime memory only.
 - **DET-023** [v1·todo·M15] If valid embedded detection data exists, detection is skipped.
-- **DET-024** [v1·todo·M5] Page width, padding and thresholds are computed per page; documents with mixed page sizes are supported.
+- **DET-024** [v1·done·M5] Page width, padding and thresholds are computed per page; documents with mixed page sizes are supported.
 
 ## PLY — Junctions and playing order (pure logic)
 
-- **PLY-001** [v1·todo·M5] For N systems the junctions are 0..N as defined in the glossary; each junction maps to its bars (one, or two at a page change).
+- **PLY-001** [v1·done·M5] For N systems the junctions are 0..N as defined in the glossary; each junction maps to its bars (one, or two at a page change).
 - **PLY-002** [v1·todo·M6] The playing order is generated by this replay: set position = 0 and all arrival counts = 0; repeat: increment the arrival count at the position; if a jump exists with origin = position and pass = arrival count, set position = its target and repeat; otherwise, if position = N stop; otherwise append system position+1 to the order and set position = position+1.
 - **PLY-003** [v1·todo·M6] Pass n of a jump means the n-th arrival at its origin junction, counting the start at junction 0, forward steps and jump arrivals.
 - **PLY-004** [v1·todo·M6] A jump arrival counts as an arrival at its target, and jumps at the target for that pass fire immediately (chaining).
@@ -168,7 +168,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **SLD-010** [v1·todo·M12] The slide is fitted (contain) into the available area; remaining area shows canvas grey. Annotation and presentation mode use the same stored aspect ratio.
 - **SLD-011** [v1·todo·M12] The display scale is the same on all slides except for slides enlarged by SLD-006.
 - **SLD-012** [v1·todo·M12] After any change that recomputes slides (ratio, detection, jumps, breaks, stops), the current slide is the one containing the first entry of the previously shown slide.
-- **SLD-013** [v1·todo·M5] Aspect-ratio steps: range `T:aspectRatio.min` to `max`; "show more" moves to the next lower multiple of `T:aspectRatio.step` strictly below the current value, "show less" to the next higher multiple strictly above (1.78 → 1.7 / 1.8); results are clamped.
+- **SLD-013** [v1·done·M5] Aspect-ratio steps: range `T:aspectRatio.min` to `max`; "show more" moves to the next lower multiple of `T:aspectRatio.step` strictly below the current value, "show less" to the next higher multiple strictly above (1.78 → 1.7 / 1.8); results are clamped.
 - **SLD-014** [v1·todo·M12] The global default ratio is stored per orientation; its first value is the presentation-mode viewport ratio captured at the first presentation entry in that orientation, before that the device screen ratio; rounded to `T:aspectRatio.roundDecimals` and clamped.
 - **SLD-015** [v1·todo·M12] Changing the ratio with the buttons creates or updates a per-PDF override for the current orientation, stored in the embedded data; on read-only files it exists in memory only.
 - **SLD-016** [v1·todo·M12] Annotation mode shows "slide x of n" with previous/next buttons and a slider; presentation mode shows no indicator.

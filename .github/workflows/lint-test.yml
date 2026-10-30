@@ -31,10 +31,7 @@ jobs:
       - name: Lint self-test
         run: npm run lint:selftest
 
-      # TEMPORARY (DEC-080): from M4 the core specs are red on purpose (`not implemented`) until M5-M6 implement them.
-      # Remove `continue-on-error` when the last stub of the first-set core contracts is implemented.
       - name: Unit tests
-        continue-on-error: true
         run: npm test -- --watch=false
 
       - name: Cache Playwright browsers
