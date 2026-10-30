@@ -45,6 +45,9 @@ for (const file of files) {
 
   const text = withoutStyles
     .replace(interpolationPattern, '')
+    .replace(/@let\b[^;]*;/g, '')
+    .replace(/@(?:else\s+if|if|else|for|switch|case|default|empty|defer|placeholder|loading|error)\b[^{]*\{/g, '')
+    .replace(/\}/g, '')
     .replace(/<[^>]*>/g, '')
     .replace(/&[A-Za-z0-9#]+;/g, '')
     .trim();

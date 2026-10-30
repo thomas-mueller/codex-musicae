@@ -1,0 +1,52 @@
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
+
+import { APP_VERSION } from '../../ports/app-version';
+import { UiStore } from '../../state/ui.store';
+import { POPUP_OVERFLOW_BOTTOM, POPUP_SLIDER } from './bottom-bar';
+import { IconButton } from './icon-button';
+import { LEVEL_STEPS, POPUP_ORG } from './tool-area';
+import { POPUP_OVERFLOW_TOP } from './top-bar';
+
+export const POPUP_INFO = 'info';
+const POPUP_SELECTOR = '[data-popup], [data-popup-trigger]';
+
+/** Renders at most one popup: a sheet (compact) or a side panel (expanded). UIX-013, 015 */
+@Component({
+  selector: 'app-popup-host',
+  imports: [IconButton, TranslocoPipe],
+  templateUrl: './popup-host.html',
+  styleUrl: './popup-host.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '(document:pointerdown)': 'onOutside($event)',
+    // TODO(M13): move to command bus
+    '(document:keydown.escape)': 'store.closePopup()',
+  },
+})
+export class PopupHost {
+  protected readonly store = inject(UiStore);
+  protected readonly version = inject(APP_VERSION);
+  protected readonly levelSteps = LEVEL_STEPS;
+  protected readonly ids = {
+    overflowTop: POPUP_OVERFLOW_TOP,
+    overflowBottom: POPUP_OVERFLOW_BOTTOM,
+    slider: POPUP_SLIDER,
+    org: POPUP_ORG,
+    info: POPUP_INFO,
+  };
+  protected readonly compact = computed(() => this.store.sizeClass() === 'compact');
+  protected readonly annotation = computed(() => this.store.mode() === 'annotation');
+  protected readonly noDocument = computed(() => !this.store.hasDocument());
+  protected readonly popupId = computed(() => {
+    const id = this.store.popup()?.id;
+    return id !== undefined && Object.values(this.ids).includes(id) ? id : null;
+  });
+
+  protected onOutside(event: Event): void {
+    const target = event.target;
+    if (this.store.popup() && target instanceof Element && !target.closest(POPUP_SELECTOR)) {
+      this.store.closePopup();
+    }
+  }
+}

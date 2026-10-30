@@ -1,0 +1,26 @@
+:host {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: var(--cm-touch-target);
+  min-height: var(--cm-touch-target);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--cm-icon);
+  cursor: pointer;
+}
+
+:host(.toggled) {
+  background: var(--cm-accent);
+  color: var(--cm-on-accent);
+}
+
+:host(.disabled) {
+  opacity: var(--cm-disabled-opacity);
+  cursor: default;
+}

@@ -44,6 +44,13 @@ export const TUNABLES = {
 
   layout: {
     barHeightPx: 48, // UIX-007
+    indicatorPlaceholder: '– / –', // UIX-004: shown instead of "x / n" while no document is open
+    iconSizePx: 24, // UIX-010
+    tooltipPaddingPx: 8, // UIX-014
+    tooltipRadiusPx: 4, // UIX-014
+    popupAnimationMs: 150, // UIX-013: sheet slide-in
+    popupRadiusPx: 12, // UIX-013
+    fabInsetPx: 16, // UIX-004: distance of the tool button from the canvas edge
     minTouchTargetPx: 44, // UIX-007
     compactMaxWidthPx: 600, // UIX-003: compact if width < this ...
     compactMaxHeightPx: 480, // ... or height < this

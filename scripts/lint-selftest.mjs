@@ -57,6 +57,15 @@ try {
   const translatedTemplate = join(fixtureRoot, 'translated.html');
   await writeFile(rawTemplate, '<p>Raw text</p>\n', 'utf8');
   await writeFile(translatedTemplate, "<p>{{ 'app.placeholder' | transloco }}</p>\n", 'utf8');
+  const flowTemplate = join(fixtureRoot, 'flow.html');
+  const flowRawTemplate = join(fixtureRoot, 'flow-raw.html');
+  await writeFile(flowTemplate, "@if (a()) {\n<p>{{ 'app.placeholder' | transloco }}</p>\n} @else {\n<i></i>\n}\n@for (x of xs(); track x) {\n<b></b>\n}\n", 'utf8');
+  await writeFile(flowRawTemplate, '@if (a()) {\n<p>Raw text</p>\n}\n', 'utf8');
+  const flowResult = await runNode('scripts/check-templates.mjs', relative(repositoryRoot, flowTemplate));
+  const flowRawResult = await runNode('scripts/check-templates.mjs', relative(repositoryRoot, flowRawTemplate));
+  if (flowResult.code !== 0 || flowRawResult.code === 0) {
+    throw new Error('template self-test did not allow control flow or still must reject raw text inside it');
+  }
   const rawResult = await runNode('scripts/check-templates.mjs', relative(repositoryRoot, rawTemplate));
   const translatedResult = await runNode('scripts/check-templates.mjs', relative(repositoryRoot, translatedTemplate));
   if (rawResult.code === 0 || translatedResult.code !== 0) {

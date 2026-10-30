@@ -1,0 +1,10 @@
+@for (entry of entries; track entry.mode) {
+  <button
+    appIconButton
+    [icon]="entry.icon"
+    [labelKey]="entry.labelKey"
+    [toggled]="store.mode() === entry.mode"
+    [disabled]="isDisabled(entry.mode)"
+    (pressed)="store.setMode(entry.mode)"
+  ></button>
+}

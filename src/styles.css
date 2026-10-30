@@ -5,3 +5,22 @@ body {
   overflow: hidden;
   background: var(--cm-canvas-grey);
 }
+
+.cm-tooltip {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  padding: 0 var(--cm-tooltip-padding);
+  border-radius: var(--cm-tooltip-radius);
+  background: var(--cm-icon);
+  color: var(--cm-bar-bg);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.cm-tooltip-above {
+  top: auto;
+  bottom: 100%;
+}

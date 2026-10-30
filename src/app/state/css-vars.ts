@@ -12,6 +12,13 @@ export function tunablesToCssVars(t: Tunables): Readonly<Record<string, string>>
     '--cm-icon': t.colors.iconDefault,
     '--cm-bar-bg': t.colors.barBackground,
     '--cm-bar-height': `${t.layout.barHeightPx}px`,
+    '--cm-indicator-placeholder': JSON.stringify(t.layout.indicatorPlaceholder),
+    '--cm-icon-size': `${t.layout.iconSizePx}px`,
+    '--cm-tooltip-padding': `${t.layout.tooltipPaddingPx}px`,
+    '--cm-tooltip-radius': `${t.layout.tooltipRadiusPx}px`,
+    '--cm-popup-duration': `${t.layout.popupAnimationMs}ms`,
+    '--cm-popup-radius': `${t.layout.popupRadiusPx}px`,
+    '--cm-fab-inset': `${t.layout.fabInsetPx}px`,
     '--cm-touch-target': `${t.layout.minTouchTargetPx}px`,
     '--cm-disabled-opacity': String(t.layout.disabledOpacity),
   };

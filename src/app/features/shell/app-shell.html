@@ -1,3 +1,17 @@
-<header class="bar" data-area="top" [hidden]="presentation()"></header>
-<app-canvas-area data-area="canvas" />
-<footer class="bar" data-area="bottom" [hidden]="presentation()"></footer>
+<header class="bar" data-area="top" [hidden]="presentation()">
+  @if (!presentation()) {
+    <app-top-bar />
+  }
+</header>
+<div class="middle">
+  @if (!presentation()) {
+    <app-tool-area />
+  }
+  <app-canvas-area data-area="canvas" />
+</div>
+<footer class="bar" data-area="bottom" [hidden]="presentation()">
+  @if (!presentation()) {
+    <app-bottom-bar />
+  }
+</footer>
+<app-popup-host />

@@ -1,0 +1,50 @@
+:host {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.popup {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  background: var(--cm-bar-bg);
+  color: var(--cm-icon);
+  pointer-events: auto;
+}
+
+.sheet {
+  left: 0;
+  right: 0;
+  bottom: calc(var(--cm-bar-height) + env(safe-area-inset-bottom));
+  justify-content: center;
+  border-radius: var(--cm-popup-radius) var(--cm-popup-radius) 0 0;
+  animation: slide-up var(--cm-popup-duration) ease-out;
+}
+
+.panel {
+  top: var(--cm-bar-height);
+  right: 0;
+  flex-direction: column;
+  border-radius: 0 0 0 var(--cm-popup-radius);
+}
+
+.slider {
+  flex: 1;
+  height: var(--cm-touch-target);
+}
+
+.version {
+  min-height: var(--cm-touch-target);
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--cm-tooltip-padding);
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+}

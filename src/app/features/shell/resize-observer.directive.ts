@@ -11,6 +11,9 @@ export class ViewportObserverDirective {
     const destroyRef = inject(DestroyRef);
     afterNextRender(() => {
       store.setViewport(host.clientWidth, host.clientHeight);
+      if (typeof ResizeObserver === 'undefined') {
+        return;
+      }
       const observer = new ResizeObserver(() => store.setViewport(host.clientWidth, host.clientHeight));
       observer.observe(host);
       destroyRef.onDestroy(() => observer.disconnect());

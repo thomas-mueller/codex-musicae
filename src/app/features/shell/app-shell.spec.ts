@@ -1,9 +1,15 @@
 import { TestBed } from '@angular/core/testing';
 
+import { provideTestTransloco } from '../../../testing/transloco';
+import { APP_VERSION } from '../../ports/app-version';
 import { UiStore } from '../../state/ui.store';
 import { AppShell } from './app-shell';
 
 describe('AppShell', () => {
+  beforeEach(() => {
+    TestBed.configureTestingModule({ providers: [provideTestTransloco(), { provide: APP_VERSION, useValue: 'v-test' }] });
+  });
+
   async function render() {
     const fixture = TestBed.createComponent(AppShell);
     await fixture.whenStable();
@@ -24,7 +30,9 @@ describe('AppShell', () => {
   });
 
   it('UIX-001 presentation mode shows only the canvas area', async () => {
-    TestBed.inject(UiStore).setMode('presentation');
+    const store = TestBed.inject(UiStore);
+    store.hasDocument.set(true);
+    store.setMode('presentation');
     const fixture = await render();
     expect(areas(fixture.nativeElement)).toEqual(['canvas']);
   });
