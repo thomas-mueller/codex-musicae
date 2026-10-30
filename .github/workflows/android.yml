@@ -6,8 +6,8 @@ on:
       - lint-test
     types:
       - completed
-    # branches:
-    #   - main
+    branches:
+      - '**'
 
 permissions:
   contents: read

@@ -4,7 +4,7 @@ A PDF viewer for instrumentalists: steps through scores by music system ("slides
 
 These instructions are tool-neutral. If your tool expects `AGENTS.md`, copy this file.
 
-Keep this file synchronized with the active counterparts `CLAUDE.md`, `.claude/CLAUDE.md`, and `.gemini/GEMINI.md`; update all four together whenever these standing instructions change.
+`AGENTS.md` is the single source of truth. `CLAUDE.md`, `.claude/CLAUDE.md` and `.gemini/GEMINI.md` are generated copies: edit only `AGENTS.md`, then run `npm run sync:agents` (the owner commits all four). `npm run lint` fails when a copy differs.
 
 ## Read in this order
 
@@ -50,15 +50,26 @@ Angular (standalone, signals, zoneless, OnPush, strict TypeScript), Capacitor, p
 - Production build: `npm run build`
 - Capacitor sync: `npm run cap:sync`
 - Android debug APK: `npm run android:debug`
+- Sync the instruction copies: `npm run sync:agents`
 - Android local setup: `source ./init.sh` (selects JDK 21 and configures the local Android SDK)
 
 ## Workflow
 
 - One fresh session per milestone; plan first, wait for approval.
-- Branch `m<n>-<slug>`; commit after each step; run lint and tests yourself and fix failures.
+- Work on the local branch `m<n>-<slug>` (creating it is allowed); run lint and tests yourself and fix failures.
+- At the end of each step, stop editing and give the owner a summary of the changed files and a suggested commit message (with test counts where the milestone asks for them). The owner commits.
 - Do not touch layers or files outside the milestone's scope; follow its "do not" list.
-- Stop at the end of the milestone. The owner reviews, tags and merges.
-- Never push to `main`, tag, or change GitHub secrets.
+- Stop at the end of the milestone. The owner reviews, commits, pushes, tags and merges.
+- Never change GitHub secrets.
+
+## Git: the owner commits and pushes
+
+The repository owner commits and pushes all code personally. The agent never does this: not when a milestone file says "commit", not "just once", not on any branch.
+
+- Never run `git commit` (including `--amend`), `git push` (any remote, branch or tag), `git tag`, `git merge`, `git rebase`, `git reset`, `git cherry-pick`, `git stash`, or `git add`. Never open, update or merge pull requests (`gh pr …`) or create releases.
+- Read-only git is fine: `status`, `diff`, `log`, `show`, `describe`, `blame`.
+- Wherever a document says "commit" in an instruction to you, read it as "leave the change in the working tree and propose a commit message". If any instruction conflicts with this section, this section wins.
+- Never change git configuration or remotes.
 
 ## Naming and versions
 
