@@ -57,6 +57,10 @@ export default tseslint.config(
           ],
         },
       ],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_' },
+      ],
       '@typescript-eslint/no-magic-numbers': [
         'error',
         { ignore: [0, 1, -1, 2], ignoreEnums: true, ignoreNumericLiteralTypes: true },
@@ -115,7 +119,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['src/config/**/*.ts', '**/*.spec.ts'],
+    files: ['src/config/**/*.ts', '**/*.spec.ts', `${appRoot}/core/fixtures/**/*.ts`],
     rules: {
       '@typescript-eslint/no-magic-numbers': 'off',
       'no-restricted-syntax': 'off',
