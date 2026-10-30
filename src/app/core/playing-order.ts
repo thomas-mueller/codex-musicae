@@ -114,16 +114,20 @@ export function generatePlayingOrder(input: PlayingOrderInput): PlayingOrder {
  * Numbers per system (PLY-010): result[i] lists, ascending, the 1-based positions in `entries` at which
  * system i + 1 occurs. Length = systemCount; a system never played has an empty list.
  */
-export function systemNumbers(_order: PlayingOrder, _systemCount: number): number[][] {
-  throw new Error('not implemented');
+export function systemNumbers(order: PlayingOrder, systemCount: number): number[][] {
+  const result: number[][] = Array.from({ length: systemCount }, () => []);
+  order.entries.forEach((system, i) => {
+    result[system - 1]?.push(i + 1);
+  });
+  return result;
 }
 
 /**
  * Forced slide breaks (PLY-011): result[i] is true if any junction in order.between[i] is in `breaks`.
  * Length = order.between.length.
  */
-export function forcedBreaks(_order: PlayingOrder, _breaks: ReadonlySet<number>): boolean[] {
-  throw new Error('not implemented');
+export function forcedBreaks(order: PlayingOrder, breaks: ReadonlySet<number>): boolean[] {
+  return order.between.map((junctions) => junctions.some((j) => breaks.has(j)));
 }
 
 /** PLY-007: origin and target integers in 0..systemCount, origin !== target, pass an integer >= 1. */
