@@ -2,7 +2,10 @@
  * core/slides — slide packing. Requirements: SLD-001..SLD-006, SLD-012.
  * All geometry in page display space (PDF points).
  */
-import type { Rect } from './geometry';
+import { rectUnion, type Rect } from './geometry';
+
+/** Tolerance when comparing a stack height with the slide height (SLD-003). */
+const STACK_EPSILON = 1e-9;
 
 /** A system with its padded area (clamped to the page), as produced by `paddedArea`. */
 export interface SystemGeom {
@@ -52,8 +55,8 @@ export interface SlidePlan {
 }
 
 /** SLD-002: maximum `padded.width` over all systems. */
-export function referenceWidth(_systems: readonly SystemGeom[]): number {
-  throw new Error('not implemented');
+export function referenceWidth(systems: readonly SystemGeom[]): number {
+  return systems.reduce((max, s) => Math.max(max, s.padded.width), 0);
 }
 
 /**
@@ -68,13 +71,72 @@ export function referenceWidth(_systems: readonly SystemGeom[]): number {
  * When closing: enlarged = stack > H + 1e-9; height = enlarged ? stack : H; width = enlarged ? height * aspectRatio : slideWidth.
  * An enlarged slide always holds a single entry. No entries -> []. Slide entry ranges cover 0..entries.length-1 without gaps.
  */
-export function packSlides(_input: PackInput): SlidePlan[] {
-  throw new Error('not implemented');
+export function packSlides(input: PackInput): SlidePlan[] {
+  const { entries, forcedBreakAfter, systems, slideWidth, aspectRatio } = input;
+  const slideHeight = slideWidth / aspectRatio;
+  const slides: SlidePlan[] = [];
+  let open: { entryStart: number; regions: Region[] } | null = null;
+
+  const stackOf = (regions: readonly Region[]): number => regions.reduce((sum, r) => sum + r.area.height, 0);
+
+  const close = (slide: { entryStart: number; regions: Region[] }, entryEnd: number): SlidePlan => {
+    const stackHeight = stackOf(slide.regions);
+    const enlarged = stackHeight > slideHeight + STACK_EPSILON;
+    const height = enlarged ? stackHeight : slideHeight;
+    const width = enlarged ? height * aspectRatio : slideWidth;
+    return { entryStart: slide.entryStart, entryEnd, regions: slide.regions, width, height, stackHeight, enlarged };
+  };
+
+  const newRegion = (s: SystemGeom, i: number): Region => ({
+    pageIndex: s.pageIndex,
+    firstSystem: s.index,
+    lastSystem: s.index,
+    area: { ...s.padded },
+    entryStart: i,
+    entryEnd: i,
+  });
+
+  entries.forEach((systemIndex, i) => {
+    const s = systems[systemIndex - 1];
+    if (!s) {
+      return;
+    }
+    if (open && forcedBreakAfter[i - 1] !== true) {
+      const previousIndex = entries[i - 1] ?? 0;
+      const prev = systems[previousIndex - 1];
+      const adjacent = systemIndex === previousIndex + 1 && prev?.pageIndex === s.pageIndex;
+      const trial = [...open.regions];
+      const last = trial[trial.length - 1];
+      if (adjacent && last) {
+        trial[trial.length - 1] = {
+          ...last,
+          area: rectUnion(last.area, s.padded),
+          lastSystem: s.index,
+          entryEnd: i,
+        };
+      } else {
+        trial.push(newRegion(s, i));
+      }
+      if (stackOf(trial) <= slideHeight + STACK_EPSILON) {
+        open.regions = trial;
+        return;
+      }
+    }
+    if (open) {
+      slides.push(close(open, i - 1));
+    }
+    open = { entryStart: i, regions: [newRegion(s, i)] };
+  });
+
+  if (open) {
+    slides.push(close(open, entries.length - 1));
+  }
+  return slides;
 }
 
 /** Index of the slide whose [entryStart, entryEnd] contains `entryIndex`, or -1. */
-export function slideIndexOfEntry(_slides: readonly SlidePlan[], _entryIndex: number): number {
-  throw new Error('not implemented');
+export function slideIndexOfEntry(slides: readonly SlidePlan[], entryIndex: number): number {
+  return slides.findIndex((s) => s.entryStart <= entryIndex && entryIndex <= s.entryEnd);
 }
 
 /**
