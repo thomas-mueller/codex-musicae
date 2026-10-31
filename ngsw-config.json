@@ -15,7 +15,8 @@
           "/*.js",
           "/icons/*.png",
           "/assets/icons/*.svg",
-          "/assets/i18n/*.json"
+          "/assets/i18n/*.json",
+          "/assets/pdfjs/pdf.worker.min.mjs"
         ]
       }
     },
@@ -25,7 +26,8 @@
       "updateMode": "lazy",
       "resources": {
         "files": [
-          "/assets/large/**"
+          "/assets/large/**",
+          "/assets/pdfjs/**"
         ]
       }
     }

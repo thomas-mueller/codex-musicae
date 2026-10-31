@@ -19,6 +19,8 @@ import { APP_VERSION } from './ports/app-version';
 import { provideAppIdentity } from './adapters/web/app-identity';
 import { AppTranslocoLoader } from './adapters/web/transloco-loader';
 import { PwaUpdatePolicy } from './adapters/web/pwa-update-policy';
+import { PdfJsRenderer } from './adapters/pdfjs/pdfjs-renderer';
+import { PDF_RENDERER } from './ports/pdf-renderer';
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
@@ -45,6 +47,7 @@ export const appConfig: ApplicationConfig = {
       loader: AppTranslocoLoader,
     }),
     provideAppIdentity(),
+    { provide: PDF_RENDERER, useFactory: () => new PdfJsRenderer() },
     provideRouter(routes),
   ]
 };

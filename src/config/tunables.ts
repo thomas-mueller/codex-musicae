@@ -210,6 +210,14 @@ export const TUNABLES = {
     governorLowResFactor: 0.75, // NFR-010: render scale factor at level 2 and above
   },
 
+  pdf: {
+    workerSrc: 'assets/pdfjs/pdf.worker.min.mjs', // GEN-005: pdf.js worker from our own origin, no CDN
+    cMapUrl: 'assets/pdfjs/cmaps/', // GEN-005
+    standardFontDataUrl: 'assets/pdfjs/standard_fonts/', // GEN-005
+    wasmUrl: 'assets/pdfjs/wasm/', // GEN-005
+    iccUrl: 'assets/pdfjs/iccs/', // GEN-005
+  },
+
   rendering: {
     zoomSettleMs: 200, // SLD-018, ORG-002: wait after the last zoom change before re-rendering sharp
     orgPageGapPx: 12, // ORG-001: gap between pages in organization mode
