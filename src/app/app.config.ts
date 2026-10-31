@@ -11,6 +11,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { Capacitor } from '@capacitor/core';
 import { provideTransloco } from '@jsverse/transloco';
 import { provideRouter } from '@angular/router';
+import { TUNABLES } from '../config/tunables';
+import { tunablesToCssVars } from './state/css-vars';
 import { APP_VERSION_RAW } from '../config/version.generated';
 import { APP_VERSION } from './ports/app-version';
 
@@ -29,6 +31,7 @@ export const appConfig: ApplicationConfig = {
       enabled: shouldRegisterServiceWorker(isDevMode(), Capacitor),
       registrationStrategy: 'registerWhenStable:30000',
     }),
+    provideEnvironmentInitializer(() => applyTunablesToCss(document.documentElement)),
     provideEnvironmentInitializer(() => {
       void inject(PwaUpdatePolicy).checkAtStartup();
     }),
@@ -55,4 +58,10 @@ export function shouldRegisterServiceWorker(
   capacitor: CapacitorPlatform,
 ): boolean {
   return !developmentBuild && !capacitor.isNativePlatform();
+}
+
+export function applyTunablesToCss(root: HTMLElement): void {
+  for (const [name, value] of Object.entries(tunablesToCssVars(TUNABLES))) {
+    root.style.setProperty(name, value);
+  }
 }

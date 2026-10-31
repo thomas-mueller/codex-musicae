@@ -1,0 +1,35 @@
+@if (popupId(); as id) {
+  <div class="popup" [class.sheet]="compact()" [class.panel]="!compact()" data-popup>
+    @switch (id) {
+      @case (ids.overflowTop) {
+        <button appIconButton icon="info" labelKey="info" (pressed)="store.openPopup(ids.info)"></button>
+      }
+      @case (ids.overflowBottom) {
+        @if (annotation() && compact()) {
+          <button appIconButton icon="showMore" labelKey="showMore" [disabled]="noDocument()"></button>
+          <button appIconButton icon="showLess" labelKey="showLess" [disabled]="noDocument()"></button>
+        }
+        <button appIconButton icon="info" labelKey="info" (pressed)="store.openPopup(ids.info)"></button>
+      }
+      @case (ids.info) {
+        <span class="version" [attr.aria-label]="'a11y.versionInfo' | transloco" [textContent]="version"></span>
+      }
+      @case (ids.slider) {
+        <input type="range" class="slider" [disabled]="noDocument()" [attr.aria-label]="'a11y.slideSlider' | transloco" />
+      }
+      @case (ids.org) {
+        @for (entry of levels; track entry.level) {
+          <button
+            appIconButton
+            [icon]="entry.icon"
+            [labelKey]="entry.icon"
+            [toggled]="store.level() === entry.level"
+            [disabled]="noDocument()"
+            (pressed)="store.setLevel(entry.level)"
+          ></button>
+        }
+        <button appIconButton icon="jumpList" labelKey="jumpList" [disabled]="noDocument()"></button>
+      }
+    }
+  </div>
+}

@@ -17,3 +17,11 @@ Non-blocking remarks (no action needed to proceed):
 
 - `rectAreaCases`, `rectUnionCases`, `bitmapRectToDisplayCases` and `medianCases`-like groups partly lack a `req` field; the specs use the requirement IDs from the fixture file header (DET-009) as fallback.
 - SP10 relies on the 1e-9 tolerance in `packSlides` because `H` is only approximately 840 in floating point; an implementation must use `stack <= H + 1e-9` exactly as documented.
+
+## V1-M7 S2 — icon `file_download` missing from `@material-symbols/svg-400` (resolved)
+
+`TUNABLES.icons.saveCopy` stays `'file_download'`; the package ships that glyph as `download`. Resolved by the owner: `scripts/build-icons.mjs` carries an alias (`file_download` -> `download`), the sprite symbol keeps the tunables name.
+
+## V1-M7 S2 — `app.spec.ts` "I18-001 placeholder has no visible text" vs. the indicator placeholder
+
+The existing test requires `main` to have empty `textContent`. The M7 table requires a "– / –" indicator in the bottom bar. To leave the test untouched, the placeholder is drawn with a CSS `::before` (`content: var(--cm-indicator-placeholder)`, value `T:layout.indicatorPlaceholder`), so it is not text content. Suggestion: the test is a pre-M7 placeholder check; the owner may relax it (e.g. assert no letters) and then render the indicator as ordinary text.

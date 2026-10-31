@@ -5,3 +5,4 @@ export * from './junctions';
 export * from './aspect-ratio';
 export * from './playing-order';
 export * from './slides';
+export * from './layout';

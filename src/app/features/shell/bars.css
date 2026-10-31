@@ -1,0 +1,42 @@
+:host {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  height: var(--cm-bar-height);
+}
+
+.grow {
+  flex: 1;
+  min-width: var(--cm-touch-target);
+  min-height: var(--cm-touch-target);
+}
+
+.slider {
+  flex: 1;
+  min-width: 0;
+  height: var(--cm-touch-target);
+}
+
+.indicator {
+  flex: 1;
+  min-width: var(--cm-touch-target);
+  min-height: var(--cm-touch-target);
+  border: 0;
+  background: transparent;
+  color: var(--cm-icon);
+  font: inherit;
+}
+
+.indicator.disabled {
+  opacity: var(--cm-disabled-opacity);
+}
+
+.indicator.fixed {
+  flex: none;
+}
+
+/* Pseudo-element, not text content: the placeholder is not data (see docs/questions.md, I18-001). */
+.indicator::before {
+  content: var(--cm-indicator-placeholder);
+}

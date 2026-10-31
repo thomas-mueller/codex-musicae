@@ -1,0 +1,62 @@
+@if (annotation()) {
+  @if (compact()) {
+    @if (store.popup()?.id === toolsId) {
+      <div class="fab-tools" data-popup>
+        @for (entry of tools; track entry.tool) {
+          <button
+            appIconButton
+            [icon]="entry.icon"
+            [labelKey]="entry.tool"
+            [toggled]="store.tool() === entry.tool"
+            [disabled]="noDocument()"
+            (pressed)="store.toggleTool(entry.tool)"
+          ></button>
+        }
+      </div>
+    }
+    <button
+      appIconButton
+      data-popup-trigger
+      class="fab"
+      [icon]="fabIcon()"
+      labelKey="toolFab"
+      [toggled]="store.popup()?.id === toolsId"
+      (pressed)="store.togglePopup(toolsId)"
+    ></button>
+  } @else {
+    @for (entry of tools; track entry.tool) {
+      <button
+        appIconButton
+        [icon]="entry.icon"
+        [labelKey]="entry.tool"
+        [toggled]="store.tool() === entry.tool"
+        [disabled]="noDocument()"
+        (pressed)="store.toggleTool(entry.tool)"
+      ></button>
+    }
+    <button appIconButton icon="undo" labelKey="undo" [disabled]="noDocument()"></button>
+    <button appIconButton icon="redo" labelKey="redo" [disabled]="noDocument()"></button>
+  }
+} @else if (compact()) {
+  <button
+    appIconButton
+    data-popup-trigger
+    class="fab"
+    icon="levelSelector"
+    labelKey="orgFab"
+    [toggled]="store.popup()?.id === orgId"
+    (pressed)="store.togglePopup(orgId)"
+  ></button>
+} @else {
+  @for (entry of levels; track entry.level) {
+    <button
+      appIconButton
+      [icon]="entry.icon"
+      [labelKey]="entry.icon"
+      [toggled]="store.level() === entry.level"
+      [disabled]="noDocument()"
+      (pressed)="store.setLevel(entry.level)"
+    ></button>
+  }
+  <button appIconButton icon="jumpList" labelKey="jumpList" [disabled]="noDocument()"></button>
+}

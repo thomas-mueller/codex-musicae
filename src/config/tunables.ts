@@ -44,6 +44,13 @@ export const TUNABLES = {
 
   layout: {
     barHeightPx: 48, // UIX-007
+    indicatorPlaceholder: '– / –', // UIX-004: shown instead of "x / n" while no document is open
+    iconSizePx: 24, // UIX-010
+    tooltipPaddingPx: 8, // UIX-014
+    tooltipRadiusPx: 4, // UIX-014
+    popupAnimationMs: 150, // UIX-013: sheet slide-in
+    popupRadiusPx: 12, // UIX-013
+    fabInsetPx: 16, // UIX-004: distance of the tool button from the canvas edge
     minTouchTargetPx: 44, // UIX-007
     compactMaxWidthPx: 600, // UIX-003: compact if width < this ...
     compactMaxHeightPx: 480, // ... or height < this
@@ -86,6 +93,9 @@ export const TUNABLES = {
     stop: 'stop_circle',
     delete: 'delete',
     levelSelector: 'tune',
+    levelFast: 'bolt', // DET-013: one icon per detection level
+    levelStandard: 'balance',
+    levelFine: 'grain',
     jumpList: 'list',
     overflow: 'more_vert',
     info: 'info',
@@ -140,7 +150,7 @@ export const TUNABLES = {
   },
 
   detection: {
-    defaultLevel: 'standard' as 'fast' | 'standard' | 'fine', // DET-013
+    defaultLevel: 'fast' as 'fast' | 'standard' | 'fine', // DET-013
     /**
      * Each level is a fixed set of three named parameters. DET-013
      * minSystemWidthRatio:  rects narrower than this fraction of page width are never systems (DET-007)
