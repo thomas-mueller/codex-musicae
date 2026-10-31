@@ -26,6 +26,9 @@
   background: transparent;
   color: var(--cm-icon);
   font: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .indicator.disabled {

@@ -46,14 +46,14 @@ const KEY_SEPARATOR = '|';
           <div
             class="page"
             [attr.data-testid]="'org-page-' + $index"
-            [style.top.px]="page.top"
-            [style.left.px]="(sizerWidth() - page.width) / 2"
+            [style.top.px]="page.top + offsetY()"
+            [style.left.px]="pageLeft($index)"
             [style.width.px]="page.width"
             [style.height.px]="page.height"
           ></div>
         }
         @for (job of jobs(); track document().tabId + ':' + job.index) {
-          <div class="tiles" [style.top.px]="layout()[job.index]?.top" [style.left.px]="pageLeft(job.index)" [style.width.px]="layout()[job.index]?.width" [style.height.px]="layout()[job.index]?.height">
+          <div class="tiles" [style.top.px]="(layout()[job.index]?.top ?? 0) + offsetY()" [style.left.px]="pageLeft(job.index)" [style.width.px]="layout()[job.index]?.width" [style.height.px]="layout()[job.index]?.height">
             <app-page-tiles
               [document]="document()"
               [pageIndex]="job.index"
@@ -97,6 +97,7 @@ export class OrganizationViewer {
   protected readonly layout = this.view.layout;
   protected readonly sizerWidth = this.view.sizerWidth;
   protected readonly sizerHeight = this.view.sizerHeight;
+  protected readonly offsetY = this.view.offsetY;
   /** ORG-003: scale = fit-width scale of the widest page times the zoom. */
   readonly scale = this.view.scale;
   /** Scale the tiles are rendered at; follows `scale` zoomSettleMs after its last change (ORG-002, NFR-008). */
@@ -113,7 +114,7 @@ export class OrganizationViewer {
     }
     const local = (index: number): Rect => ({
       x: scroll.x - this.pageLeft(index),
-      y: scroll.y - (layout[index]?.top ?? 0),
+      y: scroll.y - (layout[index]?.top ?? 0) - this.offsetY(),
       width: viewport.width,
       height: viewport.height,
     });

@@ -21,7 +21,7 @@ export class DocumentStore {
   readonly readOnly = signal(false);
   readonly needsReopen = signal(false);
 
-  /** Organization mode view state, kept per tab (ORG-006): zoom relative to fit-width, scroll offset in CSS px. */
+  /** Organization mode view state, kept per tab (ORG-006): zoom relative to the default fit (fit-page), scroll offset in CSS px. */
   readonly orgZoom = signal(1);
   readonly orgScroll = signal<Point>({ x: 0, y: 0 });
 

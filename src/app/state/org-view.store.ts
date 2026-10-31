@@ -43,7 +43,11 @@ export class OrgViewStore {
   readonly widest = computed<Size>(() =>
     this.pageSizes().reduce((best, size) => (size.width > best.width ? size : best), { width: 0, height: 0 }),
   );
-  /** ORG-003: fit-width scale of the widest page times the zoom. */
+  /** Zoom limits relative to fit-width (core contract). */
+  private readonly limitsFromFitWidth = computed(() => orgZoomLimits(this.widest(), this.viewport(), TUNABLES.zoom.max));
+  /** ORG-003: the zoom value 1 means fit-page (or fit-width, per `zoom.orgDefault`); this is that zoom relative to fit-width. */
+  private readonly zoomBase = computed(() => (TUNABLES.zoom.orgDefault === 'fitPage' ? this.limitsFromFitWidth().min : 1));
+  /** ORG-003: fit-width scale of the widest page times the zoom base times the zoom. */
   readonly scale = computed(() => {
     const doc = this.document();
     const widest = this.widest();
@@ -51,15 +55,20 @@ export class OrgViewStore {
     if (!doc || widest.width <= 0 || viewport.width <= 0) {
       return 0;
     }
-    return fitScale(widest, viewport, 'width') * doc.orgZoom();
+    return fitScale(widest, viewport, 'width') * this.zoomBase() * doc.orgZoom();
   });
   readonly layout = computed(() => layoutPages(this.pageSizes(), this.scale(), TUNABLES.rendering.orgPageGapPx));
-  readonly sizerWidth = computed(() => this.widest().width * this.scale());
-  readonly sizerHeight = computed(() => {
+  /** Extent of all pages. */
+  readonly pagesWidth = computed(() => this.widest().width * this.scale());
+  readonly pagesHeight = computed(() => {
     const layout = this.layout();
     const last = layout[layout.length - 1];
     return last ? last.top + last.height : 0;
   });
+  /** ORG-001: content smaller than the viewport is centered; these are the scrollable extent and the vertical shift. */
+  readonly sizerWidth = computed(() => Math.max(this.pagesWidth(), this.viewport().width));
+  readonly sizerHeight = computed(() => Math.max(this.pagesHeight(), this.viewport().height));
+  readonly offsetY = computed(() => Math.max(0, (this.viewport().height - this.pagesHeight()) / 2));
 
   /** ORG-004: index of the page covering the viewport center; -1 without pages. */
   readonly currentPage = computed(() => {
@@ -69,7 +78,12 @@ export class OrgViewStore {
     }
     return pageAtOffset(this.layout(), scroll.y + this.viewport().height / 2, TUNABLES.rendering.orgPageGapPx);
   });
-  readonly zoomLimits = computed(() => orgZoomLimits(this.widest(), this.viewport(), TUNABLES.zoom.max));
+  /** Limits of the zoom value (1 = default fit); the maximum stays `zoom.max` times the fit-width scale. */
+  readonly zoomLimits = computed(() => {
+    const { min, max } = this.limitsFromFitWidth();
+    const base = this.zoomBase();
+    return { min: min / base, max: max / base };
+  });
   readonly canPrevious = computed(() => this.active() && this.currentPage() > 0);
   readonly canNext = computed(() => this.active() && this.currentPage() >= 0 && this.currentPage() < this.pageCount() - 1);
   readonly canZoomOut = computed(() => this.active() && (this.document()?.orgZoom() ?? 0) > this.zoomLimits().min);
@@ -104,7 +118,7 @@ export class OrgViewStore {
     this.zoomTo((this.document()?.orgZoom() ?? 1) / TUNABLES.zoom.buttonStep);
   }
 
-  /** Back to fit-width. */
+  /** Back to the default fit (fit-page). */
   zoomReset(): void {
     this.zoomTo(1);
   }

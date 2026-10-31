@@ -80,7 +80,7 @@ Settled decisions. Do not reopen them in an agent session; if one blocks you, wr
 Calls made while compiling the documents that go beyond what was explicitly discussed. Confirm or change them (change the requirement and log it in `changelog.md`).
 
 - **ASM-01** Tool buttons: tap toggles the tool; a long press or a small settings affordance opens the color/width popup (resolves an earlier inconsistency about tapping the active tool). ANN-002.
-- **ASM-02** Zoom is relative to the fit scale: slides 100–400 %; organization mode default fit-width, minimum fit-page, maximum 4 × fit-width. ORG-003.
+- **ASM-02** Zoom is relative to the fit scale: slides 100–400 %; organization mode default and reset fit-page (changed from fit-width by the owner after the M9 review), minimum fit-page, maximum 4 × fit-width. ORG-003.
 - **ASM-03** Detection uses connected components of the inverted Otsu bitmap; the background component supplies "the page" rectangle. DET-004.
 - **ASM-04** After detection finishes on a writable file, a save is scheduled so detection is not repeated. SAV-012.
 - **ASM-05** Jumping the queue to an unfinished page shows provisional, non-interactive bars. DET-021.

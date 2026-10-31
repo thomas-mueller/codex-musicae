@@ -14,7 +14,7 @@ const PAGE_HEIGHT = 800;
 const VIEW_WIDTH = 300;
 const GAP = TUNABLES.rendering.orgPageGapPx;
 const SCALE = VIEW_WIDTH / PAGE_WIDTH;
-const PAGE_STEP = PAGE_HEIGHT * SCALE + GAP;
+const PAGE_STEP = PAGE_HEIGHT * SCALE + GAP; // viewport height 400: fit-page and fit-width coincide
 
 describe('OrgViewStore', () => {
   async function setup(viewHeight = 400) {
@@ -63,29 +63,49 @@ describe('OrgViewStore', () => {
     expect(store.scrollRequest()).toBe(before);
   });
 
-  it('ORG-003 zoom in and out step by buttonStep and are clamped to the limits', async () => {
+  it('ORG-003 the default zoom is fit-page: the whole widest page fits the viewport', async () => {
+    const { store, doc } = await setup(200); // 300 x 200 viewport, 600 x 800 pages: height decides
+    expect(doc.orgZoom()).toBe(1);
+    expect(store.scale()).toBeCloseTo(200 / PAGE_HEIGHT);
+    expect(store.pagesWidth()).toBeCloseTo(PAGE_WIDTH * (200 / PAGE_HEIGHT));
+  });
+
+  it('ORG-003 zoom in and out step by buttonStep; the minimum is fit-page and the maximum zoom.max times fit-width', async () => {
     const { store, doc } = await setup(200);
     const { min, max } = store.zoomLimits();
-    expect(min).toBeCloseTo(0.5);
-    expect(doc.orgZoom()).toBe(1);
+    expect(min).toBe(1);
+    expect(max).toBeCloseTo(TUNABLES.zoom.max / 0.5); // fit-page is half of fit-width here
+    expect(store.canZoomOut()).toBe(false);
     store.zoomIn();
     expect(doc.orgZoom()).toBeCloseTo(TUNABLES.zoom.buttonStep);
     store.zoomOut();
-    store.zoomOut();
-    expect(doc.orgZoom()).toBeCloseTo(1 / TUNABLES.zoom.buttonStep);
-    for (let i = 0; i < 20; i++) {
-      store.zoomOut();
-    }
     expect(doc.orgZoom()).toBe(min);
-    expect(store.canZoomOut()).toBe(false);
+    store.zoomOut();
+    expect(doc.orgZoom()).toBe(min);
     for (let i = 0; i < 40; i++) {
       store.zoomIn();
     }
     expect(doc.orgZoom()).toBe(max);
     expect(store.canZoomIn()).toBe(false);
+    expect(store.scale()).toBeCloseTo(TUNABLES.zoom.max * SCALE); // zoom.max x fit-width scale
   });
 
-  it('ORG-003 reset returns to fit-width and the viewport center stays anchored', async () => {
+  it('ORG-001 content smaller than the viewport is centered vertically, narrower content horizontally', async () => {
+    const tall = await setup(2000); // all three pages (3 * 400 + 2 gaps) fit into 2000 px
+    const content = 3 * PAGE_HEIGHT * SCALE + 2 * GAP;
+    expect(tall.store.sizerHeight()).toBe(2000);
+    expect(tall.store.offsetY()).toBeCloseTo((2000 - content) / 2);
+    expect(tall.store.sizerWidth()).toBe(VIEW_WIDTH);
+  });
+
+  it('ORG-001 pages narrower than the viewport are centered horizontally', async () => {
+    const { store } = await setup(200); // fit-page: pages are 150 px wide in a 300 px viewport
+    expect(store.pagesWidth()).toBeCloseTo(150);
+    expect(store.sizerWidth()).toBe(VIEW_WIDTH);
+    expect(store.offsetY()).toBe(0);
+  });
+
+  it('ORG-003 reset returns to fit-page and the viewport center stays anchored', async () => {
     const { store, doc } = await setup(200);
     doc.orgScroll.set({ x: 0, y: 100 });
     store.zoomIn();
@@ -93,6 +113,7 @@ describe('OrgViewStore', () => {
     expect(doc.orgScroll().y).toBeCloseTo((100 + 100) * zoom - 100); // ((s + a) * n / o) - a with o = 1
     store.zoomReset();
     expect(doc.orgZoom()).toBe(1);
+    expect(store.scale()).toBeCloseTo(200 / PAGE_HEIGHT);
   });
 
   it('ORG-006 page navigation does not change the zoom', async () => {

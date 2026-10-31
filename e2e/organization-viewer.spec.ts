@@ -102,9 +102,10 @@ test('ORG-002 scrolling to the end releases the first page', async ({ page }) =>
 
 const indicator = (page: Page) => page.locator('app-bottom-bar .indicator');
 const ZOOM_STEP = 1.25; // T:zoom.buttonStep
-const WIDTH_TOLERANCE_PX = 3; // rounding of the sizer width
+const WIDTH_TOLERANCE_PX = 3; // rounding of the page width
+const CENTER_TOLERANCE_PX = 1.5;
 
-const sizerWidth = (page: Page) => page.getByTestId('org-sizer').evaluate((el) => (el as HTMLElement).offsetWidth);
+const pageWidth = (page: Page) => page.getByTestId('org-page-0').evaluate((el) => (el as HTMLElement).offsetWidth);
 
 async function openAndEnter(page: Page): Promise<void> {
   await openFile(page, 'a.pdf');
@@ -153,16 +154,59 @@ test('ORG-005 the page slider scrolls to the chosen page', async ({ page }) => {
   await expect(indicator(page)).toHaveText('3 / 3');
 });
 
-test('ORG-003 ORG-006 zoom buttons step and reset; zoom stays when the page changes', async ({ page }) => {
+test('ORG-003 ORG-006 zoom buttons step and reset to fit-page; zoom stays when the page changes', async ({ page }) => {
   await openAndEnter(page);
-  const fitWidth = await sizerWidth(page);
+  const fitPage = await pageWidth(page);
   await page.getByRole('button', { name: label('zoomIn'), exact: true }).click();
-  await expect.poll(() => sizerWidth(page)).toBeGreaterThan(fitWidth * ZOOM_STEP - WIDTH_TOLERANCE_PX);
-  expect(await sizerWidth(page)).toBeLessThan(fitWidth * ZOOM_STEP + WIDTH_TOLERANCE_PX);
-  const zoomed = await sizerWidth(page);
+  await expect.poll(() => pageWidth(page)).toBeGreaterThan(fitPage * ZOOM_STEP - WIDTH_TOLERANCE_PX);
+  expect(await pageWidth(page)).toBeLessThan(fitPage * ZOOM_STEP + WIDTH_TOLERANCE_PX);
+  const zoomed = await pageWidth(page);
   await page.getByRole('button', { name: label('next'), exact: true }).click();
   await expect(indicator(page)).toHaveText('2 / 3');
-  expect(await sizerWidth(page)).toBe(zoomed);
+  expect(await pageWidth(page)).toBe(zoomed);
   await page.getByRole('button', { name: label('zoomReset'), exact: true }).click();
-  await expect.poll(() => sizerWidth(page)).toBe(fitWidth);
+  await expect.poll(() => pageWidth(page)).toBe(fitPage);
+});
+
+test('ORG-003 the document opens at fit-page: the whole first page is visible', async ({ page }) => {
+  await openAndEnter(page);
+  const fits = await page.getByTestId('org-viewer').evaluate((viewer) => {
+    const box = (viewer.querySelector('[data-testid="org-page-0"]') as HTMLElement).getBoundingClientRect();
+    const view = viewer.getBoundingClientRect();
+    return box.top >= view.top - 1 && box.bottom <= view.bottom + 1 && box.left >= view.left - 1 && box.right <= view.right + 1;
+  });
+  expect(fits).toBe(true);
+});
+
+test('ORG-001 a page narrower than the viewport is centered horizontally', async ({ page }) => {
+  await openAndEnter(page);
+  const offset = await page.getByTestId('org-viewer').evaluate((viewer) => {
+    const box = (viewer.querySelector('[data-testid="org-page-0"]') as HTMLElement).getBoundingClientRect();
+    const view = viewer.getBoundingClientRect();
+    return box.left + box.width / 2 - (view.left + viewer.clientWidth / 2);
+  });
+  expect(Math.abs(offset)).toBeLessThanOrEqual(CENTER_TOLERANCE_PX);
+});
+
+test('ORG-004 the indicator is vertically centered in the bar, after the slider and before next', async ({ page }) => {
+  await openAndEnter(page);
+  const geometry = await page.locator('app-bottom-bar').evaluate((bar) => {
+    const rect = (el: Element | null) => (el as HTMLElement).getBoundingClientRect();
+    const barBox = rect(bar);
+    const indicatorBox = rect(bar.querySelector('.indicator'));
+    const text = bar.ownerDocument.createRange(); // the digits themselves, not the (full height) box
+    text.selectNodeContents(bar.querySelector('.indicator') as Node);
+    const textBox = text.getBoundingClientRect();
+    const next = rect(bar.querySelector('button[aria-label="Next"]'));
+    const slider = bar.querySelector('input.slider');
+    const before = slider ? rect(slider) : rect(bar.querySelector('button[aria-label="Previous"]'));
+    return {
+      centerOffset: textBox.top + textBox.height / 2 - (barBox.top + barBox.height / 2),
+      afterPrevious: indicatorBox.left >= before.right - 1,
+      beforeNext: indicatorBox.right <= next.left + 1,
+    };
+  });
+  expect(Math.abs(geometry.centerOffset)).toBeLessThanOrEqual(CENTER_TOLERANCE_PX);
+  expect(geometry.afterPrevious).toBe(true);
+  expect(geometry.beforeNext).toBe(true);
 });

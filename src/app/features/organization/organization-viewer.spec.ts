@@ -53,6 +53,35 @@ describe('OrganizationViewer', () => {
     expect(root.querySelectorAll('[data-testid^="org-page-"]')).toHaveLength(2);
   });
 
+  it('ORG-001 pages narrower than the viewport are centered horizontally and a short document vertically', async () => {
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(2000);
+    await open('a.pdf');
+    const doc = TestBed.inject(SessionStore).activeDocument()!;
+    const fixture = TestBed.createComponent(OrganizationViewer);
+    fixture.componentRef.setInput('document', doc);
+    await fixture.whenStable();
+    // fit-page in 300 x 2000: width decides (scale 0.5); two 400 px pages plus a gap leave room above and below.
+    const root: HTMLElement = fixture.nativeElement;
+    const first = root.querySelector<HTMLElement>('[data-testid="org-page-0"]')!;
+    const content = 2 * PAGE_HEIGHT * (VIEW_WIDTH / PAGE_WIDTH) + TUNABLES.rendering.orgPageGapPx;
+    expect(parseFloat(first.style.top)).toBeCloseTo((2000 - content) / 2);
+    expect(parseFloat(first.style.left)).toBeCloseTo(0);
+    expect(parseFloat(root.querySelector<HTMLElement>('[data-testid="org-sizer"]')!.style.height)).toBe(2000);
+  });
+
+  it('ORG-001 a page narrower than the viewport sits in the horizontal middle', async () => {
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(200);
+    await open('a.pdf');
+    const doc = TestBed.inject(SessionStore).activeDocument()!;
+    const fixture = TestBed.createComponent(OrganizationViewer);
+    fixture.componentRef.setInput('document', doc);
+    await fixture.whenStable();
+    // fit-page in 300 x 200: height decides (scale 0.25), pages are 150 px wide.
+    const first = fixture.nativeElement.querySelector('[data-testid="org-page-0"]') as HTMLElement;
+    expect(parseFloat(first.style.width)).toBeCloseTo(150);
+    expect(parseFloat(first.style.left)).toBeCloseTo(75);
+  });
+
   it('ORG-006 zoom scales the sizer and is not changed by scrolling', async () => {
     await open('a.pdf');
     const doc = TestBed.inject(SessionStore).activeDocument()!;

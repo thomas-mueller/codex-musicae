@@ -151,7 +151,7 @@ export const TUNABLES = {
     min: 1, // 1 = fit scale (slide contained in canvas); organization mode: see ORG-003
     max: 4, // relative to the fit scale; NAV-014, ORG-003
     buttonStep: 1.25, // multiplicative step of zoom +/- buttons
-    orgDefault: 'fitWidth' as 'fitWidth' | 'fitPage', // ORG-003
+    orgDefault: 'fitPage' as 'fitWidth' | 'fitPage', // ORG-003: zoom on open and after reset; the minimum is always fit-page
   },
 
   aspectRatio: {
