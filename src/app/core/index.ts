@@ -6,3 +6,5 @@ export * from './aspect-ratio';
 export * from './playing-order';
 export * from './slides';
 export * from './layout';
+export * from './lru-cache';
+export * from './scheduler';
