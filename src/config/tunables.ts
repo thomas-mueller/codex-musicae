@@ -210,6 +210,14 @@ export const TUNABLES = {
     governorLowResFactor: 0.75, // NFR-010: render scale factor at level 2 and above
   },
 
+  files: {
+    handleDbName: 'cm-files', // FIL-015: IndexedDB database for web file handles
+    handleStoreName: 'handles', // FIL-015
+    handleDbVersion: 1, // FIL-015
+    pdfMimeType: 'application/pdf', // FIL-001
+    pdfExtension: '.pdf', // FIL-001
+  },
+
   pdf: {
     workerSrc: 'assets/pdfjs/pdf.worker.min.mjs', // GEN-005: pdf.js worker from our own origin, no CDN
     cMapUrl: 'assets/pdfjs/cmaps/', // GEN-005
