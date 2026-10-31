@@ -26,6 +26,7 @@ export class DetectionService {
   private readonly clock = inject(CLOCK);
   private readonly runs = new Map<DocumentStore, AbortController>();
   private context!: SchedulerContext;
+  private governorPaused = false;
   private contextWaiters: Array<() => void> = [];
 
   constructor() {
@@ -64,6 +65,8 @@ export class DetectionService {
       batterySaver: TUNABLES.detection.pauseOnBatterySaver ? this.lifecycle.batterySaver() : null,
       strokeInProgress: false,
     };
+    // NFR-010: at the heaviest memory pressure detection pauses until the governor level drops. Read here, so the effect tracks it.
+    this.governorPaused = this.governor.level() >= TUNABLES.resources.governorMaxLevel;
     this.scheduler.setContext(this.context);
     const waiters = this.contextWaiters;
     this.contextWaiters = [];
@@ -74,7 +77,7 @@ export class DetectionService {
 
   /** Detection may run in the current context (same rule the scheduler applies). */
   private canRun(): boolean {
-    return pickNext([{ id: 'detection', cls: 'detection', seq: 0 }], this.context) !== null;
+    return !this.governorPaused && pickNext([{ id: 'detection', cls: 'detection', seq: 0 }], this.context) !== null;
   }
 
   private async drive(doc: DocumentStore, runSignal: AbortSignal): Promise<void> {
@@ -95,6 +98,9 @@ export class DetectionService {
 
   /** One scheduler task: picks its page when it starts, so a later `prioritize` still wins. */
   private async step(doc: DocumentStore, signal: AbortSignal): Promise<void> {
+    if (!this.canRun()) {
+      return; // the level rose after this task was queued: leave the page pending, `drive` waits for the next context change
+    }
     const run = doc.detection;
     const pageIndex = nextPageToProcess(run.states(), run.priorityPage());
     if (pageIndex === null) {

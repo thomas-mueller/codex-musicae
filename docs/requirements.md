@@ -102,7 +102,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **DET-014** [v1·todo·M11] Organization mode offers a level selector (three icon steps); choosing a level asks for confirmation and then re-runs detection.
 - **DET-015** [v1·todo·M11] During a re-run the previous results stay active; at completion they are swapped in, and jumps, breaks and stops are kept only if the total system count is unchanged, else cleared.
 - **DET-016** [v1·todo·M10] Organization mode shows detection progress (processing icon, processed/total pages); slide modes show the slide count as "n+" until detection is complete.
-- **DET-017** [v1·todo·M10] Detection pauses while the user interacts (resumes after `T:detection.idleBeforeResumeMs` without input), while the app is hidden, and under battery saver where detectable.
+- **DET-017** [v1·done·M10] Detection pauses while the user interacts (resumes after `T:detection.idleBeforeResumeMs` without input), while the app is hidden, and under battery saver where detectable.
 - **DET-018** [v1·done·M10] If a page fails (error or out of memory), it is retried once at `renderScale` × `T:detection.retryScaleFactor`; if it fails again the page is marked not detected and processing continues.
 - **DET-019** [v1·todo·M10] Slides and organization bars are usable for every page whose prefix of earlier pages is finished while later pages are still processing.
 - **DET-020** [v1·done·M10] Bitmaps are released after each page; only rectangles are retained.

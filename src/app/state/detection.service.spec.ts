@@ -202,4 +202,63 @@ describe('DetectionService', () => {
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(renders).toEqual([]);
   });
+
+  it('DET-017 does not run while the app is hidden and runs again when it becomes visible', async () => {
+    const { service, lifecycle, open, renders } = setup();
+    lifecycle.visible.set(false);
+    TestBed.tick();
+    const doc = await open();
+    service.start(doc);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(renders).toEqual([]);
+    lifecycle.visible.set(true);
+    TestBed.tick();
+    await until(() => doc.detectionComplete());
+    expect(renders).toHaveLength(PAGES);
+  });
+
+  it('DET-017 does not run under battery saver; an undetectable state (null) does not block', async () => {
+    const { service, lifecycle, open, renders } = setup();
+    lifecycle.batterySaver.set(true);
+    TestBed.tick();
+    const doc = await open();
+    service.start(doc);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(renders).toEqual([]);
+    lifecycle.batterySaver.set(null);
+    TestBed.tick();
+    await until(() => doc.detectionComplete());
+    expect(renders).toHaveLength(PAGES);
+  });
+
+  it('DET-017 pauses at governor level 3 and resumes at the reduced scale once the level drops', async () => {
+    const { service, governor, clock, open, renders } = setup();
+    const cooldown = TUNABLES.resources.governorEscalateCooldownMs;
+    for (let i = 0; i < TUNABLES.resources.governorMaxLevel; i++) {
+      governor.reportFailure();
+      clock.advance(cooldown);
+    }
+    expect(governor.level()).toBe(TUNABLES.resources.governorMaxLevel);
+    TestBed.tick();
+    const doc = await open();
+    service.start(doc);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(renders).toEqual([]);
+    clock.advance(TUNABLES.resources.governorRecoverMs);
+    expect(governor.level()).toBe(TUNABLES.resources.governorMaxLevel - 1);
+    TestBed.tick();
+    await until(() => doc.detectionComplete());
+    expect(renders.map((r) => r.scale)).toEqual(
+      Array(PAGES).fill(TUNABLES.detection.levels.fast.renderScale * TUNABLES.resources.governorLowResFactor),
+    );
+  });
+
+  it('DET-018 a failed page leaves the bars of the other pages intact', async () => {
+    const { service, open } = setup((page) => (page === 1 ? 'out-of-memory' : null));
+    const doc = await open();
+    service.start(doc);
+    await until(() => doc.detectionComplete());
+    expect(doc.detection.states()).toEqual(['done', 'failed', 'done']);
+    expect([...new Set(doc.bars().map((b) => b.pageIndex))]).toEqual([0, 2]);
+  });
 });
