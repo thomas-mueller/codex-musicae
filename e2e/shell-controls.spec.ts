@@ -37,7 +37,7 @@ for (const [sizeClass, viewport] of Object.entries(sizes) as [keyof typeof sizes
           label('openFile'), label('tabBar'), label('modeSwitch'), ...modes, label('overflow'),
         ]);
         expect(await labels(page, 'bottom')).toEqual([
-          label('previous'), ...slider, ...common, label('showMore'), label('showLess'), label('overflow'),
+          label('previous'), ...slider, ...common, label('showMore'), label('showLess'),
         ]);
         expect(await labels(page, 'tools')).toEqual([
           label('pen'), label('highlighter'), label('eraser'), label('undo'), label('redo'),
@@ -60,7 +60,7 @@ for (const [sizeClass, viewport] of Object.entries(sizes) as [keyof typeof sizes
       } else {
         expect(bottom).toContain(label('pageSlider'));
         expect(await labels(page, 'tools')).toEqual([
-          label('levelStep1'), label('levelStep2'), label('levelStep3'), label('jumpList'),
+          label('levelFast'), label('levelStandard'), label('levelFine'), label('jumpList'),
         ]);
       }
     });
@@ -98,7 +98,7 @@ for (const [sizeClass, viewport] of Object.entries(sizes) as [keyof typeof sizes
 
     test(`UIX-013 UIX-015 ${sizeClass} info popover shows the version; Escape and outside tap close it`, async ({ page }) => {
       await page.goto('/');
-      const overflow = page.locator('[data-area="bottom"]').getByLabel(label('overflow'), { exact: true });
+      const overflow = page.locator(sizeClass === 'compact' ? '[data-area="bottom"]' : '[data-area="top"]').getByLabel(label('overflow'), { exact: true });
       await overflow.click();
       await page.locator('app-popup-host').getByLabel(label('info'), { exact: true }).click();
       await expect(page.locator('app-popup-host .version')).toHaveText(/\S/);

@@ -4,6 +4,7 @@ import { TUNABLES } from '../../config/tunables';
 import { sizeClassOf } from '../core';
 
 export type Mode = 'organization' | 'annotation' | 'presentation';
+export type DetectionLevel = keyof typeof TUNABLES.detection.levels;
 export type Tool = 'pen' | 'highlighter' | 'eraser';
 export interface Popup {
   readonly id: string;
@@ -18,6 +19,8 @@ export interface Viewport {
 export class UiStore {
   readonly mode = signal<Mode>('annotation');
   readonly tool = signal<Tool | null>(null);
+  /** Selected detection level (organization mode). DET-013 */
+  readonly level = signal<DetectionLevel>(TUNABLES.detection.defaultLevel);
   readonly popup = signal<Popup | null>(null);
   /** Set by the shell's resize observer; unmeasured (0x0) until its first callback. */
   /** Placeholder until the DocumentStore (M8): no document can be open yet. FIL-007 */
@@ -48,6 +51,12 @@ export class UiStore {
       return;
     }
     this.tool.set(this.tool() === tool ? null : tool);
+  }
+
+  setLevel(level: DetectionLevel): void {
+    if (this.hasDocument()) {
+      this.level.set(level);
+    }
   }
 
   togglePopup(id: string): void {

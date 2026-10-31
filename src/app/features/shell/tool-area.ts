@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 
 import { TUNABLES } from '../../../config/tunables';
-import { Tool, UiStore } from '../../state/ui.store';
+import { DetectionLevel, Tool, UiStore } from '../../state/ui.store';
 import { IconKey } from './icon';
 import { IconButton } from './icon-button';
 
@@ -19,7 +19,11 @@ export const TOOL_ENTRIES: readonly ToolEntry[] = [
   { tool: 'eraser', icon: 'eraser' },
 ];
 
-export const LEVEL_STEPS: readonly string[] = ['levelStep1', 'levelStep2', 'levelStep3'];
+export const LEVEL_ENTRIES: readonly { readonly level: DetectionLevel; readonly icon: IconKey }[] = [
+  { level: 'fast', icon: 'levelFast' },
+  { level: 'standard', icon: 'levelStandard' },
+  { level: 'fine', icon: 'levelFine' },
+];
 
 /** Compact: one floating button. Expanded: vertical strip on the configured side. UIX-004, 005, 006 */
 @Component({
@@ -37,7 +41,7 @@ export class ToolArea {
   protected readonly store = inject(UiStore);
   protected readonly side = TUNABLES.layout.toolStripSide;
   protected readonly tools = TOOL_ENTRIES;
-  protected readonly levelSteps = LEVEL_STEPS;
+  protected readonly levels = LEVEL_ENTRIES;
   protected readonly toolsId = POPUP_TOOLS;
   protected readonly orgId = POPUP_ORG;
   protected readonly compact = computed(() => this.store.sizeClass() === 'compact');

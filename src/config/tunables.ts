@@ -93,6 +93,9 @@ export const TUNABLES = {
     stop: 'stop_circle',
     delete: 'delete',
     levelSelector: 'tune',
+    levelFast: 'bolt', // DET-013: one icon per detection level
+    levelStandard: 'balance',
+    levelFine: 'grain',
     jumpList: 'list',
     overflow: 'more_vert',
     info: 'info',
@@ -147,7 +150,7 @@ export const TUNABLES = {
   },
 
   detection: {
-    defaultLevel: 'standard' as 'fast' | 'standard' | 'fine', // DET-013
+    defaultLevel: 'fast' as 'fast' | 'standard' | 'fine', // DET-013
     /**
      * Each level is a fixed set of three named parameters. DET-013
      * minSystemWidthRatio:  rects narrower than this fraction of page width are never systems (DET-007)

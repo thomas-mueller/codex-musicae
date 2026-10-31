@@ -46,11 +46,11 @@
     "toolFab": "Tools",
     "orgFab": "Organization tools",
     "modeSwitch": "Mode",
-    "levelStep1": "Fast",
-    "levelStep2": "Standard",
-    "levelStep3": "Fine",
     "overflowMenu": "Menu",
-    "versionInfo": "Version"
+    "versionInfo": "Version",
+    "levelFast": "Fast detection",
+    "levelStandard": "Standard detection",
+    "levelFine": "Fine detection"
   },
   "tooltip": {
     "modeOrganization": "Organization mode",
@@ -96,10 +96,10 @@
     "toolFab": "Tools",
     "orgFab": "Organization tools",
     "modeSwitch": "Mode",
-    "levelStep1": "Fast",
-    "levelStep2": "Standard",
-    "levelStep3": "Fine",
     "overflowMenu": "Menu",
-    "versionInfo": "Version"
+    "versionInfo": "Version",
+    "levelFast": "Fast detection",
+    "levelStandard": "Standard detection",
+    "levelFine": "Fine detection"
   }
 }

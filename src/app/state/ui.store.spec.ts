@@ -57,4 +57,13 @@ describe('UiStore', () => {
     store.togglePopup('b');
     expect(store.popup()).toBeNull();
   });
+
+  it('DET-013 the detection level defaults to fast and changes only with a document', () => {
+    expect(store.level()).toBe('fast');
+    store.setLevel('fine');
+    expect(store.level()).toBe('fast');
+    store.hasDocument.set(true);
+    store.setLevel('fine');
+    expect(store.level()).toBe('fine');
+  });
 });

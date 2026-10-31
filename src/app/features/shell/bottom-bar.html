@@ -27,11 +27,13 @@
   <button appIconButton icon="showMore" labelKey="showMore" [disabled]="noDocument()"></button>
   <button appIconButton icon="showLess" labelKey="showLess" [disabled]="noDocument()"></button>
 }
-<button
-  appIconButton
-  data-popup-trigger
-  icon="overflow"
-  labelKey="overflow"
-  [toggled]="store.popup()?.id === overflowId"
-  (pressed)="store.togglePopup(overflowId)"
-></button>
+@if (compact()) {
+  <button
+    appIconButton
+    data-popup-trigger
+    icon="overflow"
+    labelKey="overflow"
+    [toggled]="store.popup()?.id === overflowId"
+    (pressed)="store.togglePopup(overflowId)"
+  ></button>
+}

@@ -5,7 +5,7 @@ import { APP_VERSION } from '../../ports/app-version';
 import { UiStore } from '../../state/ui.store';
 import { POPUP_OVERFLOW_BOTTOM, POPUP_SLIDER } from './bottom-bar';
 import { IconButton } from './icon-button';
-import { LEVEL_STEPS, POPUP_ORG } from './tool-area';
+import { LEVEL_ENTRIES, POPUP_ORG } from './tool-area';
 import { POPUP_OVERFLOW_TOP } from './top-bar';
 
 export const POPUP_INFO = 'info';
@@ -27,7 +27,7 @@ const POPUP_SELECTOR = '[data-popup], [data-popup-trigger]';
 export class PopupHost {
   protected readonly store = inject(UiStore);
   protected readonly version = inject(APP_VERSION);
-  protected readonly levelSteps = LEVEL_STEPS;
+  protected readonly levels = LEVEL_ENTRIES;
   protected readonly ids = {
     overflowTop: POPUP_OVERFLOW_TOP,
     overflowBottom: POPUP_OVERFLOW_BOTTOM,

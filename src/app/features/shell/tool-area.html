@@ -48,8 +48,15 @@
     (pressed)="store.togglePopup(orgId)"
   ></button>
 } @else {
-  @for (step of levelSteps; track step) {
-    <button appIconButton icon="levelSelector" [labelKey]="step" [disabled]="noDocument()"></button>
+  @for (entry of levels; track entry.level) {
+    <button
+      appIconButton
+      [icon]="entry.icon"
+      [labelKey]="entry.icon"
+      [toggled]="store.level() === entry.level"
+      [disabled]="noDocument()"
+      (pressed)="store.setLevel(entry.level)"
+    ></button>
   }
   <button appIconButton icon="jumpList" labelKey="jumpList" [disabled]="noDocument()"></button>
 }
