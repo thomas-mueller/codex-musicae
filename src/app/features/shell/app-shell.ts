@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
 
+import { SessionStore } from '../../state/session.store';
 import { UiStore } from '../../state/ui.store';
 import { BottomBar } from './bottom-bar';
 import { CanvasArea } from './canvas-area';
@@ -23,5 +24,11 @@ import { ViewportObserverDirective } from './resize-observer.directive';
 })
 export class AppShell {
   protected readonly store = inject(UiStore);
+  private readonly session = inject(SessionStore);
   protected readonly presentation = computed(() => this.store.mode() === 'presentation');
+
+  constructor() {
+    // Controls that need a document follow the active tab (FIL-007): the one place that mirrors it into UiStore.
+    effect(() => this.store.hasDocument.set(this.session.activeTab()?.status === 'ready'));
+  }
 }

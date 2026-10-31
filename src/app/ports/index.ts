@@ -9,3 +9,4 @@ export * from './fullscreen';
 export * from './wake-lock';
 export * from './open-with';
 export * from './back-button';
+export * from './device-info';

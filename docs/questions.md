@@ -25,3 +25,7 @@ Non-blocking remarks (no action needed to proceed):
 ## V1-M7 S2 — `app.spec.ts` "I18-001 placeholder has no visible text" vs. the indicator placeholder
 
 The existing test requires `main` to have empty `textContent`. The M7 table requires a "– / –" indicator in the bottom bar. To leave the test untouched, the placeholder is drawn with a CSS `::before` (`content: var(--cm-indicator-placeholder)`, value `T:layout.indicatorPlaceholder`), so it is not text content. Suggestion: the test is a pre-M7 placeholder check; the owner may relax it (e.g. assert no letters) and then render the indicator as ordinary text.
+
+## M8 — resource E2E and the debug hook (resolved)
+
+The milestone's resource E2E reads the cache size through `window.__cm`, available only when `ngDevMode`. All other E2E tests run against the production build, where the hook must not exist. Resolution: `playwright.config.ts` starts a second web server (development build, port 4174, output `dist/codexmusicae-dev`); `e2e/resource.spec.ts` runs against it, forces the smallest memory bucket and asserts `totalBytes <= budgetBytes` after every open. A short test in the same file checks that the production build has no `__cm`. `src/app/state/cache-stress.spec.ts` stays as a fast unit-level complement.

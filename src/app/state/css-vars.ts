@@ -20,6 +20,10 @@ export function tunablesToCssVars(t: Tunables): Readonly<Record<string, string>>
     '--cm-popup-radius': `${t.layout.popupRadiusPx}px`,
     '--cm-fab-inset': `${t.layout.fabInsetPx}px`,
     '--cm-touch-target': `${t.layout.minTouchTargetPx}px`,
+    '--cm-tab-gap': `${t.layout.tabGapPx}px`,
+    '--cm-tab-max-width': `${t.layout.tabMaxWidthPx}px`,
+    '--cm-tab-min-width': `${t.layout.tabMinWidthPx}px`,
+    '--cm-tab-radius': `${t.layout.tabRadiusPx}px`,
     '--cm-disabled-opacity': String(t.layout.disabledOpacity),
   };
 }

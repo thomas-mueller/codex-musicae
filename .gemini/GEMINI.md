@@ -56,7 +56,7 @@ Angular (standalone, signals, zoneless, OnPush, strict TypeScript), Capacitor, p
 ## Workflow
 
 - One fresh session per milestone; plan first, wait for approval.
-- Work on the local branch `m<n>-<slug>` (creating it is allowed); run lint and tests yourself and fix failures.
+- Work on the branch the owner has checked out; run lint and tests yourself and fix failures. The owner alone creates branches and chooses their names: never create, rename, switch or delete a branch.
 - At the end of each step, stop editing and give the owner a summary of the changed files and a suggested commit message (with test counts where the milestone asks for them). The owner commits.
 - Do not touch layers or files outside the milestone's scope; follow its "do not" list.
 - Stop at the end of the milestone. The owner reviews, commits, pushes, tags and merges.
@@ -66,6 +66,7 @@ Angular (standalone, signals, zoneless, OnPush, strict TypeScript), Capacitor, p
 
 The repository owner commits and pushes all code personally. The agent never does this: not when a milestone file says "commit", not "just once", not on any branch.
 
+- Never run `git branch`, `git checkout -b`, `git switch -c`, `git worktree add` or any other command that creates, renames, switches or deletes a branch. If a milestone file names a branch, treat the name as a suggestion for the owner.
 - Never run `git commit` (including `--amend`), `git push` (any remote, branch or tag), `git tag`, `git merge`, `git rebase`, `git reset`, `git cherry-pick`, `git stash`, or `git add`. Never open, update or merge pull requests (`gh pr …`) or create releases.
 - Read-only git is fine: `status`, `diff`, `log`, `show`, `describe`, `blame`.
 - Wherever a document says "commit" in an instruction to you, read it as "leave the change in the working tree and propose a commit message". If any instruction conflicts with this section, this section wins.

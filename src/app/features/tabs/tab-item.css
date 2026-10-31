@@ -1,0 +1,60 @@
+:host {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1 1 0;
+  min-width: var(--cm-tab-min-width);
+  max-width: var(--cm-tab-max-width);
+  min-height: var(--cm-touch-target);
+  box-sizing: border-box;
+  border-radius: var(--cm-tab-radius) var(--cm-tab-radius) 0 0;
+  color: var(--cm-icon);
+  container-type: inline-size;
+}
+
+/* Thin separator between neighbouring inactive tabs. */
+:host(:not(.active)):not(:last-child)::after {
+  content: '';
+  position: absolute;
+  inset-block: 25%;
+  inset-inline-end: 0;
+  border-inline-end: 1px solid currentColor;
+  opacity: var(--cm-disabled-opacity);
+}
+
+:host(.active) {
+  background: var(--cm-accent);
+  color: var(--cm-on-accent);
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--cm-touch-target);
+  padding: 0 var(--cm-tab-gap);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.marker {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+
+button[appIconButton] {
+  flex: none;
+}
+
+/* Narrow tabs: only the active (or hovered/focused) tab keeps its close icon, like browser tabs. */
+@container (max-width: 96px) {
+  :host(:not(.active):not(:hover):not(:focus-within)) button[appIconButton] {
+    display: none;
+  }
+}

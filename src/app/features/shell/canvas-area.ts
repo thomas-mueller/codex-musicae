@@ -1,9 +1,12 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 
-/** Middle row: canvas grey, placeholder for later content. GEN-008 */
+import { PagePreview } from './page-preview';
+
+/** Middle row: canvas grey with the page preview (until the organization viewer, M9). GEN-008 */
 @Component({
   selector: 'app-canvas-area',
-  template: '<div class="content"></div>',
+  imports: [PagePreview],
+  template: '<div class="content"><app-page-preview /></div>',
   styles: `
     :host { display: block; min-height: 0; min-width: 0; background: var(--cm-canvas-grey); }
     .content { width: 100%; height: 100%; }

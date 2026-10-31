@@ -17,6 +17,25 @@
       @case (ids.slider) {
         <input type="range" class="slider" [disabled]="noDocument()" [attr.aria-label]="'a11y.slideSlider' | transloco" />
       }
+      @case (ids.recent) {
+        <div class="list" role="list" [attr.aria-label]="'a11y.recentFiles' | transloco">
+          @for (ref of preferences.recentFiles(); track ref.id) {
+            <button type="button" class="row" role="listitem" (click)="reopen(ref)">
+              <span [textContent]="ref.name"></span>
+              @if (session.repickIds().has(ref.id)) {
+                <app-icon name="error" />
+              }
+            </button>
+          }
+        </div>
+      }
+      @case (ids.tabs) {
+        <div class="list" [attr.aria-label]="'a11y.tabList' | transloco">
+          @for (tab of session.tabs(); track tab.id) {
+            <app-tab-item [tab]="tab" [active]="tab.id === session.activeTabId()" />
+          }
+        </div>
+      }
       @case (ids.org) {
         @for (entry of levels; track entry.level) {
           <button

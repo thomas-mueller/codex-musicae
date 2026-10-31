@@ -19,7 +19,20 @@ import { APP_VERSION } from './ports/app-version';
 import { provideAppIdentity } from './adapters/web/app-identity';
 import { AppTranslocoLoader } from './adapters/web/transloco-loader';
 import { PwaUpdatePolicy } from './adapters/web/pwa-update-policy';
+import { PdfJsRenderer } from './adapters/pdfjs/pdfjs-renderer';
+import { installDebugHook } from './adapters/web/debug-hook';
+import type { DebugHost } from './adapters/web/debug-hook';
+import { BitmapCache } from './state/bitmap-cache';
+import { WebDeviceInfo } from './adapters/web/web-device-info';
+import { WebFileAccess } from './adapters/web/web-file-access';
+import { WebPreferences } from './adapters/web/web-preferences';
+import { DEVICE_INFO } from './ports/device-info';
+import { FILE_ACCESS } from './ports/file-access';
+import { PDF_RENDERER } from './ports/pdf-renderer';
+import { PREFERENCES } from './ports/preferences';
 import { routes } from './app.routes';
+
+declare const ngDevMode: boolean | object | undefined;
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -35,6 +48,13 @@ export const appConfig: ApplicationConfig = {
     provideEnvironmentInitializer(() => {
       void inject(PwaUpdatePolicy).checkAtStartup();
     }),
+    // Development builds only (ngDevMode): the production bundle carries no debug hook.
+    provideEnvironmentInitializer(() => {
+      // `ngDevMode` is replaced by `false` in production builds, so this branch and the hook module are removed.
+      if (typeof ngDevMode !== 'undefined' && ngDevMode) {
+        installDebugHook(window as DebugHost, inject(BitmapCache));
+      }
+    }),
     ...provideTransloco({
       config: {
         availableLangs: ['en'],
@@ -45,6 +65,10 @@ export const appConfig: ApplicationConfig = {
       loader: AppTranslocoLoader,
     }),
     provideAppIdentity(),
+    { provide: PDF_RENDERER, useFactory: () => new PdfJsRenderer() },
+    { provide: PREFERENCES, useFactory: () => new WebPreferences() },
+    { provide: DEVICE_INFO, useFactory: () => new WebDeviceInfo() },
+    { provide: FILE_ACCESS, useFactory: () => new WebFileAccess() },
     provideRouter(routes),
   ]
 };

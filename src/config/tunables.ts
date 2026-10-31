@@ -52,6 +52,10 @@ export const TUNABLES = {
     popupRadiusPx: 12, // UIX-013
     fabInsetPx: 16, // UIX-004: distance of the tool button from the canvas edge
     minTouchTargetPx: 44, // UIX-007
+    tabGapPx: 8, // FIL-003: padding inside a tab
+    tabMaxWidthPx: 200, // FIL-004: a tab never grows beyond this; tabs share the free width equally and shrink together
+    tabMinWidthPx: 44, // FIL-004: tabs shrink to this, then the tab bar shows the overflow button
+    tabRadiusPx: 8, // FIL-004: rounded top corners
     compactMaxWidthPx: 600, // UIX-003: compact if width < this ...
     compactMaxHeightPx: 480, // ... or height < this
     toolStripSide: 'left' as 'left' | 'right', // UIX-005
@@ -103,6 +107,9 @@ export const TUNABLES = {
     fullscreen: 'fullscreen',
     fullscreenExit: 'fullscreen_exit',
     fingerDrawing: 'touch_app', // STY-003
+    unsaved: 'circle', // FIL-003: unsaved dot
+    needsReopen: 'sync_problem', // FIL-003: access lost, file must be opened again
+    recentFiles: 'history', // FIL-008
   },
 
   gestures: {
@@ -208,6 +215,24 @@ export const TUNABLES = {
     governorEscalateCooldownMs: 2000, // NFR-010: minimum time between two escalation steps
     governorRecoverMs: 60000, // NFR-010: quiet time after which the governor steps back one level
     governorLowResFactor: 0.75, // NFR-010: render scale factor at level 2 and above
+    governorMaxLevel: 3, // NFR-010: 0 = normal … 3 = inactive tabs' bitmaps freed
+    schedulerMaxPerClass: 1, // NFR-003: running tasks per priority class
+  },
+
+  files: {
+    handleDbName: 'cm-files', // FIL-015: IndexedDB database for web file handles
+    handleStoreName: 'handles', // FIL-015
+    handleDbVersion: 1, // FIL-015
+    pdfMimeType: 'application/pdf', // FIL-001
+    pdfExtension: '.pdf', // FIL-001
+  },
+
+  pdf: {
+    workerSrc: 'assets/pdfjs/pdf.worker.min.mjs', // GEN-005: pdf.js worker from our own origin, no CDN
+    cMapUrl: 'assets/pdfjs/cmaps/', // GEN-005
+    standardFontDataUrl: 'assets/pdfjs/standard_fonts/', // GEN-005
+    wasmUrl: 'assets/pdfjs/wasm/', // GEN-005
+    iccUrl: 'assets/pdfjs/iccs/', // GEN-005
   },
 
   rendering: {
