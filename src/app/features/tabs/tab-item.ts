@@ -44,7 +44,14 @@ export function markersOf(tab: Tab): TabMarker[] {
   selector: 'app-tab-item',
   imports: [Icon, IconButton, TooltipDirective, TranslocoPipe],
   template: `
-    <button type="button" class="name" role="tab" [attr.aria-selected]="active()" (click)="session.setActive(tab().id)">
+    <button
+      type="button"
+      class="name"
+      role="tab"
+      [attr.aria-selected]="active()"
+      [attr.title]="tab().name"
+      (click)="session.setActive(tab().id)"
+    >
       <span [textContent]="tab().name"></span>
     </button>
     @for (marker of markers(); track marker.labelKey) {

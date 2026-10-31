@@ -117,6 +117,54 @@ test.describe('expanded', () => {
   });
 });
 
+test.describe('expanded tab layout', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  const copies = (count: number) => Array.from({ length: count }, (_, i) => named(`score-${i}.pdf`));
+  const widths = (page: Page) =>
+    page.locator('app-tab-bar app-tab-item').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().width));
+  const MAX_WIDTH = 200;
+  const MIN_WIDTH = 44;
+
+  test('FIL-004 a few tabs stay at most the maximum width and have no scrollbar', async ({ page }) => {
+    await openFiles(page, copies(2));
+    await expect(page.locator('app-tab-bar app-tab-item')).toHaveCount(2);
+    for (const width of await widths(page)) {
+      expect(width).toBeLessThanOrEqual(MAX_WIDTH + 1);
+    }
+    expect(await page.locator('app-tab-bar .tabs').evaluate((el) => getComputedStyle(el).overflowX)).toBe('hidden');
+  });
+
+  test('FIL-004 more tabs shrink together without overflow', async ({ page }) => {
+    await openFiles(page, copies(12));
+    await expect(page.locator('app-tab-bar app-tab-item')).toHaveCount(12);
+    const sizes = await widths(page);
+    for (const width of sizes) {
+      expect(width).toBeGreaterThanOrEqual(MIN_WIDTH - 1);
+      expect(width).toBeLessThan(MAX_WIDTH);
+      expect(Math.abs(width - (sizes[0] ?? 0))).toBeLessThan(2);
+    }
+    const fits = await page.locator('app-tab-bar .tabs').evaluate((el) => el.scrollWidth <= el.clientWidth);
+    expect(fits).toBe(true);
+    await expect(page.locator('app-tab-bar button[data-popup-trigger]')).toHaveCount(0);
+  });
+
+  test('FIL-004 with too many tabs the all-tabs button lists every tab and disappears again when they fit', async ({ page }) => {
+    await openFiles(page, copies(30));
+    await expect(page.locator('app-tab-bar app-tab-item')).toHaveCount(30);
+    const toggle = page.locator('app-tab-bar button[data-popup-trigger]');
+    await expect(toggle).toBeVisible();
+    await toggle.click();
+    await expect(page.locator('[data-popup] app-tab-item .name')).toHaveCount(30);
+    await page.keyboard.press('Escape');
+    for (let i = 0; i < 27; i++) {
+      await page.locator('app-tab-bar app-tab-item').last().getByRole('button', { name: label('closeTab') }).click();
+    }
+    await expect(page.locator('app-tab-bar app-tab-item')).toHaveCount(3);
+    await expect(toggle).toHaveCount(0);
+  });
+});
+
 test.describe('compact', () => {
   test.use({ viewport: { width: 360, height: 800 } });
 

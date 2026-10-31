@@ -4,7 +4,7 @@ import { createServer } from 'node:http';
 import { extname, join, normalize, resolve } from 'node:path';
 
 const root = resolve(process.argv[2] ?? 'dist/codex-musicae');
-const port = Number(process.env.PORT ?? '4173');
+const port = Number(process.argv[3] ?? process.env.PORT ?? '4173');
 const contentTypes = {
   '.css': 'text/css; charset=utf-8',
   '.html': 'text/html; charset=utf-8',

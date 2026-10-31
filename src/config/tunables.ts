@@ -53,6 +53,9 @@ export const TUNABLES = {
     fabInsetPx: 16, // UIX-004: distance of the tool button from the canvas edge
     minTouchTargetPx: 44, // UIX-007
     tabGapPx: 8, // FIL-003: padding inside a tab
+    tabMaxWidthPx: 200, // FIL-004: a tab never grows beyond this; tabs share the free width equally and shrink together
+    tabMinWidthPx: 44, // FIL-004: tabs shrink to this, then the tab bar shows the overflow button
+    tabRadiusPx: 8, // FIL-004: rounded top corners
     compactMaxWidthPx: 600, // UIX-003: compact if width < this ...
     compactMaxHeightPx: 480, // ... or height < this
     toolStripSide: 'left' as 'left' | 'right', // UIX-005

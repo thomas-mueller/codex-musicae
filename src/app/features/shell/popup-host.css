@@ -54,7 +54,16 @@
   flex-direction: column;
   align-items: stretch;
   max-width: 100%;
+  max-height: calc(100% - var(--cm-bar-height) * 2);
   overflow-y: auto;
+}
+
+/* Tab rows in the list fill the width instead of sharing it. */
+.list app-tab-item {
+  flex: none;
+  width: 100%;
+  max-width: none;
+  border-radius: 0;
 }
 
 .row {

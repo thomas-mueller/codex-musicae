@@ -78,8 +78,34 @@ describe('tabs', () => {
     const switcher = TestBed.createComponent(TabSwitcher);
     await bar.whenStable();
     await switcher.whenStable();
-    expect(bar.nativeElement.children).toHaveLength(0);
+    expect(bar.nativeElement.querySelectorAll('app-tab-item')).toHaveLength(0);
+    expect(bar.nativeElement.querySelector('button')).toBeNull();
     expect(switcher.nativeElement.querySelector('button')).toBeNull();
+  });
+
+  it('FIL-004 a tab carries its full file name as hover text', async () => {
+    await openTabs(file('a-very-long-score-name.pdf'));
+    const fixture = TestBed.createComponent(TabBar);
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('.name').getAttribute('title')).toBe('a-very-long-score-name.pdf');
+  });
+
+  it('FIL-004 the all-tabs button appears only while the tabs do not fit and opens the tab list', async () => {
+    await openTabs(file('a.pdf'), file('b.pdf'));
+    const widths = { scroll: 100, client: 400 };
+    vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockImplementation(() => widths.scroll);
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(() => widths.client);
+    const fixture = TestBed.createComponent(TabBar);
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('button[data-popup-trigger]')).toBeNull();
+    widths.scroll = 600;
+    await TestBed.inject(SessionStore).openFiles([file('c.pdf')]);
+    await fixture.whenStable();
+    const button: HTMLElement | null = fixture.nativeElement.querySelector('button[data-popup-trigger]');
+    expect(button).not.toBeNull();
+    button?.click();
+    expect(TestBed.inject(UiStore).popup()?.id).toBe('tabs');
+    vi.restoreAllMocks();
   });
 
   it('FIL-004 the tab switcher shows the current name and toggles the tab list popup', async () => {

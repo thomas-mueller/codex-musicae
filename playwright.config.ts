@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const E2E_BASE_URL = 'http://127.0.0.1:4173';
+export const E2E_DEV_BASE_URL = 'http://127.0.0.1:4174';
 
 type DeviceProject = {
   name: string;
@@ -40,9 +41,18 @@ export default defineConfig({
     { name: 'webkit', use: { ...devices['Desktop Safari'], browserName: 'webkit' } },
     ...deviceProjects,
   ],
-  webServer: {
-    command: 'npm run build && node scripts/serve-static.mjs dist/codexmusicae/browser',
-    url: E2E_BASE_URL,
-    reuseExistingServer: !process.env.CI,
-  },
+  webServer: [
+    {
+      command: 'npm run build && node scripts/serve-static.mjs dist/codexmusicae/browser',
+      url: E2E_BASE_URL,
+      reuseExistingServer: !process.env.CI,
+    },
+    {
+      // Development build (ngDevMode): the only one that carries the `window.__cm` debug hook, used by e2e/resource.spec.ts.
+      command:
+        'npm run build -- --configuration development --output-path dist/codexmusicae-dev && node scripts/serve-static.mjs dist/codexmusicae-dev/browser 4174',
+      url: E2E_DEV_BASE_URL,
+      reuseExistingServer: !process.env.CI,
+    },
+  ],
 });
