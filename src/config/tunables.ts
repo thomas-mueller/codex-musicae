@@ -208,6 +208,8 @@ export const TUNABLES = {
     governorEscalateCooldownMs: 2000, // NFR-010: minimum time between two escalation steps
     governorRecoverMs: 60000, // NFR-010: quiet time after which the governor steps back one level
     governorLowResFactor: 0.75, // NFR-010: render scale factor at level 2 and above
+    governorMaxLevel: 3, // NFR-010: 0 = normal … 3 = inactive tabs' bitmaps freed
+    schedulerMaxPerClass: 1, // NFR-003: running tasks per priority class
   },
 
   files: {

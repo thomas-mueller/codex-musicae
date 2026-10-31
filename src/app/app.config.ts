@@ -20,8 +20,10 @@ import { provideAppIdentity } from './adapters/web/app-identity';
 import { AppTranslocoLoader } from './adapters/web/transloco-loader';
 import { PwaUpdatePolicy } from './adapters/web/pwa-update-policy';
 import { PdfJsRenderer } from './adapters/pdfjs/pdfjs-renderer';
+import { WebDeviceInfo } from './adapters/web/web-device-info';
 import { WebFileAccess } from './adapters/web/web-file-access';
 import { WebPreferences } from './adapters/web/web-preferences';
+import { DEVICE_INFO } from './ports/device-info';
 import { FILE_ACCESS } from './ports/file-access';
 import { PDF_RENDERER } from './ports/pdf-renderer';
 import { PREFERENCES } from './ports/preferences';
@@ -53,6 +55,7 @@ export const appConfig: ApplicationConfig = {
     provideAppIdentity(),
     { provide: PDF_RENDERER, useFactory: () => new PdfJsRenderer() },
     { provide: PREFERENCES, useFactory: () => new WebPreferences() },
+    { provide: DEVICE_INFO, useFactory: () => new WebDeviceInfo() },
     { provide: FILE_ACCESS, useFactory: () => new WebFileAccess() },
     provideRouter(routes),
   ]

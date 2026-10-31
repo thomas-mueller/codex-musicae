@@ -8,3 +8,4 @@ export * from './slides';
 export * from './layout';
 export * from './lru-cache';
 export * from './scheduler';
+export * from './cache-budget';
