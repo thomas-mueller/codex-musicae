@@ -89,6 +89,11 @@ export const TUNABLES = {
     hintBarHeightPx: 32, // ORG-015: slim hint bar while picking a jump target
     stepperGapPx: 8, // ORG-016: gap between the pass stepper's buttons and number
     jumpChipButtons: 3, // ORG-020: pass, change target, delete (also the width of the pass stepper: three parts)
+    jumpListSwipeMinPx: 60, // ORG-021: horizontal distance of a swipe-left that deletes a list entry
+    listArrow: '→', // ORG-021: between the from and to labels in a jump-list entry
+    dotPx: 12, // ORG-021: diameter of the color dot of a jump-list entry
+    dialogRadiusPx: 12, // DET-014: confirmation dialog
+    dialogGapPx: 8, // DET-014: gap between the level icon and the buttons
     chipMaxButtons: 4, // ORG-014: jump, slide break, stop, delete (sizes the chip for its placement)
   },
 
@@ -132,6 +137,7 @@ export const TUNABLES = {
     overflow: 'more_vert',
     info: 'info',
     cancel: 'close',
+    confirm: 'check', // DET-014: confirmation dialog
     fullscreen: 'fullscreen',
     fullscreenExit: 'fullscreen_exit',
     fingerDrawing: 'touch_app', // STY-003

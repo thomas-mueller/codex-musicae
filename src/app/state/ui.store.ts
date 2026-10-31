@@ -33,6 +33,8 @@ export class UiStore {
   readonly popup = signal<Popup | null>(null);
   readonly selection = signal<Selection | null>(null);
   readonly pickingTarget = signal<PickingTarget | null>(null);
+  /** DET-014: the level the user chose and has not yet confirmed (the dialog is open while it is set). */
+  readonly pendingLevel = signal<DetectionLevel | null>(null);
   /** Set by the shell's resize observer; unmeasured (0x0) until its first callback. */
   /** Placeholder until the DocumentStore (M8): no document can be open yet. FIL-007 */
   readonly hasDocument = signal(false);
@@ -49,6 +51,7 @@ export class UiStore {
     this.mode.set(mode);
     this.selection.set(null);
     this.pickingTarget.set(null);
+    this.pendingLevel.set(null);
     if (mode !== 'annotation') {
       this.tool.set(null);
     }
@@ -64,6 +67,17 @@ export class UiStore {
       return;
     }
     this.tool.set(this.tool() === tool ? null : tool);
+  }
+
+  /** DET-014: asks for confirmation; nothing changes before it. */
+  requestLevel(level: DetectionLevel): void {
+    if (this.hasDocument()) {
+      this.pendingLevel.set(level);
+    }
+  }
+
+  cancelLevel(): void {
+    this.pendingLevel.set(null);
   }
 
   setLevel(level: DetectionLevel): void {

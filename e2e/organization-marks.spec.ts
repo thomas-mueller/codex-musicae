@@ -17,6 +17,7 @@ const FIRST_BAR_INDEX = 0; // junction 0, label 1·1
 const PAGE1_BOTTOM_BAR_INDEX = 4; // junction 4, label 1·5
 const LAST_BAR_INDEX = SYNTHETIC_BARS - 1; // junction 12
 const LONG_PRESS_MARGIN_MS = 200;
+const RERUN_TIMEOUT_MS = 60_000;
 const SCROLL_TIMEOUT_MS = 5000;
 const MIDDLE_BAR_INDEX = 1; // the second bar of page 1: junction 1
 const EMPTY_SPACE = { x: 5, y: 300 }; // the grey canvas left of the centered page
@@ -142,4 +143,46 @@ test('ORG-019 a long press on a badge scrolls to the other end of the jump', asy
   await page.waitForTimeout(TUNABLES.layout.longPressMs + LONG_PRESS_MARGIN_MS);
   await badge.dispatchEvent('pointerup');
   await expect.poll(() => viewer.evaluate((element) => element.scrollTop), { timeout: SCROLL_TIMEOUT_MS }).toBeGreaterThan(0);
+});
+
+/** Expanded layouts show the organization tools in a strip; compact ones behind the organization FAB. */
+async function openOrganizationTool(page: Page, key: string): Promise<void> {
+  const fab = page.getByLabel(label('orgFab'), { exact: true });
+  if (await fab.isVisible()) {
+    await fab.click();
+  }
+  await page.getByLabel(label(key), { exact: true }).click();
+}
+
+test('ORG-021 DET-014 DET-015 the jump list, then a confirmed level change keeps the marks and the bars', async ({ page }) => {
+  await openScoreInOrganization(page);
+  const bars = page.getByTestId('org-bar');
+  const chip = page.getByTestId('selection-chip');
+  for (const [from, to] of [[PAGE1_BOTTOM_BAR_INDEX, FIRST_BAR_INDEX], [MIDDLE_BAR_INDEX, MIDDLE_BAR_INDEX + 1]] as const) {
+    await bars.nth(from).click();
+    await chip.getByTestId('chip-jump').click();
+    await bars.nth(to).click();
+    await expect(page.getByTestId('stepper-value')).toHaveText('1');
+  }
+
+  await openOrganizationTool(page, 'jumpList');
+  const entries = page.getByTestId('jump-list-entry');
+  await expect(entries).toHaveCount(2);
+  await expect(entries.first().getByTestId('jump-list-from')).toHaveText(junctionLabelText(1, PAGE1_BOTTOM_BAR_INDEX + 1));
+  await expect(entries.first().getByTestId('jump-list-to')).toHaveText(junctionLabelText(1, 1));
+  await entries.nth(1).getByTestId('jump-list-delete').click();
+  await expect(entries).toHaveCount(1);
+  // The remaining jump 4 -> 0: junction 4 sits on a page change (two bars, both show the badge), junction 0 has one bar.
+  const BADGES_OF_REMAINING_JUMP = 3;
+  await expect(page.getByTestId('jump-badge')).toHaveCount(BADGES_OF_REMAINING_JUMP);
+
+  await openOrganizationTool(page, 'levelFine');
+  await expect(page.getByTestId('level-dialog')).toBeVisible();
+  await page.getByTestId('level-confirm').click();
+  await expect(page.getByTestId('level-dialog')).toHaveCount(0);
+  await expect(page.getByTestId('detection-progress')).toBeVisible(); // the re-run shows its progress
+  await expect(bars).toHaveCount(SYNTHETIC_BARS); // the old bars stay while it runs
+  await expect(page.getByTestId('detection-progress')).toHaveCount(0, { timeout: RERUN_TIMEOUT_MS });
+  await expect(bars).toHaveCount(SYNTHETIC_BARS);
+  await expect(page.getByTestId('jump-badge')).toHaveCount(BADGES_OF_REMAINING_JUMP); // 12 systems at both levels: the marks are kept
 });

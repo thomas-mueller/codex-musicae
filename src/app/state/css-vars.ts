@@ -44,6 +44,9 @@ export function tunablesToCssVars(t: Tunables): Readonly<Record<string, string>>
     '--cm-badge-font': `${t.layout.badgeFontPx}px`,
     '--cm-hint-bar-height': `${t.layout.hintBarHeightPx}px`,
     '--cm-stepper-gap': `${t.layout.stepperGapPx}px`,
+    '--cm-dot': `${t.layout.dotPx}px`,
+    '--cm-dialog-radius': `${t.layout.dialogRadiusPx}px`,
+    '--cm-dialog-gap': `${t.layout.dialogGapPx}px`,
     '--cm-disabled-opacity': String(t.layout.disabledOpacity),
   };
 }

@@ -228,4 +228,24 @@ describe('OrganizationViewer selection and marks', () => {
     vi.useRealTimers();
     expect(scroll).toHaveBeenCalledWith(doc.bars(), 0);
   });
+
+  it('ORG-021 deleting the selected jump closes the pass stepper but leaves other popups open', async () => {
+    const { doc, fixture } = await mount();
+    const ui = TestBed.inject(UiStore);
+    doc.addJump({ origin: 2, target: 0, pass: 1 });
+    ui.select({ kind: 'jump', id: 1 });
+    ui.openPopup('passStepper');
+    await fixture.whenStable();
+    doc.removeJump(1);
+    await fixture.whenStable();
+    expect(ui.popup()).toBeNull();
+    doc.addJump({ origin: 2, target: 0, pass: 1 });
+    ui.select({ kind: 'jump', id: 2 });
+    ui.openPopup('jumpList');
+    await fixture.whenStable();
+    doc.removeJump(2);
+    await fixture.whenStable();
+    expect(ui.selection()).toBeNull();
+    expect(ui.popup()?.id).toBe('jumpList');
+  });
 });

@@ -51,12 +51,15 @@
             appIconButton
             [icon]="entry.icon"
             [labelKey]="entry.icon"
-            [toggled]="store.level() === entry.level"
+            [toggled]="view.level() === entry.level"
             [disabled]="noDocument()"
-            (pressed)="store.setLevel(entry.level)"
+            (pressed)="store.requestLevel(entry.level)"
           ></button>
         }
-        <button appIconButton icon="jumpList" labelKey="jumpList" [disabled]="noDocument()"></button>
+        <button appIconButton icon="jumpList" labelKey="jumpList" [disabled]="noDocument()" (pressed)="store.openPopup(ids.jumpList)"></button>
+      }
+      @case (ids.jumpList) {
+        <app-jump-list />
       }
     }
   </div>

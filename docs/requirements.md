@@ -99,8 +99,8 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **DET-011** [v1·done·M5] A system's padded area is its box expanded by the padding on all four sides, clamped to the page bounds.
 - **DET-012** [v1·todo·M10] Pages without systems take no part in junctions, slides or the playing order; organization mode shows them as plain PDF pages.
 - **DET-013** [v1·todo·M10] Three levels `fast`, `standard`, `fine` each define `minSystemWidthRatio`, `fullWidthSystemRatio` and `renderScale` (`T:detection.levels`); the default is `T:detection.defaultLevel`.
-- **DET-014** [v1·todo·M11] Organization mode offers a level selector (three icon steps); choosing a level asks for confirmation and then re-runs detection.
-- **DET-015** [v1·todo·M11] During a re-run the previous results stay active; at completion they are swapped in, and jumps, breaks and stops are kept only if the total system count is unchanged, else cleared.
+- **DET-014** [v1·done·M11] Organization mode offers a level selector (three icon steps); choosing a level asks for confirmation and then re-runs detection.
+- **DET-015** [v1·done·M11] During a re-run the previous results stay active; at completion they are swapped in, and jumps, breaks and stops are kept only if the total system count is unchanged, else cleared.
 - **DET-016** [v1·todo·M10] Organization mode shows detection progress (processing icon, processed/total pages); slide modes show the slide count as "n+" until detection is complete.
 - **DET-017** [v1·done·M10] Detection pauses while the user interacts (resumes after `T:detection.idleBeforeResumeMs` without input), while the app is hidden, and under battery saver where detectable.
 - **DET-018** [v1·done·M10] If a page fails (error or out of memory), it is retried once at `renderScale` × `T:detection.retryScaleFactor`; if it fails again the page is marked not detected and processing continues.
@@ -149,7 +149,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **ORG-018** [v1·done·M11] Jump badges: at the origin an arrow, the target label (page number and bar number on that page, see `junctionLabel`) and the pass; at the target a matching badge showing the origin label; both in one color from `T:colors.jumpPalette`.
 - **ORG-019** [v1·done·M11] A long press (`T:layout.longPressMs`) on a badge scrolls to the other end of the jump.
 - **ORG-020** [v1·done·M11] Tapping a badge selects the jump; the chip then offers pass, change target and delete.
-- **ORG-021** [v1·todo·M11] A jump-list button opens a sheet (compact) or side panel (expanded) listing each jump with from label, to label (page·bar), pass and color; tapping an entry navigates to it; swipe or a trash icon deletes it.
+- **ORG-021** [v1·done·M11] A jump-list button opens a sheet (compact) or side panel (expanded) listing each jump with from label, to label (page·bar), pass and color; tapping an entry navigates to it; swipe or a trash icon deletes it.
 - **ORG-022** [v1·done·M11] The break icon toggles a slide break on the selected junction; a break shows as a solid line in `T:colors.breakLine` with a scissors icon at the left edge.
 - **ORG-023** [v1·done·M11] The stop icon toggles a stop on the selected junction; it shows the stop icon on the bar.
 - **ORG-024** [v1·done·M11] Deleting a jump, break or stop is immediate and has no undo.

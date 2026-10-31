@@ -55,11 +55,14 @@ export class DocumentStore {
         : [],
     );
   });
+  /** DET-015: a re-run in the background; the active run above stays displayed until it completes and is adopted. */
+  readonly candidate = signal<DetectionRun | null>(null);
+  /** DET-016: while a re-run is going on the progress shows the candidate's. */
   readonly detectionProgress = computed(() => {
-    const states = this.detection.states();
+    const states = (this.candidate() ?? this.detection).states();
     return { done: states.filter((s) => s === 'done' || s === 'failed').length, total: states.length };
   });
-  readonly detectionComplete = computed(() => isComplete(this.detection.states()));
+  readonly detectionComplete = computed(() => this.candidate() === null && isComplete(this.detection.states()));
 
   /** ORG-017: jumps, breaks and stops of this tab; in memory only (saving comes in M15). */
   private readonly marksSignal = signal<DocMarks>(EMPTY_MARKS);
@@ -137,6 +140,11 @@ export class DocumentStore {
 
   clearJunction(junction: number): void {
     this.apply(clearJunction(this.marks(), junction));
+  }
+
+  /** DET-015: marks after a re-run (kept or cleared by `reconcileAfterRedetection`); not an edit, so never "rejected". */
+  replaceMarks(marks: DocMarks): void {
+    this.marksSignal.set(marks);
   }
 
   clearRejected(): void {

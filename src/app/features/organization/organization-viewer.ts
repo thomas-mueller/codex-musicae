@@ -438,7 +438,9 @@ export class OrganizationViewer {
       if (selection?.kind === 'jump' && !exists) {
         untracked(() => {
           this.ui.deselect();
-          this.ui.closePopup();
+          if (this.ui.popup()?.id === POPUP_PASS_STEPPER) {
+            this.ui.closePopup(); // other popups (the jump list) stay open
+          }
         });
       }
     });

@@ -53,10 +53,18 @@
       appIconButton
       [icon]="entry.icon"
       [labelKey]="entry.icon"
-      [toggled]="store.level() === entry.level"
+      [toggled]="view.level() === entry.level"
       [disabled]="noDocument()"
-      (pressed)="store.setLevel(entry.level)"
+      (pressed)="store.requestLevel(entry.level)"
     ></button>
   }
-  <button appIconButton icon="jumpList" labelKey="jumpList" [disabled]="noDocument()"></button>
+  <button
+    appIconButton
+    data-popup-trigger
+    icon="jumpList"
+    labelKey="jumpList"
+    [toggled]="store.popup()?.id === jumpListId"
+    [disabled]="noDocument()"
+    (pressed)="store.togglePopup(jumpListId)"
+  ></button>
 }
