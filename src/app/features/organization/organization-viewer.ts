@@ -16,17 +16,22 @@ import {
 import { TranslocoPipe } from '@jsverse/transloco';
 
 import { TUNABLES } from '../../../config/tunables';
-import type { Bar, Rect } from '../../core';
+import { isValidMarkJunction, junctionHasItems } from '../../core';
+import type { Bar, Point, Rect } from '../../core';
 import { DEVICE_INFO } from '../../ports/device-info';
 import { CLOCK } from '../../state/clock';
 import type { DocumentStore } from '../../state/document.store';
 import { DetectionService } from '../../state/detection.service';
 import type { ProvisionalBar } from '../../state/detection-run';
 import { OrgViewStore } from '../../state/org-view.store';
+import { UiStore } from '../../state/ui.store';
 import { ResourceGovernor } from '../../state/resource-governor';
 import { Scheduler } from '../../state/scheduler';
 import { Icon } from '../shell/icon';
 import { BarsLayer } from './bars-layer';
+import { barRows } from './bar-rows';
+import { chipPlacement } from './chip-placement';
+import { SelectionChip } from './selection-chip';
 import { PageTiles } from './page-tiles';
 
 interface TileJob {
@@ -55,9 +60,10 @@ function groupByPage<T extends { readonly pageIndex: number }>(items: readonly T
  */
 @Component({
   selector: 'app-organization-viewer',
-  imports: [PageTiles, BarsLayer, Icon, TranslocoPipe],
+  imports: [PageTiles, BarsLayer, SelectionChip, Icon, TranslocoPipe],
+  host: { '(document:keydown)': 'onKeydown($event)' },
   template: `
-    <div #scroller class="scroller" data-testid="org-viewer" (scroll)="onScroll()">
+    <div #scroller class="scroller" data-testid="org-viewer" (scroll)="onScroll()" (click)="onBackgroundClick($event)">
       <div class="sizer" data-testid="org-sizer" [style.width.px]="sizerWidth()" [style.height.px]="sizerHeight()">
         @for (page of layout(); track $index) {
           <div
@@ -84,13 +90,29 @@ function groupByPage<T extends { readonly pageIndex: number }>(items: readonly T
         }
         @for (page of layout(); track $index) {
           <div class="overlay" [style.top.px]="page.top + offsetY()" [style.left.px]="pageLeft($index)" [style.width.px]="page.width" [style.height.px]="page.height">
-            <app-bars-layer [bars]="barsOf($index)" [provisionalBars]="provisionalBarsOf($index)" [scale]="scale()" />
+            <app-bars-layer [bars]="barsOf($index)" [provisionalBars]="provisionalBarsOf($index)" [scale]="scale()" [rows]="rows()" [selectedJunction]="selectedJunction()" (barTap)="selectJunction($event)" />
             @if (isProcessing($index)) {
               <span class="badge" role="img" [attr.data-testid]="'org-processing-' + $index" [attr.aria-label]="'a11y.processing' | transloco">
                 <app-icon name="processing" />
               </span>
             }
           </div>
+        }
+        @let chip = chipState();
+        @if (chip) {
+          <app-selection-chip
+            class="chip"
+            [style.left.px]="chip.position.x"
+            [style.top.px]="chip.position.y"
+            [markable]="chip.markable"
+            [hasBreak]="chip.hasBreak"
+            [hasStop]="chip.hasStop"
+            [hasItems]="chip.hasItems"
+            (toggleBreak)="document().toggleBreak(chip.junction)"
+            (toggleStop)="document().toggleStop(chip.junction)"
+            (clear)="document().clearJunction(chip.junction)"
+            (jump)="onJump()"
+          />
         }
       </div>
     </div>
@@ -103,6 +125,7 @@ function groupByPage<T extends { readonly pageIndex: number }>(items: readonly T
     .tiles { position: absolute; }
     /* Above the tile canvases: bars and the processing badge of a page (ORG-008, DET-016). */
     .overlay { position: absolute; pointer-events: none; }
+    .chip { position: absolute; z-index: 2; }
     .badge { position: absolute; top: var(--cm-page-badge-inset); right: var(--cm-page-badge-inset); color: var(--cm-icon); display: inline-flex; }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -186,9 +209,72 @@ export class OrganizationViewer {
     return jobs.sort((a, b) => a.index - b.index);
   });
 
+  private readonly ui = inject(UiStore);
   private readonly detection = inject(DetectionService);
+  protected readonly rows = computed(() => {
+    const doc = this.document();
+    return barRows(doc.numbers(), doc.marks(), doc.junctionCount());
+  });
+  /** ORG-013: the selected junction while it still exists. */
+  protected readonly selectedJunction = computed(() => {
+    const selection = this.ui.selection();
+    return selection?.kind === 'junction' && selection.junction <= this.document().junctionCount() ? selection.junction : null;
+  });
+  /** ORG-014: chip content and its place next to the first bar of the selected junction. */
+  protected readonly chipState = computed(() => {
+    const junction = this.selectedJunction();
+    const doc = this.document();
+    const bar = junction === null ? undefined : doc.bars().find((b) => b.junction === junction);
+    const page = bar === undefined ? undefined : this.layout()[bar.pageIndex];
+    if (junction === null || bar === undefined || page === undefined) {
+      return null;
+    }
+    const marks = doc.marks();
+    const hasItems = junctionHasItems(marks, junction);
+    const { minTouchTargetPx, chipPaddingPx, chipGapPx } = TUNABLES.layout;
+    const buttons = hasItems ? TUNABLES.layout.chipMaxButtons : TUNABLES.layout.chipMaxButtons - 1;
+    const size = { width: buttons * minTouchTargetPx + 2 * chipPaddingPx, height: minTouchTargetPx + 2 * chipPaddingPx };
+    const scroll = doc.orgScroll();
+    const viewport = this.view.viewport();
+    const barRect: Rect = {
+      x: this.pageLeft(bar.pageIndex),
+      y: page.top + this.offsetY() + bar.y * this.scale(),
+      width: page.width,
+      height: Math.max(bar.height * this.scale(), TUNABLES.colors.orgBar.minHeightPx),
+    };
+    const position: Point = chipPlacement(barRect, size, { x: scroll.x, y: scroll.y, ...viewport }, chipGapPx);
+    return {
+      junction,
+      position,
+      hasItems,
+      hasBreak: marks.breaks.includes(junction),
+      hasStop: marks.stops.includes(junction),
+      markable: isValidMarkJunction(junction, doc.junctionCount()),
+    };
+  });
   private readonly barsByPage = computed(() => groupByPage<Bar>(this.document().bars()));
   private readonly provisionalByPage = computed(() => groupByPage<ProvisionalBar>(this.document().provisionalBars()));
+
+  protected selectJunction(junction: number): void {
+    this.ui.select({ kind: 'junction', junction });
+  }
+
+  /** ORG-013: tapping empty space (outside bars and the chip) deselects. */
+  protected onBackgroundClick(event: MouseEvent): void {
+    if (!(event.target instanceof Element) || event.target.closest('[data-bar],[data-chip]') === null) {
+      this.ui.deselect();
+    }
+  }
+
+  // TODO(M13): Escape and back arrive as semantic commands from input/; local until then.
+  protected onKeydown(event: KeyboardEvent): void {
+    if ((TUNABLES.keymap.back as readonly string[]).includes(event.code) && this.ui.selection() !== null) {
+      this.ui.deselect();
+    }
+  }
+
+  // TODO(M11-S3): starts jump-target picking.
+  protected onJump(): void {}
 
   protected barsOf(pageIndex: number): readonly Bar[] {
     return this.barsByPage().get(pageIndex) ?? NO_BARS;
@@ -210,6 +296,11 @@ export class OrganizationViewer {
 
   constructor() {
     this.destroyRef.onDestroy(() => this.cancelSettle?.());
+    // The selection belongs to one tab's bars.
+    effect(() => {
+      const tabId = this.document().tabId;
+      untracked(() => (tabId ? this.ui.deselect() : undefined));
+    });
     effect(() => {
       const scale = this.scale();
       const tabId = this.document().tabId;

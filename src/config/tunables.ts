@@ -71,6 +71,16 @@ export const TUNABLES = {
     progressLineHeightPx: 3, // UIX-020
     minSupportedWidthPx: 320, // UIX-016
     maxSupportedWidthPx: 2560, // UIX-016
+    numberSeparator: ', ', // ORG-012: between the numbers of a system in a bar row
+    barRowFontPx: 11, // ORG-011: monospaced digits in the bar row
+    barRowIconPx: 16, // ORG-011: break and stop icons in the bar row
+    barRowInsetPx: 4, // ORG-011: left inset and gap between the items of a bar row
+    breakLinePx: 2, // ORG-022: thickness of the slide-break line
+    barHitSlopPx: 8, // ORG-013: extra tap area above and below a bar (thin bars stay tappable)
+    chipGapPx: 8, // ORG-014: distance between the selection chip and its bar
+    chipPaddingPx: 4, // ORG-014: padding inside the selection chip
+    chipRadiusPx: 24, // ORG-014
+    chipMaxButtons: 4, // ORG-014: jump, slide break, stop, delete (sizes the chip for its placement)
   },
 
   /** Material Symbols (Outlined) names. The agent verifies each exists in the bundled set. UIX-010 */

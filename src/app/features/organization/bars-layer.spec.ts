@@ -4,10 +4,16 @@ import { TUNABLES } from '../../../config/tunables';
 import type { Bar } from '../../core';
 import type { ProvisionalBar } from '../../state/detection-run';
 import { BarsLayer } from './bars-layer';
+import type { BarRowData } from './bar-rows';
 
 const SCALE = 0.5;
 
-function mount(inputs: { bars?: Bar[]; provisionalBars?: ProvisionalBar[]; selectedJunction?: number | null }) {
+function mount(inputs: {
+  bars?: Bar[];
+  provisionalBars?: ProvisionalBar[];
+  selectedJunction?: number | null;
+  rows?: Map<number, BarRowData>;
+}) {
   const fixture = TestBed.createComponent(BarsLayer);
   fixture.componentRef.setInput('scale', SCALE);
   for (const [name, value] of Object.entries(inputs)) {
@@ -64,5 +70,54 @@ describe('BarsLayer', () => {
     expect(bar!.childElementCount).toBe(0);
     expect(bar!.textContent).toBe('');
     expect(bars(fixture)).toHaveLength(0);
+  });
+
+  it('ORG-013 tapping a bar emits its junction; provisional bars emit nothing', async () => {
+    const fixture = mount({
+      bars: [{ junction: 3, pageIndex: 0, y: 0, height: 20 }],
+      provisionalBars: [{ junction: -1, pageIndex: 1, y: 0, height: 20, provisional: true }],
+    });
+    const taps: number[] = [];
+    fixture.componentInstance.barTap.subscribe((j) => taps.push(j));
+    await fixture.whenStable();
+    bars(fixture)[0]!.click();
+    bars(fixture, 'org-bar-provisional')[0]!.click();
+    expect(taps).toEqual([3]);
+  });
+
+  it('ORG-011 ORG-012 a bar row shows the numbers; both bars of a page change show the same text', async () => {
+    const fixture = mount({
+      bars: [
+        { junction: 4, pageIndex: 0, y: 700, height: 100 },
+        { junction: 4, pageIndex: 1, y: 0, height: 50 },
+      ],
+      rows: new Map([[4, { numbersText: '4, 8', hasBreak: false, hasStop: false }]]),
+    });
+    await fixture.whenStable();
+    const texts = Array.from(fixture.nativeElement.querySelectorAll('[data-testid="org-bar-numbers"]')).map((e) => (e as HTMLElement).textContent);
+    expect(texts).toEqual(['4, 8', '4, 8']);
+  });
+
+  it('ORG-022 a break draws the line and the scissors icon; ORG-023 a stop draws the stop icon', async () => {
+    const fixture = mount({
+      bars: [
+        { junction: 2, pageIndex: 0, y: 0, height: 20 },
+        { junction: 3, pageIndex: 0, y: 50, height: 20 },
+        { junction: 4, pageIndex: 0, y: 100, height: 20 },
+      ],
+      rows: new Map([
+        [2, { numbersText: '', hasBreak: true, hasStop: false }],
+        [3, { numbersText: '', hasBreak: false, hasStop: true }],
+        [4, { numbersText: '', hasBreak: false, hasStop: false }],
+      ]),
+    });
+    await fixture.whenStable();
+    const [withBreak, withStop, plain] = bars(fixture);
+    expect(withBreak!.querySelector('[data-testid="org-bar-break-line"]')).not.toBeNull();
+    expect(withBreak!.querySelector('[data-testid="org-bar-break-icon"]')).not.toBeNull();
+    expect(withBreak!.querySelector('[data-testid="org-bar-stop-icon"]')).toBeNull();
+    expect(withStop!.querySelector('[data-testid="org-bar-stop-icon"]')).not.toBeNull();
+    expect(withStop!.querySelector('[data-testid="org-bar-break-line"]')).toBeNull();
+    expect(plain!.querySelector('[data-testid="org-bar-row"]')).toBeNull();
   });
 });

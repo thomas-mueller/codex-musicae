@@ -30,6 +30,14 @@ export function tunablesToCssVars(t: Tunables): Readonly<Record<string, string>>
     '--cm-org-bar-provisional-opacity': String(t.colors.orgBar.provisionalOpacity),
     '--cm-progress-gap': `${t.layout.progressGapPx}px`,
     '--cm-page-badge-inset': `${t.layout.pageBadgeInsetPx}px`,
+    '--cm-break-line': t.colors.breakLine,
+    '--cm-break-line-px': `${t.layout.breakLinePx}px`,
+    '--cm-bar-row-font': `${t.layout.barRowFontPx}px`,
+    '--cm-bar-row-icon': `${t.layout.barRowIconPx}px`,
+    '--cm-bar-row-inset': `${t.layout.barRowInsetPx}px`,
+    '--cm-bar-hit-slop': `${t.layout.barHitSlopPx}px`,
+    '--cm-chip-padding': `${t.layout.chipPaddingPx}px`,
+    '--cm-chip-radius': `${t.layout.chipRadiusPx}px`,
     '--cm-disabled-opacity': String(t.layout.disabledOpacity),
   };
 }
