@@ -1,7 +1,11 @@
 import { computed, signal } from '@angular/core';
 
-import { computeBars, flattenSystems, isComplete, isProvisional, junctionCount, usablePrefix } from '../core';
-import type { DetectedPage, Point } from '../core';
+import { TUNABLES } from '../../config/tunables';
+import {
+  EMPTY_MARKS, addJump, clearJunction, computeBars, flattenSystems, forcedBreaks, generatePlayingOrder, isComplete,
+  isProvisional, junctionCount, removeJump, systemNumbers, toggleBreak, toggleStop, updateJump, usablePrefix,
+} from '../core';
+import type { DetectedPage, DocMarks, Jump, Point } from '../core';
 import type { PdfDocumentHandle, PdfOpenError, PdfPageInfo, PdfRenderer } from '../ports/pdf-renderer';
 import { DetectionRun } from './detection-run';
 import type { ProvisionalBar } from './detection-run';
@@ -57,6 +61,25 @@ export class DocumentStore {
   });
   readonly detectionComplete = computed(() => isComplete(this.detection.states()));
 
+  /** ORG-017: jumps, breaks and stops of this tab; in memory only (saving comes in M15). */
+  private readonly marksSignal = signal<DocMarks>(EMPTY_MARKS);
+  readonly marks = this.marksSignal.asReadonly();
+  /** Transient: set to a fresh object on every rejected edit so the UI can flash an error icon; no text. */
+  private readonly lastRejectedSignal = signal<{ readonly seq: number } | null>(null);
+  readonly lastRejected = this.lastRejectedSignal.asReadonly();
+  private rejectedSeq = 0;
+
+  readonly playingOrder = computed(() =>
+    generatePlayingOrder({
+      systemCount: this.junctionCount(),
+      jumps: this.marks().jumps,
+      stops: this.marks().stops,
+      maxLength: TUNABLES.playingOrder.maxLength,
+    }),
+  );
+  readonly numbers = computed(() => systemNumbers(this.playingOrder(), this.junctionCount()));
+  readonly forcedBreakAfter = computed(() => forcedBreaks(this.playingOrder(), new Set(this.marks().breaks)));
+
   readonly handle = this.handleSignal.asReadonly();
   readonly pageInfos = this.pageInfosSignal.asReadonly();
   readonly status = this.statusSignal.asReadonly();
@@ -90,10 +113,50 @@ export class DocumentStore {
     this.statusSignal.set('ready');
   }
 
+  /** Returns the id of the new jump, or null if it was rejected. */
+  addJump(jump: Jump): number | null {
+    const before = this.marks().nextJumpId;
+    return this.apply(addJump(this.marks(), jump, this.junctionCount())) ? before : null;
+  }
+
+  removeJump(id: number): void {
+    this.apply(removeJump(this.marks(), id));
+  }
+
+  updateJump(id: number, patch: Partial<Jump>): void {
+    this.apply(updateJump(this.marks(), id, patch, this.junctionCount()));
+  }
+
+  toggleBreak(junction: number): void {
+    this.apply(toggleBreak(this.marks(), junction, this.junctionCount()));
+  }
+
+  toggleStop(junction: number): void {
+    this.apply(toggleStop(this.marks(), junction, this.junctionCount()));
+  }
+
+  clearJunction(junction: number): void {
+    this.apply(clearJunction(this.marks(), junction));
+  }
+
+  clearRejected(): void {
+    this.lastRejectedSignal.set(null);
+  }
+
   async dispose(): Promise<void> {
     const handle = this.handleSignal();
     this.handleSignal.set(null);
     await handle?.destroy();
+  }
+
+  /** A null result (invalid edit) leaves the marks unchanged and flags the rejection. */
+  private apply(next: DocMarks | null): boolean {
+    if (next === null) {
+      this.lastRejectedSignal.set({ seq: ++this.rejectedSeq });
+      return false;
+    }
+    this.marksSignal.set(next);
+    return true;
   }
 
   private fail(code: DocumentErrorCode): void {

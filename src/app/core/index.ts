@@ -11,3 +11,4 @@ export * from './scheduler';
 export * from './cache-budget';
 export * from './view';
 export * from './detection-queue';
+export * from './edits';

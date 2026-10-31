@@ -84,6 +84,12 @@ export function barsOfJunction(bars: readonly Bar[], junction: number): Bar[] {
  * of the FIRST bar of the junction in `bars` order (for a junction on a page change this is the bottom bar of the earlier page).
  * `bars` must be the output of `computeBars`. A junction without bars gives null.
  */
-export function junctionLabel(_bars: readonly Bar[], _junction: number): JunctionLabel | null {
-  throw new Error('not implemented');
+export function junctionLabel(bars: readonly Bar[], junction: number): JunctionLabel | null {
+  const index = bars.findIndex((b) => b.junction === junction);
+  const bar = bars[index];
+  if (bar === undefined) {
+    return null;
+  }
+  const ordinal = bars.slice(0, index + 1).filter((b) => b.pageIndex === bar.pageIndex).length;
+  return { page: bar.pageIndex + 1, ordinal };
 }
