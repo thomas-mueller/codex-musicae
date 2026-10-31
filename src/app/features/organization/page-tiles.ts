@@ -12,7 +12,19 @@ interface Tile {
   readonly rect: Rect;
   readonly canvas: HTMLCanvasElement;
   readonly controller: AbortController;
+  readonly cls: 'visible' | 'prefetch';
   done: boolean;
+  drawn: boolean;
+}
+
+interface Inputs {
+  readonly doc: DocumentStore;
+  readonly pageIndex: number;
+  readonly pageSize: Size;
+  readonly settled: number;
+  readonly live: number;
+  readonly visible: Rect;
+  readonly viewport: Rect;
 }
 
 const KEY_SEPARATOR = '|';
@@ -48,7 +60,9 @@ export class PageTiles {
   private readonly scheduler = inject(Scheduler);
   private readonly regions = inject(RegionRenderer);
   private readonly tiles = new Map<string, Tile>();
+  private readonly attempts = new Map<string, number>();
   private currentScale = 0;
+  private last: Inputs | null = null;
 
   constructor() {
     effect(() => {
@@ -59,7 +73,7 @@ export class PageTiles {
       const live = this.liveScale();
       const visible = this.visibleRect();
       const viewport = this.viewportRect();
-      untracked(() => this.reconcile(doc, pageIndex, pageSize, settled, live, visible, viewport));
+      untracked(() => this.reconcile({ doc, pageIndex, pageSize, settled, live, visible, viewport }));
     });
     inject(DestroyRef).onDestroy(() => {
       for (const key of [...this.tiles.keys()]) {
@@ -68,7 +82,9 @@ export class PageTiles {
     });
   }
 
-  private reconcile(doc: DocumentStore, pageIndex: number, pageSize: Size, settled: number, live: number, visible: Rect, viewport: Rect): void {
+  private reconcile(inputs: Inputs): void {
+    const { doc, pageIndex, pageSize, settled, live, visible, viewport } = inputs;
+    this.last = inputs;
     this.currentScale = settled;
     if (settled <= 0 || live <= 0) {
       return;
@@ -81,8 +97,14 @@ export class PageTiles {
     for (const rect of wanted) {
       const key = this.keyOf(settled, rect);
       wantedKeys.add(key);
+      const cls = intersects(rect, viewportSettled) ? 'visible' : 'prefetch';
+      const existing = this.tiles.get(key);
+      // A margin tile that is not drawn yet and has scrolled into view starts over with the higher priority.
+      if (existing && existing.cls === 'prefetch' && cls === 'visible' && !existing.drawn) {
+        this.release(key);
+      }
       if (!this.tiles.has(key)) {
-        this.start(doc, pageIndex, key, settled, rect, intersects(rect, viewportSettled) ? 'visible' : 'prefetch');
+        this.start(doc, pageIndex, key, settled, rect, cls);
       }
     }
     for (const [key, tile] of [...this.tiles]) {
@@ -106,7 +128,7 @@ export class PageTiles {
     canvas.style.visibility = 'hidden';
     canvas.style.pointerEvents = 'none';
     this.host.appendChild(canvas);
-    const tile: Tile = { scale, rect, canvas, controller: new AbortController(), done: false };
+    const tile: Tile = { scale, rect, canvas, controller: new AbortController(), cls, done: false, drawn: false };
     this.tiles.set(key, tile);
     const region: Rect = { x: rect.x / scale, y: rect.y / scale, width: rect.width / scale, height: rect.height / scale };
     void this.scheduler
@@ -129,8 +151,18 @@ export class PageTiles {
         },
         { viewKey: `${doc.tabId}${KEY_SEPARATOR}org${KEY_SEPARATOR}${scale}` },
       )
-      .then(() => {
+      .then((result) => {
         tile.done = true;
+        // Preempted by a higher-priority task (not aborted by us): try again, a few times at most (NFR-008).
+        if (!result.ok && !tile.controller.signal.aborted && this.tiles.get(key) === tile && tile.scale === this.currentScale) {
+          const tries = this.attempts.get(key) ?? 0;
+          if (tries < TUNABLES.rendering.tileRetryMax && this.last) {
+            this.attempts.set(key, tries + 1);
+            this.release(key);
+            this.reconcile(this.last);
+            return;
+          }
+        }
         this.sweep();
       });
   }
@@ -145,6 +177,7 @@ export class PageTiles {
     if (context) {
       context.drawImage(bitmap, 0, 0);
       tile.canvas.style.visibility = 'visible';
+      tile.drawn = true;
     }
   }
 

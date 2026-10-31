@@ -243,6 +243,7 @@ export const TUNABLES = {
   rendering: {
     zoomSettleMs: 200, // SLD-018, ORG-002: wait after the last zoom change before re-rendering sharp
     orgPageGapPx: 12, // ORG-001: gap between pages in organization mode
+    tileRetryMax: 3, // NFR-008: resubmissions of a tile whose task was cancelled by a higher-priority task
   },
 
   budgets: {

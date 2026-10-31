@@ -6,8 +6,11 @@ import { provideTestTransloco } from '../../../testing/transloco';
 import { APP_VERSION } from '../../ports/app-version';
 import { PDF_RENDERER } from '../../ports/pdf-renderer';
 import { CLOCK } from '../../state/clock';
+import { Scheduler } from '../../state/scheduler';
 import { ResourceGovernor } from '../../state/resource-governor';
 import { FakeClock } from '../../state/testing/fake-clock';
+import { err, ok } from '../../ports/result';
+import { fakeBitmap } from '../../state/testing/fake-bitmap';
 import { fakeRenderer } from '../../state/testing/fake-renderer';
 import { OrgViewStore } from '../../state/org-view.store';
 import { SessionStore } from '../../state/session.store';
@@ -268,6 +271,58 @@ describe('OrganizationViewer tiles', () => {
     await fixture.whenStable();
     await new Promise((resolve) => setTimeout(resolve, TUNABLES.navigation.pageScrollMs * 2));
     expect(scroller.scrollTop).toBe(0);
+  });
+
+  it('NFR-008 a margin tile cancelled by a visible task is rendered again (page above after a remount)', async () => {
+    TestBed.inject(UiStore).setMode('organization');
+    const session = TestBed.inject(SessionStore);
+    await session.openFiles([{ ref: { id: 'a', name: 'a.pdf' }, bytes: new Uint8Array([1]), writable: true }]);
+    const doc = session.activeDocument()!;
+    const step = PAGE_HEIGHT * (VIEW_WIDTH / PAGE_WIDTH) + TUNABLES.rendering.orgPageGapPx;
+    doc.orgScroll.set({ x: 0, y: 3 * step }); // restored position: page 3 in view, page 2 is the prefetch margin above
+    const fixture = TestBed.createComponent(OrganizationViewer);
+    fixture.componentRef.setInput('document', doc);
+    await flush(fixture);
+    await flush(fixture);
+    const all = canvases(fixture);
+    expect(all.length).toBeGreaterThanOrEqual(3); // pages 2, 3, 4
+    expect(all.filter((c) => c.style.visibility !== 'visible')).toEqual([]);
+    expect(renderedPages().has(2)).toBe(true);
+  });
+
+  it('NFR-008 a prefetch tile whose page scrolls into view is requested again as visible', async () => {
+    TestBed.inject(UiStore).setMode('organization');
+    const session = TestBed.inject(SessionStore);
+    await session.openFiles([{ ref: { id: 'a', name: 'a.pdf' }, bytes: new Uint8Array([1]), writable: true }]);
+    const doc = session.activeDocument()!;
+    // Page 1 (the margin page) never finishes rendering, as when a prefetch task is still queued.
+    renderer.handles[0]!.renderRegion.mockImplementation((req, signal) =>
+      req.pageIndex === 1
+        ? new Promise((resolve) => signal.addEventListener('abort', () => resolve(err('cancelled'))))
+        : Promise.resolve(ok(fakeBitmap())),
+    );
+    const submit = vi.spyOn(TestBed.inject(Scheduler), 'submit');
+    const fixture = TestBed.createComponent(OrganizationViewer);
+    fixture.componentRef.setInput('document', doc);
+    await flush(fixture);
+    expect(submit.mock.calls.filter(([cls]) => cls === 'prefetch').length).toBeGreaterThan(0);
+    submit.mockClear();
+    const scroller = fixture.nativeElement.querySelector('[data-testid="org-viewer"]') as HTMLElement;
+    scroller.scrollTop = PAGE_HEIGHT * (VIEW_WIDTH / PAGE_WIDTH) + TUNABLES.rendering.orgPageGapPx;
+    scroller.dispatchEvent(new Event('scroll'));
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await flush(fixture);
+    expect(submit.mock.calls.some(([cls]) => cls === 'visible')).toBe(true);
+  });
+
+  it('NFR-008 retries of a tile the scheduler keeps cancelling stop at tileRetryMax', async () => {
+    TestBed.inject(UiStore).setMode('organization');
+    const submit = vi.spyOn(TestBed.inject(Scheduler), 'submit').mockResolvedValue({ ok: false, error: 'cancelled' });
+    await mount();
+    await settle();
+    expect(submit.mock.calls.length).toBeGreaterThan(0);
+    // two pages (page 0 in view, page 1 margin), one tile each: first try plus at most tileRetryMax retries
+    expect(submit.mock.calls.length).toBeLessThanOrEqual(2 * (1 + TUNABLES.rendering.tileRetryMax));
   });
 
   it('FIL-009 draws nothing for a document in error state', async () => {

@@ -104,6 +104,7 @@ const indicator = (page: Page) => page.locator('app-bottom-bar .indicator');
 const ZOOM_STEP = 1.25; // T:zoom.buttonStep
 const WIDTH_TOLERANCE_PX = 3; // rounding of the page width
 const CENTER_TOLERANCE_PX = 1.5;
+const GAP_TOLERANCE_PX = 3; // native slider track/thumb rounding
 
 const pageWidth = (page: Page) => page.getByTestId('org-page-0').evaluate((el) => (el as HTMLElement).offsetWidth);
 
@@ -209,4 +210,43 @@ test('ORG-004 the indicator is vertically centered in the bar, after the slider 
   expect(Math.abs(geometry.centerOffset)).toBeLessThanOrEqual(CENTER_TOLERANCE_PX);
   expect(geometry.afterPrevious).toBe(true);
   expect(geometry.beforeNext).toBe(true);
+});
+
+test('ORG-004 the gaps between previous, slider, "x / n" and next are equal (expanded)', async ({ page }) => {
+  await openAndEnter(page);
+  const gaps = await page.locator('app-bottom-bar').evaluate((bar) => {
+    const slider = bar.querySelector('input.slider');
+    if (!slider) {
+      return null; // compact layout: no slider
+    }
+    const rect = (el: Element | null) => (el as HTMLElement).getBoundingClientRect();
+    const text = bar.ownerDocument.createRange();
+    text.selectNodeContents(bar.querySelector('.indicator') as Node);
+    const textBox = text.getBoundingClientRect();
+    const previousIcon = rect(bar.querySelector('button[aria-label="Previous"] app-icon'));
+    const nextIcon = rect(bar.querySelector('button[aria-label="Next"] app-icon'));
+    const sliderBox = rect(slider);
+    return [sliderBox.left - previousIcon.right, textBox.left - sliderBox.right, nextIcon.left - textBox.right];
+  });
+  test.skip(gaps === null, 'compact layout has no slider');
+  const [first, second, third] = gaps ?? [];
+  expect(Math.abs((first ?? 0) - (second ?? 0))).toBeLessThanOrEqual(GAP_TOLERANCE_PX);
+  expect(Math.abs((second ?? 0) - (third ?? 0))).toBeLessThanOrEqual(GAP_TOLERANCE_PX);
+});
+
+test('NFR-008 coming back from another mode and going to the previous page shows its content', async ({ page }) => {
+  await openAndEnter(page);
+  const next = page.getByRole('button', { name: label('next'), exact: true });
+  await next.click();
+  await expect(indicator(page)).toHaveText('2 / 3');
+  await next.click();
+  await expect(indicator(page)).toHaveText('3 / 3');
+  await page.getByLabel(label('modeAnnotation'), { exact: true }).click();
+  await expect(page.getByTestId('org-viewer')).toHaveCount(0);
+  await enterOrganization(page);
+  await expect(indicator(page)).toHaveText('3 / 3');
+  await page.getByRole('button', { name: label('previous'), exact: true }).click();
+  await expect(indicator(page)).toHaveText('2 / 3');
+  await expect.poll(() => page.locator('app-page-tiles canvas[style*="visibility: hidden"]').count()).toBe(0);
+  await expect.poll(() => page.locator('app-page-tiles canvas[style*="visibility: visible"]').count()).toBeGreaterThan(0);
 });
