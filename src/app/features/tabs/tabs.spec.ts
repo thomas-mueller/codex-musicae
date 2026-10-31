@@ -124,6 +124,13 @@ describe('tabs', () => {
 @Component({ imports: [OpenFileDirective], template: '<button appOpenFile type="button"></button>' })
 class Host {}
 
+/** Pointer event with an explicit time stamp (the real one is the hardware time of the input). */
+function pointer(type: string, timeStamp: number): Event {
+  const event = new Event(type);
+  Object.defineProperty(event, 'timeStamp', { value: timeStamp });
+  return event;
+}
+
 describe('OpenFileDirective', () => {
   let pick: ReturnType<typeof vi.fn>;
   beforeEach(() => {
@@ -146,8 +153,8 @@ describe('OpenFileDirective', () => {
 
   it('FIL-001 a tap opens the picker', () => {
     const el = button();
-    el.dispatchEvent(new Event('pointerdown'));
-    el.dispatchEvent(new Event('pointerup'));
+    el.dispatchEvent(pointer('pointerdown', 0));
+    el.dispatchEvent(pointer('pointerup', 50));
     el.click();
     expect(pick).toHaveBeenCalledTimes(1);
     expect(TestBed.inject(UiStore).popup()).toBeNull();
@@ -155,9 +162,9 @@ describe('OpenFileDirective', () => {
 
   it('FIL-008 a long press opens the recent files and the following click does not open the picker', () => {
     const el = button();
-    el.dispatchEvent(new Event('pointerdown'));
+    el.dispatchEvent(pointer('pointerdown', 0));
     vi.advanceTimersByTime(TUNABLES.layout.longPressMs);
-    el.dispatchEvent(new Event('pointerup'));
+    el.dispatchEvent(pointer('pointerup', TUNABLES.layout.longPressMs));
     el.click();
     expect(TestBed.inject(UiStore).popup()?.id).toBe('recent');
     expect(pick).not.toHaveBeenCalled();
@@ -167,10 +174,21 @@ describe('OpenFileDirective', () => {
 
   it('FIL-008 a release before the long press time cancels it', () => {
     const el = button();
-    el.dispatchEvent(new Event('pointerdown'));
+    el.dispatchEvent(pointer('pointerdown', 0));
     vi.advanceTimersByTime(TUNABLES.layout.longPressMs - 1);
-    el.dispatchEvent(new Event('pointerup'));
+    el.dispatchEvent(pointer('pointerup', TUNABLES.layout.longPressMs - 1));
     vi.advanceTimersByTime(TUNABLES.layout.longPressMs);
+    expect(TestBed.inject(UiStore).popup()).toBeNull();
+  });
+
+  it('FIL-001 a quick tap still opens the picker when a stalled main thread fired the long-press timer first', () => {
+    const el = button();
+    el.dispatchEvent(pointer('pointerdown', 0));
+    vi.advanceTimersByTime(TUNABLES.layout.longPressMs + 1); // timer runs before the release is handled
+    expect(TestBed.inject(UiStore).popup()?.id).toBe('recent');
+    el.dispatchEvent(pointer('pointerup', 80)); // but the user released after 80 ms
+    el.click();
+    expect(pick).toHaveBeenCalledTimes(1);
     expect(TestBed.inject(UiStore).popup()).toBeNull();
   });
 

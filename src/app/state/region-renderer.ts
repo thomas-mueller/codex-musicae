@@ -71,7 +71,8 @@ export class RegionRenderer {
     if (!rendered.ok) {
       return rendered;
     }
-    if (signal.aborted) {
+    // The tab may have been closed while rendering: never put a bitmap of a disposed document into the cache.
+    if (signal.aborted || doc.handle() !== handle) {
       rendered.value.close();
       return err('cancelled');
     }

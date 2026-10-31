@@ -3,18 +3,15 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { OrganizationViewer } from '../organization/organization-viewer';
 import { SessionStore } from '../../state/session.store';
 import { UiStore } from '../../state/ui.store';
-import { PagePreview } from './page-preview';
 
-/** Middle row: canvas grey with the organization viewer; other modes show the page preview until their milestones. GEN-008 */
+/** Middle row: canvas grey with the organization viewer; the other modes follow in their milestones. GEN-008 */
 @Component({
   selector: 'app-canvas-area',
-  imports: [OrganizationViewer, PagePreview],
+  imports: [OrganizationViewer],
   template: `
     <div class="content">
       @if (organizationDocument(); as doc) {
         <app-organization-viewer [document]="doc" />
-      } @else {
-        <app-page-preview />
       }
     </div>
   `,

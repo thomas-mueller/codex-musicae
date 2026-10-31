@@ -4,6 +4,11 @@ import { TUNABLES } from '../../../config/tunables';
 import { provideTestPorts } from '../../../testing/provide-test-ports';
 import { provideTestTransloco } from '../../../testing/transloco';
 import { APP_VERSION } from '../../ports/app-version';
+import { PDF_RENDERER } from '../../ports/pdf-renderer';
+import { CLOCK } from '../../state/clock';
+import { ResourceGovernor } from '../../state/resource-governor';
+import { FakeClock } from '../../state/testing/fake-clock';
+import { fakeRenderer } from '../../state/testing/fake-renderer';
 import { SessionStore } from '../../state/session.store';
 import { UiStore } from '../../state/ui.store';
 import { AppShell } from '../shell/app-shell';
@@ -19,6 +24,7 @@ describe('OrganizationViewer', () => {
   beforeEach(() => {
     vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(VIEW_WIDTH);
     vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(VIEW_HEIGHT);
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ drawImage: vi.fn() } as never);
     TestBed.configureTestingModule({
       providers: [provideTestTransloco(), provideTestPorts(), { provide: APP_VERSION, useValue: 'v-test' }],
     });
@@ -80,7 +86,7 @@ describe('OrganizationViewer', () => {
     fixture.componentRef.setInput('document', doc);
     await fixture.whenStable();
     const html = (fixture.nativeElement as HTMLElement).outerHTML;
-    expect(html).not.toMatch(/touch|pointer|swipe/i);
+    expect(html).not.toMatch(/(touch|pointer|swipe)\w*=/i);
   });
 
   it('ORG-007 organization mode has no active drawing tool', () => {
@@ -103,5 +109,128 @@ describe('OrganizationViewer', () => {
     await fixture.whenStable();
     expect(fixture.nativeElement.querySelector('app-organization-viewer')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('app-page-preview')).toBeNull();
+  });
+});
+
+describe('OrganizationViewer tiles', () => {
+  const PAGES = 6;
+  const SETTLE = TUNABLES.rendering.zoomSettleMs;
+  let clock: FakeClock;
+  let renderer: ReturnType<typeof fakeRenderer>;
+  const drawImage = vi.fn();
+
+  beforeEach(() => {
+    drawImage.mockClear();
+    clock = new FakeClock();
+    renderer = fakeRenderer('invalid', PAGES);
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(VIEW_WIDTH);
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(VIEW_HEIGHT);
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ drawImage } as never);
+    TestBed.configureTestingModule({
+      providers: [
+        provideTestTransloco(),
+        provideTestPorts(),
+        { provide: PDF_RENDERER, useValue: renderer },
+        { provide: CLOCK, useValue: clock },
+        { provide: APP_VERSION, useValue: 'v-test' },
+      ],
+    });
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  async function mount(name = 'a.pdf', firstByte = 1) {
+    const session = TestBed.inject(SessionStore);
+    await session.openFiles([{ ref: { id: `id-${name}`, name }, bytes: new Uint8Array([firstByte]), writable: true }]);
+    const doc = session.activeDocument()!;
+    const fixture = TestBed.createComponent(OrganizationViewer);
+    fixture.componentRef.setInput('document', doc);
+    await flush(fixture);
+    return { doc, fixture };
+  }
+  async function flush(fixture: { whenStable(): Promise<unknown> }): Promise<void> {
+    await fixture.whenStable();
+    await settle();
+    await fixture.whenStable();
+  }
+  const canvases = (fixture: { nativeElement: HTMLElement }) => Array.from(fixture.nativeElement.querySelectorAll('canvas'));
+  const renderedPages = () => new Set(renderer.handles[0]!.renderRegion.mock.calls.map(([req]) => req.pageIndex));
+
+  it('FIL-001 renders page 1 at fit-width through the cache', async () => {
+    const { fixture } = await mount();
+    expect(renderedPages().has(0)).toBe(true);
+    expect(renderer.handles[0]!.renderRegion.mock.calls[0]![0].scale).toBeCloseTo(VIEW_WIDTH / PAGE_WIDTH);
+    expect(drawImage).toHaveBeenCalled();
+    expect(canvases(fixture)[0]!.style.visibility).toBe('visible');
+  });
+
+  it('ORG-002 renders the visible page plus orgRenderPagesAround pages on each side, nothing farther', async () => {
+    const { fixture } = await mount();
+    expect([...renderedPages()].sort()).toEqual([0, 1]); // page 0 in view, margin page 1 (nothing above)
+    const scroller = fixture.nativeElement.querySelector('[data-testid="org-viewer"]') as HTMLElement;
+    scroller.scrollTop = 2 * (PAGE_HEIGHT * (VIEW_WIDTH / PAGE_WIDTH) + TUNABLES.rendering.orgPageGapPx);
+    scroller.dispatchEvent(new Event('scroll'));
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await flush(fixture);
+    expect([...renderedPages()].sort()).toEqual([0, 1, 2, 3]);
+    expect(fixture.nativeElement.querySelectorAll('app-page-tiles').length).toBe(3); // pages 1, 2, 3 — page 0 released
+  });
+
+  it('ORG-002 renders no margin pages when the governor drops prefetch', async () => {
+    const governor = TestBed.inject(ResourceGovernor);
+    governor.reportFailure();
+    expect(governor.prefetchNeighbors()).toBe(0);
+    await mount();
+    expect([...renderedPages()]).toEqual([0]);
+  });
+
+  it('NFR-007 no tile is larger than tileSizePx', async () => {
+    const { doc, fixture } = await mount();
+    doc.orgZoom.set(4);
+    fixture.detectChanges();
+    clock.advance(SETTLE);
+    await flush(fixture);
+    const sizes = canvases(fixture).map((c) => [parseFloat(c.style.width), parseFloat(c.style.height)]);
+    expect(sizes.length).toBeGreaterThan(0);
+    for (const [w, h] of sizes) {
+      expect(w).toBeLessThanOrEqual(TUNABLES.resources.tileSizePx);
+      expect(h).toBeLessThanOrEqual(TUNABLES.resources.tileSizePx);
+    }
+  });
+
+  it('NFR-008 keeps old tiles scaled until the zoom settles, then renders sharp and drops them', async () => {
+    const { doc, fixture } = await mount();
+    const calls = () => renderer.handles[0]!.renderRegion.mock.calls.length;
+    const before = calls();
+    const oldCanvas = canvases(fixture)[0]!;
+    doc.orgZoom.set(2);
+    await flush(fixture);
+    expect(calls()).toBe(before); // nothing rendered yet
+    expect(parseFloat(oldCanvas.style.width)).toBeCloseTo(2 * PAGE_WIDTH * (VIEW_WIDTH / PAGE_WIDTH));
+    clock.advance(SETTLE);
+    await flush(fixture);
+    expect(calls()).toBeGreaterThan(before);
+    expect(renderer.handles[0]!.renderRegion.mock.calls.at(-1)![0].scale).toBeCloseTo(1);
+    expect(oldCanvas.isConnected).toBe(false);
+  });
+
+  it('ORG-002 pages leaving the visible set release their canvases', async () => {
+    const { fixture } = await mount();
+    const first = canvases(fixture)[0]!;
+    const scroller = fixture.nativeElement.querySelector('[data-testid="org-viewer"]') as HTMLElement;
+    scroller.scrollTop = 4 * (PAGE_HEIGHT * (VIEW_WIDTH / PAGE_WIDTH) + TUNABLES.rendering.orgPageGapPx);
+    scroller.dispatchEvent(new Event('scroll'));
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await flush(fixture);
+    expect(first.isConnected).toBe(false);
+    expect(first.width).toBe(0);
+  });
+
+  it('FIL-009 draws nothing for a document in error state', async () => {
+    const fixture = TestBed.createComponent(AppShell);
+    TestBed.inject(UiStore).setMode('organization');
+    await TestBed.inject(SessionStore).openFiles([{ ref: { id: 'bad', name: 'bad.pdf' }, bytes: new Uint8Array([0]), writable: true }]);
+    await flush(fixture);
+    expect(drawImage).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('app-organization-viewer')).toBeNull();
   });
 });

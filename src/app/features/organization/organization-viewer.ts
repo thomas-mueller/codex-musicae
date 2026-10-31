@@ -15,8 +15,20 @@ import {
 
 import { TUNABLES } from '../../../config/tunables';
 import { fitScale, layoutPages } from '../../core';
-import type { Size } from '../../core';
+import type { Rect, Size } from '../../core';
+import { CLOCK } from '../../state/clock';
 import type { DocumentStore } from '../../state/document.store';
+import { ResourceGovernor } from '../../state/resource-governor';
+import { Scheduler } from '../../state/scheduler';
+import { PageTiles } from './page-tiles';
+
+interface TileJob {
+  readonly index: number;
+  readonly visible: Rect;
+  readonly viewport: Rect;
+}
+
+const KEY_SEPARATOR = '|';
 
 /**
  * Organization mode: the whole PDF as a continuous vertical-scroll viewer on canvas grey (ORG-001).
@@ -25,6 +37,7 @@ import type { DocumentStore } from '../../state/document.store';
  */
 @Component({
   selector: 'app-organization-viewer',
+  imports: [PageTiles],
   template: `
     <div #scroller class="scroller" data-testid="org-viewer" (scroll)="onScroll()">
       <div class="sizer" data-testid="org-sizer" [style.width.px]="sizerWidth()" [style.height.px]="sizerHeight()">
@@ -38,6 +51,19 @@ import type { DocumentStore } from '../../state/document.store';
             [style.height.px]="page.height"
           ></div>
         }
+        @for (job of jobs(); track document().tabId + ':' + job.index) {
+          <div class="tiles" [style.top.px]="layout()[job.index]?.top" [style.left.px]="pageLeft(job.index)" [style.width.px]="layout()[job.index]?.width" [style.height.px]="layout()[job.index]?.height">
+            <app-page-tiles
+              [document]="document()"
+              [pageIndex]="job.index"
+              [pageSize]="pageSizes()[job.index]!"
+              [settledScale]="settledScale()"
+              [liveScale]="scale()"
+              [visibleRect]="job.visible"
+              [viewportRect]="job.viewport"
+            />
+          </div>
+        }
       </div>
     </div>
   `,
@@ -46,6 +72,7 @@ import type { DocumentStore } from '../../state/document.store';
     .scroller { width: 100%; height: 100%; overflow: auto; -webkit-overflow-scrolling: touch; }
     .sizer { position: relative; min-width: 100%; }
     .page { position: absolute; background: var(--cm-paper); }
+    .tiles { position: absolute; }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -54,10 +81,15 @@ export class OrganizationViewer {
 
   private readonly scroller = viewChild.required<ElementRef<HTMLElement>>('scroller');
   private readonly destroyRef = inject(DestroyRef);
+  private readonly clock = inject(CLOCK);
+  private readonly scheduler = inject(Scheduler);
+  private readonly governor = inject(ResourceGovernor);
+  private cancelSettle: (() => void) | null = null;
+  private settledTab = '';
   private readonly viewport = signal<Size>({ width: 0, height: 0 });
   private frame = 0;
 
-  private readonly pageSizes = computed<Size[]>(() =>
+  protected readonly pageSizes = computed<Size[]>(() =>
     this.document()
       .pageInfos()
       .map((info) => ({ width: info.width, height: info.height })),
@@ -75,6 +107,8 @@ export class OrganizationViewer {
     return fitScale(widest, viewport, 'width') * this.document().orgZoom();
   });
   protected readonly layout = computed(() => layoutPages(this.pageSizes(), this.scale(), TUNABLES.rendering.orgPageGapPx));
+  /** Scale the tiles are rendered at; follows `scale` zoomSettleMs after its last change (ORG-002, NFR-008). */
+  protected readonly settledScale = signal(0);
   protected readonly sizerWidth = computed(() => this.widest().width * this.scale());
   protected readonly sizerHeight = computed(() => {
     const layout = this.layout();
@@ -82,7 +116,70 @@ export class OrganizationViewer {
     return last ? last.top + last.height : 0;
   });
 
+  /** Pages in the viewport plus the margin pages, each with the part to cover with tiles (ORG-002). */
+  protected readonly jobs = computed<TileJob[]>(() => {
+    const layout = this.layout();
+    const viewport = this.viewport();
+    const scroll = this.document().orgScroll();
+    const margin = this.governor.prefetchNeighbors() > 0 ? TUNABLES.resources.orgRenderPagesAround : 0;
+    if (this.settledScale() <= 0 || layout.length === 0) {
+      return [];
+    }
+    const local = (index: number): Rect => ({
+      x: scroll.x - this.pageLeft(index),
+      y: scroll.y - (layout[index]?.top ?? 0),
+      width: viewport.width,
+      height: viewport.height,
+    });
+    const clip = (r: Rect, w: number, h: number): Rect | null => {
+      const x = Math.max(0, r.x);
+      const y = Math.max(0, r.y);
+      const width = Math.min(w, r.x + r.width) - x;
+      const height = Math.min(h, r.y + r.height) - y;
+      return width > 0 && height > 0 ? { x, y, width, height } : null;
+    };
+    const core: TileJob[] = [];
+    layout.forEach((page, index) => {
+      const view = local(index);
+      const visible = clip(view, page.width, page.height);
+      if (visible) {
+        core.push({ index, visible, viewport: view });
+      }
+    });
+    const first = core[0]?.index;
+    const last = core[core.length - 1]?.index;
+    if (first === undefined || last === undefined) {
+      return [];
+    }
+    const jobs = [...core];
+    for (let offset = 1; offset <= margin; offset++) {
+      for (const index of [first - offset, last + offset]) {
+        const page = layout[index];
+        if (!page) {
+          continue;
+        }
+        const view = local(index);
+        // Margin pages: full height, but only the viewport's horizontal range.
+        const visible = clip({ ...view, y: 0, height: page.height }, page.width, page.height);
+        if (visible) {
+          jobs.push({ index, visible, viewport: view });
+        }
+      }
+    }
+    return jobs.sort((a, b) => a.index - b.index);
+  });
+
+  protected pageLeft(index: number): number {
+    return (this.sizerWidth() - (this.layout()[index]?.width ?? 0)) / 2;
+  }
+
   constructor() {
+    this.destroyRef.onDestroy(() => this.cancelSettle?.());
+    effect(() => {
+      const scale = this.scale();
+      const tabId = this.document().tabId;
+      untracked(() => this.followScale(scale, tabId));
+    });
     afterNextRender(() => {
       const element = this.scroller().nativeElement;
       const measure = (): void => this.viewport.set({ width: element.clientWidth, height: element.clientHeight });
@@ -106,6 +203,26 @@ export class OrganizationViewer {
         element.scrollTop = target.y;
       });
     });
+  }
+
+  /** First layout and tab changes settle at once; later scale changes wait for the zoom to stop. */
+  private followScale(scale: number, tabId: string): void {
+    if (scale <= 0) {
+      return;
+    }
+    const settle = (): void => {
+      this.cancelSettle = null;
+      this.settledTab = tabId;
+      this.scheduler.setViewKey([tabId, 'org', scale].join(KEY_SEPARATOR));
+      this.settledScale.set(scale);
+    };
+    this.cancelSettle?.();
+    this.cancelSettle = null;
+    if (this.settledScale() === 0 || this.settledTab !== tabId) {
+      settle();
+    } else if (scale !== this.settledScale()) {
+      this.cancelSettle = this.clock.schedule(TUNABLES.rendering.zoomSettleMs, settle);
+    }
   }
 
   /** Stores the scroll offset per tab; throttled to animation frames, outside Angular reactivity. */

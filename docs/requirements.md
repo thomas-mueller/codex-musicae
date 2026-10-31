@@ -129,13 +129,13 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 
 ## ORG — Organization mode
 
-- **ORG-001** [v1·todo·M9] Organization mode shows the original PDF as a normal continuous vertical-scroll viewer with small gaps between pages on canvas grey.
-- **ORG-002** [v1·todo·M9] Only visible pages plus `T:resources.orgRenderPagesAround` pages on each side are rendered.
+- **ORG-001** [v1·done·M9] Organization mode shows the original PDF as a normal continuous vertical-scroll viewer with small gaps between pages on canvas grey.
+- **ORG-002** [v1·done·M9] Only visible pages plus `T:resources.orgRenderPagesAround` pages on each side are rendered.
 - **ORG-003** [v1·todo·M9] Zoom: default on open is fit-width; the minimum is fit-page; the maximum is `T:zoom.max` × the fit-width scale; the reset button returns to fit-width; zoom buttons step by `T:zoom.buttonStep`.
 - **ORG-004** [v1·todo·M9] A "page x of n" indicator shows the page covering the viewport center and updates while scrolling; n counts all pages.
 - **ORG-005** [v1·todo·M9] Previous/next page buttons and a page slider scroll to a page.
 - **ORG-006** [v1·todo·M9] Horizontal swipes do not change pages; zoom stays unchanged when the page changes.
-- **ORG-007** [v1·todo·M9] Drawing is not available in organization mode.
+- **ORG-007** [v1·done·M9] Drawing is not available in organization mode.
 - **ORG-008** [v1·todo·M10] Every junction is drawn as a translucent bar over the whitespace gap, full page width: between two systems on a page; for junction 0 from the page top to the top of system 1; for junction N from the bottom of system N to the page bottom; at a page change as two bars (bottom of page p, top of page p+1).
 - **ORG-009** [v1·todo·M10] Pages without systems have no bars.
 - **ORG-010** [v1·todo·M10] Bars use `T:colors.orgBar.tint` at `opacity`; a selected junction uses `selectedOpacity`, on both bars of a page change.

@@ -4,12 +4,15 @@ import { expect, test, type Page } from '@playwright/test';
 const en = JSON.parse(readFileSync('src/assets/i18n/en.json', 'utf8')) as { a11y: Record<string, string> };
 const label = (key: string) => en.a11y[key] as string;
 
+const RETRY_TIMEOUT_MS = 1000; // one attempt of the repeated mode click
 const SCORE = 'e2e/fixtures/synthetic-score.pdf';
 const DAMAGED = 'e2e/fixtures/damaged.pdf';
 const scoreBytes = readFileSync(SCORE);
 const named = (name: string) => ({ name, mimeType: 'application/pdf', buffer: scoreBytes });
 
 type Upload = string | { name: string; mimeType: string; buffer: Buffer };
+
+const FILE_CHOOSER_TIMEOUT_MS = 15_000; // fail fast with a clear error instead of hanging until the test timeout
 
 test.beforeEach(async ({ page }) => {
   // Force the <input type="file"> path in every engine.
@@ -20,7 +23,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function openFiles(page: Page, files: Upload | Upload[]): Promise<void> {
-  const chooser = page.waitForEvent('filechooser');
+  const chooser = page.waitForEvent('filechooser', { timeout: FILE_CHOOSER_TIMEOUT_MS });
   await page.getByRole('button', { name: label('openFile'), exact: true }).click();
   await (await chooser).setFiles(files);
 }
@@ -28,7 +31,11 @@ async function openFiles(page: Page, files: Upload | Upload[]): Promise<void> {
 const tabNames = (page: Page) => page.locator('app-tab-bar .name').allTextContents();
 
 async function previewHasInk(page: Page): Promise<boolean> {
-  const canvas = page.locator('app-page-preview canvas[data-rendered="true"]');
+  await expect(async () => {
+    await page.getByLabel(label('modeOrganization'), { exact: true }).click();
+    await expect(page.getByTestId('org-viewer')).toBeVisible({ timeout: RETRY_TIMEOUT_MS });
+  }).toPass();
+  const canvas = page.locator('app-organization-viewer canvas[style*="visibility: visible"]').first();
   await expect(canvas).toBeVisible();
   return canvas.evaluate((el) => {
     const c = el as HTMLCanvasElement;
@@ -108,7 +115,7 @@ test.describe('expanded', () => {
     await rows.filter({ hasText: 'synthetic-score.pdf' }).click();
     await expect(rows.filter({ hasText: 'synthetic-score.pdf' }).locator('app-icon')).toBeVisible();
     // ... and the second tap offers the picker.
-    const chooser = page.waitForEvent('filechooser');
+    const chooser = page.waitForEvent('filechooser', { timeout: FILE_CHOOSER_TIMEOUT_MS });
     await rows.filter({ hasText: 'synthetic-score.pdf' }).click();
     await (await chooser).setFiles(named('synthetic-score-v2.pdf'));
     await expect.poll(() => tabNames(page)).toContain('synthetic-score-v2.pdf');
