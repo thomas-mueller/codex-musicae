@@ -139,20 +139,20 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **ORG-008** [v1·done·M10] Every junction is drawn as a translucent bar over the whitespace gap, full page width: between two systems on a page; for junction 0 from the page top to the top of system 1; for junction N from the bottom of system N to the page bottom; at a page change as two bars (bottom of page p, top of page p+1).
 - **ORG-009** [v1·done·M10] Pages without systems have no bars.
 - **ORG-010** [v1·done·M10] Bars use `T:colors.orgBar.tint` at `opacity`; a selected junction uses `selectedOpacity`, on both bars of a page change.
-- **ORG-011** [v1·todo·M11] Each bar shows one compact row: the numbers of the system above it, jump badges, the stop symbol and the break scissors line. There is no numbering toggle.
+- **ORG-011** [v1·done·M11] Each bar shows one compact row: the numbers of the system above it, jump badges, the stop symbol and the break scissors line. There is no numbering toggle.
 - **ORG-012** [v1·done·M11] Numbers are shown ascending, comma separated ("3, 9"); junction 0 shows none; both bars of a page change show the numbers of the system above the junction.
 - **ORG-013** [v1·done·M11] Tapping a bar selects its junction; tapping empty space, Esc or back deselects. Taps in organization mode never navigate.
-- **ORG-014** [v1·todo·M11] A selected junction shows a chip with icons: jump, slide break, stop, delete (delete only if the junction holds an item).
-- **ORG-015** [v1·todo·M11] Jump creation: select the origin, tap the jump icon, all other bars become tappable targets with a hint bar and a cancel icon; page navigation and zoom stay active; tapping a bar creates the jump; Esc or back cancels.
-- **ORG-016** [v1·todo·M11] After creation a stepper opens to set the pass number (integer ≥ 1, default 1).
-- **ORG-017** [v1·todo·M11] Several jumps may sit on one junction; two jumps with the same origin and pass are allowed (PLY-006). There are no plausibility checks.
-- **ORG-018** [v1·todo·M11] Jump badges: at the origin an arrow, the target label (page number and bar number on that page, see `junctionLabel`) and the pass; at the target a matching badge showing the origin label; both in one color from `T:colors.jumpPalette`.
-- **ORG-019** [v1·todo·M11] A long press (`T:layout.longPressMs`) on a badge scrolls to the other end of the jump.
-- **ORG-020** [v1·todo·M11] Tapping a badge selects the jump; the chip then offers pass, change target and delete.
+- **ORG-014** [v1·done·M11] A selected junction shows a chip with icons: jump, slide break, stop, delete (delete only if the junction holds an item).
+- **ORG-015** [v1·done·M11] Jump creation: select the origin, tap the jump icon, all other bars become tappable targets with a hint bar and a cancel icon; page navigation and zoom stay active; tapping a bar creates the jump; Esc or back cancels.
+- **ORG-016** [v1·done·M11] After creation a stepper opens to set the pass number (integer ≥ 1, default 1).
+- **ORG-017** [v1·done·M11] Several jumps may sit on one junction; two jumps with the same origin and pass are allowed (PLY-006). There are no plausibility checks.
+- **ORG-018** [v1·done·M11] Jump badges: at the origin an arrow, the target label (page number and bar number on that page, see `junctionLabel`) and the pass; at the target a matching badge showing the origin label; both in one color from `T:colors.jumpPalette`.
+- **ORG-019** [v1·done·M11] A long press (`T:layout.longPressMs`) on a badge scrolls to the other end of the jump.
+- **ORG-020** [v1·done·M11] Tapping a badge selects the jump; the chip then offers pass, change target and delete.
 - **ORG-021** [v1·todo·M11] A jump-list button opens a sheet (compact) or side panel (expanded) listing each jump with from label, to label (page·bar), pass and color; tapping an entry navigates to it; swipe or a trash icon deletes it.
 - **ORG-022** [v1·done·M11] The break icon toggles a slide break on the selected junction; a break shows as a solid line in `T:colors.breakLine` with a scissors icon at the left edge.
 - **ORG-023** [v1·done·M11] The stop icon toggles a stop on the selected junction; it shows the stop icon on the bar.
-- **ORG-024** [v1·todo·M11] Deleting a jump, break or stop is immediate and has no undo.
+- **ORG-024** [v1·done·M11] Deleting a jump, break or stop is immediate and has no undo.
 
 ## SLD — Slide composition
 

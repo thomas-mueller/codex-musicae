@@ -38,6 +38,12 @@ export function tunablesToCssVars(t: Tunables): Readonly<Record<string, string>>
     '--cm-bar-hit-slop': `${t.layout.barHitSlopPx}px`,
     '--cm-chip-padding': `${t.layout.chipPaddingPx}px`,
     '--cm-chip-radius': `${t.layout.chipRadiusPx}px`,
+    '--cm-badge-gap': `${t.layout.badgeGapPx}px`,
+    '--cm-badge-padding': `${t.layout.badgePaddingPx}px`,
+    '--cm-badge-radius': `${t.layout.badgeRadiusPx}px`,
+    '--cm-badge-font': `${t.layout.badgeFontPx}px`,
+    '--cm-hint-bar-height': `${t.layout.hintBarHeightPx}px`,
+    '--cm-stepper-gap': `${t.layout.stepperGapPx}px`,
     '--cm-disabled-opacity': String(t.layout.disabledOpacity),
   };
 }

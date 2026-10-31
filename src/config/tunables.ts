@@ -80,6 +80,15 @@ export const TUNABLES = {
     chipGapPx: 8, // ORG-014: distance between the selection chip and its bar
     chipPaddingPx: 4, // ORG-014: padding inside the selection chip
     chipRadiusPx: 24, // ORG-014
+    badgeGapPx: 4, // ORG-018: gap between stacked jump badges and from the bar's right edge
+    badgePaddingPx: 3, // ORG-018: padding inside a jump badge
+    badgeRadiusPx: 8, // ORG-018
+    badgeFontPx: 11, // ORG-018
+    labelSeparator: '·', // ORG-018: between page and bar number in a junction label ("7·1")
+    passPrefix: '×', // ORG-018: before the pass number in a badge ("×2")
+    hintBarHeightPx: 32, // ORG-015: slim hint bar while picking a jump target
+    stepperGapPx: 8, // ORG-016: gap between the pass stepper's buttons and number
+    jumpChipButtons: 3, // ORG-020: pass, change target, delete (also the width of the pass stepper: three parts)
     chipMaxButtons: 4, // ORG-014: jump, slide break, stop, delete (sizes the chip for its placement)
   },
 
@@ -108,6 +117,10 @@ export const TUNABLES = {
     showMore: 'unfold_more', // taller slide = lower aspect ratio
     showLess: 'unfold_less', // wider slide = higher aspect ratio
     jump: 'alt_route',
+    pass: 'counter_1', // ORG-020: chip button that opens the pass stepper
+    changeTarget: 'ads_click', // ORG-020
+    plus: 'add', // ORG-016
+    minus: 'remove', // ORG-016
     slideBreak: 'content_cut',
     stop: 'stop_circle',
     delete: 'delete',

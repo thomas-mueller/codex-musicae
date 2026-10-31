@@ -13,6 +13,11 @@ export interface Popup {
 export type Selection =
   | { readonly kind: 'junction'; readonly junction: number }
   | { readonly kind: 'jump'; readonly id: number };
+/** ORG-015: the user is choosing the target bar of a new jump, or of `editJumpId` (change target). */
+export interface PickingTarget {
+  readonly originJunction: number;
+  readonly editJumpId?: number;
+}
 export interface Viewport {
   readonly width: number;
   readonly height: number;
@@ -27,6 +32,7 @@ export class UiStore {
   readonly level = signal<DetectionLevel>(TUNABLES.detection.defaultLevel);
   readonly popup = signal<Popup | null>(null);
   readonly selection = signal<Selection | null>(null);
+  readonly pickingTarget = signal<PickingTarget | null>(null);
   /** Set by the shell's resize observer; unmeasured (0x0) until its first callback. */
   /** Placeholder until the DocumentStore (M8): no document can be open yet. FIL-007 */
   readonly hasDocument = signal(false);
@@ -42,6 +48,7 @@ export class UiStore {
     }
     this.mode.set(mode);
     this.selection.set(null);
+    this.pickingTarget.set(null);
     if (mode !== 'annotation') {
       this.tool.set(null);
     }
@@ -71,6 +78,14 @@ export class UiStore {
 
   deselect(): void {
     this.selection.set(null);
+  }
+
+  startPicking(target: PickingTarget): void {
+    this.pickingTarget.set(target);
+  }
+
+  cancelPicking(): void {
+    this.pickingTarget.set(null);
   }
 
   togglePopup(id: string): void {

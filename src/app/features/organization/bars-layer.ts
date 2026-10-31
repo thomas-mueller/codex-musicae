@@ -5,6 +5,8 @@ import type { Bar } from '../../core';
 import type { ProvisionalBar } from '../../state/detection-run';
 import { Icon } from '../shell/icon';
 import type { BarRowData } from './bar-rows';
+import type { JumpBadge } from './jump-badges';
+import { LongPressDirective } from './long-press.directive';
 
 /**
  * ORG-008, ORG-010, DET-021: the junction bars of one page as translucent full-width strips over the whitespace gaps.
@@ -13,7 +15,7 @@ import type { BarRowData } from './bar-rows';
  */
 @Component({
   selector: 'app-bars-layer',
-  imports: [Icon],
+  imports: [Icon, LongPressDirective],
   template: `
     @for (bar of bars(); track $index) {
       <div
@@ -21,6 +23,7 @@ import type { BarRowData } from './bar-rows';
         data-bar
         data-testid="org-bar"
         [class.selected]="bar.junction === selectedJunction()"
+        [class.target]="pickingOrigin() !== null && bar.junction !== pickingOrigin()"
         [style.top.px]="bar.y * scale()"
         [style.height.px]="heightOf(bar)"
         (click)="barTap.emit(bar.junction)"
@@ -37,6 +40,33 @@ import type { BarRowData } from './bar-rows';
             }
             @if (row.hasStop) {
               <span class="stop-icon" data-testid="org-bar-stop-icon"><app-icon name="stop" /></span>
+            }
+          </div>
+        }
+        @let badgeList = badges().get(bar.junction);
+        @if (badgeList?.length) {
+          <div class="badges">
+            @for (badge of badgeList; track badge.jumpId + badge.role) {
+              <button
+                type="button"
+                class="badge"
+                appLongPress
+                #press="appLongPress"
+                data-badge
+                data-testid="jump-badge"
+                [attr.data-jump-id]="badge.jumpId"
+                [attr.data-role]="badge.role"
+                [class.selected]="badge.jumpId === selectedJumpId()"
+                [style.background]="color(badge)"
+                (click)="onBadgeClick($event, badge, press.consumeClick())"
+                (longPress)="badgeLongPress.emit(badge)"
+              >
+                <app-icon name="jump" />
+                <span data-testid="jump-badge-label">{{ badge.otherLabel }}</span>
+                @if (badge.role === 'origin') {
+                  <span data-testid="jump-badge-pass">{{ passPrefix }}{{ badge.pass }}</span>
+                }
+              </button>
             }
           </div>
         }
@@ -61,6 +91,10 @@ import type { BarRowData } from './bar-rows';
     .bar.selected::before { opacity: var(--cm-org-bar-selected-opacity); }
     .bar.provisional { pointer-events: none; }
     .bar.provisional::before { opacity: var(--cm-org-bar-provisional-opacity); }
+    .bar.target::before { opacity: var(--cm-org-bar-selected-opacity); }
+    .badges { position: absolute; right: var(--cm-badge-gap); top: 50%; transform: translateY(-50%); z-index: 1; display: flex; flex-direction: row-reverse; gap: var(--cm-badge-gap); pointer-events: none; --cm-icon-size: var(--cm-bar-row-icon); }
+    .badge { display: inline-flex; align-items: center; gap: var(--cm-badge-gap); padding: var(--cm-badge-padding); border: 0; border-radius: var(--cm-badge-radius); color: var(--cm-on-accent); font-family: monospace; font-size: var(--cm-badge-font); cursor: pointer; pointer-events: auto; }
+    .badge.selected { outline: var(--cm-break-line-px) solid var(--cm-icon); }
     .row { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); z-index: 1; display: flex; align-items: center; gap: var(--cm-bar-row-inset); padding-left: var(--cm-bar-row-inset); pointer-events: none; --cm-icon-size: var(--cm-bar-row-icon); }
     .break-line { position: absolute; left: 0; right: 0; top: 50%; height: var(--cm-break-line-px); transform: translateY(-50%); background: var(--cm-break-line); }
     .break-icon { position: relative; display: inline-flex; color: var(--cm-break-line); }
@@ -77,7 +111,26 @@ export class BarsLayer {
   readonly selectedJunction = input<number | null>(null);
   /** Row content per junction (ORG-011); junctions without an entry show no row. */
   readonly rows = input<ReadonlyMap<number, BarRowData>>(new Map());
+  /** ORG-018: jump badges per junction. */
+  readonly badges = input<ReadonlyMap<number, readonly JumpBadge[]>>(new Map());
+  readonly selectedJumpId = input<number | null>(null);
+  /** ORG-015: while a target is picked, the origin junction (all other bars are highlighted); null otherwise. */
+  readonly pickingOrigin = input<number | null>(null);
   readonly barTap = output<number>();
+  readonly badgeTap = output<number>();
+  readonly badgeLongPress = output<JumpBadge>();
+  protected readonly passPrefix = TUNABLES.layout.passPrefix;
+
+  protected color(badge: JumpBadge): string {
+    return TUNABLES.colors.jumpPalette[badge.colorIndex] ?? TUNABLES.colors.accent;
+  }
+
+  protected onBadgeClick(event: Event, badge: JumpBadge, longPressed: boolean): void {
+    event.stopPropagation();
+    if (!longPressed) {
+      this.badgeTap.emit(badge.jumpId);
+    }
+  }
 
   protected heightOf(bar: Bar): number {
     return Math.max(bar.height * this.scale(), TUNABLES.colors.orgBar.minHeightPx);

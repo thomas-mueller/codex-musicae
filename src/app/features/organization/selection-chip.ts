@@ -10,27 +10,33 @@ import { IconButton } from '../shell/icon-button';
   selector: 'app-selection-chip',
   imports: [IconButton],
   template: `
-    <button appIconButton icon="jump" labelKey="jump" data-testid="chip-jump" (pressed)="jump.emit()"></button>
-    <button
-      appIconButton
-      icon="slideBreak"
-      labelKey="slideBreak"
-      data-testid="chip-break"
-      [toggled]="hasBreak()"
-      [disabled]="!markable()"
-      (pressed)="toggleBreak.emit()"
-    ></button>
-    <button
-      appIconButton
-      icon="stop"
-      labelKey="stop"
-      data-testid="chip-stop"
-      [toggled]="hasStop()"
-      [disabled]="!markable()"
-      (pressed)="toggleStop.emit()"
-    ></button>
-    @if (hasItems()) {
+    @if (kind() === 'jump') {
+      <button appIconButton icon="pass" labelKey="pass" data-popup-trigger data-testid="chip-pass" (pressed)="openPass.emit()"></button>
+      <button appIconButton icon="changeTarget" labelKey="changeTarget" data-testid="chip-change-target" (pressed)="changeTarget.emit()"></button>
       <button appIconButton icon="delete" labelKey="delete" data-testid="chip-delete" (pressed)="clear.emit()"></button>
+    } @else {
+      <button appIconButton icon="jump" labelKey="jump" data-testid="chip-jump" (pressed)="jump.emit()"></button>
+      <button
+        appIconButton
+        icon="slideBreak"
+        labelKey="slideBreak"
+        data-testid="chip-break"
+        [toggled]="hasBreak()"
+        [disabled]="!markable()"
+        (pressed)="toggleBreak.emit()"
+      ></button>
+      <button
+        appIconButton
+        icon="stop"
+        labelKey="stop"
+        data-testid="chip-stop"
+        [toggled]="hasStop()"
+        [disabled]="!markable()"
+        (pressed)="toggleStop.emit()"
+      ></button>
+      @if (hasItems()) {
+        <button appIconButton icon="delete" labelKey="delete" data-testid="chip-delete" (pressed)="clear.emit()"></button>
+      }
     }
   `,
   styles: `
@@ -40,6 +46,7 @@ import { IconButton } from '../shell/icon-button';
   host: { 'data-chip': '', 'data-testid': 'selection-chip' },
 })
 export class SelectionChip {
+  readonly kind = input<'junction' | 'jump'>('junction');
   /** False on junctions 0 and N (`isValidMarkJunction`). */
   readonly markable = input.required<boolean>();
   readonly hasBreak = input(false);
@@ -49,4 +56,6 @@ export class SelectionChip {
   readonly toggleBreak = output<void>();
   readonly toggleStop = output<void>();
   readonly clear = output<void>();
+  readonly openPass = output<void>();
+  readonly changeTarget = output<void>();
 }

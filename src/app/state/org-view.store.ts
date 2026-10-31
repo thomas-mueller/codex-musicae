@@ -1,8 +1,8 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 
 import { TUNABLES } from '../../config/tunables';
-import { fitScale, layoutPages, orgZoomLimits, pageAtOffset, scrollAfterZoom } from '../core';
-import type { Size } from '../core';
+import { barsOfJunction, fitScale, layoutPages, orgZoomLimits, pageAtOffset, scrollAfterZoom } from '../core';
+import type { Bar, Size } from '../core';
 import { SessionStore } from './session.store';
 import { UiStore } from './ui.store';
 
@@ -96,6 +96,21 @@ export class OrgViewStore {
       return;
     }
     this.requestSignal.set({ top: page.top, animate, seq: this.seq++ });
+  }
+
+  /**
+   * ORG-019: animated scroll that centers the first bar of `junction` (the bottom bar of the earlier page for a
+   * page-change junction). The viewer clamps the offset to the scrollable range.
+   */
+  scrollToJunction(bars: readonly Bar[], junction: number): void {
+    const bar = barsOfJunction(bars, junction)[0];
+    const page = bar === undefined ? undefined : this.layout()[bar.pageIndex];
+    if (!this.active() || bar === undefined || page === undefined) {
+      return;
+    }
+    const height = Math.max(bar.height * this.scale(), TUNABLES.colors.orgBar.minHeightPx);
+    const top = page.top + this.offsetY() + bar.y * this.scale();
+    this.requestSignal.set({ top: Math.max(0, top + height / 2 - this.viewport().height / 2), animate: true, seq: this.seq++ });
   }
 
   next(): void {

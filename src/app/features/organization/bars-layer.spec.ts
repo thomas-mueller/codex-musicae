@@ -5,6 +5,7 @@ import type { Bar } from '../../core';
 import type { ProvisionalBar } from '../../state/detection-run';
 import { BarsLayer } from './bars-layer';
 import type { BarRowData } from './bar-rows';
+import type { JumpBadge } from './jump-badges';
 
 const SCALE = 0.5;
 
@@ -13,6 +14,9 @@ function mount(inputs: {
   provisionalBars?: ProvisionalBar[];
   selectedJunction?: number | null;
   rows?: Map<number, BarRowData>;
+  badges?: Map<number, JumpBadge[]>;
+  selectedJumpId?: number | null;
+  pickingOrigin?: number | null;
 }) {
   const fixture = TestBed.createComponent(BarsLayer);
   fixture.componentRef.setInput('scale', SCALE);
@@ -119,5 +123,77 @@ describe('BarsLayer', () => {
     expect(withStop!.querySelector('[data-testid="org-bar-stop-icon"]')).not.toBeNull();
     expect(withStop!.querySelector('[data-testid="org-bar-break-line"]')).toBeNull();
     expect(plain!.querySelector('[data-testid="org-bar-row"]')).toBeNull();
+  });
+
+  const badge = (over: Partial<JumpBadge>): JumpBadge => ({
+    jumpId: 1, role: 'origin', otherJunction: 3, otherLabel: '7·1', pass: 2, colorIndex: 0, ...over,
+  });
+  const badgesOf = (fixture: { nativeElement: HTMLElement }) =>
+    Array.from(fixture.nativeElement.querySelectorAll<HTMLElement>('[data-testid="jump-badge"]'));
+
+  it('ORG-018 an origin badge shows the arrow, the target label and the pass in the jump color', async () => {
+    const fixture = mount({
+      bars: [{ junction: 1, pageIndex: 0, y: 0, height: 20 }],
+      badges: new Map([[1, [badge({ colorIndex: 2 })]]]),
+    });
+    await fixture.whenStable();
+    const [el] = badgesOf(fixture);
+    expect(el!.querySelector('app-icon')).not.toBeNull();
+    expect(el!.querySelector('[data-testid="jump-badge-label"]')!.textContent).toBe('7·1');
+    expect(el!.querySelector('[data-testid="jump-badge-pass"]')!.textContent).toBe(`${TUNABLES.layout.passPrefix}2`);
+    expect(el!.style.background).not.toBe('');
+  });
+
+  it('ORG-018 a target badge shows the origin label and no pass; several badges stack in creation order', async () => {
+    const fixture = mount({
+      bars: [{ junction: 1, pageIndex: 0, y: 0, height: 20 }],
+      badges: new Map([[1, [badge({ jumpId: 1, role: 'target', otherLabel: '1·5' }), badge({ jumpId: 2 })]]]),
+    });
+    await fixture.whenStable();
+    const [first, second] = badgesOf(fixture);
+    expect(first!.querySelector('[data-testid="jump-badge-pass"]')).toBeNull();
+    expect(first!.querySelector('[data-testid="jump-badge-label"]')!.textContent).toBe('1·5');
+    expect(second!.dataset['jumpId']).toBe('2');
+  });
+
+  it('ORG-020 tapping a badge emits its jump id and does not tap the bar', async () => {
+    const fixture = mount({
+      bars: [{ junction: 1, pageIndex: 0, y: 0, height: 20 }],
+      badges: new Map([[1, [badge({ jumpId: 5 })]]]),
+    });
+    const taps: number[] = [];
+    const barTaps: number[] = [];
+    fixture.componentInstance.badgeTap.subscribe((id) => taps.push(id));
+    fixture.componentInstance.barTap.subscribe((j) => barTaps.push(j));
+    await fixture.whenStable();
+    badgesOf(fixture)[0]!.click();
+    expect(taps).toEqual([5]);
+    expect(barTaps).toEqual([]);
+  });
+
+  it('ORG-020 the selected jump badge is marked', async () => {
+    const fixture = mount({
+      bars: [{ junction: 1, pageIndex: 0, y: 0, height: 20 }],
+      badges: new Map([[1, [badge({ jumpId: 5 })]]]),
+      selectedJumpId: 5,
+    });
+    await fixture.whenStable();
+    expect(badgesOf(fixture)[0]!.classList.contains('selected')).toBe(true);
+  });
+
+  it('ORG-015 while picking, every bar except the origin is highlighted as a target', async () => {
+    const fixture = mount({
+      bars: [
+        { junction: 0, pageIndex: 0, y: 0, height: 20 },
+        { junction: 1, pageIndex: 0, y: 50, height: 20 },
+        { junction: 2, pageIndex: 0, y: 100, height: 20 },
+      ],
+      pickingOrigin: 1,
+    });
+    await fixture.whenStable();
+    expect(bars(fixture).map((b) => b.classList.contains('target'))).toEqual([true, false, true]);
+    fixture.componentRef.setInput('pickingOrigin', null);
+    await fixture.whenStable();
+    expect(bars(fixture).some((b) => b.classList.contains('target'))).toBe(false);
   });
 });

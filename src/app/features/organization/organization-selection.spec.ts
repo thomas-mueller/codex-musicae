@@ -5,6 +5,7 @@ import { provideTestPorts } from '../../../testing/provide-test-ports';
 import { provideTestTransloco } from '../../../testing/transloco';
 import { APP_VERSION } from '../../ports/app-version';
 import { SessionStore } from '../../state/session.store';
+import { OrgViewStore } from '../../state/org-view.store';
 import { UiStore } from '../../state/ui.store';
 import { OrganizationViewer } from './organization-viewer';
 
@@ -120,5 +121,111 @@ describe('OrganizationViewer selection and marks', () => {
     await fixture.whenStable();
     ui.setMode('annotation');
     expect(ui.selection()).toBeNull();
+  });
+
+  const tap = async (fixture: { whenStable(): Promise<unknown> }, element: HTMLElement) => {
+    element.click();
+    await fixture.whenStable();
+  };
+
+  it('ORG-015 ORG-016 ORG-018 jump flow: chip, pick a target, stepper, badges', async () => {
+    const { doc, fixture, root, bar, press } = await mount();
+    const ui = TestBed.inject(UiStore);
+    await tap(fixture, bar(2));
+    await press('jump');
+    expect(ui.pickingTarget()).toEqual({ originJunction: 2 });
+    expect(root.querySelector('[data-testid="org-hint-bar"]')).not.toBeNull();
+    expect(root.querySelector('[data-testid="selection-chip"]')).toBeNull();
+    expect(bar(0).classList.contains('target')).toBe(true);
+    expect(bar(2).classList.contains('target')).toBe(false);
+
+    await tap(fixture, bar(2)); // the origin again does nothing
+    expect(ui.pickingTarget()).not.toBeNull();
+    expect(doc.marks().jumps).toEqual([]);
+
+    await tap(fixture, bar(0));
+    expect(doc.marks().jumps).toEqual([{ origin: 2, target: 0, pass: 1, id: 1 }]);
+    expect(ui.pickingTarget()).toBeNull();
+    expect(ui.selection()).toEqual({ kind: 'jump', id: 1 });
+    expect(root.querySelector('[data-testid="stepper-value"]')!.textContent).toBe('1');
+
+    root.querySelector<HTMLElement>('[data-testid="stepper-plus"]')!.click();
+    await fixture.whenStable();
+    expect(doc.marks().jumps[0]?.pass).toBe(2);
+    expect(root.querySelector('[data-testid="stepper-value"]')!.textContent).toBe('2'); // the stepper stays open and selected
+    expect(ui.selection()).toEqual({ kind: 'jump', id: 1 });
+    const originBadge = bar(2).querySelector('[data-testid="jump-badge"]')!;
+    expect(originBadge.textContent).toContain(`1${TUNABLES.layout.labelSeparator}1`);
+    expect(originBadge.textContent).toContain(`${TUNABLES.layout.passPrefix}2`);
+    const targetBadge = bar(0).querySelector('[data-testid="jump-badge"]')!;
+    expect(targetBadge.textContent).toContain(`1${TUNABLES.layout.labelSeparator}3`);
+  });
+
+  it('ORG-015 Escape and the cancel icon leave picking without a change', async () => {
+    const { doc, fixture, root, bar, press } = await mount();
+    const ui = TestBed.inject(UiStore);
+    await tap(fixture, bar(1));
+    await press('jump');
+    root.dispatchEvent(new KeyboardEvent('keydown', { code: TUNABLES.keymap.back[0], bubbles: true }));
+    await fixture.whenStable();
+    expect(ui.pickingTarget()).toBeNull();
+    await press('jump');
+    root.querySelector<HTMLElement>('[data-testid="org-hint-cancel"]')!.click();
+    await fixture.whenStable();
+    expect(ui.pickingTarget()).toBeNull();
+    expect(doc.marks().jumps).toEqual([]);
+    expect(root.querySelector('[data-testid="org-hint-bar"]')).toBeNull();
+  });
+
+  it('ORG-020 selecting a badge offers pass, change target and delete; change target retargets', async () => {
+    const { doc, fixture, root, bar } = await mount();
+    const ui = TestBed.inject(UiStore);
+    doc.addJump({ origin: 2, target: 0, pass: 1 });
+    await fixture.whenStable();
+    ui.closePopup();
+    await tap(fixture, bar(2).querySelector<HTMLElement>('[data-testid="jump-badge"]')!);
+    expect(ui.selection()).toEqual({ kind: 'jump', id: 1 });
+    for (const id of ['pass', 'change-target', 'delete']) {
+      expect(root.querySelector(`[data-testid="chip-${id}"]`), id).not.toBeNull();
+    }
+    root.querySelector<HTMLElement>('[data-testid="chip-change-target"]')!.click();
+    await fixture.whenStable();
+    expect(ui.pickingTarget()).toEqual({ originJunction: 2, editJumpId: 1 });
+    await tap(fixture, bar(1));
+    expect(doc.marks().jumps[0]).toMatchObject({ origin: 2, target: 1, pass: 1, id: 1 });
+    expect(ui.pickingTarget()).toBeNull();
+  });
+
+  it('ORG-020 the pass button opens the stepper; delete removes the jump and its badges', async () => {
+    const { doc, fixture, root, bar } = await mount();
+    const ui = TestBed.inject(UiStore);
+    doc.addJump({ origin: 2, target: 0, pass: 3 });
+    await fixture.whenStable();
+    ui.closePopup();
+    await tap(fixture, bar(2).querySelector<HTMLElement>('[data-testid="jump-badge"]')!);
+    root.querySelector<HTMLElement>('[data-testid="chip-pass"]')!.click();
+    await fixture.whenStable();
+    expect(root.querySelector('[data-testid="stepper-value"]')!.textContent).toBe('3');
+    ui.closePopup();
+    await fixture.whenStable();
+    root.querySelector<HTMLElement>('[data-testid="chip-delete"]')!.click();
+    await fixture.whenStable();
+    expect(doc.marks().jumps).toEqual([]);
+    expect(ui.selection()).toBeNull();
+    expect(root.querySelectorAll('[data-testid="jump-badge"]')).toHaveLength(0);
+  });
+
+  it('ORG-019 long press on a badge scrolls to the other end of the jump', async () => {
+    const { doc, fixture, bar } = await mount();
+    const view = TestBed.inject(OrgViewStore);
+    const scroll = vi.spyOn(view, 'scrollToJunction');
+    doc.addJump({ origin: 2, target: 0, pass: 1 });
+    await fixture.whenStable();
+    const badge = bar(2).querySelector<HTMLElement>('[data-testid="jump-badge"]')!;
+    vi.useFakeTimers();
+    badge.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    vi.advanceTimersByTime(TUNABLES.layout.longPressMs);
+    vi.useRealTimers();
+    expect(scroll).toHaveBeenCalledWith(doc.bars(), 0);
   });
 });
