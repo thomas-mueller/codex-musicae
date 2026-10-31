@@ -24,6 +24,7 @@ import { PdfJsRenderer } from './adapters/pdfjs/pdfjs-renderer';
 import { installDebugHook } from './adapters/web/debug-hook';
 import type { DebugHost } from './adapters/web/debug-hook';
 import { BitmapCache } from './state/bitmap-cache';
+import { SessionStore } from './state/session.store';
 import { WebAppLifecycle } from './adapters/web/web-app-lifecycle';
 import { WebDeviceInfo } from './adapters/web/web-device-info';
 import { WebFileAccess } from './adapters/web/web-file-access';
@@ -58,7 +59,8 @@ export const appConfig: ApplicationConfig = {
       if (typeof ngDevMode !== 'undefined' && ngDevMode) {
         const renderer = inject(PDF_RENDERER);
         const engine = inject(DETECTION_ENGINE);
-        installDebugHook(window as DebugHost, inject(BitmapCache), async (pdf, pageIndex, scale) => {
+        const session = inject(SessionStore);
+        const detect = async (pdf: Uint8Array, pageIndex: number, scale: number) => {
           const signal = new AbortController().signal;
           const doc = await renderer.open(pdf);
           if (!doc.ok) throw new Error(doc.error);
@@ -74,6 +76,10 @@ export const appConfig: ApplicationConfig = {
           } finally {
             await doc.value.destroy();
           }
+        };
+        installDebugHook(window as DebugHost, inject(BitmapCache), {
+          detect,
+          startedOrder: () => session.activeDocument()?.detection.startedOrder ?? [],
         });
       }
     }),

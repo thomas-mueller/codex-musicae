@@ -51,3 +51,11 @@
 .indicator.has-text::before {
   content: none;
 }
+
+/* DET-016: processing icon and "done/total" next to the page indicator. */
+.progress {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cm-progress-gap);
+  color: var(--cm-icon);
+}

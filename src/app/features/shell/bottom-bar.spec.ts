@@ -81,4 +81,26 @@ describe('BottomBar in organization mode', () => {
     slider.dispatchEvent(new Event('input'));
     expect(view.scrollRequest()).toMatchObject({ top: PAGE_STEP, animate: false });
   });
+
+  const progress = (root: HTMLElement) => root.querySelector('[data-testid="detection-progress"]');
+
+  it('DET-016 shows the processing icon and processed/total while detection runs, and nothing when complete', async () => {
+    const { fixture, root, doc } = await mount();
+    expect(progress(root)?.textContent?.trim()).toBe(`0${TUNABLES.layout.progressSeparator}2`);
+    expect(progress(root)?.querySelector('app-icon')).not.toBeNull();
+    doc.detection.finish(0, 'done', { pageIndex: 0, width: 600, height: 800, systems: [] });
+    await fixture.whenStable();
+    expect(progress(root)?.textContent?.trim()).toBe(`1${TUNABLES.layout.progressSeparator}2`);
+    doc.detection.finish(1, 'failed', null);
+    await fixture.whenStable();
+    expect(progress(root)).toBeNull();
+  });
+
+  it('DET-016 shows no progress outside organization mode', async () => {
+    const { fixture, root } = await mount();
+    TestBed.inject(UiStore).setMode('annotation');
+    await fixture.whenStable();
+    expect(progress(root)).toBeNull();
+  });
 });
+

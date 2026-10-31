@@ -104,9 +104,9 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **DET-016** [v1·todo·M10] Organization mode shows detection progress (processing icon, processed/total pages); slide modes show the slide count as "n+" until detection is complete.
 - **DET-017** [v1·done·M10] Detection pauses while the user interacts (resumes after `T:detection.idleBeforeResumeMs` without input), while the app is hidden, and under battery saver where detectable.
 - **DET-018** [v1·done·M10] If a page fails (error or out of memory), it is retried once at `renderScale` × `T:detection.retryScaleFactor`; if it fails again the page is marked not detected and processing continues.
-- **DET-019** [v1·todo·M10] Slides and organization bars are usable for every page whose prefix of earlier pages is finished while later pages are still processing.
+- **DET-019** [v1·done·M10] Slides and organization bars are usable for every page whose prefix of earlier pages is finished while later pages are still processing.
 - **DET-020** [v1·done·M10] Bitmaps are released after each page; only rectangles are retained.
-- **DET-021** [v1·todo·M10] Navigating to an unfinished page in organization mode makes it the next page processed; its bars are drawn provisional (`T:colors.orgBar.provisionalOpacity`, no numbers, not selectable) until all earlier pages are finished.
+- **DET-021** [v1·done·M10] Navigating to an unfinished page in organization mode makes it the next page processed; its bars are drawn provisional (`T:colors.orgBar.provisionalOpacity`, no numbers, not selectable) until all earlier pages are finished.
 - **DET-022** [v1·done·M10] Detection results are cached in runtime memory only.
 - **DET-023** [v1·todo·M15] If valid embedded detection data exists, detection is skipped.
 - **DET-024** [v1·done·M5] Page width, padding and thresholds are computed per page; documents with mixed page sizes are supported.
@@ -136,9 +136,9 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **ORG-005** [v1·done·M9] Previous/next page buttons and a page slider scroll to a page.
 - **ORG-006** [v1·done·M9] Horizontal swipes do not change pages; zoom stays unchanged when the page changes.
 - **ORG-007** [v1·done·M9] Drawing is not available in organization mode.
-- **ORG-008** [v1·todo·M10] Every junction is drawn as a translucent bar over the whitespace gap, full page width: between two systems on a page; for junction 0 from the page top to the top of system 1; for junction N from the bottom of system N to the page bottom; at a page change as two bars (bottom of page p, top of page p+1).
-- **ORG-009** [v1·todo·M10] Pages without systems have no bars.
-- **ORG-010** [v1·todo·M10] Bars use `T:colors.orgBar.tint` at `opacity`; a selected junction uses `selectedOpacity`, on both bars of a page change.
+- **ORG-008** [v1·done·M10] Every junction is drawn as a translucent bar over the whitespace gap, full page width: between two systems on a page; for junction 0 from the page top to the top of system 1; for junction N from the bottom of system N to the page bottom; at a page change as two bars (bottom of page p, top of page p+1).
+- **ORG-009** [v1·done·M10] Pages without systems have no bars.
+- **ORG-010** [v1·done·M10] Bars use `T:colors.orgBar.tint` at `opacity`; a selected junction uses `selectedOpacity`, on both bars of a page change.
 - **ORG-011** [v1·todo·M11] Each bar shows one compact row: the numbers of the system above it, jump badges, the stop symbol and the break scissors line. There is no numbering toggle.
 - **ORG-012** [v1·todo·M11] Numbers are shown ascending, comma separated ("3, 9"); junction 0 shows none; both bars of a page change show the numbers of the system above the junction.
 - **ORG-013** [v1·todo·M11] Tapping a bar selects its junction; tapping empty space, Esc or back deselects. Taps in organization mode never navigate.

@@ -10,14 +10,16 @@ export interface DebugHook {
   readonly cache: { readonly totalBytes: number; readonly budgetBytes: number };
   /** Renders page `pageIndex` of `pdf` at `scale` and returns the detection engine's rectangles (DET-004 E2E). */
   readonly detect?: (pdf: Uint8Array, pageIndex: number, scale: number) => Promise<readonly Rect[]>;
+  /** Page indices of the active document in the order detection started them (DET-021 E2E). */
+  readonly startedOrder?: () => readonly number[];
 }
 
 export type DebugHost = { __cm?: DebugHook };
 
 /** Exposes live, read-only cache numbers as `__cm.cache`. */
-export function installDebugHook(host: DebugHost, cache: CacheProbe, detect?: DebugHook['detect']): void {
+export function installDebugHook(host: DebugHost, cache: CacheProbe, extras: Partial<Omit<DebugHook, 'cache'>> = {}): void {
   host.__cm = {
-    ...(detect ? { detect } : {}),
+    ...extras,
     cache: {
       get totalBytes() {
         return cache.totalBytes;

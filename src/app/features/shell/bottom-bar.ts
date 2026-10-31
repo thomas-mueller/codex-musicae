@@ -4,6 +4,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { OrgViewStore } from '../../state/org-view.store';
 import { TUNABLES } from '../../../config/tunables';
 import { UiStore } from '../../state/ui.store';
+import { Icon } from './icon';
 import { IconButton } from './icon-button';
 
 export const POPUP_OVERFLOW_BOTTOM = 'overflow-bottom';
@@ -12,7 +13,7 @@ export const POPUP_SLIDER = 'slider';
 /** Navigation, indicator/slider, zoom and overflow, per mode and size class. UIX-004, 005, 006 */
 @Component({
   selector: 'app-bottom-bar',
-  imports: [IconButton, TranslocoPipe],
+  imports: [Icon, IconButton, TranslocoPipe],
   templateUrl: './bottom-bar.html',
   styleUrl: './bars.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -42,6 +43,16 @@ export class BottomBar {
     return this.organization() && this.view.active() && page >= 0
       ? `${page + 1}${TUNABLES.layout.indicatorSeparator}${this.view.pageCount()}`
       : '';
+  });
+
+  /** DET-016: "processed/total" while detection of the active document is running; empty text means hidden. */
+  protected readonly progressText = computed(() => {
+    const doc = this.view.document();
+    if (!this.organization() || !doc || doc.detectionComplete()) {
+      return '';
+    }
+    const { done, total } = doc.detectionProgress();
+    return `${done}${TUNABLES.layout.progressSeparator}${total}`;
   });
 
   protected onSlide(event: Event): void {

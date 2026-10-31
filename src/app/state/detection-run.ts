@@ -15,7 +15,11 @@ export class DetectionRun {
   /** The page the viewer wants next (DET-021); consumed when a page task starts. */
   readonly priorityPage = signal<number | null>(null);
 
+  /** Page indices in the order processing started them; read by the dev-only debug hook (DET-021 E2E). */
+  startedOrder: number[] = [];
+
   reset(pageCount: number): void {
+    this.startedOrder = [];
     this.states.set(Array.from({ length: pageCount }, () => 'pending' as const));
     this.pages.set(Array.from({ length: pageCount }, () => null));
     this.priorityPage.set(null);

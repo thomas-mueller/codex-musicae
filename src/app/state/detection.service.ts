@@ -109,6 +109,7 @@ export class DetectionService {
     if (run.priorityPage() === pageIndex) {
       run.priorityPage.set(null);
     }
+    run.startedOrder.push(pageIndex);
     run.setState(pageIndex, 'running');
     let outcome: PageOutcome;
     try {
