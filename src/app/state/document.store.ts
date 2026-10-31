@@ -1,5 +1,6 @@
 import { signal } from '@angular/core';
 
+import type { Point } from '../core';
 import type { PdfDocumentHandle, PdfOpenError, PdfPageInfo, PdfRenderer } from '../ports/pdf-renderer';
 
 export type DocumentStatus = 'loading' | 'ready' | 'error';
@@ -19,6 +20,10 @@ export class DocumentStore {
   readonly unsaved = signal(false);
   readonly readOnly = signal(false);
   readonly needsReopen = signal(false);
+
+  /** Organization mode view state, kept per tab (ORG-006): zoom relative to fit-width, scroll offset in CSS px. */
+  readonly orgZoom = signal(1);
+  readonly orgScroll = signal<Point>({ x: 0, y: 0 });
 
   readonly handle = this.handleSignal.asReadonly();
   readonly pageInfos = this.pageInfosSignal.asReadonly();

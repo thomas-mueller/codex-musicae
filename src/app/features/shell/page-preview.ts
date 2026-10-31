@@ -10,7 +10,7 @@ import { SessionStore } from '../../state/session.store';
  * Page 1 of the active document at fit-width, rendered through the scheduler and the bitmap cache.
  * FIL-001, NFR-003, NFR-008
  */
-// TEMPORARY(M9): replaced by OrganizationViewer
+// TEMPORARY(M9): shown outside organization mode until S2 of M9 retires it
 @Component({
   selector: 'app-page-preview',
   template: '<canvas #canvas [hidden]="!rendered()" [attr.data-rendered]="rendered()"></canvas>',
