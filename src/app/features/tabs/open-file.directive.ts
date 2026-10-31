@@ -13,8 +13,8 @@ export const POPUP_RECENT = 'recent';
 @Directive({
   selector: '[appOpenFile]',
   host: {
-    '(pointerdown)': 'onDown()',
-    '(pointerup)': 'cancelTimer()',
+    '(pointerdown)': 'onDown($event)',
+    '(pointerup)': 'onUp($event)',
     '(pointerleave)': 'cancelTimer()',
     '(pointercancel)': 'cancelTimer()',
     '(click)': 'onClick()',
@@ -26,13 +26,17 @@ export class OpenFileDirective {
   private readonly ui = inject(UiStore);
   private timer: ReturnType<typeof setTimeout> | undefined;
   private longPressed = false;
+  private downAt = 0;
+  private upAt = 0;
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.cancelTimer());
   }
 
-  protected onDown(): void {
+  protected onDown(event: Event): void {
     this.longPressed = false;
+    this.downAt = event.timeStamp;
+    this.upAt = event.timeStamp;
     this.cancelTimer();
     this.timer = setTimeout(() => {
       this.longPressed = true;
@@ -40,15 +44,29 @@ export class OpenFileDirective {
     }, TUNABLES.layout.longPressMs);
   }
 
+  protected onUp(event: Event): void {
+    this.upAt = event.timeStamp;
+    this.cancelTimer();
+  }
+
   protected cancelTimer(): void {
     clearTimeout(this.timer);
     this.timer = undefined;
   }
 
+  /**
+   * The press length comes from the event time stamps, not from the timer: a busy main thread (rendering) can
+   * fire the timer before a quick release is handled, and that tap must still open the picker.
+   */
   protected onClick(): void {
-    if (this.longPressed) {
+    const heldMs = this.upAt - this.downAt;
+    if (this.longPressed && heldMs >= TUNABLES.layout.longPressMs) {
       this.longPressed = false;
       return;
+    }
+    if (this.longPressed) {
+      this.longPressed = false;
+      this.ui.closePopup();
     }
     void this.session.pickAndOpen();
   }

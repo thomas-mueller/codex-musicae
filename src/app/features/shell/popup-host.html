@@ -15,7 +15,16 @@
         <span class="version" [attr.aria-label]="'a11y.versionInfo' | transloco" [textContent]="version"></span>
       }
       @case (ids.slider) {
-        <input type="range" class="slider" [disabled]="noDocument()" [attr.aria-label]="'a11y.slideSlider' | transloco" />
+        <input
+          type="range"
+          class="slider"
+          min="1"
+          [max]="view.pageCount()"
+          [value]="view.currentPage() + 1"
+          [disabled]="organization() ? !view.active() : noDocument()"
+          [attr.aria-label]="'a11y.' + (organization() ? 'pageSlider' : 'slideSlider') | transloco"
+          (input)="onSlide($event)"
+        />
       }
       @case (ids.recent) {
         <div class="list" role="list" [attr.aria-label]="'a11y.recentFiles' | transloco">

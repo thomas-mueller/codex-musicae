@@ -3,6 +3,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 
 import { APP_VERSION } from '../../ports/app-version';
 import type { FileRef } from '../../ports/file-access';
+import { OrgViewStore } from '../../state/org-view.store';
 import { PreferencesStore } from '../../state/preferences.store';
 import { SessionStore } from '../../state/session.store';
 import { UiStore } from '../../state/ui.store';
@@ -33,6 +34,7 @@ const POPUP_SELECTOR = '[data-popup], [data-popup-trigger]';
 })
 export class PopupHost {
   protected readonly store = inject(UiStore);
+  protected readonly view = inject(OrgViewStore);
   protected readonly version = inject(APP_VERSION);
   protected readonly session = inject(SessionStore);
   protected readonly preferences = inject(PreferencesStore);
@@ -47,6 +49,7 @@ export class PopupHost {
     tabs: POPUP_TABS,
   };
   protected readonly compact = computed(() => this.store.sizeClass() === 'compact');
+  protected readonly organization = computed(() => this.store.mode() === 'organization');
   protected readonly annotation = computed(() => this.store.mode() === 'annotation');
   protected readonly noDocument = computed(() => !this.store.hasDocument());
   protected readonly popupId = computed(() => {
@@ -58,6 +61,12 @@ export class PopupHost {
   protected async reopen(ref: FileRef): Promise<void> {
     if ((await this.session.reopenRecent(ref)) === 'opened') {
       this.store.closePopup();
+    }
+  }
+
+  protected onSlide(event: Event): void {
+    if (this.organization()) {
+      this.view.goToPage(Number((event.target as HTMLInputElement).value) - 1, false);
     }
   }
 

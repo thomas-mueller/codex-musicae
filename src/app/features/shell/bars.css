@@ -16,6 +16,8 @@
   flex: 1;
   min-width: 0;
   height: var(--cm-touch-target);
+  /* The gap after the slider equals the empty space around a button icon, so the gaps previous|slider|"x / n"|next are equal. */
+  margin: 0 calc((var(--cm-touch-target) - var(--cm-icon-size)) / 2) 0 0;
 }
 
 .indicator {
@@ -26,6 +28,9 @@
   background: transparent;
   color: var(--cm-icon);
   font: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .indicator.disabled {
@@ -34,9 +39,15 @@
 
 .indicator.fixed {
   flex: none;
+  min-width: 0;
+  padding: 0;
 }
 
 /* Pseudo-element, not text content: the placeholder is not data (see docs/questions.md, I18-001). */
 .indicator::before {
   content: var(--cm-indicator-placeholder);
+}
+
+.indicator.has-text::before {
+  content: none;
 }

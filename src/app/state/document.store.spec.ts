@@ -31,4 +31,16 @@ describe('DocumentStore', () => {
     expect(renderer.handles[0]?.destroy).toHaveBeenCalledTimes(1);
     expect(doc.handle()).toBeNull();
   });
+
+  it('ORG-006 zoom and scroll default to fit-width at the top and are kept per document', () => {
+    const a = new DocumentStore('a', fakeRenderer());
+    const b = new DocumentStore('b', fakeRenderer());
+    expect(a.orgZoom()).toBe(1);
+    expect(a.orgScroll()).toEqual({ x: 0, y: 0 });
+    a.orgZoom.set(2);
+    a.orgScroll.set({ x: 5, y: 700 });
+    expect(b.orgZoom()).toBe(1);
+    expect(b.orgScroll()).toEqual({ x: 0, y: 0 });
+    expect(a.orgScroll()).toEqual({ x: 5, y: 700 });
+  });
 });

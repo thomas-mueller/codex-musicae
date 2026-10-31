@@ -8,4 +8,8 @@ export class WebDeviceInfo implements DeviceInfo {
   devicePixelRatio(): number {
     return window.devicePixelRatio || 1;
   }
+
+  prefersReducedMotion(): boolean {
+    return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
 }

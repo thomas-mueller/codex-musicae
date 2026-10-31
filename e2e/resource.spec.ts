@@ -8,6 +8,7 @@ const DEV_URL = 'http://127.0.0.1:4174';
 const SMALLEST_BUCKET_GB = 1;
 const OPEN_COUNT = 12;
 const CYCLES = 25;
+const FILE_CHOOSER_TIMEOUT_MS = 15_000; // fail fast with a clear error instead of hanging until the test timeout
 const RESOURCE_TEST_TIMEOUT_MS = 90_000; // 12 renders on a slow CI runner with the unoptimized dev build
 
 test.use({ viewport: { width: 1280, height: 800 } });
@@ -38,10 +39,11 @@ async function prepare(page: Page, url: string): Promise<void> {
 }
 
 async function openCopy(page: Page, name: string): Promise<void> {
-  const chooser = page.waitForEvent('filechooser');
+  const chooser = page.waitForEvent('filechooser', { timeout: FILE_CHOOSER_TIMEOUT_MS });
   await page.getByRole('button', { name: en.a11y['openFile'] as string, exact: true }).click();
   await (await chooser).setFiles({ name, mimeType: 'application/pdf', buffer: scoreBytes });
-  await expect(page.locator('app-page-preview canvas[data-rendered="true"]')).toBeVisible();
+  await page.getByLabel(en.a11y['modeOrganization'] as string, { exact: true }).click();
+  await expect(page.locator('app-organization-viewer canvas[style*="visibility: visible"]').first()).toBeVisible();
 }
 
 test.describe('development build with the debug hook', () => {

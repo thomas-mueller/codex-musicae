@@ -45,6 +45,7 @@ export const TUNABLES = {
   layout: {
     barHeightPx: 48, // UIX-007
     indicatorPlaceholder: '– / –', // UIX-004: shown instead of "x / n" while no document is open
+    indicatorSeparator: ' / ', // ORG-004: between the current and the total page in "x / n"
     iconSizePx: 24, // UIX-010
     tooltipPaddingPx: 8, // UIX-014
     tooltipRadiusPx: 4, // UIX-014
@@ -142,11 +143,15 @@ export const TUNABLES = {
     back: ['Escape'],
   },
 
+  navigation: {
+    pageScrollMs: 200, // ORG-005: duration of the previous/next page scroll (instant with reduced motion)
+  },
+
   zoom: {
     min: 1, // 1 = fit scale (slide contained in canvas); organization mode: see ORG-003
     max: 4, // relative to the fit scale; NAV-014, ORG-003
     buttonStep: 1.25, // multiplicative step of zoom +/- buttons
-    orgDefault: 'fitWidth' as 'fitWidth' | 'fitPage', // ORG-003
+    orgDefault: 'fitPage' as 'fitWidth' | 'fitPage', // ORG-003: zoom on open and after reset; the minimum is always fit-page
   },
 
   aspectRatio: {
@@ -238,6 +243,7 @@ export const TUNABLES = {
   rendering: {
     zoomSettleMs: 200, // SLD-018, ORG-002: wait after the last zoom change before re-rendering sharp
     orgPageGapPx: 12, // ORG-001: gap between pages in organization mode
+    tileRetryMax: 3, // NFR-008: resubmissions of a tile whose task was cancelled by a higher-priority task
   },
 
   budgets: {
