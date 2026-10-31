@@ -32,6 +32,17 @@ async function openScoreInOrganization(page: Page): Promise<void> {
   await expect(page.getByTestId('org-bar')).toHaveCount(SYNTHETIC_BARS, { timeout: DETECTION_TIMEOUT_MS });
 }
 
+test('ORG-010 the bars layer stacks above every tile canvas', async ({ page }) => {
+  await openScoreInOrganization(page);
+  const { overlay, canvases } = await page.evaluate(() => {
+    const z = (element: Element): number => Number(getComputedStyle(element).zIndex) || 0;
+    const layer = globalThis.document.querySelector('.overlay');
+    return { overlay: layer ? z(layer) : -1, canvases: Array.from(globalThis.document.querySelectorAll('app-page-tiles canvas')).map(z) };
+  });
+  expect(canvases.length).toBeGreaterThan(0);
+  expect(overlay).toBeGreaterThan(Math.max(...canvases));
+});
+
 test('ORG-013 ORG-014 ORG-022 ORG-023 ORG-024 select a bar, set a break and a stop, delete, deselect', async ({ page }) => {
   await openScoreInOrganization(page);
   const bar = page.getByTestId('org-bar').nth(MIDDLE_BAR_INDEX);
