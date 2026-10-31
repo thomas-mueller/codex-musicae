@@ -179,6 +179,11 @@ export const TUNABLES = {
     idleBeforeResumeMs: 1000, // DET-017
     pauseWhenHidden: true, // DET-017
     pauseOnBatterySaver: true, // DET-017 (where detectable)
+    opencvAssetPath: 'assets/opencv/opencv.js', // NFR-012: self-hosted, loaded only inside the detection worker
+    binaryThreshold: 0, // DET-004: ignored by Otsu, which picks the threshold
+    binaryMaxValue: 255, // DET-004: ink value in the binary image
+    connectivity: 8, // DET-004: 8-connected components
+    ccStat: { left: 0, top: 1, width: 2, height: 3 }, // DET-004: cv.CC_STAT_* columns of connectedComponentsWithStats
   },
 
   playingOrder: {

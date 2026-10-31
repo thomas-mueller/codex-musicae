@@ -10,3 +10,4 @@ export * from './lru-cache';
 export * from './scheduler';
 export * from './cache-budget';
 export * from './view';
+export * from './detection-queue';

@@ -89,7 +89,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **DET-001** [v1·todo·M10] When a PDF has no valid embedded data, detection runs automatically for all pages in page order in the background.
 - **DET-002** [v1·todo·M10] Detection runs in one dedicated web worker, one page at a time, and never blocks the UI thread.
 - **DET-003** [v1·todo·M10] A page is rendered to a bitmap at the level's `renderScale`; if width×height exceeds `T:resources.maxCanvasPixels` the scale is reduced to fit.
-- **DET-004** [v1·todo·M10] The bitmap is binarized with Otsu (ink = foreground); the bounding rectangle and area of every connected component are collected, including the background component (label 0), whose rectangle is the whole page.
+- **DET-004** [v1·done·M10] The bitmap is binarized with Otsu (ink = foreground); the bounding rectangle and area of every connected component are collected, including the background component (label 0), whose rectangle is the whole page.
 - **DET-005** [v1·done·M5] Filter step 0: rectangles with zero width or zero height are ignored. Filter step 1: the single rectangle with the largest area is dropped (the page); on equal areas the first in input order is dropped.
 - **DET-006** [v1·done·M5] Filter step 2: among the remaining rectangles, sort by area, find the largest gap between consecutive areas, and keep rectangles whose area is strictly greater than the middle of that gap; among equal gaps the one between the largest areas is used; with fewer than two remaining rectangles, or when all remaining areas are equal (largest gap 0), the threshold is 0.
 - **DET-007** [v1·done·M5] Filter step 3: from the kept rectangles, discard those narrower than `minSystemWidthRatio` × page width.
@@ -266,8 +266,8 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **NFR-008** [v1·done·M8] Stale render tasks are cancelled when the view changes.
 - **NFR-009** [v1·done·M8] Inactive tabs release their bitmaps and keep only lightweight document data.
 - **NFR-010** [v1·done·M8] Under memory pressure the app degrades in this order: drop prefetch, lower render resolution, free inactive tabs' bitmaps; it never fails outright.
-- **NFR-011** [v1·todo·M10] Every OpenCV object is released in a `finally` block.
-- **NFR-012** [v1·todo·M10] OpenCV.js is loaded only inside the detection worker, lazily on first use, from the app's own assets (no CDN).
+- **NFR-011** [v1·done·M10] Every OpenCV object is released in a `finally` block.
+- **NFR-012** [v1·done·M10] OpenCV.js is loaded only inside the detection worker, lazily on first use, from the app's own assets (no CDN).
 - **NFR-013** [v1·todo·M15] There is no hard PDF size limit; a failed save shows the error icon and does not crash.
 - **NFR-014** [v1·done·M1] The initial bundle stays within `T:budgets.initialBundleKbGzip` (Angular build budget).
 - **NFR-015** [v1·todo·M16] After the OS kills the WebView, the next start restores tabs and positions; unsaved loss is limited to the autosave delay.
