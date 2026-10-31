@@ -48,3 +48,24 @@
     transform: translateY(100%);
   }
 }
+
+.list {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  max-width: 100%;
+  overflow-y: auto;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--cm-tab-gap);
+  min-height: var(--cm-touch-target);
+  padding: 0 var(--cm-tab-gap);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+}

@@ -1,0 +1,32 @@
+:host {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  max-width: 100%;
+  min-height: var(--cm-touch-target);
+  color: var(--cm-icon);
+}
+
+:host(.active) {
+  background: var(--cm-accent);
+  color: var(--cm-on-accent);
+}
+
+.name {
+  min-height: var(--cm-touch-target);
+  min-width: 0;
+  padding: 0 var(--cm-tab-gap);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.marker {
+  position: relative;
+  display: inline-flex;
+}

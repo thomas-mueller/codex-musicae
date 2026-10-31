@@ -15,6 +15,11 @@ export class DocumentStore {
   private readonly statusSignal = signal<DocumentStatus>('loading');
   private readonly errorCodeSignal = signal<DocumentErrorCode | null>(null);
 
+  /** Status markers of FIL-003; set by later milestones (saving, read-only files, lost access). */
+  readonly unsaved = signal(false);
+  readonly readOnly = signal(false);
+  readonly needsReopen = signal(false);
+
   readonly handle = this.handleSignal.asReadonly();
   readonly pageInfos = this.pageInfosSignal.asReadonly();
   readonly status = this.statusSignal.asReadonly();

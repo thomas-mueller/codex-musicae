@@ -50,7 +50,15 @@
     "versionInfo": "Version",
     "levelFast": "Fast detection",
     "levelStandard": "Standard detection",
-    "levelFine": "Fine detection"
+    "levelFine": "Fine detection",
+    "errorInvalid": "Damaged or invalid PDF",
+    "errorEncrypted": "Encrypted PDF",
+    "errorEmpty": "PDF without pages",
+    "errorUnknown": "File could not be opened",
+    "unsaved": "Unsaved changes",
+    "needsReopen": "Open the file again",
+    "recentFiles": "Recent files",
+    "tabList": "Open tabs"
   },
   "tooltip": {
     "modeOrganization": "Organization mode",
@@ -100,6 +108,14 @@
     "versionInfo": "Version",
     "levelFast": "Fast detection",
     "levelStandard": "Standard detection",
-    "levelFine": "Fine detection"
+    "levelFine": "Fine detection",
+    "errorInvalid": "Damaged or invalid PDF",
+    "errorEncrypted": "Encrypted PDF",
+    "errorEmpty": "PDF without pages",
+    "errorUnknown": "File could not be opened",
+    "unsaved": "Unsaved changes",
+    "needsReopen": "Open the file again",
+    "recentFiles": "Recent files",
+    "tabList": "Open tabs"
   }
 }

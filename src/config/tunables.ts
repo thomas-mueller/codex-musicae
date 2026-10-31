@@ -52,6 +52,7 @@ export const TUNABLES = {
     popupRadiusPx: 12, // UIX-013
     fabInsetPx: 16, // UIX-004: distance of the tool button from the canvas edge
     minTouchTargetPx: 44, // UIX-007
+    tabGapPx: 8, // FIL-003: padding inside a tab
     compactMaxWidthPx: 600, // UIX-003: compact if width < this ...
     compactMaxHeightPx: 480, // ... or height < this
     toolStripSide: 'left' as 'left' | 'right', // UIX-005
@@ -103,6 +104,9 @@ export const TUNABLES = {
     fullscreen: 'fullscreen',
     fullscreenExit: 'fullscreen_exit',
     fingerDrawing: 'touch_app', // STY-003
+    unsaved: 'circle', // FIL-003: unsaved dot
+    needsReopen: 'sync_problem', // FIL-003: access lost, file must be opened again
+    recentFiles: 'history', // FIL-008
   },
 
   gestures: {

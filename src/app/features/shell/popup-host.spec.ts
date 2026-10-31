@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 
+import { provideTestPorts } from '../../../testing/provide-test-ports';
 import { provideTestTransloco } from '../../../testing/transloco';
 import { APP_VERSION } from '../../ports/app-version';
 import { UiStore } from '../../state/ui.store';
@@ -8,7 +9,7 @@ import { PopupHost } from './popup-host';
 describe('PopupHost', () => {
   async function setup() {
     TestBed.configureTestingModule({
-      providers: [provideTestTransloco(), { provide: APP_VERSION, useValue: 'v0.0.0-test' }],
+      providers: [provideTestTransloco(), provideTestPorts(), { provide: APP_VERSION, useValue: 'v0.0.0-test' }],
     });
     const fixture = TestBed.createComponent(PopupHost);
     const store = TestBed.inject(UiStore);

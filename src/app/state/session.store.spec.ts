@@ -151,3 +151,69 @@ describe('SessionStore', () => {
     expect(active.close).not.toHaveBeenCalled();
   });
 });
+
+describe('SessionStore picker and recents', () => {
+  function setupPicker() {
+    const base = setup();
+    return base;
+  }
+
+  it('FIL-001 pickAndOpen opens the picked files in tabs', async () => {
+    const { session, files } = setupPicker();
+    files.pickPdfs = () => Promise.resolve({ ok: true, value: [file('a.pdf'), file('b.pdf')] });
+    expect(await session.pickAndOpen()).toBe('opened');
+    expect(session.tabs().map((t) => t.name)).toEqual(['a.pdf', 'b.pdf']);
+  });
+
+  it('FIL-001 a dismissed picker is silent and opens nothing', async () => {
+    const { session } = setupPicker();
+    expect(await session.pickAndOpen()).toBe('cancelled');
+    expect(session.tabs()).toEqual([]);
+  });
+
+  it('FIL-001 a picker failure is reported as failed', async () => {
+    const { session, files } = setupPicker();
+    files.pickPdfs = () => Promise.resolve({ ok: false, error: 'denied' });
+    expect(await session.pickAndOpen()).toBe('failed');
+  });
+
+  it('FIL-008 reopening a recent file opens it', async () => {
+    const { session, files } = setupPicker();
+    const opened = file('r.pdf');
+    files.reopen = () => Promise.resolve({ ok: true, value: opened });
+    expect(await session.reopenRecent(opened.ref)).toBe('opened');
+    expect(session.tabs().map((t) => t.name)).toEqual(['r.pdf']);
+  });
+
+  for (const error of ['not-found', 'denied', 'needs-user-gesture'] as const) {
+    it(`FIL-008 ${error} marks the recent file so the next tap offers the picker`, async () => {
+      const { session, files } = setupPicker();
+      const lost = file('lost.pdf').ref;
+      files.reopen = () => Promise.resolve({ ok: false, error });
+      expect(await session.reopenRecent(lost)).toBe('repick');
+      expect(session.repickIds().has(lost.id)).toBe(true);
+      expect(session.tabs()).toEqual([]);
+    });
+  }
+
+  it('FIL-008 the second tap runs the picker, replaces the old recent entry and clears the mark', async () => {
+    const { session, files, preferences } = setupPicker();
+    const old = file('lost.pdf').ref;
+    await preferences.addRecent(old);
+    files.reopen = () => Promise.resolve({ ok: false, error: 'not-found' });
+    await session.reopenRecent(old);
+    const fresh = file('lost2.pdf');
+    files.pickPdfs = () => Promise.resolve({ ok: true, value: [fresh] });
+    expect(await session.reopenRecent(old)).toBe('opened');
+    await preferences.ready;
+    expect(session.repickIds().has(old.id)).toBe(false);
+    expect(preferences.recentFiles().map((r) => r.name)).toEqual(['lost2.pdf']);
+    expect(session.tabs().map((t) => t.name)).toEqual(['lost2.pdf']);
+  });
+
+  it('FIL-003 tabs expose the marker flags of their document', async () => {
+    const { session } = setupPicker();
+    await session.openFiles([file('a.pdf')]);
+    expect(session.tabs()[0]).toMatchObject({ unsaved: false, readOnly: false, needsReopen: false });
+  });
+});

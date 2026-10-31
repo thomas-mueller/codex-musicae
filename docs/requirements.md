@@ -33,7 +33,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **GEN-002** [v1·done·M3] The Android applicationId and Capacitor appId are `T:identity.appId`.
 - **GEN-003** [v1-optional·todo·M18] The iOS bundle ID is `T:identity.appId`.
 - **GEN-004** [v1·done·M0] The GitHub repository is private and has no license file; only built apps (web, Android, optionally iOS) are distributed.
-- **GEN-005** [v1·todo·M8] PDF content is processed on the device only; no network request carries PDF content or PDF-derived data.
+- **GEN-005** [v1·done·M8] PDF content is processed on the device only; no network request carries PDF content or PDF-derived data.
 - **GEN-006** [v1·done·M1] The app has no account, no backend beyond static hosting, no analytics and no crash reporting.
 - **GEN-007** [v1·done·M7] The app has a single light theme; there is no dark mode.
 - **GEN-008** [v1·done·M7] Every area not covered by PDF content (around the slide, filler outside the page, the empty state) uses `T:colors.canvasGrey`.
@@ -47,21 +47,21 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 
 ## FIL — Files and tabs
 
-- **FIL-001** [v1·todo·M8] The open-file control opens the platform file picker for PDFs with multiple selection; each selected PDF opens in its own tab.
-- **FIL-002** [v1·todo·M8] Opening a PDF that is already open focuses its existing tab. Same file means: `isSameEntry` (web handles), same URI (Android), else equal name, size and last-modified time.
-- **FIL-003** [v1·todo·M8] Each tab shows the file name, a close icon and a status marker (unsaved dot, error icon, read-only lock icon, needs-re-open icon).
-- **FIL-004** [v1·todo·M8] In expanded layout the tabs are a tab bar; in compact layout one button shows the current tab name and opens the list of all tabs.
-- **FIL-005** [v1·todo·M8] Switching tabs keeps the global mode, tool and tool settings; per tab are position, zoom, aspect-ratio override, undo history and document data.
+- **FIL-001** [v1·done·M8] The open-file control opens the platform file picker for PDFs with multiple selection; each selected PDF opens in its own tab.
+- **FIL-002** [v1·done·M8] Opening a PDF that is already open focuses its existing tab. Same file means: `isSameEntry` (web handles), same URI (Android), else equal name, size and last-modified time.
+- **FIL-003** [v1·done·M8] Each tab shows the file name, a close icon and a status marker (unsaved dot, error icon, read-only lock icon, needs-re-open icon).
+- **FIL-004** [v1·done·M8] In expanded layout the tabs are a tab bar; in compact layout one button shows the current tab name and opens the list of all tabs.
+- **FIL-005** [v1·done·M8] Switching tabs keeps the global mode, tool and tool settings; per tab are position, zoom, aspect-ratio override, undo history and document data.
 - **FIL-006** [v1·todo·M15] Closing a tab saves it first; if saving fails the tab stays open and shows the error icon.
 - **FIL-007** [v1·done·M7] With no tab open, all chrome stays visible, the PDF area shows only canvas grey, controls that need a document are disabled, open-file and recent files stay enabled.
-- **FIL-008** [v1·todo·M8] A recent-files list (max `T:resources.recentFilesMax`, newest first) opens from the open-file control; selecting an entry reopens it, or asks to re-pick the file if access is lost.
-- **FIL-009** [v1·todo·M8] An encrypted, damaged or zero-page PDF opens as a tab in error state (error icon, tooltip with reason); it never crashes the app.
+- **FIL-008** [v1·done·M8] A recent-files list (max `T:resources.recentFilesMax`, newest first) opens from the open-file control; selecting an entry reopens it, or asks to re-pick the file if access is lost.
+- **FIL-009** [v1·done·M8] An encrypted, damaged or zero-page PDF opens as a tab in error state (error icon, tooltip with reason); it never crashes the app.
 - **FIL-010** [v1·todo·M15] While a tab has pending changes it shows the unsaved dot; it disappears after a successful save.
 - **FIL-011** [v1·todo·M16] At startup the app reopens the previous tabs, selects the last active tab and restores each tab's position.
 - **FIL-012** [v1·todo·M16] After startup the mode is annotation mode, even if the app was closed in presentation mode.
 - **FIL-013** [v1·todo·M16] A tab whose file access cannot be restored shows the needs-re-open state; one tap re-picks the file or re-grants permission.
 - **FIL-014** [v1·todo·M16] The persisted position per tab is the playing-order system index of the first entry on the current slide plus the organization-mode page and scroll offset.
-- **FIL-015** [v1·todo·M8] The preferences store (`T:persistence.keyPrefix`) holds UI state and file references only, never PDF-derived data. _P: web stores file handles in IndexedDB, other values in localStorage; Android uses Capacitor Preferences._
+- **FIL-015** [v1·done·M8] The preferences store (`T:persistence.keyPrefix`) holds UI state and file references only, never PDF-derived data. _P: web stores file handles in IndexedDB, other values in localStorage; Android uses Capacitor Preferences._
 - **FIL-016** [v1·todo·M15] If a file cannot be written, its tab shows the read-only lock icon and offers "save a copy"; ink, jumps and breaks stay editable in memory.
 - **FIL-017** [v1·todo·M15] "Save a copy" writes the modified PDF to a new file. _P: web download or save picker; Android document-create intent._
 - **FIL-018** [v1·todo·M16] The Android app is offered for PDF `VIEW` intents ("Open with…") and opens the file in a tab, requesting write access.
@@ -258,14 +258,14 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 
 - **NFR-001** [v1·todo·M17] A slide change completes in ≤ `T:budgets.slideChangeP95Ms` (95th percentile) with neighbors prefetched.
 - **NFR-002** [v1·todo·M17] While drawing, added latency stays ≤ `T:budgets.drawingMaxAddedLatencyMs` and no main-thread task exceeds `drawingMaxLongTaskMs`.
-- **NFR-003** [v1·todo·M8] One scheduler ranks work: input and drawing, then visible rendering, then neighbor prefetch, then saving, then detection; lower-priority work is paused or cancelled when higher-priority work needs the CPU.
-- **NFR-004** [v1·todo·M8] A bitmap cache with a byte budget (`T:resources.cacheBudgetByDeviceMemoryGb`, default `cacheBudgetDefaultBytes`) evicts least recently used bitmaps first.
-- **NFR-005** [v1·todo·M8] The device pixel ratio used for rendering is capped at `T:resources.devicePixelRatioCap`.
-- **NFR-006** [v1·todo·M8] No canvas exceeds `T:resources.maxCanvasPixels`.
+- **NFR-003** [v1·done·M8] One scheduler ranks work: input and drawing, then visible rendering, then neighbor prefetch, then saving, then detection; lower-priority work is paused or cancelled when higher-priority work needs the CPU.
+- **NFR-004** [v1·done·M8] A bitmap cache with a byte budget (`T:resources.cacheBudgetByDeviceMemoryGb`, default `cacheBudgetDefaultBytes`) evicts least recently used bitmaps first.
+- **NFR-005** [v1·done·M8] The device pixel ratio used for rendering is capped at `T:resources.devicePixelRatioCap`.
+- **NFR-006** [v1·done·M8] No canvas exceeds `T:resources.maxCanvasPixels`.
 - **NFR-007** [v1·todo·M9] Zoomed views (organization pages and slides) render only the visible tiles, each at most `T:resources.tileSizePx` wide and high.
-- **NFR-008** [v1·todo·M8] Stale render tasks are cancelled when the view changes.
-- **NFR-009** [v1·todo·M8] Inactive tabs release their bitmaps and keep only lightweight document data.
-- **NFR-010** [v1·todo·M8] Under memory pressure the app degrades in this order: drop prefetch, lower render resolution, free inactive tabs' bitmaps; it never fails outright.
+- **NFR-008** [v1·done·M8] Stale render tasks are cancelled when the view changes.
+- **NFR-009** [v1·done·M8] Inactive tabs release their bitmaps and keep only lightweight document data.
+- **NFR-010** [v1·done·M8] Under memory pressure the app degrades in this order: drop prefetch, lower render resolution, free inactive tabs' bitmaps; it never fails outright.
 - **NFR-011** [v1·todo·M10] Every OpenCV object is released in a `finally` block.
 - **NFR-012** [v1·todo·M10] OpenCV.js is loaded only inside the detection worker, lazily on first use, from the app's own assets (no CDN).
 - **NFR-013** [v1·todo·M15] There is no hard PDF size limit; a failed save shows the error icon and does not crash.

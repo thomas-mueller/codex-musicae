@@ -2,8 +2,9 @@ import { computed, effect, inject, Injectable, signal } from '@angular/core';
 
 import { TUNABLES } from '../../config/tunables';
 import { FILE_ACCESS } from '../ports/file-access';
-import type { FileRef, OpenedFile } from '../ports/file-access';
+import type { FileAccessError, FileRef, OpenedFile } from '../ports/file-access';
 import { PDF_RENDERER } from '../ports/pdf-renderer';
+import type { Result } from '../ports/result';
 import { BitmapCache } from './bitmap-cache';
 import { DocumentStore } from './document.store';
 import type { DocumentErrorCode, DocumentStatus } from './document.store';
@@ -16,7 +17,12 @@ export interface Tab {
   readonly name: string;
   readonly status: DocumentStatus;
   readonly errorCode: DocumentErrorCode | null;
+  readonly unsaved: boolean;
+  readonly readOnly: boolean;
+  readonly needsReopen: boolean;
 }
+
+export type OpenOutcome = 'opened' | 'cancelled' | 'failed' | 'repick';
 
 interface TabEntry {
   readonly id: string;
@@ -34,6 +40,7 @@ export class SessionStore {
   private readonly governor = inject(ResourceGovernor);
   private readonly entries = signal<readonly TabEntry[]>([]);
   private readonly activeIdSignal = signal<string | null>(null);
+  private readonly repickSignal = signal<ReadonlySet<string>>(new Set());
   private tabCounter = 0;
   private opening: Promise<void> = Promise.resolve();
 
@@ -45,8 +52,13 @@ export class SessionStore {
       name: e.ref.name,
       status: e.document.status(),
       errorCode: e.document.errorCode(),
+      unsaved: e.document.unsaved(),
+      readOnly: e.document.readOnly(),
+      needsReopen: e.document.needsReopen(),
     })),
   );
+  /** Recent entries whose access is lost: the next tap offers the picker (FIL-008). */
+  readonly repickIds = this.repickSignal.asReadonly();
   readonly activeTabId = this.activeIdSignal.asReadonly();
   readonly activeTab = computed(() => this.tabs().find((t) => t.id === this.activeIdSignal()) ?? null);
   readonly activeDocument = computed(() => this.entries().find((e) => e.id === this.activeIdSignal())?.document ?? null);
@@ -75,6 +87,29 @@ export class SessionStore {
     return this.opening;
   }
 
+  /** FIL-001: the picker is called before any await so the browser still sees the user gesture. */
+  pickAndOpen(): Promise<OpenOutcome> {
+    return this.finishPick(this.files.pickPdfs());
+  }
+
+  /** FIL-008: reopen a recent file; lost access marks it, and the next tap offers the picker instead. */
+  async reopenRecent(ref: FileRef): Promise<OpenOutcome> {
+    if (this.repickSignal().has(ref.id)) {
+      const outcome = await this.finishPick(this.files.pickPdfs(), ref);
+      if (outcome === 'opened') {
+        this.markRepick(ref.id, false);
+      }
+      return outcome;
+    }
+    const reopened = await this.files.reopen(ref);
+    if (!reopened.ok) {
+      this.markRepick(ref.id, true);
+      return 'repick';
+    }
+    await this.openFiles([reopened.value]);
+    return 'opened';
+  }
+
   closeTab(id: string): void {
     const list = this.entries();
     const index = list.findIndex((e) => e.id === id);
@@ -95,6 +130,33 @@ export class SessionStore {
     if (this.entries().some((e) => e.id === id)) {
       this.activeIdSignal.set(id);
     }
+  }
+
+  private async finishPick(
+    picking: Promise<Result<readonly OpenedFile[], FileAccessError>>,
+    replaced?: FileRef,
+  ): Promise<OpenOutcome> {
+    const picked = await picking;
+    if (!picked.ok) {
+      return picked.error === 'cancelled' ? 'cancelled' : 'failed';
+    }
+    if (replaced) {
+      await this.preferences.removeRecent(replaced, (refId) => this.entries().some((e) => e.ref.id === refId));
+    }
+    await this.openFiles(picked.value);
+    return 'opened';
+  }
+
+  private markRepick(id: string, on: boolean): void {
+    this.repickSignal.update((ids) => {
+      const next = new Set(ids);
+      if (on) {
+        next.add(id);
+      } else {
+        next.delete(id);
+      }
+      return next;
+    });
   }
 
   private async openOne(file: OpenedFile): Promise<void> {
