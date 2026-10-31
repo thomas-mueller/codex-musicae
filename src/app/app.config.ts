@@ -24,9 +24,11 @@ import { PdfJsRenderer } from './adapters/pdfjs/pdfjs-renderer';
 import { installDebugHook } from './adapters/web/debug-hook';
 import type { DebugHost } from './adapters/web/debug-hook';
 import { BitmapCache } from './state/bitmap-cache';
+import { WebAppLifecycle } from './adapters/web/web-app-lifecycle';
 import { WebDeviceInfo } from './adapters/web/web-device-info';
 import { WebFileAccess } from './adapters/web/web-file-access';
 import { WebPreferences } from './adapters/web/web-preferences';
+import { APP_LIFECYCLE } from './ports/app-lifecycle';
 import { DETECTION_ENGINE } from './ports/detection-engine';
 import { DEVICE_INFO } from './ports/device-info';
 import { FILE_ACCESS } from './ports/file-access';
@@ -87,6 +89,7 @@ export const appConfig: ApplicationConfig = {
     provideAppIdentity(),
     { provide: PDF_RENDERER, useFactory: () => new PdfJsRenderer() },
     { provide: DETECTION_ENGINE, useFactory: () => new OpenCvDetectionEngine() },
+    { provide: APP_LIFECYCLE, useFactory: () => new WebAppLifecycle() },
     { provide: PREFERENCES, useFactory: () => new WebPreferences() },
     { provide: DEVICE_INFO, useFactory: () => new WebDeviceInfo() },
     { provide: FILE_ACCESS, useFactory: () => new WebFileAccess() },

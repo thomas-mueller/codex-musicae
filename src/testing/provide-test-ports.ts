@@ -1,5 +1,10 @@
 import type { Provider } from '@angular/core';
 
+import { signal } from '@angular/core';
+
+import { APP_LIFECYCLE } from '../app/ports/app-lifecycle';
+import { DETECTION_ENGINE } from '../app/ports/detection-engine';
+import { ok } from '../app/ports/result';
 import { DEVICE_INFO } from '../app/ports/device-info';
 import { FILE_ACCESS } from '../app/ports/file-access';
 import { PDF_RENDERER } from '../app/ports/pdf-renderer';
@@ -15,6 +20,26 @@ export function provideTestPorts(): Provider[] {
     { provide: PDF_RENDERER, useValue: fakeRenderer() },
     { provide: FILE_ACCESS, useValue: fakeFileAccess() },
     { provide: PREFERENCES, useValue: memoryPreferences() },
+    ...provideTestDetectionPorts(),
+  ];
+}
+
+/** A lifecycle that reports the user as active, so background detection stays paused (DET-017) and specs that open documents see no extra renders. */
+export function provideTestDetectionPorts(): Provider[] {
+  return [
+    {
+      provide: APP_LIFECYCLE,
+      useValue: { visible: signal(true), userActive: signal(true), batterySaver: signal<boolean | null>(null), onPause: () => () => undefined },
+    },
+    {
+      provide: DETECTION_ENGINE,
+      useValue: {
+        extractComponents: (bitmap: ImageBitmap) => {
+          bitmap.close();
+          return Promise.resolve(ok([]));
+        },
+      },
+    },
     { provide: DEVICE_INFO, useValue: { deviceMemoryGb: () => TEST_MEMORY_GB, devicePixelRatio: () => 1, prefersReducedMotion: () => false } },
   ];
 }

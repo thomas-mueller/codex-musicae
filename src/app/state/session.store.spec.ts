@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 
 import { TUNABLES } from '../../config/tunables';
+import { provideTestDetectionPorts } from '../../testing/provide-test-ports';
 import { DEVICE_INFO } from '../ports/device-info';
 import { FILE_ACCESS } from '../ports/file-access';
 import type { OpenedFile } from '../ports/file-access';
@@ -33,6 +34,7 @@ function setup() {
       { provide: PDF_RENDERER, useValue: fakeRenderer('invalid') },
       { provide: FILE_ACCESS, useValue: files },
       { provide: PREFERENCES, useValue: memoryPreferences() },
+      ...provideTestDetectionPorts(),
       { provide: CLOCK, useValue: clock },
       { provide: DEVICE_INFO, useValue: { deviceMemoryGb: () => 4, devicePixelRatio: () => 1, prefersReducedMotion: () => false } },
     ],

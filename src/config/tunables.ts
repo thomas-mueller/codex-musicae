@@ -179,6 +179,7 @@ export const TUNABLES = {
     idleBeforeResumeMs: 1000, // DET-017
     pauseWhenHidden: true, // DET-017
     pauseOnBatterySaver: true, // DET-017 (where detectable)
+    cancelRetryDelayMs: 250, // DET-017: wait before a page cancelled by foreground work is submitted again
     opencvAssetPath: 'assets/opencv/opencv.js', // NFR-012: self-hosted, loaded only inside the detection worker
     binaryThreshold: 0, // DET-004: ignored by Otsu, which picks the threshold
     binaryMaxValue: 255, // DET-004: ink value in the binary image
