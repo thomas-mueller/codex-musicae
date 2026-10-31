@@ -8,9 +8,15 @@ const DEV_URL = 'http://127.0.0.1:4174';
 const SMALLEST_BUCKET_GB = 1;
 const OPEN_COUNT = 12;
 const CYCLES = 25;
+const RESOURCE_TEST_TIMEOUT_MS = 90_000; // 12 renders on a slow CI runner with the unoptimized dev build
 
 test.use({ viewport: { width: 1280, height: 800 } });
-test.skip(({ browserName }) => browserName !== 'chromium', 'resource checks run on Chromium only');
+// Desktop Chromium only: the Chromium device projects (phone, tablet) emulate touch and a high pixel ratio,
+// so rendering 12 pages there is far slower and says nothing more about the cache budget.
+test.beforeEach(({ browserName }, testInfo) => {
+  test.skip(browserName !== 'chromium' || testInfo.project.name !== 'chromium', 'resource checks run on desktop Chromium only');
+});
+test.setTimeout(RESOURCE_TEST_TIMEOUT_MS);
 
 interface Probe {
   totalBytes: number;
