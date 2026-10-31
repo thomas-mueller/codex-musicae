@@ -71,8 +71,9 @@ export const TUNABLES = {
     progressLineHeightPx: 3, // UIX-020
     minSupportedWidthPx: 320, // UIX-016
     maxSupportedWidthPx: 2560, // UIX-016
-    numberSeparator: ', ', // ORG-012: between the numbers of a system in a bar row
-    barRowFontPx: 11, // ORG-011: monospaced digits in the bar row
+    numberSeparator: ', ', // ORG-012: between the playing-order numbers of a system
+    systemLabelHeightRatio: 0.8, // ORG-012: the digits of a system's label cover this share of the system height
+    systemLabelDigitEm: 0.72, // ORG-012: height of a digit in em for the label font (sans-serif)
     barRowIconPx: 16, // ORG-011: break and stop icons in the bar row
     barRowInsetPx: 4, // ORG-011: left inset and gap between the items of a bar row
     breakLinePx: 2, // ORG-022: thickness of the slide-break line
@@ -84,16 +85,17 @@ export const TUNABLES = {
     badgePaddingPx: 3, // ORG-018: padding inside a jump badge
     badgeRadiusPx: 8, // ORG-018
     badgeFontPx: 11, // ORG-018
-    labelSeparator: '·', // ORG-018: between page and bar number in a junction label ("7·1")
     passPrefix: '×', // ORG-018: before the pass number in a badge ("×2")
     hintBarHeightPx: 32, // ORG-015: slim hint bar while picking a jump target
     stepperGapPx: 8, // ORG-016: gap between the pass stepper's buttons and number
     jumpChipButtons: 3, // ORG-020: pass, change target, delete (also the width of the pass stepper: three parts)
-    jumpListSwipeMinPx: 60, // ORG-021: horizontal distance of a swipe-left that deletes a list entry
-    listArrow: '→', // ORG-021: between the from and to labels in a jump-list entry
-    dotPx: 12, // ORG-021: diameter of the color dot of a jump-list entry
+    markListSwipeMinPx: 60, // ORG-021: horizontal distance of a swipe-left that deletes an entry of the marks list
+    listArrow: '→', // ORG-021: between the from and to system numbers of a jump in the marks list
+    dotPx: 12, // ORG-021: diameter of the color dot of a jump in the marks list
+    unreachedOpacity: 0.6, // ORG-021: entries that are never reached in the playing order are dimmed
     dialogRadiusPx: 12, // DET-014: confirmation dialog
     dialogGapPx: 8, // DET-014: gap between the level icon and the buttons
+    markerRotationDeg: 180, // ORG-018: the split points toward the end of the PDF, the merge arrows come from its beginning
     chipMaxButtons: 4, // ORG-014: jump, slide break, stop, delete (sizes the chip for its placement)
   },
 
@@ -121,7 +123,8 @@ export const TUNABLES = {
     next: 'chevron_right',
     showMore: 'unfold_more', // taller slide = lower aspect ratio
     showLess: 'unfold_less', // wider slide = higher aspect ratio
-    jump: 'alt_route',
+    jump: 'alt_route', // ORG-018: also the start marker of a jump, rotated by markerRotationDeg
+    jumpEnd: 'merge', // ORG-018: the end marker of a jump (arrows merge), rotated by markerRotationDeg
     pass: 'counter_1', // ORG-020: chip button that opens the pass stepper
     changeTarget: 'ads_click', // ORG-020
     plus: 'add', // ORG-016
@@ -133,7 +136,7 @@ export const TUNABLES = {
     levelFast: 'bolt', // DET-013: one icon per detection level
     levelStandard: 'balance',
     levelFine: 'grain',
-    jumpList: 'list',
+    markList: 'list', // ORG-021: button that opens the marks list (jumps, slide breaks, stops)
     overflow: 'more_vert',
     info: 'info',
     cancel: 'close',
@@ -200,12 +203,13 @@ export const TUNABLES = {
      * Each level is a fixed set of three named parameters. DET-013
      * minSystemWidthRatio:  rects narrower than this fraction of page width are never systems (DET-007)
      * fullWidthSystemRatio: rects at least this wide are always systems (DET-008)
-     * renderScale:          bitmap pixels per PDF point used for detection (DET-003)
+     * renderScale:          bitmap pixels per PDF point used for detection (DET-003); written as dpi / 72.
+     *                       `fast` is 100 dpi, the value of the dev-v0 draft (`PDF_DETECTION_CONFIG.renderScale = 100 / 72`).
      */
     levels: {
-      fast: { minSystemWidthRatio: 0.6, fullWidthSystemRatio: 0.8, renderScale: 1.0 },
-      standard: { minSystemWidthRatio: 0.5, fullWidthSystemRatio: 0.75, renderScale: 1.5 },
-      fine: { minSystemWidthRatio: 0.4, fullWidthSystemRatio: 0.7, renderScale: 2.5 },
+      fast: { minSystemWidthRatio: 0.6, fullWidthSystemRatio: 0.8, renderScale: 100 / 72 },
+      standard: { minSystemWidthRatio: 0.5, fullWidthSystemRatio: 0.75, renderScale: 150 / 72 },
+      fine: { minSystemWidthRatio: 0.4, fullWidthSystemRatio: 0.7, renderScale: 200 / 72 },
     },
     fallbackPaddingPageHeightRatio: 0.02, // DET-010: used when no spacing exists in the whole document
     retryScaleFactor: 0.6, // DET-018

@@ -76,8 +76,8 @@ describe('OrganizationViewer selection and marks', () => {
     expect(chip()).toBeNull();
   });
 
-  it('ORG-022 ORG-023 ORG-011 chip toggles break and stop and the row shows numbers and icons', async () => {
-    const { doc, fixture, bar, press } = await mount();
+  it('ORG-022 ORG-023 ORG-011 chip toggles break and stop and the row shows the icons', async () => {
+    const { doc, fixture, root, bar, press } = await mount();
     bar(1).click();
     await fixture.whenStable();
     await press('break');
@@ -86,7 +86,8 @@ describe('OrganizationViewer selection and marks', () => {
     expect(doc.marks().stops).toEqual([1]);
     expect(bar(1).querySelector('[data-testid="org-bar-break-line"]')).not.toBeNull();
     expect(bar(1).querySelector('[data-testid="org-bar-stop-icon"]')).not.toBeNull();
-    expect(bar(1).querySelector('[data-testid="org-bar-numbers"]')?.textContent).toBe('1');
+    expect(root.querySelector('[data-testid="system-label"][data-system="1"]')?.textContent).toBe('1'); // numbers sit on the systems
+    expect(bar(1).querySelector('[data-testid="org-bar-numbers"]')).toBeNull();
     await press('break');
     expect(doc.marks().breaks).toEqual([]);
   });
@@ -128,7 +129,7 @@ describe('OrganizationViewer selection and marks', () => {
     await fixture.whenStable();
   };
 
-  it('ORG-015 ORG-016 ORG-018 jump flow: chip, pick a target, stepper, badges', async () => {
+  it('ORG-015 ORG-016 ORG-018 jump flow: chip, pick a target, stepper, markers', async () => {
     const { doc, fixture, root, bar, press } = await mount();
     const ui = TestBed.inject(UiStore);
     await tap(fixture, bar(2));
@@ -154,11 +155,12 @@ describe('OrganizationViewer selection and marks', () => {
     expect(doc.marks().jumps[0]?.pass).toBe(2);
     expect(root.querySelector('[data-testid="stepper-value"]')!.textContent).toBe('2'); // the stepper stays open and selected
     expect(ui.selection()).toEqual({ kind: 'jump', id: 1 });
-    const originBadge = bar(2).querySelector('[data-testid="jump-badge"]')!;
-    expect(originBadge.textContent).toContain(`1${TUNABLES.layout.labelSeparator}1`);
-    expect(originBadge.textContent).toContain(`${TUNABLES.layout.passPrefix}2`);
-    const targetBadge = bar(0).querySelector('[data-testid="jump-badge"]')!;
-    expect(targetBadge.textContent).toContain(`1${TUNABLES.layout.labelSeparator}3`);
+    // Jump from junction 2 to junction 0: it starts at system 2 and ends at system 1.
+    const start = root.querySelector('[data-testid="jump-marker"][data-role="origin"]')!;
+    expect(start.querySelector('[data-testid="jump-marker-number"]')!.textContent).toBe('1');
+    expect(start.querySelector('[data-testid="jump-marker-pass"]')!.textContent).toBe(`${TUNABLES.layout.passPrefix}2`);
+    const end = root.querySelector('[data-testid="jump-marker"][data-role="target"]')!;
+    expect(end.querySelector('[data-testid="jump-marker-number"]')!.textContent).toBe('2');
   });
 
   it('ORG-015 Escape and the cancel icon leave picking without a change', async () => {
@@ -177,13 +179,13 @@ describe('OrganizationViewer selection and marks', () => {
     expect(root.querySelector('[data-testid="org-hint-bar"]')).toBeNull();
   });
 
-  it('ORG-020 selecting a badge offers pass, change target and delete; change target retargets', async () => {
+  it('ORG-020 selecting a marker offers pass, change target and delete; change target retargets', async () => {
     const { doc, fixture, root, bar } = await mount();
     const ui = TestBed.inject(UiStore);
     doc.addJump({ origin: 2, target: 0, pass: 1 });
     await fixture.whenStable();
     ui.closePopup();
-    await tap(fixture, bar(2).querySelector<HTMLElement>('[data-testid="jump-badge"]')!);
+    await tap(fixture, root.querySelector<HTMLElement>('[data-testid="jump-marker"][data-role="origin"]')!);
     expect(ui.selection()).toEqual({ kind: 'jump', id: 1 });
     for (const id of ['pass', 'change-target', 'delete']) {
       expect(root.querySelector(`[data-testid="chip-${id}"]`), id).not.toBeNull();
@@ -196,13 +198,13 @@ describe('OrganizationViewer selection and marks', () => {
     expect(ui.pickingTarget()).toBeNull();
   });
 
-  it('ORG-020 the pass button opens the stepper; delete removes the jump and its badges', async () => {
-    const { doc, fixture, root, bar } = await mount();
+  it('ORG-020 the pass button opens the stepper; delete removes the jump and its markers', async () => {
+    const { doc, fixture, root } = await mount();
     const ui = TestBed.inject(UiStore);
     doc.addJump({ origin: 2, target: 0, pass: 3 });
     await fixture.whenStable();
     ui.closePopup();
-    await tap(fixture, bar(2).querySelector<HTMLElement>('[data-testid="jump-badge"]')!);
+    await tap(fixture, root.querySelector<HTMLElement>('[data-testid="jump-marker"][data-role="origin"]')!);
     root.querySelector<HTMLElement>('[data-testid="chip-pass"]')!.click();
     await fixture.whenStable();
     expect(root.querySelector('[data-testid="stepper-value"]')!.textContent).toBe('3');
@@ -212,16 +214,16 @@ describe('OrganizationViewer selection and marks', () => {
     await fixture.whenStable();
     expect(doc.marks().jumps).toEqual([]);
     expect(ui.selection()).toBeNull();
-    expect(root.querySelectorAll('[data-testid="jump-badge"]')).toHaveLength(0);
+    expect(root.querySelectorAll('[data-testid="jump-marker"]')).toHaveLength(0);
   });
 
-  it('ORG-019 long press on a badge scrolls to the other end of the jump', async () => {
-    const { doc, fixture, bar } = await mount();
+  it('ORG-019 long press on a marker scrolls to the other end of the jump', async () => {
+    const { doc, fixture, root } = await mount();
     const view = TestBed.inject(OrgViewStore);
     const scroll = vi.spyOn(view, 'scrollToJunction');
     doc.addJump({ origin: 2, target: 0, pass: 1 });
     await fixture.whenStable();
-    const badge = bar(2).querySelector<HTMLElement>('[data-testid="jump-badge"]')!;
+    const badge = root.querySelector<HTMLElement>('[data-testid="jump-marker"][data-role="origin"]')!;
     vi.useFakeTimers();
     badge.dispatchEvent(new Event('pointerdown', { bubbles: true }));
     vi.advanceTimersByTime(TUNABLES.layout.longPressMs);
@@ -241,11 +243,24 @@ describe('OrganizationViewer selection and marks', () => {
     expect(ui.popup()).toBeNull();
     doc.addJump({ origin: 2, target: 0, pass: 1 });
     ui.select({ kind: 'jump', id: 2 });
-    ui.openPopup('jumpList');
+    ui.openPopup('markList');
     await fixture.whenStable();
     doc.removeJump(2);
     await fixture.whenStable();
     expect(ui.selection()).toBeNull();
-    expect(ui.popup()?.id).toBe('jumpList');
+    expect(ui.popup()?.id).toBe('markList');
+  });
+
+  it('ORG-016 a second jump from the same bar starts at occurrence 2 and the stepper shows it', async () => {
+    const { doc, fixture, root, bar, press } = await mount();
+    const ui = TestBed.inject(UiStore);
+    doc.addJump({ origin: 2, target: 0, pass: 1 });
+    await fixture.whenStable();
+    ui.closePopup();
+    await tap(fixture, bar(2));
+    await press('jump');
+    await tap(fixture, bar(1));
+    expect(doc.marks().jumps.map((j) => [j.origin, j.target, j.pass])).toEqual([[2, 0, 1], [2, 1, 2]]);
+    expect(root.querySelector('[data-testid="stepper-value"]')!.textContent).toBe('2');
   });
 });

@@ -28,6 +28,8 @@ Accepted on purpose. They are not bugs; do not "fix" them in a v1 milestone.
 - **LIM-022** Versions below 1.0.0 are pre-release milestones: they show progress, not stability, and early milestones deliver nothing usable. The release is the extra tag `v1.0.0` on the last included milestone's commit.
 - **LIM-024** In a PDF whose `/EmbeddedFiles` name tree has `/Kids` nodes, the app's attachment is added as a new leaf without re-sorting the tree; strict viewers may not list it, other viewers ignore it either way.
 - **LIM-025** Annotations of other apps that are not `/Ink` (text notes, highlights, stamps) are kept on save but not displayed by the app from M15 on.
+- **LIM-026** A jump that starts at junction 0 or ends at junction N has no source or next system; its marker sits on the bar of that junction and the end at N shows no number (ORG-018, DEC-091).
+- **LIM-027** System labels show playing-order numbers while jump markers and the marks list show print numbers; a system played twice carries two label numbers but one print number (DEC-090).
 - **LIM-023** Samsung Internet is treated as covered by Chromium and verified on a real device only.
 
 ## Future versions (backlog)

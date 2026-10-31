@@ -61,10 +61,10 @@
   <button
     appIconButton
     data-popup-trigger
-    icon="jumpList"
-    labelKey="jumpList"
-    [toggled]="store.popup()?.id === jumpListId"
+    icon="markList"
+    labelKey="markList"
+    [toggled]="store.popup()?.id === markListId"
     [disabled]="noDocument()"
-    (pressed)="store.togglePopup(jumpListId)"
+    (pressed)="store.togglePopup(markListId)"
   ></button>
 }

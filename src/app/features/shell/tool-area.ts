@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 
 import { TUNABLES } from '../../../config/tunables';
-import { POPUP_JUMP_LIST } from '../organization/jump-list';
+import { POPUP_MARK_LIST } from '../organization/mark-list';
 import { OrgViewStore } from '../../state/org-view.store';
 import { DetectionLevel, Tool, UiStore } from '../../state/ui.store';
 import { IconKey } from './icon';
@@ -42,7 +42,7 @@ export const LEVEL_ENTRIES: readonly { readonly level: DetectionLevel; readonly 
 export class ToolArea {
   protected readonly store = inject(UiStore);
   protected readonly view = inject(OrgViewStore);
-  protected readonly jumpListId = POPUP_JUMP_LIST;
+  protected readonly markListId = POPUP_MARK_LIST;
   protected readonly side = TUNABLES.layout.toolStripSide;
   protected readonly tools = TOOL_ENTRIES;
   protected readonly levels = LEVEL_ENTRIES;

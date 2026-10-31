@@ -32,7 +32,6 @@ export function tunablesToCssVars(t: Tunables): Readonly<Record<string, string>>
     '--cm-page-badge-inset': `${t.layout.pageBadgeInsetPx}px`,
     '--cm-break-line': t.colors.breakLine,
     '--cm-break-line-px': `${t.layout.breakLinePx}px`,
-    '--cm-bar-row-font': `${t.layout.barRowFontPx}px`,
     '--cm-bar-row-icon': `${t.layout.barRowIconPx}px`,
     '--cm-bar-row-inset': `${t.layout.barRowInsetPx}px`,
     '--cm-bar-hit-slop': `${t.layout.barHitSlopPx}px`,
@@ -44,9 +43,11 @@ export function tunablesToCssVars(t: Tunables): Readonly<Record<string, string>>
     '--cm-badge-font': `${t.layout.badgeFontPx}px`,
     '--cm-hint-bar-height': `${t.layout.hintBarHeightPx}px`,
     '--cm-stepper-gap': `${t.layout.stepperGapPx}px`,
+    '--cm-unreached-opacity': String(t.layout.unreachedOpacity),
     '--cm-dot': `${t.layout.dotPx}px`,
     '--cm-dialog-radius': `${t.layout.dialogRadiusPx}px`,
     '--cm-dialog-gap': `${t.layout.dialogGapPx}px`,
+    '--cm-marker-rotation': `${t.layout.markerRotationDeg}deg`,
     '--cm-disabled-opacity': String(t.layout.disabledOpacity),
   };
 }

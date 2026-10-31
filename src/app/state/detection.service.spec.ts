@@ -20,6 +20,7 @@ const PAGE_WIDTH = 600;
 const PAGE_HEIGHT = 800;
 const SYSTEM: Rect = { x: 50, y: 100, width: 500, height: 60 }; // display points; 500/600 > fullWidthSystemRatio of every level
 const RETRY = TUNABLES.detection.retryScaleFactor;
+const DEFAULT_SCALE = TUNABLES.detection.levels[TUNABLES.detection.defaultLevel].renderScale;
 
 const until = async (condition: () => boolean): Promise<void> => {
   for (let i = 0; i < 200 && !condition(); i++) {
@@ -121,7 +122,7 @@ describe('DetectionService', () => {
     service.start(doc);
     await until(() => doc.detectionComplete());
     expect(doc.detection.states()[0]).toBe('done');
-    expect(renders.filter((r) => r.page === 0).map((r) => r.scale)).toEqual([1, RETRY]);
+    expect(renders.filter((r) => r.page === 0).map((r) => r.scale)).toEqual([DEFAULT_SCALE, DEFAULT_SCALE * RETRY]);
     expect(governor.level()).toBe(1);
   });
 

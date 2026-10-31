@@ -1,46 +1,19 @@
-import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 
 import { TUNABLES } from '../src/config/tunables';
 import { generatePlayingOrder, systemNumbers } from '../src/app/core/playing-order';
+import { label, openScoreInOrganization, SYNTHETIC_BARS, SYNTHETIC_SYSTEMS } from './support/score';
+import { RERUN_TIMEOUT_MS, SCROLL_TIMEOUT_MS } from './support/timing';
 
-const en = JSON.parse(readFileSync('src/assets/i18n/en.json', 'utf8')) as { a11y: Record<string, string> };
-const label = (key: string) => en.a11y[key] as string;
-const scoreBytes = readFileSync('e2e/fixtures/synthetic-score.pdf');
-const FILE_CHOOSER_TIMEOUT_MS = 15_000;
-const DETECTION_TIMEOUT_MS = 45_000;
-const RETRY_TIMEOUT_MS = 1000;
-const TEST_TIMEOUT_MS = 120_000;
-const SYNTHETIC_BARS = 15; // 3 pages x (4 systems + 1) bars
-const SYSTEMS = 12; // 3 pages x 4 systems
+const SYSTEMS = SYNTHETIC_SYSTEMS;
 const FIRST_BAR_INDEX = 0; // junction 0, label 1·1
 const PAGE1_BOTTOM_BAR_INDEX = 4; // junction 4, label 1·5
 const LAST_BAR_INDEX = SYNTHETIC_BARS - 1; // junction 12
 const LONG_PRESS_MARGIN_MS = 200;
-const RERUN_TIMEOUT_MS = 60_000;
-const SCROLL_TIMEOUT_MS = 5000;
 const MIDDLE_BAR_INDEX = 1; // the second bar of page 1: junction 1
 const EMPTY_SPACE = { x: 5, y: 300 }; // the grey canvas left of the centered page
 
 test.use({ viewport: { width: 1280, height: 800 } });
-test.setTimeout(TEST_TIMEOUT_MS);
-test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => {
-    delete (globalThis as unknown as { showOpenFilePicker?: unknown }).showOpenFilePicker;
-  });
-});
-
-async function openScoreInOrganization(page: Page): Promise<void> {
-  await page.goto('/');
-  const chooser = page.waitForEvent('filechooser', { timeout: FILE_CHOOSER_TIMEOUT_MS });
-  await page.getByRole('button', { name: label('openFile'), exact: true }).click();
-  await (await chooser).setFiles({ name: 'score.pdf', mimeType: 'application/pdf', buffer: scoreBytes });
-  await expect(async () => {
-    await page.getByLabel(label('modeOrganization'), { exact: true }).click();
-    await expect(page.getByTestId('org-viewer')).toBeVisible({ timeout: RETRY_TIMEOUT_MS });
-  }).toPass();
-  await expect(page.getByTestId('org-bar')).toHaveCount(SYNTHETIC_BARS, { timeout: DETECTION_TIMEOUT_MS });
-}
 
 test('ORG-010 the bars layer stacks above every tile canvas', async ({ page }) => {
   await openScoreInOrganization(page);
@@ -66,7 +39,8 @@ test('ORG-013 ORG-014 ORG-022 ORG-023 ORG-024 select a bar, set a break and a st
   await expect(bar.getByTestId('org-bar-break-line')).toHaveCount(1);
   await expect(bar.getByTestId('org-bar-break-icon')).toHaveCount(1);
   await expect(bar.getByTestId('org-bar-stop-icon')).toHaveCount(1);
-  await expect(bar.getByTestId('org-bar-numbers')).toHaveText('1');
+  await expect(page.locator('[data-testid="system-label"][data-system="1"]')).toHaveText('1');
+  await expect(bar.getByTestId('org-bar-numbers')).toHaveCount(0);
 
   await chip.getByTestId('chip-delete').click();
   await expect(bar.getByTestId('org-bar-break-line')).toHaveCount(0);
@@ -81,9 +55,10 @@ test('ORG-013 ORG-014 ORG-022 ORG-023 ORG-024 select a bar, set a break and a st
   await expect(chip).toHaveCount(0);
 });
 
-const junctionLabelText = (page: number, bar: number): string => `${page}${TUNABLES.layout.labelSeparator}${bar}`;
+const marker = (page: Page, role: 'origin' | 'target') => page.locator(`[data-testid="jump-marker"][data-role="${role}"]`);
+const systemLabel = (page: Page, system: number) => page.locator(`[data-testid="system-label"][data-system="${system}"]`);
 
-test('ORG-015 ORG-016 ORG-018 ORG-020 create a jump, set the pass, see the badges, edit and delete it', async ({ page }) => {
+test('ORG-015 ORG-016 ORG-018 ORG-020 create a jump, set the pass, see the markers on the systems, edit and delete it', async ({ page }) => {
   await openScoreInOrganization(page);
   const bars = page.getByTestId('org-bar');
   const chip = page.getByTestId('selection-chip');
@@ -93,7 +68,7 @@ test('ORG-015 ORG-016 ORG-018 ORG-020 create a jump, set the pass, see the badge
 
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('org-hint-bar')).toHaveCount(0);
-  await expect(page.getByTestId('jump-badge')).toHaveCount(0);
+  await expect(page.getByTestId('jump-marker')).toHaveCount(0);
 
   await bars.nth(PAGE1_BOTTOM_BAR_INDEX).click();
   await chip.getByTestId('chip-jump').click();
@@ -102,27 +77,40 @@ test('ORG-015 ORG-016 ORG-018 ORG-020 create a jump, set the pass, see the badge
   await page.getByTestId('stepper-plus').click();
   await expect(page.getByTestId('stepper-value')).toHaveText('2');
 
+  // The jump leaves after system 4 (right side) and arrives before system 1 (left side).
   const order = generatePlayingOrder({ systemCount: SYSTEMS, jumps: [{ origin: PAGE1_BOTTOM_BAR_INDEX, target: 0, pass: 2 }], stops: [], maxLength: TUNABLES.playingOrder.maxLength });
   const numbers = systemNumbers(order, SYSTEMS)[PAGE1_BOTTOM_BAR_INDEX - 1]!.join(TUNABLES.layout.numberSeparator);
-  const origin = bars.nth(PAGE1_BOTTOM_BAR_INDEX);
-  await expect(origin.getByTestId('org-bar-numbers')).toHaveText(numbers);
-  await expect(origin.getByTestId('jump-badge')).toContainText(junctionLabelText(1, 1));
-  await expect(origin.getByTestId('jump-badge')).toContainText(`${TUNABLES.layout.passPrefix}2`);
-  await expect(bars.nth(FIRST_BAR_INDEX).getByTestId('jump-badge')).toContainText(junctionLabelText(1, PAGE1_BOTTOM_BAR_INDEX + 1));
+  await expect(systemLabel(page, PAGE1_BOTTOM_BAR_INDEX)).toHaveText(numbers);
+  await expect(page.getByTestId('jump-marker')).toHaveCount(2); // one start, one end, although junction 4 has two bars
+  await expect(marker(page, 'origin').getByTestId('jump-marker-number')).toHaveText('1'); // target system
+  await expect(marker(page, 'origin').getByTestId('jump-marker-pass')).toHaveText(`${TUNABLES.layout.passPrefix}2`);
+  await expect(marker(page, 'target').getByTestId('jump-marker-number')).toHaveText(String(PAGE1_BOTTOM_BAR_INDEX)); // source system
 
-  await origin.getByTestId('jump-badge').click();
+  await marker(page, 'origin').click();
   await expect(chip.getByTestId('chip-pass')).toBeVisible();
   await expect(chip.getByTestId('chip-change-target')).toBeVisible();
   await chip.getByTestId('chip-change-target').click();
   await bars.nth(1).click();
-  await expect(origin.getByTestId('jump-badge')).toContainText(junctionLabelText(1, 2));
+  await expect(marker(page, 'origin').getByTestId('jump-marker-number')).toHaveText('2'); // now ends before system 2
 
-  await origin.getByTestId('jump-badge').click();
+  await marker(page, 'origin').click();
   await chip.getByTestId('chip-delete').click();
-  await expect(page.getByTestId('jump-badge')).toHaveCount(0);
+  await expect(page.getByTestId('jump-marker')).toHaveCount(0);
 });
 
-test('ORG-019 a long press on a badge scrolls to the other end of the jump', async ({ page }) => {
+test('ORG-016 a second jump from the same bar starts at occurrence 2', async ({ page }) => {
+  await openScoreInOrganization(page);
+  const bars = page.getByTestId('org-bar');
+  const chip = page.getByTestId('selection-chip');
+  for (const [target, pass] of [[FIRST_BAR_INDEX, '1'], [MIDDLE_BAR_INDEX, '2']] as const) {
+    await bars.nth(PAGE1_BOTTOM_BAR_INDEX).click();
+    await chip.getByTestId('chip-jump').click();
+    await bars.nth(target).click();
+    await expect(page.getByTestId('stepper-value')).toHaveText(pass);
+  }
+});
+
+test('ORG-019 a long press on a marker scrolls to the other end of the jump', async ({ page }) => {
   await openScoreInOrganization(page);
   const viewer = page.getByTestId('org-viewer');
   const bars = page.getByTestId('org-bar');
@@ -137,11 +125,12 @@ test('ORG-019 a long press on a badge scrolls to the other end of the jump', asy
   await viewer.evaluate((element) => {
     element.scrollTop = 0;
   });
-  const badge = bars.nth(FIRST_BAR_INDEX).getByTestId('jump-badge');
+  // Junctions 0 and N have no system: the start sits on bar 0, the end on bar N.
+  const start = marker(page, 'origin');
   // Dispatched pointer events: Playwright's mouse API sends none on emulated-touch Firefox.
-  await badge.dispatchEvent('pointerdown');
+  await start.dispatchEvent('pointerdown');
   await page.waitForTimeout(TUNABLES.layout.longPressMs + LONG_PRESS_MARGIN_MS);
-  await badge.dispatchEvent('pointerup');
+  await start.dispatchEvent('pointerup');
   await expect.poll(() => viewer.evaluate((element) => element.scrollTop), { timeout: SCROLL_TIMEOUT_MS }).toBeGreaterThan(0);
 });
 
@@ -154,27 +143,51 @@ async function openOrganizationTool(page: Page, key: string): Promise<void> {
   await page.getByLabel(label(key), { exact: true }).click();
 }
 
-test('ORG-021 DET-014 DET-015 the jump list, then a confirmed level change keeps the marks and the bars', async ({ page }) => {
+test('ORG-021 the marks list shows jumps, slide breaks and stops in playing order and deletes each kind', async ({ page }) => {
   await openScoreInOrganization(page);
   const bars = page.getByTestId('org-bar');
   const chip = page.getByTestId('selection-chip');
-  for (const [from, to] of [[PAGE1_BOTTOM_BAR_INDEX, FIRST_BAR_INDEX], [MIDDLE_BAR_INDEX, MIDDLE_BAR_INDEX + 1]] as const) {
+  const JUNCTION_1_BAR = 1;
+  const JUNCTION_2_BAR = 2;
+  const JUNCTION_3_BAR = 3;
+  const JUNCTION_6_BAR = 7; // page 2: bars 5..9 are junctions 4, 5, 6, 7, 8 (index 5 is the second bar of junction 4)
+  // B: 1 -> 2 is created second but is met first in the playing order; A: 4 -> 0 follows; break at 3; stop at 6.
+  for (const [from, to] of [[PAGE1_BOTTOM_BAR_INDEX, FIRST_BAR_INDEX], [JUNCTION_1_BAR, JUNCTION_2_BAR]] as const) {
     await bars.nth(from).click();
     await chip.getByTestId('chip-jump').click();
     await bars.nth(to).click();
-    await expect(page.getByTestId('stepper-value')).toHaveText('1');
+    await expect(page.getByTestId('stepper-value')).toBeVisible();
   }
+  await bars.nth(JUNCTION_3_BAR).click();
+  await chip.getByTestId('chip-break').click();
+  await bars.nth(JUNCTION_6_BAR).click();
+  await chip.getByTestId('chip-stop').click();
 
-  await openOrganizationTool(page, 'jumpList');
-  const entries = page.getByTestId('jump-list-entry');
-  await expect(entries).toHaveCount(2);
-  await expect(entries.first().getByTestId('jump-list-from')).toHaveText(junctionLabelText(1, PAGE1_BOTTOM_BAR_INDEX + 1));
-  await expect(entries.first().getByTestId('jump-list-to')).toHaveText(junctionLabelText(1, 1));
-  await entries.nth(1).getByTestId('jump-list-delete').click();
+  await openOrganizationTool(page, 'markList');
+  const entries = page.getByTestId('mark-list-entry');
+  await expect(entries).toHaveCount(4);
+  await expect(entries.evaluateAll((items) => items.map((item) => (item as HTMLElement).dataset['kind']))).resolves.toEqual(['jump', 'break', 'jump', 'stop']);
+  await expect(entries.first().getByTestId('mark-list-from')).toHaveText('1');
+  await expect(entries.first().getByTestId('mark-list-to')).toHaveText('3');
+  await expect(entries.nth(2).getByTestId('mark-list-from')).toHaveText(String(PAGE1_BOTTOM_BAR_INDEX));
+  await expect(entries.nth(2).getByTestId('mark-list-to')).toHaveText('1');
+
+  for (const kind of ['stop', 'break', 'jump']) {
+    await page.locator(`[data-testid="mark-list-entry"][data-kind="${kind}"]`).first().getByTestId('mark-list-delete').click();
+  }
   await expect(entries).toHaveCount(1);
-  // The remaining jump 4 -> 0: junction 4 sits on a page change (two bars, both show the badge), junction 0 has one bar.
-  const BADGES_OF_REMAINING_JUMP = 3;
-  await expect(page.getByTestId('jump-badge')).toHaveCount(BADGES_OF_REMAINING_JUMP);
+});
+
+test('DET-014 DET-015 a confirmed level change keeps the marks and the bars', async ({ page }) => {
+  await openScoreInOrganization(page);
+  const bars = page.getByTestId('org-bar');
+  const chip = page.getByTestId('selection-chip');
+  await bars.nth(PAGE1_BOTTOM_BAR_INDEX).click();
+  await chip.getByTestId('chip-jump').click();
+  await bars.nth(FIRST_BAR_INDEX).click();
+  await expect(page.getByTestId('stepper-value')).toHaveText('1');
+  const MARKERS_OF_ONE_JUMP = 2;
+  await expect(page.getByTestId('jump-marker')).toHaveCount(MARKERS_OF_ONE_JUMP);
 
   await openOrganizationTool(page, 'levelFine');
   await expect(page.getByTestId('level-dialog')).toBeVisible();
@@ -184,5 +197,5 @@ test('ORG-021 DET-014 DET-015 the jump list, then a confirmed level change keeps
   await expect(bars).toHaveCount(SYNTHETIC_BARS); // the old bars stay while it runs
   await expect(page.getByTestId('detection-progress')).toHaveCount(0, { timeout: RERUN_TIMEOUT_MS });
   await expect(bars).toHaveCount(SYNTHETIC_BARS);
-  await expect(page.getByTestId('jump-badge')).toHaveCount(BADGES_OF_REMAINING_JUMP); // 12 systems at both levels: the marks are kept
+  await expect(page.getByTestId('jump-marker')).toHaveCount(MARKERS_OF_ONE_JUMP); // 12 systems at both levels: the marks are kept
 });

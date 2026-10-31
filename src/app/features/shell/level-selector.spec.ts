@@ -109,12 +109,12 @@ describe('level selector', () => {
   it('ORG-021 the jump list button opens the list as a panel (expanded) and as a sheet (compact)', async () => {
     const { ui } = await openDocument();
     const fixture = TestBed.createComponent(PopupHost);
-    ui.openPopup('jumpList');
+    ui.openPopup('markList');
     await fixture.whenStable();
     const root: HTMLElement = fixture.nativeElement;
-    expect(root.querySelector('.popup.panel app-jump-list')).not.toBeNull();
+    expect(root.querySelector('.popup.panel app-mark-list')).not.toBeNull();
     ui.setViewport(TUNABLES.layout.compactMaxWidthPx - 1, TUNABLES.layout.compactMaxHeightPx - 1);
     await fixture.whenStable();
-    expect(root.querySelector('.popup.sheet app-jump-list')).not.toBeNull();
+    expect(root.querySelector('.popup.sheet app-mark-list')).not.toBeNull();
   });
 });

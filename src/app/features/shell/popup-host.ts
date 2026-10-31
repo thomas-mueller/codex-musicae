@@ -8,7 +8,7 @@ import { PreferencesStore } from '../../state/preferences.store';
 import { SessionStore } from '../../state/session.store';
 import { UiStore } from '../../state/ui.store';
 import { POPUP_OVERFLOW_BOTTOM, POPUP_SLIDER } from './bottom-bar';
-import { JumpList, POPUP_JUMP_LIST } from '../organization/jump-list';
+import { MarkList, POPUP_MARK_LIST } from '../organization/mark-list';
 import { POPUP_RECENT } from '../tabs/open-file.directive';
 import { POPUP_TABS } from '../tabs/tab-switcher';
 import { TabItem } from '../tabs/tab-item';
@@ -23,7 +23,7 @@ const POPUP_SELECTOR = '[data-popup], [data-popup-trigger]';
 /** Renders at most one popup: a sheet (compact) or a side panel (expanded). UIX-013, 015 */
 @Component({
   selector: 'app-popup-host',
-  imports: [Icon, IconButton, JumpList, TabItem, TranslocoPipe],
+  imports: [Icon, IconButton, MarkList, TabItem, TranslocoPipe],
   templateUrl: './popup-host.html',
   styleUrl: './popup-host.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -48,7 +48,7 @@ export class PopupHost {
     info: POPUP_INFO,
     recent: POPUP_RECENT,
     tabs: POPUP_TABS,
-    jumpList: POPUP_JUMP_LIST,
+    markList: POPUP_MARK_LIST,
   };
   protected readonly compact = computed(() => this.store.sizeClass() === 'compact');
   protected readonly organization = computed(() => this.store.mode() === 'organization');

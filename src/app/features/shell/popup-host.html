@@ -56,10 +56,10 @@
             (pressed)="store.requestLevel(entry.level)"
           ></button>
         }
-        <button appIconButton icon="jumpList" labelKey="jumpList" [disabled]="noDocument()" (pressed)="store.openPopup(ids.jumpList)"></button>
+        <button appIconButton icon="markList" labelKey="markList" [disabled]="noDocument()" (pressed)="store.openPopup(ids.markList)"></button>
       }
-      @case (ids.jumpList) {
-        <app-jump-list />
+      @case (ids.markList) {
+        <app-mark-list />
       }
     }
   </div>

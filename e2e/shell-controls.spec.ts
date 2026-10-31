@@ -60,7 +60,7 @@ for (const [sizeClass, viewport] of Object.entries(sizes) as [keyof typeof sizes
       } else {
         expect(bottom).toContain(label('pageSlider'));
         expect(await labels(page, 'tools')).toEqual([
-          label('levelFast'), label('levelStandard'), label('levelFine'), label('jumpList'),
+          label('levelFast'), label('levelStandard'), label('levelFine'), label('markList'),
         ]);
       }
     });

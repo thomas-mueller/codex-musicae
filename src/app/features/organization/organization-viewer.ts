@@ -17,7 +17,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 
 import { TUNABLES } from '../../../config/tunables';
 import { isValidMarkJunction, junctionHasItems } from '../../core';
-import type { Bar, Point, Rect } from '../../core';
+import type { Bar, Point, Rect, SystemInfo } from '../../core';
 import { DEVICE_INFO } from '../../ports/device-info';
 import { CLOCK } from '../../state/clock';
 import type { DocumentStore } from '../../state/document.store';
@@ -32,10 +32,12 @@ import { IconButton } from '../shell/icon-button';
 import { BarsLayer } from './bars-layer';
 import { barRows } from './bar-rows';
 import { chipPlacement } from './chip-placement';
-import { jumpBadges } from './jump-badges';
-import type { JumpBadge } from './jump-badges';
+import { JumpMarkers, jumpMarkers } from './jump-markers';
+import type { JumpMarker } from './jump-markers';
+import { nextPass } from './jump-pass';
 import { PassStepper, POPUP_PASS_STEPPER } from './pass-stepper';
 import { SelectionChip } from './selection-chip';
+import { SystemLabels } from './system-labels';
 import { PageTiles } from './page-tiles';
 
 interface TileJob {
@@ -64,7 +66,7 @@ function groupByPage<T extends { readonly pageIndex: number }>(items: readonly T
  */
 @Component({
   selector: 'app-organization-viewer',
-  imports: [PageTiles, BarsLayer, SelectionChip, PassStepper, IconButton, Icon, TranslocoPipe],
+  imports: [PageTiles, BarsLayer, JumpMarkers, SystemLabels, SelectionChip, PassStepper, IconButton, Icon, TranslocoPipe],
   host: { '(document:keydown)': 'onKeydown($event)' },
   template: `
     @if (pickingOrigin() !== null) {
@@ -99,7 +101,9 @@ function groupByPage<T extends { readonly pageIndex: number }>(items: readonly T
         }
         @for (page of layout(); track $index) {
           <div class="overlay" [style.top.px]="page.top + offsetY()" [style.left.px]="pageLeft($index)" [style.width.px]="page.width" [style.height.px]="page.height">
-            <app-bars-layer [bars]="barsOf($index)" [provisionalBars]="provisionalBarsOf($index)" [scale]="scale()" [rows]="rows()" [selectedJunction]="selectedJunction()" [badges]="badges()" [selectedJumpId]="selectedJumpId()" [pickingOrigin]="pickingOrigin()" (barTap)="selectJunction($event)" (badgeTap)="selectJump($event)" (badgeLongPress)="onBadgeLongPress($event)" />
+            <app-system-labels [systems]="systemsOf($index)" [numbers]="document().numbers()" [scale]="scale()" />
+            <app-bars-layer [bars]="barsOf($index)" [provisionalBars]="provisionalBarsOf($index)" [scale]="scale()" [rows]="rows()" [selectedJunction]="selectedJunction()" [pickingOrigin]="pickingOrigin()" (barTap)="selectJunction($event)" />
+            <app-jump-markers [markers]="markersOf($index)" [scale]="scale()" [selectedJumpId]="selectedJumpId()" (markerTap)="selectJump($event)" (markerLongPress)="onMarkerLongPress($event)" />
             @if (isProcessing($index)) {
               <span class="badge" role="img" [attr.data-testid]="'org-processing-' + $index" [attr.aria-label]="'a11y.processing' | transloco">
                 <app-icon name="processing" />
@@ -240,14 +244,17 @@ export class OrganizationViewer {
   private readonly detection = inject(DetectionService);
   protected readonly rows = computed(() => {
     const doc = this.document();
-    return barRows(doc.numbers(), doc.marks(), doc.junctionCount());
+    return barRows(doc.marks(), doc.junctionCount());
   });
   /** ORG-013: the selected junction while it still exists. */
   protected readonly selectedJunction = computed(() => {
     const selection = this.ui.selection();
     return selection?.kind === 'junction' && selection.junction <= this.document().junctionCount() ? selection.junction : null;
   });
-  protected readonly badges = computed(() => jumpBadges(this.document().marks(), this.document().bars(), TUNABLES.colors.jumpPalette.length));
+  private readonly markers = computed(() =>
+    jumpMarkers(this.document().marks(), this.document().systems(), this.document().bars(), TUNABLES.colors.jumpPalette.length),
+  );
+  private readonly markersByPage = computed(() => groupByPage<JumpMarker>(this.markers()));
   protected readonly pickingOrigin = computed(() => this.ui.pickingTarget()?.originJunction ?? null);
   /** ORG-020: the selected jump while it exists. */
   private readonly selectedJump = computed(() => {
@@ -257,24 +264,35 @@ export class OrganizationViewer {
   protected readonly selectedJumpId = computed(() => this.selectedJump()?.id ?? null);
   private readonly stepperOpen = computed(() => this.ui.popup()?.id === POPUP_PASS_STEPPER && this.selectedJump() !== null);
 
-  /** Top-left of a floating control of `size` next to the first bar of `junction` (content coordinates). */
-  private placeNear(junction: number, size: { width: number; height: number }): Point | null {
-    const bar = this.document().bars().find((b) => b.junction === junction);
-    const page = bar === undefined ? undefined : this.layout()[bar.pageIndex];
-    if (bar === undefined || page === undefined) {
+  /** Top-left of a floating control of `size` next to a vertical extent of a page (page points; content coordinates out). */
+  private placeNearAnchor(anchor: { pageIndex: number; y: number; height: number }, size: { width: number; height: number }): Point | null {
+    const page = this.layout()[anchor.pageIndex];
+    if (page === undefined) {
       return null;
     }
     const scroll = this.document().orgScroll();
-    const barRect: Rect = {
-      x: this.pageLeft(bar.pageIndex),
-      y: page.top + this.offsetY() + bar.y * this.scale(),
+    const rect: Rect = {
+      x: this.pageLeft(anchor.pageIndex),
+      y: page.top + this.offsetY() + anchor.y * this.scale(),
       width: page.width,
-      height: Math.max(bar.height * this.scale(), TUNABLES.colors.orgBar.minHeightPx),
+      height: Math.max(anchor.height * this.scale(), TUNABLES.colors.orgBar.minHeightPx),
     };
-    return chipPlacement(barRect, size, { x: scroll.x, y: scroll.y, ...this.view.viewport() }, TUNABLES.layout.chipGapPx);
+    return chipPlacement(rect, size, { x: scroll.x, y: scroll.y, ...this.view.viewport() }, TUNABLES.layout.chipGapPx);
   }
 
-  /** ORG-014, ORG-020: chip of the selected junction, or of the selected jump (next to its origin bar). */
+  /** Next to the first bar of `junction`. */
+  private placeNear(junction: number, size: { width: number; height: number }): Point | null {
+    const bar = this.document().bars().find((b) => b.junction === junction);
+    return bar === undefined ? null : this.placeNearAnchor(bar, size);
+  }
+
+  /** ORG-020: next to the start marker of a jump (its source system), else next to the origin bar. */
+  private placeNearJump(jumpId: number, origin: number, size: { width: number; height: number }): Point | null {
+    const marker = this.markers().find((m) => m.jumpId === jumpId && m.role === 'origin');
+    return marker === undefined ? this.placeNear(origin, size) : this.placeNearAnchor(marker, size);
+  }
+
+  /** ORG-014, ORG-020: chip of the selected junction, or of the selected jump (next to its start marker). */
   protected readonly chipState = computed(() => {
     if (this.ui.pickingTarget() !== null || this.stepperOpen()) {
       return null;
@@ -285,7 +303,7 @@ export class OrganizationViewer {
     const height = minTouchTargetPx + 2 * chipPaddingPx;
     const jump = this.selectedJump();
     if (jump !== null) {
-      const position = this.placeNear(jump.origin, { width: jumpChipButtons * minTouchTargetPx + 2 * chipPaddingPx, height });
+      const position = this.placeNearJump(jump.id, jump.origin, { width: jumpChipButtons * minTouchTargetPx + 2 * chipPaddingPx, height });
       return position === null
         ? null
         : { kind: 'jump' as const, junction: jump.origin, jumpId: jump.id, position, hasItems: true, hasBreak: false, hasStop: false, markable: false };
@@ -318,9 +336,10 @@ export class OrganizationViewer {
     }
     const { minTouchTargetPx, chipPaddingPx, jumpChipButtons } = TUNABLES.layout;
     const size = { width: jumpChipButtons * minTouchTargetPx + 2 * chipPaddingPx, height: minTouchTargetPx + 2 * chipPaddingPx };
-    const position = this.placeNear(jump.origin, size);
+    const position = this.placeNearJump(jump.id, jump.origin, size);
     return position === null ? null : { id: jump.id, pass: jump.pass, position };
   });
+  private readonly systemsByPage = computed(() => groupByPage<SystemInfo>(this.document().systems()));
   private readonly barsByPage = computed(() => groupByPage<Bar>(this.document().bars()));
   private readonly provisionalByPage = computed(() => groupByPage<ProvisionalBar>(this.document().provisionalBars()));
 
@@ -340,7 +359,8 @@ export class OrganizationViewer {
       this.ui.cancelPicking();
       return;
     }
-    const id = doc.addJump({ origin: picking.originJunction, target: junction, pass: 1 });
+    const pass = nextPass(doc.marks(), picking.originJunction);
+    const id = doc.addJump({ origin: picking.originJunction, target: junction, pass });
     if (id !== null) {
       this.ui.cancelPicking();
       this.ui.select({ kind: 'jump', id });
@@ -357,8 +377,8 @@ export class OrganizationViewer {
   }
 
   /** ORG-019: long press scrolls to the other end of the jump. */
-  protected onBadgeLongPress(badge: JumpBadge): void {
-    this.view.scrollToJunction(this.document().bars(), badge.otherJunction);
+  protected onMarkerLongPress(marker: JumpMarker): void {
+    this.view.scrollToJunction(this.document().bars(), marker.otherJunction);
   }
 
   protected onClear(chip: { kind: 'junction' | 'jump'; junction: number; jumpId: number }): void {
@@ -399,6 +419,14 @@ export class OrganizationViewer {
   /** ORG-015: the other bars become targets. */
   protected onJump(originJunction: number): void {
     this.ui.startPicking({ originJunction });
+  }
+
+  protected markersOf(pageIndex: number): readonly JumpMarker[] {
+    return this.markersByPage().get(pageIndex) ?? NO_BARS;
+  }
+
+  protected systemsOf(pageIndex: number): readonly SystemInfo[] {
+    return this.systemsByPage().get(pageIndex) ?? NO_BARS;
   }
 
   protected barsOf(pageIndex: number): readonly Bar[] {

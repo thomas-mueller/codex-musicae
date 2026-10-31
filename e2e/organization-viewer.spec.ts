@@ -1,13 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 
+import { enterOrganization } from './support/score';
+
 const en = JSON.parse(readFileSync('src/assets/i18n/en.json', 'utf8')) as { a11y: Record<string, string> };
 const label = (key: string) => en.a11y[key] as string;
 
 const scoreBytes = readFileSync('e2e/fixtures/synthetic-score.pdf');
 const named = (name: string) => ({ name, mimeType: 'application/pdf', buffer: scoreBytes });
 const PAGES = 3;
-const RETRY_TIMEOUT_MS = 1000;
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -15,14 +16,6 @@ test.beforeEach(async ({ page }) => {
   });
   await page.goto('/');
 });
-
-// The click can land before the app reacts (WebKit); repeat it until the viewer shows. Selecting the mode is idempotent.
-async function enterOrganization(page: Page): Promise<void> {
-  await expect(async () => {
-    await page.getByLabel(label('modeOrganization'), { exact: true }).click();
-    await expect(page.getByTestId('org-viewer')).toBeVisible({ timeout: RETRY_TIMEOUT_MS });
-  }).toPass();
-}
 
 async function openFile(page: Page, name: string): Promise<void> {
   const chooser = page.waitForEvent('filechooser');

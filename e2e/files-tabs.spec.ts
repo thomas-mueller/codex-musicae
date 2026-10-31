@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 
+import { NEGATIVE_SETTLE_MS } from './support/timing';
+
 const en = JSON.parse(readFileSync('src/assets/i18n/en.json', 'utf8')) as { a11y: Record<string, string> };
 const label = (key: string) => en.a11y[key] as string;
 
@@ -65,7 +67,7 @@ test.describe('expanded', () => {
     await openFiles(page, SCORE);
     await expect(page.locator('app-tab-bar .name')).toHaveCount(1);
     await openFiles(page, SCORE);
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(NEGATIVE_SETTLE_MS); // absence of a second tab: nothing to wait for but a grace period
     await expect(page.locator('app-tab-bar .name')).toHaveCount(1);
   });
 
