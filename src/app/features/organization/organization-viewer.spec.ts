@@ -9,6 +9,7 @@ import { CLOCK } from '../../state/clock';
 import { ResourceGovernor } from '../../state/resource-governor';
 import { FakeClock } from '../../state/testing/fake-clock';
 import { fakeRenderer } from '../../state/testing/fake-renderer';
+import { OrgViewStore } from '../../state/org-view.store';
 import { SessionStore } from '../../state/session.store';
 import { UiStore } from '../../state/ui.store';
 import { AppShell } from '../shell/app-shell';
@@ -223,6 +224,21 @@ describe('OrganizationViewer tiles', () => {
     await flush(fixture);
     expect(first.isConnected).toBe(false);
     expect(first.width).toBe(0);
+  });
+
+  it('ORG-005 executes page scroll requests instantly and as a short tween', async () => {
+    TestBed.inject(UiStore).setMode('organization');
+    const { fixture } = await mount();
+    const view = TestBed.inject(OrgViewStore);
+    const scroller = fixture.nativeElement.querySelector('[data-testid="org-viewer"]') as HTMLElement;
+    const step = PAGE_HEIGHT * (VIEW_WIDTH / PAGE_WIDTH) + TUNABLES.rendering.orgPageGapPx;
+    view.goToPage(1, false);
+    await fixture.whenStable();
+    expect(scroller.scrollTop).toBe(step);
+    view.goToPage(0, true);
+    await fixture.whenStable();
+    await new Promise((resolve) => setTimeout(resolve, TUNABLES.navigation.pageScrollMs * 2));
+    expect(scroller.scrollTop).toBe(0);
   });
 
   it('FIL-009 draws nothing for a document in error state', async () => {

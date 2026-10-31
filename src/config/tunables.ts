@@ -45,6 +45,7 @@ export const TUNABLES = {
   layout: {
     barHeightPx: 48, // UIX-007
     indicatorPlaceholder: '– / –', // UIX-004: shown instead of "x / n" while no document is open
+    indicatorSeparator: ' / ', // ORG-004: between the current and the total page in "x / n"
     iconSizePx: 24, // UIX-010
     tooltipPaddingPx: 8, // UIX-014
     tooltipRadiusPx: 4, // UIX-014
@@ -140,6 +141,10 @@ export const TUNABLES = {
     first: ['Home'],
     last: ['End'],
     back: ['Escape'],
+  },
+
+  navigation: {
+    pageScrollMs: 200, // ORG-005: duration of the previous/next page scroll (instant with reduced motion)
   },
 
   zoom: {

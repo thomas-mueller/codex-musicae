@@ -34,7 +34,7 @@ function setup() {
       { provide: FILE_ACCESS, useValue: files },
       { provide: PREFERENCES, useValue: memoryPreferences() },
       { provide: CLOCK, useValue: clock },
-      { provide: DEVICE_INFO, useValue: { deviceMemoryGb: () => 4, devicePixelRatio: () => 1 } },
+      { provide: DEVICE_INFO, useValue: { deviceMemoryGb: () => 4, devicePixelRatio: () => 1, prefersReducedMotion: () => false } },
     ],
   });
   return {

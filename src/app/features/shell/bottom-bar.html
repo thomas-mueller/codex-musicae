@@ -1,28 +1,41 @@
-<button appIconButton icon="previous" labelKey="previous" [disabled]="noDocument()"></button>
+<button appIconButton icon="previous" labelKey="previous" [disabled]="previousDisabled()" (pressed)="view.previous()"></button>
 @if (compact()) {
   <button
     type="button"
     class="indicator"
     data-popup-trigger
-    [class.disabled]="noDocument()"
+    [class.disabled]="sliderDisabled()"
+    [class.has-text]="indicatorText() !== ''"
     [attr.aria-label]="'a11y.' + indicatorKey() | transloco"
-    [attr.aria-disabled]="noDocument() ? true : null"
-    [attr.tabindex]="noDocument() ? -1 : null"
-    (click)="noDocument() || store.togglePopup(sliderId)"
+    [attr.aria-disabled]="sliderDisabled() ? true : null"
+    [attr.tabindex]="sliderDisabled() ? -1 : null"
+    [textContent]="indicatorText()"
+    (click)="sliderDisabled() || store.togglePopup(sliderId)"
   ></button>
 } @else {
   <input
     type="range"
     class="slider"
-    [disabled]="noDocument()"
+    min="1"
+    [max]="view.pageCount()"
+    [value]="view.currentPage() + 1"
+    [disabled]="sliderDisabled()"
     [attr.aria-label]="'a11y.' + sliderKey() | transloco"
+    (input)="onSlide($event)"
   />
-  <span role="status" class="indicator fixed" [class.disabled]="noDocument()" [attr.aria-label]="'a11y.' + indicatorKey() | transloco"></span>
+  <span
+    role="status"
+    class="indicator fixed"
+    [class.disabled]="sliderDisabled()"
+    [class.has-text]="indicatorText() !== ''"
+    [attr.aria-label]="'a11y.' + indicatorKey() | transloco"
+    [textContent]="indicatorText()"
+  ></span>
 }
-<button appIconButton icon="next" labelKey="next" [disabled]="noDocument()"></button>
-<button appIconButton icon="zoomOut" labelKey="zoomOut" [disabled]="noDocument()"></button>
-<button appIconButton icon="zoomIn" labelKey="zoomIn" [disabled]="noDocument()"></button>
-<button appIconButton icon="zoomReset" labelKey="zoomReset" [disabled]="noDocument()"></button>
+<button appIconButton icon="next" labelKey="next" [disabled]="nextDisabled()" (pressed)="view.next()"></button>
+<button appIconButton icon="zoomOut" labelKey="zoomOut" [disabled]="zoomOutDisabled()" (pressed)="view.zoomOut()"></button>
+<button appIconButton icon="zoomIn" labelKey="zoomIn" [disabled]="zoomInDisabled()" (pressed)="view.zoomIn()"></button>
+<button appIconButton icon="zoomReset" labelKey="zoomReset" [disabled]="zoomResetDisabled()" (pressed)="view.zoomReset()"></button>
 @if (annotation() && !compact()) {
   <button appIconButton icon="showMore" labelKey="showMore" [disabled]="noDocument()"></button>
   <button appIconButton icon="showLess" labelKey="showLess" [disabled]="noDocument()"></button>

@@ -40,3 +40,7 @@
 .indicator::before {
   content: var(--cm-indicator-placeholder);
 }
+
+.indicator.has-text::before {
+  content: none;
+}

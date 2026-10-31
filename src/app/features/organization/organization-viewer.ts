@@ -14,10 +14,11 @@ import {
 } from '@angular/core';
 
 import { TUNABLES } from '../../../config/tunables';
-import { fitScale, layoutPages } from '../../core';
-import type { Rect, Size } from '../../core';
+import type { Rect } from '../../core';
+import { DEVICE_INFO } from '../../ports/device-info';
 import { CLOCK } from '../../state/clock';
 import type { DocumentStore } from '../../state/document.store';
+import { OrgViewStore } from '../../state/org-view.store';
 import { ResourceGovernor } from '../../state/resource-governor';
 import { Scheduler } from '../../state/scheduler';
 import { PageTiles } from './page-tiles';
@@ -86,40 +87,25 @@ export class OrganizationViewer {
   private readonly governor = inject(ResourceGovernor);
   private cancelSettle: (() => void) | null = null;
   private settledTab = '';
-  private readonly viewport = signal<Size>({ width: 0, height: 0 });
+  private readonly view = inject(OrgViewStore);
+  private readonly device = inject(DEVICE_INFO);
+  private handledRequest = this.view.scrollRequest()?.seq ?? -1;
+  private tween = 0;
   private frame = 0;
 
-  protected readonly pageSizes = computed<Size[]>(() =>
-    this.document()
-      .pageInfos()
-      .map((info) => ({ width: info.width, height: info.height })),
-  );
-  private readonly widest = computed<Size>(() =>
-    this.pageSizes().reduce((best, size) => (size.width > best.width ? size : best), { width: 0, height: 0 }),
-  );
+  protected readonly pageSizes = this.view.pageSizes;
+  protected readonly layout = this.view.layout;
+  protected readonly sizerWidth = this.view.sizerWidth;
+  protected readonly sizerHeight = this.view.sizerHeight;
   /** ORG-003: scale = fit-width scale of the widest page times the zoom. */
-  readonly scale = computed(() => {
-    const widest = this.widest();
-    const viewport = this.viewport();
-    if (widest.width <= 0 || viewport.width <= 0) {
-      return 0;
-    }
-    return fitScale(widest, viewport, 'width') * this.document().orgZoom();
-  });
-  protected readonly layout = computed(() => layoutPages(this.pageSizes(), this.scale(), TUNABLES.rendering.orgPageGapPx));
+  readonly scale = this.view.scale;
   /** Scale the tiles are rendered at; follows `scale` zoomSettleMs after its last change (ORG-002, NFR-008). */
   protected readonly settledScale = signal(0);
-  protected readonly sizerWidth = computed(() => this.widest().width * this.scale());
-  protected readonly sizerHeight = computed(() => {
-    const layout = this.layout();
-    const last = layout[layout.length - 1];
-    return last ? last.top + last.height : 0;
-  });
 
   /** Pages in the viewport plus the margin pages, each with the part to cover with tiles (ORG-002). */
   protected readonly jobs = computed<TileJob[]>(() => {
     const layout = this.layout();
-    const viewport = this.viewport();
+    const viewport = this.view.viewport();
     const scroll = this.document().orgScroll();
     const margin = this.governor.prefetchNeighbors() > 0 ? TUNABLES.resources.orgRenderPagesAround : 0;
     if (this.settledScale() <= 0 || layout.length === 0) {
@@ -182,7 +168,7 @@ export class OrganizationViewer {
     });
     afterNextRender(() => {
       const element = this.scroller().nativeElement;
-      const measure = (): void => this.viewport.set({ width: element.clientWidth, height: element.clientHeight });
+      const measure = (): void => this.view.viewport.set({ width: element.clientWidth, height: element.clientHeight });
       measure();
       if (typeof ResizeObserver !== 'undefined') {
         const observer = new ResizeObserver(measure);
@@ -190,7 +176,18 @@ export class OrganizationViewer {
         this.destroyRef.onDestroy(() => observer.disconnect());
       }
     });
-    this.destroyRef.onDestroy(() => cancelAnimationFrame(this.frame));
+    this.destroyRef.onDestroy(() => {
+      cancelAnimationFrame(this.frame);
+      cancelAnimationFrame(this.tween);
+    });
+    // ORG-005: page jumps requested by the controls.
+    effect(() => {
+      const request = this.view.scrollRequest();
+      if (request && request.seq !== this.handledRequest) {
+        this.handledRequest = request.seq;
+        untracked(() => this.scrollTo(request.top, request.animate));
+      }
+    });
     // Restore the tab's scroll position once the sizer has its size (tab switch, first layout).
     effect(() => {
       const doc = this.document();
@@ -203,6 +200,27 @@ export class OrganizationViewer {
         element.scrollTop = target.y;
       });
     });
+  }
+
+  /** Instant, or a short rAF tween (ORG-005: at most `navigation.pageScrollMs`); instant with reduced motion. */
+  private scrollTo(top: number, animate: boolean): void {
+    const element = this.scroller().nativeElement;
+    cancelAnimationFrame(this.tween);
+    const from = element.scrollTop;
+    if (!animate || this.device.prefersReducedMotion() || from === top) {
+      element.scrollTop = top;
+      return;
+    }
+    let start: number | null = null;
+    const step = (now: number): void => {
+      start ??= now;
+      const t = Math.min(1, (now - start) / TUNABLES.navigation.pageScrollMs);
+      element.scrollTop = from + (top - from) * (1 - (1 - t) * (1 - t));
+      if (t < 1) {
+        this.tween = requestAnimationFrame(step);
+      }
+    };
+    this.tween = requestAnimationFrame(step);
   }
 
   /** First layout and tab changes settle at once; later scale changes wait for the zoom to stop. */

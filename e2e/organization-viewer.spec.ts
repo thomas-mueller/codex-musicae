@@ -99,3 +99,70 @@ test('ORG-002 scrolling to the end releases the first page', async ({ page }) =>
   await expect(page.getByTestId('org-page-2')).toBeVisible();
   await expect.poll(() => page.locator('app-page-tiles canvas[style*="visibility: visible"]').count()).toBeGreaterThan(0);
 });
+
+const indicator = (page: Page) => page.locator('app-bottom-bar .indicator');
+const ZOOM_STEP = 1.25; // T:zoom.buttonStep
+const WIDTH_TOLERANCE_PX = 3; // rounding of the sizer width
+
+const sizerWidth = (page: Page) => page.getByTestId('org-sizer').evaluate((el) => (el as HTMLElement).offsetWidth);
+
+async function openAndEnter(page: Page): Promise<void> {
+  await openFile(page, 'a.pdf');
+  await enterOrganization(page);
+  await expect(indicator(page)).toHaveText('1 / 3');
+}
+
+async function pageSlider(page: Page) {
+  const inBar = page.locator('app-bottom-bar input.slider');
+  if (await inBar.count()) {
+    return inBar;
+  }
+  await indicator(page).click(); // compact: the slider is in the popup
+  return page.locator('[data-popup] input.slider');
+}
+
+test('ORG-004 the indicator follows scrolling', async ({ page }) => {
+  await openAndEnter(page);
+  await page.getByTestId('org-viewer').evaluate((el) => {
+    el.scrollTop = (el.querySelector('[data-testid="org-page-1"]') as HTMLElement).offsetTop;
+  });
+  await expect(indicator(page)).toHaveText('2 / 3');
+});
+
+test('ORG-005 next and previous move one page and are disabled at the ends', async ({ page }) => {
+  await openAndEnter(page);
+  const previous = page.getByRole('button', { name: label('previous'), exact: true });
+  const next = page.getByRole('button', { name: label('next'), exact: true });
+  await expect(previous).toHaveAttribute('aria-disabled', 'true');
+  await next.click();
+  await expect(indicator(page)).toHaveText('2 / 3');
+  await next.click();
+  await expect(indicator(page)).toHaveText('3 / 3');
+  await expect(next).toHaveAttribute('aria-disabled', 'true');
+  await previous.click();
+  await expect(indicator(page)).toHaveText('2 / 3');
+});
+
+test('ORG-005 the page slider scrolls to the chosen page', async ({ page }) => {
+  await openAndEnter(page);
+  const slider = await pageSlider(page);
+  await slider.evaluate((el) => {
+    (el as HTMLInputElement).value = '3';
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await expect(indicator(page)).toHaveText('3 / 3');
+});
+
+test('ORG-003 ORG-006 zoom buttons step and reset; zoom stays when the page changes', async ({ page }) => {
+  await openAndEnter(page);
+  const fitWidth = await sizerWidth(page);
+  await page.getByRole('button', { name: label('zoomIn'), exact: true }).click();
+  await expect.poll(() => sizerWidth(page)).toBeGreaterThan(fitWidth * ZOOM_STEP - WIDTH_TOLERANCE_PX);
+  expect(await sizerWidth(page)).toBeLessThan(fitWidth * ZOOM_STEP + WIDTH_TOLERANCE_PX);
+  const zoomed = await sizerWidth(page);
+  await page.getByRole('button', { name: label('next'), exact: true }).click();
+  await expect(indicator(page)).toHaveText('2 / 3');
+  expect(await sizerWidth(page)).toBe(zoomed);
+  await page.getByRole('button', { name: label('zoomReset'), exact: true }).click();
+  await expect.poll(() => sizerWidth(page)).toBe(fitWidth);
+});

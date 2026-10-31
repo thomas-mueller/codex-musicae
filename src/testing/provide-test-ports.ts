@@ -15,6 +15,6 @@ export function provideTestPorts(): Provider[] {
     { provide: PDF_RENDERER, useValue: fakeRenderer() },
     { provide: FILE_ACCESS, useValue: fakeFileAccess() },
     { provide: PREFERENCES, useValue: memoryPreferences() },
-    { provide: DEVICE_INFO, useValue: { deviceMemoryGb: () => TEST_MEMORY_GB, devicePixelRatio: () => 1 } },
+    { provide: DEVICE_INFO, useValue: { deviceMemoryGb: () => TEST_MEMORY_GB, devicePixelRatio: () => 1, prefersReducedMotion: () => false } },
   ];
 }

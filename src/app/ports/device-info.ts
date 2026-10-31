@@ -5,6 +5,8 @@ export interface DeviceInfo {
   /** `navigator.deviceMemory` in GB (approximate), undefined when the platform does not tell. */
   deviceMemoryGb(): number | undefined;
   devicePixelRatio(): number;
+  /** `prefers-reduced-motion: reduce`: animations are replaced by instant changes. */
+  prefersReducedMotion(): boolean;
 }
 
 export const DEVICE_INFO = new InjectionToken<DeviceInfo>('DeviceInfo');
