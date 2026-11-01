@@ -155,12 +155,14 @@ describe('OrganizationViewer selection and marks', () => {
     expect(doc.marks().jumps[0]?.pass).toBe(2);
     expect(root.querySelector('[data-testid="stepper-value"]')!.textContent).toBe('2'); // the stepper stays open and selected
     expect(ui.selection()).toEqual({ kind: 'jump', id: 1 });
-    // Jump from junction 2 to junction 0: it starts at system 2 and ends at system 1.
+    // Jump from junction 2 to junction 0 with pass 2: it is met after the 2nd played system and the 3rd would follow.
+    // Pass 2 is never reached in this order (junction 2 is arrived at once), so both ends show the placeholder.
     const start = root.querySelector('[data-testid="jump-marker"][data-role="origin"]')!;
-    expect(start.querySelector('[data-testid="jump-marker-number"]')!.textContent).toBe('1');
-    expect(start.querySelector('[data-testid="jump-marker-pass"]')!.textContent).toBe(`${TUNABLES.layout.passPrefix}2`);
+    const unknown = TUNABLES.layout.unknownNumber;
+    const expected = `${unknown} ${TUNABLES.layout.listArrow} ${unknown} ${TUNABLES.layout.passPrefix}2`;
+    expect(start.querySelector('[data-testid="jump-marker-label"]')!.textContent).toBe(expected);
     const end = root.querySelector('[data-testid="jump-marker"][data-role="target"]')!;
-    expect(end.querySelector('[data-testid="jump-marker-number"]')!.textContent).toBe('2');
+    expect(end.querySelector('[data-testid="jump-marker-label"]')!.textContent).toBe(expected);
   });
 
   it('ORG-015 Escape and the cancel icon leave picking without a change', async () => {

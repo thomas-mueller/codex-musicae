@@ -13,9 +13,8 @@ import { fakeBitmap } from './testing/fake-bitmap';
 import { FakeClock } from './testing/fake-clock';
 import { fakeRenderer } from './testing/fake-renderer';
 
+const SYSTEM_INK = 0.3; // share of a system box that is ink
 const PAGES = 2;
-const PAGE_WIDTH = 600;
-const PAGE_HEIGHT = 800;
 const FIRST: Rect = { x: 50, y: 100, width: 500, height: 60 };
 const SECOND: Rect = { x: 50, y: 300, width: 500, height: 60 };
 const ACTIVE_LEVEL = TUNABLES.detection.defaultLevel;
@@ -38,6 +37,7 @@ function setup(candidateSystems: 1 | 2 | 'fail') {
   const isCandidateCall = () => lastScale > TUNABLES.detection.levels[ACTIVE_LEVEL].renderScale;
   const engine = {
     extractComponents: vi.fn(async (bitmap: ImageBitmap) => {
+      const { width, height } = bitmap;
       bitmap.close();
       const candidate = isCandidateCall();
       if (candidate && gate) {
@@ -47,8 +47,11 @@ function setup(candidateSystems: 1 | 2 | 'fail') {
         return err('unknown' as const);
       }
       const rects = candidate && candidateSystems === 2 ? [FIRST, SECOND] : [FIRST];
-      const scaled = rects.map((r) => ({ x: r.x * lastScale, y: r.y * lastScale, width: r.width * lastScale, height: r.height * lastScale }));
-      return ok([{ x: 0, y: 0, width: PAGE_WIDTH * lastScale, height: PAGE_HEIGHT * lastScale }, ...scaled]);
+      const components = rects.map((r) => ({
+        rect: { x: r.x * lastScale, y: r.y * lastScale, width: r.width * lastScale, height: r.height * lastScale },
+        area: Math.round(r.width * r.height * lastScale * lastScale * SYSTEM_INK),
+      }));
+      return ok({ width, height, components });
     }),
   };
   TestBed.configureTestingModule({

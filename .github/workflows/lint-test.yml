@@ -7,7 +7,7 @@ permissions:
   contents: read
 
 # The end-to-end tests run in their own workflow (e2e.yml) so that deploy-web and android, which wait for this one,
-# never depend on them (PIP-001, DEC-093).
+# never depend on them (PIP-001, DEC-100).
 jobs:
   lint-test:
     runs-on: ubuntu-latest

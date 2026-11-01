@@ -106,15 +106,31 @@ describe('level selector', () => {
     expect(ui.pendingLevel()).not.toBeNull();
   });
 
-  it('ORG-021 the jump list button opens the list as a panel (expanded) and as a sheet (compact)', async () => {
+  it('ORG-021 compact: the marks list is a sheet of the popup host; expanded: the popup host renders nothing for it', async () => {
     const { ui } = await openDocument();
     const fixture = TestBed.createComponent(PopupHost);
     ui.openPopup('markList');
     await fixture.whenStable();
     const root: HTMLElement = fixture.nativeElement;
-    expect(root.querySelector('.popup.panel app-mark-list')).not.toBeNull();
+    expect(root.querySelector('app-mark-list')).toBeNull();
     ui.setViewport(TUNABLES.layout.compactMaxWidthPx - 1, TUNABLES.layout.compactMaxHeightPx - 1);
     await fixture.whenStable();
     expect(root.querySelector('.popup.sheet app-mark-list')).not.toBeNull();
+  });
+
+  it('ORG-021 expanded: the marks list opens in a panel beside its button inside the strip', async () => {
+    const { ui } = await openDocument();
+    const fixture = TestBed.createComponent(ToolArea);
+    await fixture.whenStable();
+    const root: HTMLElement = fixture.nativeElement;
+    expect(root.querySelector('[data-testid="mark-list-panel"]')).toBeNull();
+    ui.openPopup('markList');
+    await fixture.whenStable();
+    const panel = root.querySelector<HTMLElement>('[data-testid="mark-list-panel"]');
+    expect(panel).not.toBeNull();
+    expect(panel!.closest('.anchor')!.querySelector('button')).not.toBeNull(); // the button the panel belongs to
+    expect(panel!.dataset['side']).toBe(TUNABLES.layout.toolStripSide);
+    expect(panel!.hasAttribute('data-popup')).toBe(true); // taps inside do not close it
+    expect(panel!.querySelector('app-mark-list')).not.toBeNull();
   });
 });

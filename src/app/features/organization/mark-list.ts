@@ -3,122 +3,71 @@ import { TranslocoPipe } from '@jsverse/transloco';
 
 import { TUNABLES } from '../../../config/tunables';
 import { jumpColorIndex } from '../../core';
-import type { DocMarks } from '../../core';
+import type { DocMarks, MarkPosition, MarkPositions } from '../../core';
 import { OrgViewStore } from '../../state/org-view.store';
 import { UiStore } from '../../state/ui.store';
 import { Icon } from '../shell/icon';
 import { IconButton } from '../shell/icon-button';
+import { breakLabel, jumpLabel, stopLabel } from './mark-labels';
 
 /** Popup id of the marks list (a sheet when compact, a side panel otherwise). */
 export const POPUP_MARK_LIST = 'markList';
 
 const HALF_TURN_DEG = 180;
 
+/** ORG-018, ORG-021: playing-order numbers around a mark; null = none there (start / end of the order) or not reached. */
+interface Around {
+  readonly previous: number | null;
+  readonly next: number | null;
+  /** False if the mark is never reached in the playing order (listed at the end, dimmed, numbers unknown). */
+  readonly reached: boolean;
+}
+
 export type MarkListEntry =
-  | {
-      readonly kind: 'jump';
-      readonly id: number;
-      readonly junction: number;
-      /** Print number of the source / target system; null where that end has no system (junction 0 / N). */
-      readonly fromSystem: number | null;
-      readonly toSystem: number | null;
-      readonly pass: number;
-      readonly colorIndex: number;
-      readonly reached: boolean;
-    }
-  | { readonly kind: 'break' | 'stop'; readonly junction: number; readonly systemAbove: number; readonly reached: boolean };
+  | ({ readonly kind: 'jump'; readonly id: number; readonly junction: number; readonly pass: number; readonly colorIndex: number } & Around)
+  | ({ readonly kind: 'break'; readonly junction: number } & Around)
+  | ({ readonly kind: 'stop'; readonly junction: number } & Around);
 
-type WithoutReached<T> = T extends unknown ? Omit<T, 'reached'> : never;
+const UNREACHED: Around = { previous: null, next: null, reached: false };
+const reachedAround = (position: MarkPosition): Around => ({ previous: position.previous, next: position.next, reached: true });
 
-interface Arrival {
-  readonly junction: number;
-  /** Number of systems played before this arrival. */
-  readonly entriesSoFar: number;
-}
-
-interface Replay {
-  readonly arrivals: readonly Arrival[];
-  /** Arrival (index) at which each jump fired, by jump id. */
-  readonly firedAt: ReadonlyMap<number, number>;
-  /** Index of the arrival at which a stop ends the playing order; Infinity without a reached stop. */
-  readonly endArrival: number;
-  /** Systems in the playing order (after the cap and the stops). */
-  readonly entryCount: number;
-}
-
-/**
- * The arrival events of the replay documented in `core/playing-order` (PLY-002, PLY-006, PLY-008): which jump fires where and
- * where a stop ends the order. The contract exposes only entries and `between`, which omit the arrivals after the last system,
- * so the list needs its own pass over the same rules. `markListEntries` is tested against the playing-order fixtures.
- */
-export function replayArrivals(marks: DocMarks, systemCount: number, maxLength: number): Replay {
-  const arrivals: Arrival[] = [];
-  const firedAt = new Map<number, number>();
-  const counts = new Array<number>(systemCount + 1).fill(0);
-  let position = 0;
-  let entries = 0;
-  for (;;) {
-    counts[position] = (counts[position] ?? 0) + 1;
-    arrivals.push({ junction: position, entriesSoFar: entries });
-    const jump = marks.jumps.find((j) => j.origin === position && j.pass === counts[position]);
-    if (jump !== undefined) {
-      firedAt.set(jump.id, arrivals.length - 1);
-      position = jump.target;
-      continue;
-    }
-    if (position === systemCount || entries >= maxLength) {
-      break;
-    }
-    entries++;
-    position++;
-  }
-  const lastArrival = (junction: number): number => arrivals.map((a) => a.junction).lastIndexOf(junction);
-  const stopped = marks.stops
-    .map((junction) => ({ index: lastArrival(junction) }))
-    .filter((stop) => stop.index >= 0)
-    .map((stop) => ({ index: stop.index, cut: arrivals[stop.index]!.entriesSoFar }));
-  const cut = stopped.reduce((best, stop) => Math.min(best, stop.cut), Number.POSITIVE_INFINITY);
-  const endArrival = stopped.filter((stop) => stop.cut === cut).reduce((best, stop) => Math.min(best, stop.index), Number.POSITIVE_INFINITY);
-  return { arrivals, firedAt, endArrival, entryCount: Math.min(entries, cut) };
-}
-
-/** Tie-break among items met at the same arrival: the break, then the jump that leaves, then the stop that ends. */
+/** Tie-break among marks met at the same arrival: the break, then the jump that leaves, then the stop that ends. */
 const KIND_RANK = { break: 0, jump: 1, stop: 2 } as const;
 /** Order of the unreached tail: jumps, then breaks, then stops. */
 const UNREACHED_RANK = { jump: 0, break: 1, stop: 2 } as const;
 
 /**
- * ORG-021: jumps, slide breaks and stops in the order of the final playing order: a break where its junction is first
- * reached, a jump where it fires (the `pass`-th arrival at its origin), a stop where it ends the order. Items that are never
- * reached (after a stop, shadowed by an earlier jump with the same origin and pass, or never arrived at) follow at the end:
- * jumps in creation order, then breaks, then stops by junction.
+ * ORG-021: jumps, slide breaks and stops in the order of the final playing order (`markPositions`): a break where its
+ * junction is first reached, a jump where it fires, a stop where it ends the order. Marks that are never reached (after a stop,
+ * shadowed by an earlier jump with the same origin and pass, never arrived at) follow at the end: jumps in creation order,
+ * then breaks, then stops by junction.
  */
-export function markListEntries(marks: DocMarks, systemCount: number, maxLength: number, paletteSize: number): MarkListEntry[] {
-  const { arrivals, firedAt, endArrival } = replayArrivals(marks, systemCount, maxLength);
-  const firstArrival = (junction: number): number => arrivals.findIndex((a) => a.junction === junction);
-  const lastArrival = (junction: number): number => arrivals.map((a) => a.junction).lastIndexOf(junction);
+export function markListEntries(marks: DocMarks, positions: MarkPositions, paletteSize: number): MarkListEntry[] {
   const keyed: { key: number; rank: number; order: number; entry: MarkListEntry }[] = [];
   const unreached: { rank: number; order: number; entry: MarkListEntry }[] = [];
-  const place = (index: number, rank: number, order: number, entry: WithoutReached<MarkListEntry>): void => {
-    if (index >= 0 && index <= endArrival) {
-      keyed.push({ key: index, rank, order, entry: { ...entry, reached: true } as MarkListEntry });
+  const place = (position: MarkPosition | undefined, kind: MarkListEntry['kind'], order: number, make: (around: Around) => MarkListEntry): void => {
+    if (position === undefined) {
+      unreached.push({ rank: UNREACHED_RANK[kind], order, entry: make(UNREACHED) });
     } else {
-      unreached.push({ rank: UNREACHED_RANK[entry.kind], order, entry: { ...entry, reached: false } as MarkListEntry });
+      keyed.push({ key: position.index, rank: KIND_RANK[kind], order, entry: make(reachedAround(position)) });
     }
   };
-  marks.jumps.forEach((jump) => {
-    place(firedAt.get(jump.id) ?? -1, KIND_RANK.jump, jump.id, {
+  for (const jump of marks.jumps) {
+    place(positions.jumps.get(jump.id), 'jump', jump.id, (around) => ({
       kind: 'jump',
       id: jump.id,
       junction: jump.origin,
-      fromSystem: jump.origin >= 1 ? jump.origin : null,
-      toSystem: jump.target + 1 <= systemCount ? jump.target + 1 : null,
       pass: jump.pass,
       colorIndex: jumpColorIndex(jump.id, paletteSize),
-    });
-  });
-  marks.breaks.forEach((junction) => place(firstArrival(junction), KIND_RANK.break, junction, { kind: 'break', junction, systemAbove: junction }));
-  marks.stops.forEach((junction) => place(lastArrival(junction), KIND_RANK.stop, junction, { kind: 'stop', junction, systemAbove: junction }));
+      ...around,
+    }));
+  }
+  for (const junction of marks.breaks) {
+    place(positions.breaks.get(junction), 'break', junction, (around) => ({ kind: 'break', junction, ...around }));
+  }
+  for (const junction of marks.stops) {
+    place(positions.stops.get(junction), 'stop', junction, (around) => ({ kind: 'stop', junction, ...around }));
+  }
   keyed.sort((a, b) => a.key - b.key || a.rank - b.rank || a.order - b.order);
   unreached.sort((a, b) => a.rank - b.rank || a.order - b.order);
   return [...keyed, ...unreached].map((item) => item.entry);
@@ -155,15 +104,12 @@ export function isSwipeLeft(dx: number, dy: number): boolean {
         >
           @if (entry.kind === 'jump') {
             <span class="dot" data-testid="mark-list-dot" [style.background]="color(entry.colorIndex)"></span>
-            <span data-testid="mark-list-from">{{ entry.fromSystem }}</span>
-            <span>{{ arrow }}</span>
-            <span data-testid="mark-list-to">{{ entry.toSystem }}</span>
-            <span data-testid="mark-list-pass">{{ passPrefix }}{{ entry.pass }}</span>
+            <span data-testid="mark-list-label">{{ label(entry) }}</span>
           } @else {
             <span class="mark-icon" [class.break]="entry.kind === 'break'" data-testid="mark-list-icon">
               <app-icon [name]="entry.kind === 'break' ? 'slideBreak' : 'stop'" />
             </span>
-            <span data-testid="mark-list-system">{{ entry.systemAbove }}</span>
+            <span data-testid="mark-list-label">{{ label(entry) }}</span>
           }
           <button appIconButton icon="delete" labelKey="delete" data-testid="mark-list-delete" (click)="$event.stopPropagation()" (pressed)="remove(entry)"></button>
         </div>
@@ -185,8 +131,6 @@ export function isSwipeLeft(dx: number, dy: number): boolean {
 export class MarkList {
   private readonly view = inject(OrgViewStore);
   private readonly ui = inject(UiStore);
-  protected readonly arrow = TUNABLES.layout.listArrow;
-  protected readonly passPrefix = TUNABLES.layout.passPrefix;
   private startX = 0;
   private startY = 0;
   private swiped = false;
@@ -195,8 +139,19 @@ export class MarkList {
     const doc = this.view.document();
     return doc === null
       ? []
-      : markListEntries(doc.marks(), doc.junctionCount(), TUNABLES.playingOrder.maxLength, TUNABLES.colors.jumpPalette.length);
+      : markListEntries(doc.marks(), doc.markPositions(), TUNABLES.colors.jumpPalette.length);
   });
+
+  protected label(entry: MarkListEntry): string {
+    switch (entry.kind) {
+      case 'jump':
+        return jumpLabel(entry.previous, entry.next, entry.pass);
+      case 'break':
+        return breakLabel(entry.previous, entry.next);
+      case 'stop':
+        return stopLabel(entry.previous);
+    }
+  }
 
   protected key(entry: MarkListEntry): string {
     return entry.kind === 'jump' ? `jump:${entry.id}` : `${entry.kind}:${entry.junction}`;

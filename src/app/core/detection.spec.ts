@@ -1,26 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, it } from 'vitest';
 
-import { computePaddings, gapsOnPage, median, paddedArea, selectSystemRects } from './detection';
+import { computePaddings, gapsOnPage, median, paddedArea } from './detection';
 import {
-  computePaddingsCases, detectionParams, gapsOnPageCases, medianCases, paddedAreaCases, selectSystemRectsCases,
+  computePaddingsCases, gapsOnPageCases, medianCases, paddedAreaCases,
 } from './fixtures/detection.cases';
 import { caseTitle, expectCloseDeep } from '../../testing/expect-close-deep';
-
-describe('selectSystemRects', () => {
-  for (const c of selectSystemRectsCases) {
-    it(caseTitle(c, 'DET-005'), () => {
-      expectCloseDeep(selectSystemRects(c.rects, c.pageWidth, detectionParams[c.params]), c.expected);
-    });
-  }
-
-  it('DET-005 does not modify its input array or its rectangles', () => {
-    for (const c of selectSystemRectsCases) {
-      const before = structuredClone(c.rects);
-      selectSystemRects(c.rects, c.pageWidth, detectionParams[c.params]);
-      expect(c.rects).toEqual(before);
-    }
-  });
-});
 
 describe('gapsOnPage', () => {
   for (const c of gapsOnPageCases) {

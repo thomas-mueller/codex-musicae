@@ -3,13 +3,12 @@ import { TestBed } from '@angular/core/testing';
 import { TUNABLES } from '../../../config/tunables';
 import { provideTestPorts } from '../../../testing/provide-test-ports';
 import { provideTestTransloco } from '../../../testing/transloco';
-import { EMPTY_MARKS } from '../../core';
+import { EMPTY_MARKS, markPositions } from '../../core';
 import type { DocMarks } from '../../core';
-import { generatePlayingOrderCases } from '../../core/fixtures/playing-order.cases';
 import { OrgViewStore } from '../../state/org-view.store';
 import { SessionStore } from '../../state/session.store';
 import { UiStore } from '../../state/ui.store';
-import { isSwipeLeft, MarkList, markListEntries, replayArrivals } from './mark-list';
+import { isSwipeLeft, MarkList, markListEntries } from './mark-list';
 
 const PAGE_WIDTH = 600;
 const PAGE_HEIGHT = 800;
@@ -22,22 +21,13 @@ const marks = (over: Partial<DocMarks> & { jumps?: DocMarks['jumps'] }): DocMark
   ...over,
   nextJumpId: (over.jumps?.length ?? 0) + 1,
 });
+const entriesOf = (m: DocMarks, systemCount: number) => markListEntries(m, markPositions(m, systemCount, MAX), palette);
 const describeEntries = (m: DocMarks, systemCount: number) =>
-  markListEntries(m, systemCount, MAX, palette).map((e) => `${e.kind}:${e.kind === 'jump' ? e.id : e.junction}${e.reached ? '' : '!'}`);
-
-describe('replayArrivals', () => {
-  for (const c of generatePlayingOrderCases) {
-    it(`PLY-002 ${c.id}: the replay keeps as many systems as the playing order (${c.name})`, () => {
-      const jumps = c.input.jumps.map((j, i) => ({ ...j, id: i + 1 }));
-      const replay = replayArrivals({ ...EMPTY_MARKS, jumps, stops: [...c.input.stops] }, c.input.systemCount, c.input.maxLength);
-      expect(replay.entryCount).toBe(c.expected.entries.length);
-    });
-  }
-});
+  entriesOf(m, systemCount).map((e) => `${e.kind}:${e.kind === 'jump' ? e.id : e.junction}${e.reached ? '' : '!'}`);
 
 describe('markListEntries', () => {
   it('ORG-021 without marks the list is empty', () => {
-    expect(markListEntries(EMPTY_MARKS, 4, MAX, palette)).toEqual([]);
+    expect(entriesOf(EMPTY_MARKS, 4)).toEqual([]);
   });
 
   it('ORG-021 items follow the playing order, not the creation order or the junction numbers', () => {
@@ -94,16 +84,25 @@ describe('markListEntries', () => {
     expect(describeEntries(m, 4)).toEqual(['stop:1', 'jump:1!', 'jump:2!', 'break:3!']);
   });
 
-  it('ORG-021 jump entries carry the system numbers, null where an end has no system, pass and color', () => {
-    const [entry] = markListEntries(marks({ jumps: [{ origin: 0, target: 4, pass: 1, id: 1 }] }), 4, MAX, palette);
-    expect(entry).toMatchObject({ kind: 'jump', fromSystem: null, toSystem: null, pass: 1, colorIndex: 0, junction: 0, reached: true });
-    const [other] = markListEntries(marks({ jumps: [{ origin: 3, target: 1, pass: 2, id: 2 }] }), 4, MAX, palette);
-    expect(other).toMatchObject({ fromSystem: 3, toSystem: 2, colorIndex: 1 });
+  it('ORG-018 jump entries carry the playing-order numbers before and after the jump, pass and color; missing ones are null', () => {
+    // 1 2 3 4 | jump 4 -> 0 | 1 ...
+    const [entry] = entriesOf(marks({ jumps: [{ origin: 4, target: 0, pass: 1, id: 1 }] }), 4);
+    expect(entry).toMatchObject({ kind: 'jump', previous: 4, next: 5, pass: 1, colorIndex: 0, junction: 4, reached: true });
+    const [atStart] = entriesOf(marks({ jumps: [{ origin: 0, target: 4, pass: 1, id: 2 }] }), 4);
+    expect(atStart).toMatchObject({ previous: null, next: null, colorIndex: 1 });
   });
 
-  it('ORG-021 break and stop entries name the system above their junction', () => {
-    const entries = markListEntries(marks({ breaks: [2], stops: [3] }), 4, MAX, palette);
-    expect(entries).toMatchObject([{ kind: 'break', junction: 2, systemAbove: 2 }, { kind: 'stop', junction: 3, systemAbove: 3 }]);
+  it('ORG-021 break and stop entries carry the playing-order numbers around their position', () => {
+    const entries = entriesOf(marks({ breaks: [2], stops: [3] }), 4);
+    expect(entries).toMatchObject([
+      { kind: 'break', junction: 2, previous: 2, next: 3 },
+      { kind: 'stop', junction: 3, previous: 3, next: null },
+    ]);
+  });
+
+  it('ORG-021 unreached entries have no numbers', () => {
+    const entries = entriesOf(marks({ jumps: [{ origin: 3, target: 0, pass: 9, id: 1 }] }), 4);
+    expect(entries[0]).toMatchObject({ reached: false, previous: null, next: null });
   });
 });
 
@@ -151,13 +150,14 @@ describe('MarkList', () => {
     // 4 systems: arrivals 0, 1(break), 2, 3(stop reached on its last arrival: only one) -> the jump at 4 is never reached.
     expect(entries().map((e) => `${e.dataset['kind']}:${e.dataset['junction']}`)).toEqual(['break:1', 'stop:3', 'jump:4']);
     const [breakEntry, stopEntry, jumpEntry] = entries();
-    expect(breakEntry!.querySelector('[data-testid="mark-list-system"]')!.textContent).toBe('1');
+    const label = (el: HTMLElement) => el.querySelector('[data-testid="mark-list-label"]')!.textContent;
+    expect(label(breakEntry!)).toBe(`1 ${TUNABLES.layout.breakSeparator} 2`);
+    expect(breakEntry!.querySelector('[data-testid="mark-list-icon"]')).not.toBeNull();
+    expect(label(stopEntry!)).toBe('3');
     expect(stopEntry!.querySelector('[data-testid="mark-list-icon"]')).not.toBeNull();
     expect(jumpEntry!.classList.contains('unreached')).toBe(true);
-    expect(jumpEntry!.querySelector('[data-testid="mark-list-from"]')!.textContent).toBe('4');
-    expect(jumpEntry!.querySelector('[data-testid="mark-list-to"]')!.textContent).toBe('1');
-    expect(jumpEntry!.querySelector('[data-testid="mark-list-pass"]')!.textContent).toBe(`${TUNABLES.layout.passPrefix}3`);
-    expect(jumpEntry!.textContent).toContain(TUNABLES.layout.listArrow);
+    const unknown = TUNABLES.layout.unknownNumber;
+    expect(label(jumpEntry!)).toBe(`${unknown} ${TUNABLES.layout.listArrow} ${unknown} ${TUNABLES.layout.passPrefix}3`);
     expect((jumpEntry!.querySelector('[data-testid="mark-list-dot"]') as HTMLElement).style.background).not.toBe('');
   });
 

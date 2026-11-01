@@ -4,9 +4,10 @@ import { TUNABLES } from '../../../config/tunables';
 import type { SystemInfo } from '../../core';
 
 /**
- * ORG-011, ORG-012: the playing-order numbers of every music system of one page ("3, 9"), centered on the system. The
- * digits cover `T:layout.systemLabelHeightRatio` of the system height and have the color and transparency of the bars.
- * Positions are the system box × scale (page-local CSS px). Systems that are never played get no label.
+ * ORG-011, ORG-012: the playing-order numbers of every music system of one page ("3, 9"), at the height of the system and
+ * horizontally centered on the PAGE. The digits cover `T:layout.systemLabelHeightRatio` of the system height, in a light weight,
+ * with the color and transparency of the bars. Vertical positions are the system box × scale (page-local CSS px). Systems that
+ * are never played get no label.
  */
 @Component({
   selector: 'app-system-labels',
@@ -18,9 +19,7 @@ import type { SystemInfo } from '../../core';
           class="label"
           data-testid="system-label"
           [attr.data-system]="system.index"
-          [style.left.px]="system.box.x * scale()"
           [style.top.px]="system.box.y * scale()"
-          [style.width.px]="system.box.width * scale()"
           [style.height.px]="system.box.height * scale()"
           [style.font-size.px]="fontSize(system)"
         >{{ text }}</span>
@@ -31,6 +30,8 @@ import type { SystemInfo } from '../../core';
     :host { position: absolute; inset: 0; pointer-events: none; }
     .label {
       position: absolute;
+      left: 0;
+      right: 0;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -38,7 +39,7 @@ import type { SystemInfo } from '../../core';
       white-space: nowrap;
       line-height: 1;
       font-family: sans-serif;
-      font-weight: bold;
+      font-weight: var(--cm-system-label-weight);
       color: var(--cm-org-bar-tint);
       opacity: var(--cm-org-bar-opacity);
       pointer-events: none;

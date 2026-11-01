@@ -252,7 +252,7 @@ export class OrganizationViewer {
     return selection?.kind === 'junction' && selection.junction <= this.document().junctionCount() ? selection.junction : null;
   });
   private readonly markers = computed(() =>
-    jumpMarkers(this.document().marks(), this.document().systems(), this.document().bars(), TUNABLES.colors.jumpPalette.length),
+    jumpMarkers(this.document().marks(), this.document().systems(), this.document().bars(), TUNABLES.colors.jumpPalette.length, this.document().markPositions()),
   );
   private readonly markersByPage = computed(() => groupByPage<JumpMarker>(this.markers()));
   protected readonly pickingOrigin = computed(() => this.ui.pickingTarget()?.originJunction ?? null);

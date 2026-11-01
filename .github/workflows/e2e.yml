@@ -1,7 +1,7 @@
 name: e2e
 
 # End-to-end tests (Playwright, three engines x desktop/phone/tablet). Temporarily optional: this workflow is not
-# referenced by deploy-web or android, so a red run here never blocks a deployment or an APK (PIP-001, DEC-093).
+# referenced by deploy-web or android, so a red run here never blocks a deployment or an APK (PIP-001, DEC-100).
 #
 # Designed for a free GitHub account: no artifacts (the storage quota is small and cannot be raised) and no uploads of
 # reports; every matrix job builds for itself, which takes seconds, and failures are read from the job log.

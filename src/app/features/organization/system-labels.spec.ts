@@ -38,14 +38,14 @@ describe('SystemLabels', () => {
     expect(labels(fixture).map((l) => l.dataset['system'])).toEqual(['1', '3']);
   });
 
-  it('ORG-012 the label sits on the system box, centered, scaled', async () => {
+  it('ORG-012 the label is as high as the system and spans the whole page width, so the text is centered on the page', async () => {
     const fixture = mount([[1], [2], [3]]);
     await fixture.whenStable();
     const [first] = labels(fixture);
-    expect(parseFloat(first!.style.left)).toBeCloseTo(40 * SCALE);
     expect(parseFloat(first!.style.top)).toBeCloseTo(100 * SCALE);
-    expect(parseFloat(first!.style.width)).toBeCloseTo(500 * SCALE);
     expect(parseFloat(first!.style.height)).toBeCloseTo(80 * SCALE);
+    expect(first!.style.left).toBe(''); // from the stylesheet: left 0 and right 0, i.e. the page width
+    expect(first!.style.width).toBe('');
   });
 
   it('ORG-012 the digits cover systemLabelHeightRatio of the system height', async () => {

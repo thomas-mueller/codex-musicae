@@ -56,6 +56,9 @@ export class PopupHost {
   protected readonly noDocument = computed(() => !this.store.hasDocument());
   protected readonly popupId = computed(() => {
     const id = this.store.popup()?.id;
+    if (id === this.ids.markList && !this.compact()) {
+      return null; // expanded layouts open the marks list beside its button (ToolArea)
+    }
     return id !== undefined && Object.values(this.ids).includes(id) ? id : null;
   });
 

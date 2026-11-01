@@ -3,7 +3,7 @@ import { computed, signal } from '@angular/core';
 import { TUNABLES } from '../../config/tunables';
 import {
   EMPTY_MARKS, addJump, clearJunction, computeBars, flattenSystems, forcedBreaks, generatePlayingOrder, isComplete,
-  isProvisional, junctionCount, removeJump, systemNumbers, toggleBreak, toggleStop, updateJump, usablePrefix,
+  isProvisional, junctionCount, markPositions, removeJump, systemNumbers, toggleBreak, toggleStop, updateJump, usablePrefix,
 } from '../core';
 import type { DetectedPage, DocMarks, Jump, Point } from '../core';
 import type { PdfDocumentHandle, PdfOpenError, PdfPageInfo, PdfRenderer } from '../ports/pdf-renderer';
@@ -82,6 +82,8 @@ export class DocumentStore {
   );
   readonly numbers = computed(() => systemNumbers(this.playingOrder(), this.junctionCount()));
   readonly forcedBreakAfter = computed(() => forcedBreaks(this.playingOrder(), new Set(this.marks().breaks)));
+  /** ORG-018, ORG-021: where jumps, breaks and stops are met in the playing order (playing-order numbers, never print numbers). */
+  readonly markPositions = computed(() => markPositions(this.marks(), this.junctionCount(), TUNABLES.playingOrder.maxLength));
 
   readonly handle = this.handleSignal.asReadonly();
   readonly pageInfos = this.pageInfosSignal.asReadonly();

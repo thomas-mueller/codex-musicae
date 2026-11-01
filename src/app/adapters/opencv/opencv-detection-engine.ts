@@ -1,7 +1,6 @@
 import * as Comlink from 'comlink';
 
-import type { Rect } from '../../core/geometry';
-import type { DetectionEngine, DetectionError } from '../../ports/detection-engine';
+import type { ComponentSet, DetectionEngine, DetectionError, ExtractionParams } from '../../ports/detection-engine';
 import { err } from '../../ports/result';
 import type { Result } from '../../ports/result';
 import { mapDetectionError } from './map-error';
@@ -20,7 +19,7 @@ export class OpenCvDetectionEngine implements DetectionEngine {
 
   constructor(private readonly createWorkerApi: () => DetectionWorkerApi = createDetectionWorkerApi) {}
 
-  extractComponents(bitmap: ImageBitmap, signal: AbortSignal): Promise<Result<readonly Rect[], DetectionError>> {
+  extractComponents(bitmap: ImageBitmap, signal: AbortSignal, params: ExtractionParams): Promise<Result<ComponentSet, DetectionError>> {
     if (signal.aborted) {
       bitmap.close();
       return Promise.resolve(err('cancelled'));
@@ -33,7 +32,7 @@ export class OpenCvDetectionEngine implements DetectionEngine {
         resolve(err('cancelled'));
       };
       signal.addEventListener('abort', onAbort, { once: true });
-      worker.extract(Comlink.transfer(bitmap, [bitmap]), taskId).then(
+      worker.extract(Comlink.transfer(bitmap, [bitmap]), taskId, params).then(
         (result) => resolve(result),
         (thrown: unknown) => {
           const { error, detail } = mapDetectionError(thrown);

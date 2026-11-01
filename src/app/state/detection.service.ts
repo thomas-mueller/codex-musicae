@@ -3,12 +3,12 @@ import { effect, inject, Injectable } from '@angular/core';
 import { TUNABLES } from '../../config/tunables';
 import type { DetectionLevelName } from '../../config/tunables';
 import {
-  bitmapRectToDisplay, fitScaleToPixelCap, flattenSystems, nextPageToProcess, pickNext, reconcileAfterRedetection,
-  selectSystemRects,
+  fitScaleToPixelCap, flattenSystems, nextPageToProcess, pickNext, reconcileAfterRedetection, selectSystems,
 } from '../core';
 import type { DetectedPage, SchedulerContext } from '../core';
 import { APP_LIFECYCLE } from '../ports/app-lifecycle';
 import { DETECTION_ENGINE } from '../ports/detection-engine';
+import type { ExtractionParams } from '../ports/detection-engine';
 import type { PdfDocumentHandle, PdfPageInfo } from '../ports/pdf-renderer';
 import { CLOCK } from './clock';
 import { DetectionRun } from './detection-run';
@@ -185,19 +185,15 @@ export class DetectionService {
     const wanted = level.renderScale * this.governor.renderScaleFactor();
     let scale = fitScaleToPixelCap(info.width, info.height, wanted, TUNABLES.resources.maxCanvasPixels);
     for (let attempt = 0; attempt < 2; attempt++) {
-      const rects = await this.extract(handle, info, scale, signal);
-      if (rects.ok) {
-        const systems = selectSystemRects(
-          rects.value.map((r) => bitmapRectToDisplay(r, scale)),
-          info.width,
-          level,
-        );
+      const set = await this.extract(handle, info, scale, { blockSize: level.adaptiveBlockSize, c: level.adaptiveC }, signal);
+      if (set.ok) {
+        const systems = selectSystems(set.value.components, { width: set.value.width, height: set.value.height }, { width: info.width, height: info.height }, level);
         return { kind: 'done', page: { pageIndex, width: info.width, height: info.height, systems } };
       }
-      if (rects.error === 'cancelled') {
+      if (set.error === 'cancelled') {
         return { kind: 'cancelled' };
       }
-      if (rects.error === 'out-of-memory') {
+      if (set.error === 'out-of-memory') {
         this.governor.reportFailure();
       }
       scale *= TUNABLES.detection.retryScaleFactor;
@@ -205,13 +201,13 @@ export class DetectionService {
     return { kind: 'failed' };
   }
 
-  private async extract(handle: PdfDocumentHandle, info: PdfPageInfo, scale: number, signal: AbortSignal) {
+  private async extract(handle: PdfDocumentHandle, info: PdfPageInfo, scale: number, params: ExtractionParams, signal: AbortSignal) {
     const region = { x: 0, y: 0, width: info.width, height: info.height };
     const bitmap = await handle.renderRegion({ pageIndex: info.pageIndex, region, scale }, signal);
     if (!bitmap.ok) {
       return bitmap;
     }
     // DET-020: the engine takes the bitmap and closes it; nothing here keeps it.
-    return this.engine.extractComponents(bitmap.value, signal);
+    return this.engine.extractComponents(bitmap.value, signal, params);
   }
 }

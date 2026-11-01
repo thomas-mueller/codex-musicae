@@ -15,32 +15,6 @@ const union = (a, b) => {
   return R(x0, y0, x1 - x0, y1 - y0);
 };
 
-// ---- detection filter
-export function selectSystemRects(rects, pageWidth, p) {
-  const valid = rects.filter((r) => r.width > 0 && r.height > 0);
-  if (valid.length === 0) return [];
-  let maxI = 0;
-  valid.forEach((r, i) => { if (area(r) > area(valid[maxI])) maxI = i; });
-  const rest = valid.filter((_, i) => i !== maxI);
-  if (rest.length === 0) return [];
-  let threshold = 0;
-  if (rest.length >= 2) {
-    const a = rest.map(area).sort((x, y) => x - y);
-    let bestGap = -1, bestI = -1;
-    for (let i = 0; i < a.length - 1; i++) {
-      const g = a[i + 1] - a[i];
-      if (g >= bestGap) { bestGap = g; bestI = i; }
-    }
-    if (bestGap > 0) threshold = (a[bestI] + a[bestI + 1]) / 2;
-  }
-  const keep = new Set();
-  rest.forEach((r, i) => {
-    if (area(r) > threshold && r.width >= p.minSystemWidthRatio * pageWidth) keep.add(i);
-    if (r.width >= p.fullWidthSystemRatio * pageWidth) keep.add(i);
-  });
-  return rest.filter((_, i) => keep.has(i)).sort((a, b) => a.y - b.y || a.x - b.x);
-}
-
 // ---- padding
 const median = (v) => {
   if (v.length === 0) return null;

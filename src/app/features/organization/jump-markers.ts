@@ -2,13 +2,15 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
 
 import { TUNABLES } from '../../../config/tunables';
 import { jumpColorIndex } from '../../core';
-import type { Bar, DocMarks, SystemInfo } from '../../core';
+import type { Bar, DocMarks, MarkPositions, SystemInfo } from '../../core';
 import { Icon } from '../shell/icon';
 import { LongPressDirective } from './long-press.directive';
+import { jumpLabel } from './mark-labels';
 
 /**
- * One end of a jump on the page (ORG-018). The start sits on the right of the source system and shows the target system
- * number and the pass; the end sits on the left of the system after the target junction and shows the source system number.
+ * One end of a jump on the page (ORG-018). The start sits on the right of the source system, the end on the left of the
+ * system after the target junction; both show "<previous> → <next> ×<pass>": the playing-order numbers of the system played
+ * before the jump and the one played after it.
  */
 export interface JumpMarker {
   readonly jumpId: number;
@@ -17,8 +19,9 @@ export interface JumpMarker {
   /** Vertical extent of the anchor (a system, or a bar for the two junctions that have no system) in page points. */
   readonly y: number;
   readonly height: number;
-  /** Print number of the system at the other end; null where that end has no system (junction 0 or N). */
-  readonly otherNumber: number | null;
+  /** Playing-order number of the system played before / after the jump; null at the start / end of the order or if never reached. */
+  readonly previous: number | null;
+  readonly next: number | null;
   /** The junction at the other end; long press scrolls there (ORG-019). */
   readonly otherJunction: number;
   readonly pass: number;
@@ -36,7 +39,13 @@ interface Anchor {
  * `origin` and an end at system `target + 1`. A start at junction 0 and an end at junction N have no system and fall back
  * to the first bar of that junction. An end whose anchor does not exist yet (outside the usable prefix) gets no marker.
  */
-export function jumpMarkers(marks: DocMarks, systems: readonly SystemInfo[], bars: readonly Bar[], paletteSize: number): JumpMarker[] {
+export function jumpMarkers(
+  marks: DocMarks,
+  systems: readonly SystemInfo[],
+  bars: readonly Bar[],
+  paletteSize: number,
+  positions: MarkPositions,
+): JumpMarker[] {
   const systemCount = systems.length;
   const systemAnchor = (index: number): Anchor | null => {
     const system = systems.find((s) => s.index === index);
@@ -50,13 +59,14 @@ export function jumpMarkers(marks: DocMarks, systems: readonly SystemInfo[], bar
     const colorIndex = jumpColorIndex(jump.id, paletteSize);
     const start = systemAnchor(jump.origin) ?? (jump.origin === 0 ? barAnchor(0) : null);
     const end = systemAnchor(jump.target + 1) ?? (jump.target === systemCount ? barAnchor(systemCount) : null);
+    const around = positions.jumps.get(jump.id);
+    const numbers = { previous: around?.previous ?? null, next: around?.next ?? null };
     const markers: JumpMarker[] = [];
     if (start !== null) {
-      const targetSystem = jump.target + 1;
-      markers.push({ ...start, jumpId: jump.id, role: 'origin', otherNumber: targetSystem <= systemCount ? targetSystem : null, otherJunction: jump.target, pass: jump.pass, colorIndex });
+      markers.push({ ...start, ...numbers, jumpId: jump.id, role: 'origin', otherJunction: jump.target, pass: jump.pass, colorIndex });
     }
     if (end !== null) {
-      markers.push({ ...end, jumpId: jump.id, role: 'target', otherNumber: jump.origin >= 1 ? jump.origin : null, otherJunction: jump.origin, pass: jump.pass, colorIndex });
+      markers.push({ ...end, ...numbers, jumpId: jump.id, role: 'target', otherJunction: jump.origin, pass: jump.pass, colorIndex });
     }
     return markers;
   });
@@ -102,12 +112,7 @@ interface MarkerGroup {
             (longPress)="markerLongPress.emit(marker)"
           >
             <app-icon class="icon" [name]="marker.role === 'origin' ? 'jump' : 'jumpEnd'" />
-            @if (marker.otherNumber !== null) {
-              <span data-testid="jump-marker-number">{{ marker.otherNumber }}</span>
-            }
-            @if (marker.role === 'origin') {
-              <span data-testid="jump-marker-pass">{{ passPrefix }}{{ marker.pass }}</span>
-            }
+            <span data-testid="jump-marker-label">{{ label(marker) }}</span>
           </button>
         }
       </div>
@@ -131,7 +136,6 @@ export class JumpMarkers {
   readonly selectedJumpId = input<number | null>(null);
   readonly markerTap = output<number>();
   readonly markerLongPress = output<JumpMarker>();
-  protected readonly passPrefix = TUNABLES.layout.passPrefix;
 
   protected readonly groups = computed<MarkerGroup[]>(() => {
     const groups = new Map<string, { role: JumpMarker['role']; y: number; height: number; markers: JumpMarker[] }>();
@@ -143,6 +147,10 @@ export class JumpMarkers {
     }
     return [...groups].map(([key, group]) => ({ key, ...group }));
   });
+
+  protected label(marker: JumpMarker): string {
+    return jumpLabel(marker.previous, marker.next, marker.pass);
+  }
 
   protected color(marker: JumpMarker): string {
     return TUNABLES.colors.jumpPalette[marker.colorIndex] ?? TUNABLES.colors.accent;

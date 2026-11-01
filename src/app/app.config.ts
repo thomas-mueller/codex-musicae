@@ -70,9 +70,10 @@ export const appConfig: ApplicationConfig = {
             const region = { x: 0, y: 0, width: info.value.width, height: info.value.height };
             const bitmap = await doc.value.renderRegion({ pageIndex, region, scale }, signal);
             if (!bitmap.ok) throw new Error(bitmap.error);
-            const rects = await engine.extractComponents(bitmap.value, signal);
-            if (!rects.ok) throw new Error(rects.error);
-            return rects.value;
+            const level = TUNABLES.detection.levels[TUNABLES.detection.defaultLevel];
+            const set = await engine.extractComponents(bitmap.value, signal, { blockSize: level.adaptiveBlockSize, c: level.adaptiveC });
+            if (!set.ok) throw new Error(set.error);
+            return set.value.components.map((component) => component.rect);
           } finally {
             await doc.value.destroy();
           }
