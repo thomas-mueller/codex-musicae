@@ -8,6 +8,7 @@ const DETECTION_BASE_MS = 45_000;
 const RERUN_BASE_MS = 60_000;
 const NEGATIVE_SETTLE_BASE_MS = 300;
 const SCROLL_BASE_MS = 5_000;
+const DOCUMENT_OPEN_BASE_MS = 15_000;
 
 export const scaled = (ms: number): number => ms * CI_FACTOR;
 
@@ -22,3 +23,5 @@ export const RETRY_TIMEOUT_MS = 1_000;
 /** Time given to something that must NOT happen (a second tab, a console message) before asserting its absence. */
 export const NEGATIVE_SETTLE_MS = scaled(NEGATIVE_SETTLE_BASE_MS);
 export const SCROLL_TIMEOUT_MS = scaled(SCROLL_BASE_MS);
+/** An opened PDF reaches ready or error in the tab bar; cold pdf.js start-up is slow in WebKit on CI. */
+export const DOCUMENT_OPEN_TIMEOUT_MS = scaled(DOCUMENT_OPEN_BASE_MS);

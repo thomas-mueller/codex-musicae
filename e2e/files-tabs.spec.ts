@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 
-import { NEGATIVE_SETTLE_MS } from './support/timing';
+import { DOCUMENT_OPEN_TIMEOUT_MS, NEGATIVE_SETTLE_MS } from './support/timing';
 
 const en = JSON.parse(readFileSync('src/assets/i18n/en.json', 'utf8')) as { a11y: Record<string, string> };
 const label = (key: string) => en.a11y[key] as string;
@@ -82,7 +82,9 @@ test.describe('expanded', () => {
   test('FIL-009 a damaged PDF opens as a tab with an error marker and the app stays usable', async ({ page }) => {
     await openFiles(page, DAMAGED);
     await expect(page.locator('app-tab-bar .name')).toHaveText(['damaged.pdf']);
-    await expect(page.locator(`app-tab-bar [aria-label="${label('errorInvalid')}"]`)).toBeVisible();
+    await expect(page.locator(`app-tab-bar [aria-label="${label('errorInvalid')}"]`)).toBeVisible({
+      timeout: DOCUMENT_OPEN_TIMEOUT_MS,
+    });
     await openFiles(page, SCORE);
     await expect(page.locator('app-tab-bar .name')).toHaveCount(2);
     expect(await previewHasInk(page)).toBe(true);
@@ -101,9 +103,9 @@ test.describe('expanded', () => {
     const undo = page.getByRole('button', { name: label('undo'), exact: true }).first();
     await expect(undo).toHaveAttribute('aria-disabled', 'true');
     await openFiles(page, SCORE);
-    await expect(undo).not.toHaveAttribute('aria-disabled', 'true');
+    await expect(undo).not.toHaveAttribute('aria-disabled', 'true', { timeout: DOCUMENT_OPEN_TIMEOUT_MS });
     await openFiles(page, DAMAGED);
-    await expect(undo).toHaveAttribute('aria-disabled', 'true');
+    await expect(undo).toHaveAttribute('aria-disabled', 'true', { timeout: DOCUMENT_OPEN_TIMEOUT_MS });
   });
 
   test('FIL-008 the recent list shows opened files, and a lost file offers the picker on a second tap', async ({ page }) => {
