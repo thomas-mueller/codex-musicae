@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { desktopTest } from './support/desktop';
+
 import { label, openScoreInAnnotation, openScoreInOrganization } from './support/score';
 
 const SWIPE_FRACTION = 0.2; // NAV-008: above the 15% minimum
@@ -39,7 +41,7 @@ async function swipe(page: Page, fraction: number): Promise<void> {
 const progressWidth = (page: Page): Promise<string> =>
   page.getByTestId('progress-line').evaluate((el) => (el as HTMLElement).style.width);
 
-test('NAV-006 NAV-007 clicks in the left, right and center tap zones go back, forward and into presentation', async ({ page }) => {
+desktopTest('NAV-006 NAV-007 clicks in the left, right and center tap zones go back, forward and into presentation', async ({ page }) => {
   const n = await openScoreInAnnotation(page);
   expect(n).toBeGreaterThan(2);
   await clickAt(page, 0.9);
@@ -54,7 +56,7 @@ test('NAV-006 NAV-007 clicks in the left, right and center tap zones go back, fo
   await expect(shell(page)).toHaveAttribute('data-mode', 'annotation');
 });
 
-test('NAV-008 a mouse swipe turns a slide in annotation mode without a tool', async ({ page }) => {
+desktopTest('NAV-008 a mouse swipe turns a slide in annotation mode without a tool', async ({ page }) => {
   const n = await openScoreInAnnotation(page);
   await swipe(page, -SWIPE_FRACTION);
   await expect(indicator(page)).toHaveText(`2 / ${n}`);
@@ -62,7 +64,7 @@ test('NAV-008 a mouse swipe turns a slide in annotation mode without a tool', as
   await expect(indicator(page)).toHaveText(`1 / ${n}`);
 });
 
-test('NAV-008 a mouse swipe turns a slide in presentation mode', async ({ page }) => {
+desktopTest('NAV-008 a mouse swipe turns a slide in presentation mode', async ({ page }) => {
   await openScoreInAnnotation(page);
   await clickAt(page, 0.5);
   await expect(shell(page)).toHaveAttribute('data-mode', 'presentation');
@@ -73,7 +75,7 @@ test('NAV-008 a mouse swipe turns a slide in presentation mode', async ({ page }
   await expect.poll(() => progressWidth(page)).toBe(first);
 });
 
-test('ANN-008 NAV-009 with the pen active neither taps nor swipes navigate', async ({ page }) => {
+desktopTest('ANN-008 NAV-009 with the pen active neither taps nor swipes navigate', async ({ page }) => {
   const n = await openScoreInAnnotation(page);
   await page.getByRole('button', { name: label('pen'), exact: true }).click();
   await swipe(page, -SWIPE_FRACTION);
@@ -82,7 +84,7 @@ test('ANN-008 NAV-009 with the pen active neither taps nor swipes navigate', asy
   await expect(shell(page)).toHaveAttribute('data-mode', 'annotation');
 });
 
-test('NAV-009 in organization mode a click never navigates', async ({ page }) => {
+desktopTest('NAV-009 in organization mode a click never navigates', async ({ page }) => {
   await openScoreInOrganization(page);
   await clickAt(page, 0.1);
   await clickAt(page, 0.5);

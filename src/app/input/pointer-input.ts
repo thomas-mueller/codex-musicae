@@ -1,17 +1,23 @@
 import { computed, Directive, ElementRef, inject } from '@angular/core';
 
 import { TUNABLES } from '../../config/tunables';
-import { classifyTrack, pointerPolicy, tapZoneOf } from '../core';
+import { classifyTrack, isDoubleTap, pointerPolicy, tapZoneOf } from '../core';
 import type { PointerPolicy, PointerSample } from '../core';
 import { SlideNavStore } from '../state/slide-nav.store';
 import { UiStore } from '../state/ui.store';
 import { CommandBus } from './command-bus';
-import type { Command } from './command-bus';
+import type { Command, Point } from './command-bus';
+import { WheelInput } from './wheel-input';
 
 interface Track {
   readonly policy: PointerPolicy;
   readonly samples: PointerSample[];
+  /** Started on a bar, marker, chip or popup: those handle the tap themselves. */
+  readonly interactive: boolean;
 }
+
+/** Elements of organization mode that react to taps themselves; a double tap there is not a zoom. */
+const OWN_TAP_TARGETS = '[data-bar],[data-marker],[data-chip],[data-popup]';
 
 /**
  * The stage of all three modes. Turns pointer events into commands: `pointerPolicy` is called here and nowhere else
@@ -25,6 +31,7 @@ interface Track {
     '(pointermove)': 'onMove($event)',
     '(pointerup)': 'onUp($event)',
     '(pointercancel)': 'onCancel($event)',
+    '(wheel)': 'onWheel($event)',
   },
 })
 export class PointerStage {
@@ -32,11 +39,16 @@ export class PointerStage {
   private readonly ui = inject(UiStore);
   private readonly nav = inject(SlideNavStore);
   private readonly bus = inject(CommandBus);
+  private readonly wheel = new WheelInput();
   /** Active pointers; only those with a single-pointer gesture role carry a track. */
   private readonly pointers = new Map<number, Track | null>();
+  /** Latest stage position of every active pointer (pinch). */
+  private readonly positions = new Map<number, Point>();
+  private pinchDistance: number | null = null;
+  private lastTap: PointerSample | null = null;
 
-  /** Organization mode keeps native scrolling and browser pinch handling. */
-  protected readonly touchAction = computed(() => (this.ui.mode() === 'organization' ? null : 'none'));
+  /** Organization mode scrolls natively (one finger, both axes) but never zooms the page itself. */
+  protected readonly touchAction = computed(() => (this.ui.mode() === 'organization' ? 'pan-x pan-y' : 'none'));
 
   protected onDown(event: PointerEvent): void {
     if (event.button !== 0 || this.ui.popup() !== null) {
@@ -51,24 +63,60 @@ export class PointerStage {
       mode: this.ui.mode(),
       toolActive: this.ui.tool() !== null,
       pointerCount: this.pointers.size,
-      zoomed: this.ui.mode() === 'annotation' && this.nav.view().zoom > 1 + TUNABLES.zoom.fitEpsilon,
+      zoomed: this.ui.mode() === 'annotation' && this.isZoomed(),
       stylusSeen: false,
       allowFingerDrawing: false,
       pointerType: pointerTypeOf(event),
     });
-    if (policy.role === 'gestures') {
-      this.pointers.set(event.pointerId, { policy, samples: [this.sample(event)] });
-      this.element.setPointerCapture(event.pointerId);
+    const first = this.sample(event);
+    this.positions.set(event.pointerId, { x: first.x, y: first.y });
+    if (policy.role === 'pinch') {
+      this.pinchDistance = this.distance();
+    } else if (policy.role === 'gestures' || policy.role === 'org-select') {
+      const interactive = event.target instanceof Element && event.target.closest(OWN_TAP_TARGETS) !== null;
+      this.pointers.set(event.pointerId, { policy, samples: [first], interactive });
+      if (policy.role === 'gestures') {
+        this.element.setPointerCapture(event.pointerId); // organization keeps the clicks of its own elements
+      }
     }
   }
 
   protected onMove(event: PointerEvent): void {
-    this.pointers.get(event.pointerId)?.samples.push(this.sample(event));
+    const sample = this.sample(event);
+    if (this.positions.has(event.pointerId)) {
+      this.positions.set(event.pointerId, { x: sample.x, y: sample.y });
+    }
+    if (this.pinchDistance !== null) {
+      this.pinch();
+      return;
+    }
+    const track = this.pointers.get(event.pointerId);
+    const previous = track?.samples[track.samples.length - 1];
+    track?.samples.push(sample);
+    // NAV-014: one pointer pans a zoomed slide; organization mode scrolls natively.
+    if (track?.policy.pan && previous !== undefined && this.ui.mode() !== 'organization') {
+      this.bus.dispatch({ type: 'Pan', dx: sample.x - previous.x, dy: sample.y - previous.y });
+    }
+  }
+
+  protected onWheel(event: WheelEvent): void {
+    const rect = this.element.getBoundingClientRect();
+    const mode = this.ui.mode();
+    const result = this.wheel.handle(
+      { deltaX: event.deltaX, deltaY: event.deltaY, deltaMode: event.deltaMode, ctrlKey: event.ctrlKey, shiftKey: event.shiftKey, t: event.timeStamp },
+      { mode, zoomed: mode === 'annotation' && this.isZoomed(), anchor: { x: event.clientX - rect.left, y: event.clientY - rect.top } },
+    );
+    if (result.preventDefault) {
+      event.preventDefault();
+    }
+    if (result.command !== null) {
+      this.bus.dispatch(result.command);
+    }
   }
 
   protected onUp(event: PointerEvent): void {
     const track = this.pointers.get(event.pointerId);
-    this.pointers.delete(event.pointerId);
+    this.forget(event.pointerId);
     if (!track) {
       return;
     }
@@ -80,13 +128,46 @@ export class PointerStage {
   }
 
   protected onCancel(event: PointerEvent): void {
-    this.pointers.delete(event.pointerId);
+    this.forget(event.pointerId);
+  }
+
+  private forget(pointerId: number): void {
+    this.pointers.delete(pointerId);
+    this.positions.delete(pointerId);
+    if (this.positions.size < 2) {
+      this.pinchDistance = null;
+    }
+  }
+
+  private distance(): number {
+    const [a, b] = [...this.positions.values()];
+    return a !== undefined && b !== undefined ? Math.hypot(b.x - a.x, b.y - a.y) : 0;
+  }
+
+  /** NAV-014: factor = finger distance now / at the previous move, around the midpoint. */
+  private pinch(): void {
+    const [a, b] = [...this.positions.values()];
+    const previous = this.pinchDistance;
+    const distance = this.distance();
+    if (a === undefined || b === undefined || previous === null || previous <= 0 || distance <= 0) {
+      this.pinchDistance = distance;
+      return;
+    }
+    this.pinchDistance = distance;
+    this.bus.dispatch({ type: 'ZoomBy', factor: distance / previous, anchor: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } });
+  }
+
+  private isZoomed(): boolean {
+    return this.nav.view().zoom > 1 + TUNABLES.zoom.fitEpsilon;
   }
 
   private commandFor(track: Track): Command | null {
     const width = this.element.getBoundingClientRect().width;
     const kind = classifyTrack(track.samples, width, TUNABLES.gestures);
     const last = track.samples[track.samples.length - 1];
+    if (track.policy.role === 'org-select') {
+      return kind === 'tap' && !track.interactive && last !== undefined ? this.doubleTap(last) : null;
+    }
     if (kind === 'tap' && track.policy.tapZones && last !== undefined) {
       const zone = tapZoneOf(last.x, width, TUNABLES.gestures.tapZones);
       return zone === 'left' ? { type: 'Previous' } : zone === 'right' ? { type: 'Next' } : { type: 'ToggleMode' };
@@ -97,6 +178,17 @@ export class PointerStage {
     if (track.policy.swipes && kind === 'swipe-right') {
       return { type: 'Previous' };
     }
+    return null;
+  }
+
+  /** NAV-016: the second of two quick taps close together zooms; the pair is used up. */
+  private doubleTap(tap: PointerSample): Command | null {
+    const previous = this.lastTap;
+    if (previous !== null && isDoubleTap(previous, tap, { intervalMs: TUNABLES.gestures.doubleTapMaxIntervalMs, distancePx: TUNABLES.gestures.doubleTapMaxDistancePx })) {
+      this.lastTap = null;
+      return { type: 'DoubleTapZoom', anchor: { x: tap.x, y: tap.y } };
+    }
+    this.lastTap = tap;
     return null;
   }
 

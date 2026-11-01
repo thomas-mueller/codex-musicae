@@ -146,4 +146,27 @@ describe('SlideNavStore', () => {
       expect(doc.slideView()).toEqual(FIT_VIEW);
     });
   });
+
+  it('NAV-013 NAV-014 zoomAt keeps the anchor in place and stays within the zoom limits', async () => {
+    const { nav, doc } = await setup();
+    nav.stage.set({ width: 300, height: 400 });
+    nav.zoomAt(2, { x: 150, y: 200 });
+    expect(doc.slideView()).toEqual({ zoom: 2, panX: 0, panY: 0 });
+    nav.zoomAt(100, { x: 150, y: 200 });
+    expect(doc.slideView().zoom).toBe(TUNABLES.zoom.max);
+    nav.zoomAt(1 / 100, { x: 150, y: 200 });
+    expect(doc.slideView().zoom).toBe(TUNABLES.zoom.min);
+  });
+
+  it('NAV-012 NAV-014 panBy moves the zoomed slide and clamps it to the stage', async () => {
+    const { nav, doc } = await setup();
+    nav.stage.set({ width: 300, height: 400 });
+    nav.panBy(50, 50);
+    expect(doc.slideView()).toEqual(FIT_VIEW); // nothing to pan at fit
+    nav.zoomAt(2, { x: 150, y: 200 });
+    nav.panBy(10, 0);
+    expect(doc.slideView().panX).toBe(10);
+    nav.panBy(10000, 0);
+    expect(doc.slideView().panX).toBe(nav.fitted().width / 2); // (width * 2 - stage) / 2 with width = stage width
+  });
 });

@@ -193,7 +193,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 
 ## NAV — Navigation and input
 
-- **NAV-001** [v1·todo·M13] All inputs (keys, wheel, taps, swipes, pinch) are translated into semantic commands by one input layer driven by `T:keymap`; components react to commands only.
+- **NAV-001** [v1·done·M13] All inputs (keys, wheel, taps, swipes, pinch) are translated into semantic commands by one input layer driven by `T:keymap`; components react to commands only.
 - **NAV-002** [v1·done·M13] Keys (`T:keymap`): next = PageDown, ArrowRight, ArrowDown, Space; previous = PageUp, ArrowLeft, ArrowUp, Shift+Space; first = Home; last = End. Keys with Ctrl, Alt or Meta are ignored.
 - **NAV-003** [v1·done·M13] In annotation and presentation mode next/previous move one slide, first/last the first/last slide; there is no wrap-around.
 - **NAV-004** [v1·done·M13] Auto-repeated key events are ignored (`T:gestures.allowKeyRepeat`).
@@ -203,13 +203,13 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **NAV-008** [v1·done·M13] A swipe moves ≥ `T:gestures.swipeMinDistanceFraction` of the viewport width, within `swipeMaxAngleDeg` of horizontal, at ≥ `swipeMinVelocityPxPerMs`; swipe left = next, swipe right = previous.
 - **NAV-009** [v1·done·M13] Swipes navigate in presentation mode always, and in annotation mode only at fit zoom with no drawing tool active.
 - **NAV-010** [v1·done·M13] Vertical swipes do nothing on slides.
-- **NAV-011** [v1·todo·M13] Wheel at fit zoom in annotation and presentation mode: normalized deltas (`T:gestures.wheel`) accumulate; reaching `stepThresholdPx` turns one slide, then wheel input is ignored until `idleResetMs` without events or `cooldownMs`, whichever is longer.
-- **NAV-012** [v1·todo·M13] When zoomed in, the wheel pans (Shift+wheel horizontally) and never turns slides.
-- **NAV-013** [v1·todo·M13] Ctrl+wheel and trackpad pinch zoom around the pointer (factor exp(−deltaY × `T:gestures.wheel.zoomSensitivity`)) in annotation and organization mode.
-- **NAV-014** [v1·todo·M13] Touch pinch zooms around the pinch center between `T:zoom.min` and `T:zoom.max`; one finger pans a zoomed view.
+- **NAV-011** [v1·done·M13] Wheel at fit zoom in annotation and presentation mode: normalized deltas (`T:gestures.wheel`) accumulate; reaching `stepThresholdPx` turns one slide, then wheel input is ignored until `idleResetMs` without events or `cooldownMs`, whichever is longer.
+- **NAV-012** [v1·done·M13] When zoomed in, the wheel pans (Shift+wheel horizontally) and never turns slides.
+- **NAV-013** [v1·done·M13] Ctrl+wheel and trackpad pinch zoom around the pointer (factor exp(−deltaY × `T:gestures.wheel.zoomSensitivity`)) in annotation and organization mode.
+- **NAV-014** [v1·done·M13] Touch pinch zooms around the pinch center between `T:zoom.min` and `T:zoom.max`; one finger pans a zoomed view.
 - **NAV-015** [v1·done·M13] In annotation mode zoom returns to fit on every slide change; in organization mode zoom persists across page changes.
-- **NAV-016** [v1·todo·M13] In organization mode a double tap outside bars and jump markers toggles between fit-width and `T:gestures.doubleTapZoomFactor` × fit-width (interval ≤ `doubleTapMaxIntervalMs`, distance ≤ `doubleTapMaxDistancePx`).
-- **NAV-017** [v1·todo·M13] Presentation mode is always at fit scale; zoom input is ignored.
+- **NAV-016** [v1·done·M13] In organization mode a double tap outside bars and jump markers toggles between fit-width and `T:gestures.doubleTapZoomFactor` × fit-width (interval ≤ `doubleTapMaxIntervalMs`, distance ≤ `doubleTapMaxDistancePx`).
+- **NAV-017** [v1·done·M13] Presentation mode is always at fit scale; zoom input is ignored.
 - **NAV-018** [v1·done·M13] Esc closes in this order: open popup, jump-target picking or selection, presentation mode (back to annotation mode).
 - **NAV-019** [v1·done·M13] Pedals work in all modes and with a drawing tool active, because they arrive as keys.
 - **NAV-020** [v1·done·M12] A slider and the previous/next buttons jump to a slide in annotation mode.

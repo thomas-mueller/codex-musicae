@@ -6,18 +6,20 @@ import { AspectRatioService } from '../state/aspect-ratio.service';
 import { OrgViewStore } from '../state/org-view.store';
 import { SessionStore } from '../state/session.store';
 import { UiStore } from '../state/ui.store';
+import { SlideNavStore } from '../state/slide-nav.store';
 import { CommandBus } from './command-bus';
-import type { Command } from './command-bus';
+import type { Command, Point } from './command-bus';
 
 /**
  * Reacts to navigation commands by mode. NAV-001..NAV-005, NAV-015, NAV-017..NAV-019, UIX-018.
- * Zoom, pan and double-tap commands are consumed in S3.
+ * Zoom, pan and double-tap commands follow the mode: NAV-013, NAV-014, NAV-016, NAV-017.
  */
 @Injectable({ providedIn: 'root' })
 export class NavigationHandler {
   private readonly ui = inject(UiStore);
   private readonly session = inject(SessionStore);
   private readonly org = inject(OrgViewStore);
+  private readonly slideNav = inject(SlideNavStore);
   private readonly aspect = inject(AspectRatioService);
   private previousMode = this.ui.mode();
 
@@ -51,8 +53,47 @@ export class NavigationHandler {
         return this.exitPresentation();
       case 'Back':
         return this.back();
-      default:
-        return;
+      case 'ZoomBy':
+        return this.zoomBy(command.factor, command.anchor);
+      case 'ZoomReset':
+        return this.zoomReset();
+      case 'Pan':
+        return this.pan(command.dx, command.dy);
+      case 'DoubleTapZoom':
+        return this.doubleTapZoom(command.anchor);
+    }
+  }
+
+  /** NAV-017: presentation mode is always at fit scale, so zoom and pan commands are ignored there. */
+  private zoomBy(factor: number, anchor: Point): void {
+    const mode = this.ui.mode();
+    if (mode === 'annotation') {
+      this.slideNav.zoomAt(factor, anchor);
+    } else if (mode === 'organization') {
+      this.org.zoomAt(factor, anchor);
+    }
+  }
+
+  private zoomReset(): void {
+    const mode = this.ui.mode();
+    if (mode === 'annotation') {
+      this.slideNav.zoomReset();
+    } else if (mode === 'organization') {
+      this.org.zoomReset();
+    }
+  }
+
+  /** Organization mode scrolls natively, so only the slide view is panned here. */
+  private pan(dx: number, dy: number): void {
+    if (this.ui.mode() === 'annotation') {
+      this.slideNav.panBy(dx, dy);
+    }
+  }
+
+  /** NAV-016: a double tap zooms in organization mode only; in annotation mode it would delay the tap zones. */
+  private doubleTapZoom(anchor: Point): void {
+    if (this.ui.mode() === 'organization') {
+      this.org.toggleDoubleTapZoom(anchor);
     }
   }
 

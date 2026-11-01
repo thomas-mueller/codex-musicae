@@ -1,10 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 
 import { provideTestPorts } from '../../testing/provide-test-ports';
+import { TUNABLES } from '../../config/tunables';
 import { FIT_VIEW } from '../core';
 import { AspectRatioService } from '../state/aspect-ratio.service';
 import type { DocumentStore } from '../state/document.store';
 import { OrgViewStore } from '../state/org-view.store';
+import { SlideNavStore } from '../state/slide-nav.store';
 import { SessionStore } from '../state/session.store';
 import { UiStore } from '../state/ui.store';
 import { CommandBus } from './command-bus';
@@ -13,7 +15,7 @@ import { NavigationHandler } from './navigation-handler';
 
 const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 10));
 
-async function setup(): Promise<{ doc: DocumentStore; ui: UiStore; send: (type: Command['type']) => void }> {
+async function setup(): Promise<{ doc: DocumentStore; ui: UiStore; send: (type: Command['type']) => void; dispatch: (command: Command) => void }> {
   TestBed.configureTestingModule({ providers: provideTestPorts() });
   const session = TestBed.inject(SessionStore);
   await session.openFiles([{ ref: { id: 'a', name: 'a.pdf' }, bytes: new Uint8Array([1]), writable: true }]);
@@ -28,7 +30,7 @@ async function setup(): Promise<{ doc: DocumentStore; ui: UiStore; send: (type: 
   ui.hasDocument.set(true);
   TestBed.inject(NavigationHandler);
   const bus = TestBed.inject(CommandBus);
-  return { doc, ui, send: (type) => bus.dispatch({ type } as Command) };
+  return { doc, ui, send: (type) => bus.dispatch({ type } as Command), dispatch: (command) => bus.dispatch(command) };
 }
 
 describe('NavigationHandler', () => {
@@ -132,5 +134,51 @@ describe('NavigationHandler', () => {
     expect(ui.tool()).toBeNull();
     expect(doc.slideView()).toEqual(FIT_VIEW);
     expect(capture).toHaveBeenCalledWith(1280, 800);
+  });
+
+  const ANCHOR = { x: 150, y: 200 };
+
+  it('NAV-013 NAV-014 zoom and pan commands move the slide view in annotation mode', async () => {
+    const { doc, dispatch, send } = await setup();
+    TestBed.inject(SlideNavStore).stage.set({ width: 300, height: 400 });
+    dispatch({ type: 'ZoomBy', factor: 2, anchor: ANCHOR });
+    expect(doc.slideView().zoom).toBe(2);
+    dispatch({ type: 'Pan', dx: 20, dy: 0 });
+    expect(doc.slideView().panX).toBe(20);
+    dispatch({ type: 'ZoomBy', factor: 100, anchor: ANCHOR });
+    expect(doc.slideView().zoom).toBe(TUNABLES.zoom.max);
+    send('ZoomReset');
+    expect(doc.slideView()).toEqual(FIT_VIEW);
+  });
+
+  it('NAV-017 presentation mode ignores zoom, pan and double-tap commands', async () => {
+    const { doc, ui, dispatch } = await setup();
+    TestBed.inject(SlideNavStore).stage.set({ width: 300, height: 400 });
+    const org = TestBed.inject(OrgViewStore);
+    const zoomAt = vi.spyOn(org, 'zoomAt');
+    const toggle = vi.spyOn(org, 'toggleDoubleTapZoom');
+    ui.setMode('presentation');
+    dispatch({ type: 'ZoomBy', factor: 2, anchor: ANCHOR });
+    dispatch({ type: 'Pan', dx: 20, dy: 20 });
+    dispatch({ type: 'DoubleTapZoom', anchor: ANCHOR });
+    expect(doc.slideView()).toEqual(FIT_VIEW);
+    expect(zoomAt).not.toHaveBeenCalled();
+    expect(toggle).not.toHaveBeenCalled();
+  });
+
+  it('NAV-013 NAV-016 organization mode zooms around the anchor and toggles on a double tap; annotation ignores it', async () => {
+    const { ui, dispatch, doc } = await setup();
+    const org = TestBed.inject(OrgViewStore);
+    const zoomAt = vi.spyOn(org, 'zoomAt').mockImplementation(() => undefined);
+    const toggle = vi.spyOn(org, 'toggleDoubleTapZoom').mockImplementation(() => undefined);
+    dispatch({ type: 'DoubleTapZoom', anchor: ANCHOR });
+    expect(toggle).not.toHaveBeenCalled();
+    ui.setMode('organization');
+    dispatch({ type: 'ZoomBy', factor: 1.5, anchor: ANCHOR });
+    dispatch({ type: 'DoubleTapZoom', anchor: ANCHOR });
+    dispatch({ type: 'Pan', dx: 5, dy: 5 });
+    expect(zoomAt).toHaveBeenCalledWith(1.5, ANCHOR);
+    expect(toggle).toHaveBeenCalledWith(ANCHOR);
+    expect(doc.slideView()).toEqual(FIT_VIEW);
   });
 });

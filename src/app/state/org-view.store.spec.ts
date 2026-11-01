@@ -134,4 +134,27 @@ describe('OrgViewStore', () => {
     expect(store.scrollRequest()).toBeNull();
     expect(store.canZoomIn()).toBe(false);
   });
+
+  it('NAV-013 zooming around an anchor keeps the content under it in place', async () => {
+    const { store, doc } = await setup();
+    store.zoomAt(2, { x: 100, y: 50 });
+    expect(doc.orgZoom()).toBe(2);
+    expect(doc.orgScroll()).toEqual({ x: 100, y: 50 }); // (0 + anchor) * 2 - anchor
+  });
+
+  it('NAV-016 a double tap toggles between fit-width and doubleTapZoomFactor x fit-width', async () => {
+    const { store, doc } = await setup(); // viewport height 400: fit-page = fit-width, zoom value 1
+    store.toggleDoubleTapZoom({ x: 0, y: 0 });
+    expect(doc.orgZoom()).toBe(TUNABLES.gestures.doubleTapZoomFactor);
+    store.toggleDoubleTapZoom({ x: 0, y: 0 });
+    expect(doc.orgZoom()).toBe(1);
+  });
+
+  it('NAV-016 with a short viewport the first double tap goes from fit-page to the zoomed width', async () => {
+    const shortHeight = 200;
+    const { store, doc } = await setup(shortHeight);
+    const fitPageOverFitWidth = shortHeight / PAGE_HEIGHT / SCALE; // zoom value 1 is fit-page, i.e. this much of fit-width
+    store.toggleDoubleTapZoom({ x: 0, y: 0 });
+    expect(doc.orgZoom()).toBeCloseTo(TUNABLES.gestures.doubleTapZoomFactor / fitPageOverFitWidth, 6);
+  });
 });

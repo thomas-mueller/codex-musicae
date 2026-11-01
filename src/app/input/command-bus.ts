@@ -18,6 +18,7 @@ export type Command =
   | { readonly type: 'Back' }
   | { readonly type: 'ZoomBy'; readonly factor: number; readonly anchor: Point }
   | { readonly type: 'ZoomReset' }
+  /** Content displacement in px (a finger moving right is positive dx). */
   | { readonly type: 'Pan'; readonly dx: number; readonly dy: number }
   | { readonly type: 'DoubleTapZoom'; readonly anchor: Point };
 

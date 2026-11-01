@@ -7,6 +7,7 @@ import { provideTestPorts } from '../../testing/provide-test-ports';
 import { CommandBus } from './command-bus';
 import type { Command } from './command-bus';
 import { PointerStage } from './pointer-input';
+import { SlideNavStore } from '../state/slide-nav.store';
 import { UiStore } from '../state/ui.store';
 import type { Mode } from '../state/ui.store';
 
@@ -104,7 +105,7 @@ describe('PointerStage', () => {
     drag(-SWIPE_DX);
     fixture.detectChanges();
     expect(commands).toEqual([]);
-    expect(stage.style.touchAction).toBe('');
+    expect(stage.style.touchAction).toBe('pan-x pan-y');
   });
 
   it('NAV-009 annotation and presentation take over touch handling', () => {
@@ -139,5 +140,98 @@ describe('PointerStage', () => {
     fire('pointerdown', 1, 900, 300, 0);
     fire('pointerup', 1, 900, 300, TUNABLES.gestures.tapMaxDurationMs + 1);
     expect(commands).toEqual([]);
+  });
+
+  describe('pinch, pan and double tap', () => {
+    const touch = 'touch';
+    const zoomView = (zoom: number): void => {
+      Object.defineProperty(TestBed.inject(SlideNavStore), 'view', { value: () => ({ zoom, panX: 0, panY: 0 }) });
+    };
+
+    it('NAV-014 two pointers dispatch ZoomBy with the distance ratio around the midpoint', () => {
+      fire('pointerdown', 1, 400, 300, 0, touch);
+      fire('pointerdown', 2, 600, 300, 5, touch);
+      fire('pointermove', 2, 700, 300, 10, touch);
+      fire('pointermove', 2, 800, 300, 15, touch);
+      expect(commands).toEqual([
+        { type: 'ZoomBy', factor: 300 / 200, anchor: { x: 550, y: 300 } },
+        { type: 'ZoomBy', factor: 400 / 300, anchor: { x: 600, y: 300 } },
+      ]);
+    });
+
+    it('NAV-014 lifting a finger ends the pinch and the remaining finger does not tap or pan', () => {
+      fire('pointerdown', 1, 400, 300, 0, touch);
+      fire('pointerdown', 2, 600, 300, 5, touch);
+      fire('pointerup', 2, 600, 300, 10, touch);
+      fire('pointermove', 1, 100, 300, 20, touch);
+      fire('pointerup', 1, 100, 300, 30, touch);
+      expect(commands).toEqual([]);
+    });
+
+    it('NAV-014 a zoomed one-finger drag pans by the pointer deltas and does not swipe', () => {
+      zoomView(2);
+      fire('pointerdown', 1, 500, 300, 0, touch);
+      fire('pointermove', 1, 450, 320, 50, touch);
+      fire('pointermove', 1, 400, 330, 100, touch);
+      fire('pointerup', 1, 400, 330, 120, touch);
+      expect(commands).toEqual([
+        { type: 'Pan', dx: -50, dy: 20 },
+        { type: 'Pan', dx: -50, dy: 10 },
+      ]);
+    });
+
+    it('NAV-014 organization pointers never pan (native scrolling)', () => {
+      setMode('organization');
+      fire('pointerdown', 1, 500, 300, 0, touch);
+      fire('pointermove', 1, 450, 320, 50, touch);
+      fire('pointerup', 1, 450, 320, 60, touch);
+      expect(commands).toEqual([]);
+    });
+
+    it('NAV-016 two quick taps close together in organization mode zoom once', () => {
+      setMode('organization');
+      tap(500);
+      fire('pointerdown', 1, 505, 300, 200);
+      fire('pointerup', 1, 505, 300, 250);
+      expect(commands).toEqual([{ type: 'DoubleTapZoom', anchor: { x: 505, y: 300 } }]);
+      fire('pointerdown', 1, 505, 300, 300);
+      fire('pointerup', 1, 505, 300, 350);
+      expect(commands).toHaveLength(1); // the pair is used up
+    });
+
+    it('NAV-016 taps too late or too far apart do not zoom', () => {
+      setMode('organization');
+      tap(500);
+      fire('pointerdown', 1, 500, 300, 100 + TUNABLES.gestures.doubleTapMaxIntervalMs + 1);
+      fire('pointerup', 1, 500, 300, 100 + TUNABLES.gestures.doubleTapMaxIntervalMs + 50);
+      fire('pointerdown', 1, 500 + TUNABLES.gestures.doubleTapMaxDistancePx + 5, 300, 1000);
+      fire('pointerup', 1, 500 + TUNABLES.gestures.doubleTapMaxDistancePx + 5, 300, 1050);
+      expect(commands).toEqual([]);
+    });
+
+    it('NAV-016 taps on a bar are not double taps', () => {
+      setMode('organization');
+      const bar = stage.appendChild(stage.ownerDocument.createElement('div'));
+      bar.setAttribute('data-bar', '');
+      const tapBar = (t: number): void => {
+        for (const type of ['pointerdown', 'pointerup']) {
+          const event = new Event(type, { bubbles: true });
+          Object.defineProperty(event, 'timeStamp', { value: t });
+          Object.assign(event, { pointerId: 1, pointerType: 'mouse', button: 0, clientX: 500, clientY: 300 });
+          bar.dispatchEvent(event);
+          t += 10;
+        }
+      };
+      tapBar(0);
+      tapBar(100);
+      expect(commands).toEqual([]);
+    });
+
+    it('NAV-016 a double tap in annotation mode only taps', () => {
+      tap(0.9 * WIDTH);
+      fire('pointerdown', 1, 0.9 * WIDTH, 300, 150);
+      fire('pointerup', 1, 0.9 * WIDTH, 300, 250);
+      expect(types()).toEqual(['Next', 'Next']);
+    });
   });
 });
