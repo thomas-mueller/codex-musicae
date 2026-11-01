@@ -14,3 +14,4 @@ export * from './view';
 export * from './detection-queue';
 export * from './edits';
 export * from './mark-positions';
+export * from './composition';

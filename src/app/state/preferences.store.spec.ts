@@ -87,4 +87,13 @@ describe('PreferencesStore', () => {
     expect(store.recentFiles()).toEqual([]);
     expect(files.forget).toHaveBeenCalledWith(ref('a'));
   });
+
+  it('SLD-014 stores and restores the global ratio per orientation', async () => {
+    const { store, preferences } = setup({ 'ratio.portrait': 0.7, 'ratio.landscape': 'broken' });
+    await store.ready;
+    expect(store.globalRatios()).toEqual({ portrait: 0.7 });
+    await store.setGlobalRatio('landscape', 1.6);
+    expect(store.globalRatios()).toEqual({ portrait: 0.7, landscape: 1.6 });
+    expect(preferences.data.get('ratio.landscape')).toBe(1.6);
+  });
 });

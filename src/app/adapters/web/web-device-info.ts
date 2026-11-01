@@ -9,6 +9,10 @@ export class WebDeviceInfo implements DeviceInfo {
     return window.devicePixelRatio || 1;
   }
 
+  screenSize(): { width: number; height: number } {
+    return { width: screen.width, height: screen.height };
+  }
+
   prefersReducedMotion(): boolean {
     return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   }

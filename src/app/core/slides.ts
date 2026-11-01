@@ -146,6 +146,19 @@ export function slideIndexOfEntry(slides: readonly SlidePlan[], entryIndex: numb
  *  - else the last entry position;
  *  - -1 if `entries` is empty.
  */
-export function findEntryForSystem(_entries: readonly number[], _systemIndex: number): number {
-  throw new Error('not implemented');
+export function findEntryForSystem(entries: readonly number[], systemIndex: number): number {
+  if (entries.length === 0) {
+    return -1;
+  }
+  const exact = entries.indexOf(systemIndex);
+  if (exact >= 0) {
+    return exact;
+  }
+  let best = -1;
+  entries.forEach((value, i) => {
+    if (value > systemIndex && (best < 0 || value < (entries[best] ?? Infinity))) {
+      best = i;
+    }
+  });
+  return best >= 0 ? best : entries.length - 1;
 }

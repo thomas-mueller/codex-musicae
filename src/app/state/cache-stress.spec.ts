@@ -21,7 +21,7 @@ describe('bitmap cache under load', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: CLOCK, useValue: new FakeClock() },
-        { provide: DEVICE_INFO, useValue: { deviceMemoryGb: () => 1, devicePixelRatio: () => 1, prefersReducedMotion: () => false } },
+        { provide: DEVICE_INFO, useValue: { deviceMemoryGb: () => 1, devicePixelRatio: () => 1, prefersReducedMotion: () => false, screenSize: () => ({ width: 1280, height: 800 }) } },
       ],
     });
     const cache = TestBed.inject(BitmapCache);

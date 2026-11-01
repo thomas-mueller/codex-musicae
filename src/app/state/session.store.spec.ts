@@ -36,7 +36,7 @@ function setup() {
       { provide: PREFERENCES, useValue: memoryPreferences() },
       ...provideTestDetectionPorts(),
       { provide: CLOCK, useValue: clock },
-      { provide: DEVICE_INFO, useValue: { deviceMemoryGb: () => 4, devicePixelRatio: () => 1, prefersReducedMotion: () => false } },
+      { provide: DEVICE_INFO, useValue: { deviceMemoryGb: () => 4, devicePixelRatio: () => 1, prefersReducedMotion: () => false, screenSize: () => ({ width: 1280, height: 800 }) } },
     ],
   });
   return {
