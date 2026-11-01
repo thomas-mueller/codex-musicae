@@ -1,8 +1,7 @@
 import * as Comlink from 'comlink';
 
 import { TUNABLES } from '../../../config/tunables';
-import type { Rect } from '../../core/geometry';
-import type { DetectionError } from '../../ports/detection-engine';
+import type { ComponentSet, DetectionError, ExtractionParams } from '../../ports/detection-engine';
 import { err, ok } from '../../ports/result';
 import type { Result } from '../../ports/result';
 import type { DetectionWorkerApi } from '../opencv/detection-worker-api';
@@ -41,12 +40,12 @@ function toImageData(bitmap: ImageBitmap): ImageData {
 }
 
 const api: DetectionWorkerApi = {
-  async extract(bitmap: ImageBitmap, taskId: number): Promise<Result<readonly Rect[], DetectionError>> {
+  async extract(bitmap: ImageBitmap, taskId: number, params: ExtractionParams): Promise<Result<ComponentSet, DetectionError>> {
     try {
       const cv = await loadCv();
       if (cancelled.has(taskId)) return err('cancelled');
-      const rects = extractComponentsWith(cv, toImageData(bitmap));
-      return cancelled.has(taskId) ? err('cancelled') : ok(rects);
+      const components = extractComponentsWith(cv, toImageData(bitmap), params);
+      return cancelled.has(taskId) ? err('cancelled') : ok(components);
     } catch (thrown) {
       const { error, detail } = mapDetectionError(thrown);
       return err(error, detail);

@@ -41,3 +41,32 @@
   background: var(--cm-bar-bg);
   border-radius: var(--cm-popup-radius);
 }
+
+/* The marks list opens beside its button, on the side of the strip, and never over the viewer's scroll bar. */
+.anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.side-panel {
+  position: absolute;
+  top: 0;
+  z-index: 3;
+  box-sizing: border-box;
+  width: var(--cm-mark-panel-width);
+  min-height: var(--cm-touch-target); /* an empty list is still a visible, empty panel */
+  max-height: var(--cm-mark-panel-max-height);
+  overflow-y: auto;
+  background: var(--cm-bar-bg);
+  color: var(--cm-icon);
+  border-radius: var(--cm-popup-radius);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.3);
+}
+
+.side-panel[data-side='left'] {
+  left: 100%;
+}
+
+.side-panel[data-side='right'] {
+  right: calc(100% + var(--cm-scrollbar-gap));
+}

@@ -87,21 +87,21 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 ## DET — Detection
 
 - **DET-001** [v1·done·M10] When a PDF has no valid embedded data, detection runs automatically for all pages in page order in the background.
-- **DET-002** [v1·todo·M10] Detection runs in one dedicated web worker, one page at a time, and never blocks the UI thread.
+- **DET-002** [v1·done·M10] Detection runs in one dedicated web worker, one page at a time, and never blocks the UI thread.
 - **DET-003** [v1·done·M10] A page is rendered to a bitmap at the level's `renderScale`; if width×height exceeds `T:resources.maxCanvasPixels` the scale is reduced to fit.
-- **DET-004** [v1·done·M10] The bitmap is binarized with Otsu (ink = foreground); the bounding rectangle and area of every connected component are collected, including the background component (label 0), whose rectangle is the whole page.
-- **DET-005** [v1·done·M5] Filter step 0: rectangles with zero width or zero height are ignored. Filter step 1: the single rectangle with the largest area is dropped (the page); on equal areas the first in input order is dropped.
-- **DET-006** [v1·done·M5] Filter step 2: among the remaining rectangles, sort by area, find the largest gap between consecutive areas, and keep rectangles whose area is strictly greater than the middle of that gap; among equal gaps the one between the largest areas is used; with fewer than two remaining rectangles, or when all remaining areas are equal (largest gap 0), the threshold is 0.
-- **DET-007** [v1·done·M5] Filter step 3: from the kept rectangles, discard those narrower than `minSystemWidthRatio` × page width.
-- **DET-008** [v1·done·M5] Filter step 4: add every rectangle remaining after step 1 whose width is at least `fullWidthSystemRatio` × page width.
-- **DET-009** [v1·done·M5] The result is sorted top to bottom (ties left to right) and converted to page display space.
+- **DET-004** [v1·done·M10] The bitmap is converted to gray and binarized with the adaptive mean threshold (`THRESH_BINARY_INV`, ink = foreground; block size and constant per level, `T:detection.levels`); the bounding rectangle and the pixel area of every 4-connected component are collected. The background component (label 0) is not collected.
+- **DET-005** [v1·done·M5] Selection step 0: without components there are no systems; the pixel areas of all components form the list the threshold is computed from. The function does not modify its input.
+- **DET-006** [v1·done·M5] Selection step 1: sort the areas descending and find the first largest gap between consecutive areas (a later equal gap does not replace it); the threshold is the smaller area after that gap, and 0 with a single component. A component qualifies by area if its area is strictly greater than the threshold.
+- **DET-007** [v1·done·M5] Selection step 2: a component narrower than `minSystemWidthRatio` × bitmap width is never a system, whatever its area; a width exactly at the limit stays.
+- **DET-008** [v1·done·M5] Selection step 3: a component at least `fullWidthSystemRatio` × bitmap width wide is a system whatever its area; otherwise it must qualify by area (DET-006).
+- **DET-009** [v1·done·M5] The result is sorted top to bottom (ties left to right); boxes are normalized by the bitmap size and converted to page display space.
 - **DET-010** [v1·done·M5] The padding of a page is the median gap between consecutive systems on that page; a page with fewer than two systems uses the median over all pages; if no gap exists, `T:detection.fallbackPaddingPageHeightRatio` × page height.
 - **DET-011** [v1·done·M5] A system's padded area is its box expanded by the padding on all four sides, clamped to the page bounds.
-- **DET-012** [v1·todo·M10] Pages without systems take no part in junctions, slides or the playing order; organization mode shows them as plain PDF pages.
-- **DET-013** [v1·todo·M10] Three levels `fast`, `standard`, `fine` each define `minSystemWidthRatio`, `fullWidthSystemRatio` and `renderScale` (`T:detection.levels`); the default is `T:detection.defaultLevel`.
-- **DET-014** [v1·todo·M11] Organization mode offers a level selector (three icon steps); choosing a level asks for confirmation and then re-runs detection.
-- **DET-015** [v1·todo·M11] During a re-run the previous results stay active; at completion they are swapped in, and jumps, breaks and stops are kept only if the total system count is unchanged, else cleared.
-- **DET-016** [v1·todo·M10] Organization mode shows detection progress (processing icon, processed/total pages); slide modes show the slide count as "n+" until detection is complete.
+- **DET-012** [v1·done·M10] Pages without systems take no part in junctions, slides or the playing order; organization mode shows them as plain PDF pages.
+- **DET-013** [v1·done·M10] Three levels `fast`, `standard`, `fine` each define `minSystemWidthRatio`, `fullWidthSystemRatio`, `renderScale`, `adaptiveBlockSize` and `adaptiveC` (`T:detection.levels`); the default is `T:detection.defaultLevel`. `renderScale` is bitmap pixels per PDF point, written as dpi / 72: `fast` 100 dpi, `standard` 150 dpi, `fine` 200 dpi (ASM-09).
+- **DET-014** [v1·done·M11] Organization mode offers a level selector (three icon steps); choosing a level asks for confirmation and then re-runs detection.
+- **DET-015** [v1·done·M11] During a re-run the previous results stay active; at completion they are swapped in, and jumps, breaks and stops are kept only if the total system count is unchanged, else cleared.
+- **DET-016** [v1·done·M10] Organization mode shows detection progress (processing icon, processed/total pages); slide modes show the slide count as "n+" until detection is complete.
 - **DET-017** [v1·done·M10] Detection pauses while the user interacts (resumes after `T:detection.idleBeforeResumeMs` without input), while the app is hidden, and under battery saver where detectable.
 - **DET-018** [v1·done·M10] If a page fails (error or out of memory), it is retried once at `renderScale` × `T:detection.retryScaleFactor`; if it fails again the page is marked not detected and processing continues.
 - **DET-019** [v1·done·M10] Slides and organization bars are usable for every page whose prefix of earlier pages is finished while later pages are still processing.
@@ -139,20 +139,20 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **ORG-008** [v1·done·M10] Every junction is drawn as a translucent bar over the whitespace gap, full page width: between two systems on a page; for junction 0 from the page top to the top of system 1; for junction N from the bottom of system N to the page bottom; at a page change as two bars (bottom of page p, top of page p+1).
 - **ORG-009** [v1·done·M10] Pages without systems have no bars.
 - **ORG-010** [v1·done·M10] Bars use `T:colors.orgBar.tint` at `opacity`; a selected junction uses `selectedOpacity`, on both bars of a page change.
-- **ORG-011** [v1·todo·M11] Each bar shows one compact row: the numbers of the system above it, jump badges, the stop symbol and the break scissors line. There is no numbering toggle.
-- **ORG-012** [v1·todo·M11] Numbers are shown ascending, comma separated ("3, 9"); junction 0 shows none; both bars of a page change show the numbers of the system above the junction.
-- **ORG-013** [v1·todo·M11] Tapping a bar selects its junction; tapping empty space, Esc or back deselects. Taps in organization mode never navigate.
-- **ORG-014** [v1·todo·M11] A selected junction shows a chip with icons: jump, slide break, stop, delete (delete only if the junction holds an item).
-- **ORG-015** [v1·todo·M11] Jump creation: select the origin, tap the jump icon, all other bars become tappable targets with a hint bar and a cancel icon; page navigation and zoom stay active; tapping a bar creates the jump; Esc or back cancels.
-- **ORG-016** [v1·todo·M11] After creation a stepper opens to set the pass number (integer ≥ 1, default 1).
-- **ORG-017** [v1·todo·M11] Several jumps may sit on one junction; two jumps with the same origin and pass are allowed (PLY-006). There are no plausibility checks.
-- **ORG-018** [v1·todo·M11] Jump badges: at the origin an arrow, the target label (page number and bar number on that page, see `junctionLabel`) and the pass; at the target a matching badge showing the origin label; both in one color from `T:colors.jumpPalette`.
-- **ORG-019** [v1·todo·M11] A long press (`T:layout.longPressMs`) on a badge scrolls to the other end of the jump.
-- **ORG-020** [v1·todo·M11] Tapping a badge selects the jump; the chip then offers pass, change target and delete.
-- **ORG-021** [v1·todo·M11] A jump-list button opens a sheet (compact) or side panel (expanded) listing each jump with from label, to label (page·bar), pass and color; tapping an entry navigates to it; swipe or a trash icon deletes it.
-- **ORG-022** [v1·todo·M11] The break icon toggles a slide break on the selected junction; a break shows as a solid line in `T:colors.breakLine` with a scissors icon at the left edge.
-- **ORG-023** [v1·todo·M11] The stop icon toggles a stop on the selected junction; it shows the stop icon on the bar.
-- **ORG-024** [v1·todo·M11] Deleting a jump, break or stop is immediate and has no undo.
+- **ORG-011** [v1·changed·M11] Each bar shows one compact row with the stop symbol and the break scissors line. The playing-order numbers are not on the bars but on the music systems (ORG-012); jump markers sit on the systems too (ORG-018). There is no numbering toggle. *(Changed after review: the numbers and jump badges moved from the bars to the systems.)*
+- **ORG-012** [v1·changed·M11] Every music system shows its playing-order numbers (PLY-010), ascending and comma separated ("3, 9"), as a label at the height of the system and horizontally centered on the page. The digits cover `T:layout.systemLabelHeightRatio` of the system height, in the light weight `T:layout.systemLabelFontWeight`, with the color and transparency of the bars (`T:colors.orgBar`). A system that is never played has no label. The bars show no numbers. System numbers in the original PDF order are not shown anywhere. *(Changed after review: formerly the numbers of the system above each bar.)*
+- **ORG-013** [v1·done·M11] Tapping a bar selects its junction; tapping empty space, Esc or back deselects. Taps in organization mode never navigate.
+- **ORG-014** [v1·done·M11] A selected junction shows a chip with icons: jump, slide break, stop, delete (delete only if the junction holds an item).
+- **ORG-015** [v1·done·M11] Jump creation: select the origin, tap the jump icon, all other bars become tappable targets with a hint bar and a cancel icon; page navigation and zoom stay active; tapping a bar creates the jump; Esc or back cancels.
+- **ORG-016** [v1·changed·M11] After creation a stepper opens to set the pass number (integer ≥ 1). A new jump starts at the number of the existing jumps with the same origin plus one (first jump of a bar 1, second 2, …). *(Changed after review: the default was always 1.)*
+- **ORG-017** [v1·done·M11] Several jumps may sit on one junction; two jumps with the same origin and pass are allowed (PLY-006). There are no plausibility checks.
+- **ORG-018** [v1·changed·M11] Jump markers sit on the music systems. The start is at the right edge of the source system (system `origin`), vertically centered, with the jump icon rotated by `T:layout.markerRotationDeg` (the split points toward the end of the PDF); the end is at the left edge of the system after the target junction, vertically centered, with a merge icon (arrows coming from the beginning of the PDF). Both carry the label "<previous> → <next> ×<pass>": the playing-order numbers of the system played just before the jump and the one played right after it (the numbers shown on the systems, ORG-012); a number that does not exist (start or end of the playing order) or a jump that is never reached shows `T:layout.unknownNumber`. Both ends have one color from `T:colors.jumpPalette`; several markers on a system stack from the edge. At junction 0 (no source system) the start and at junction N (no next system) the end sit on the bar of that junction. *(Changed after review: formerly badges on the bars with page·bar labels, then print numbers.)*
+- **ORG-019** [v1·changed·M11] A long press (`T:layout.longPressMs`) on a jump marker scrolls to the other end of the jump.
+- **ORG-020** [v1·changed·M11] Tapping a jump marker selects the jump; the chip then offers pass, change target and delete.
+- **ORG-021** [v1·changed·M11] A marks-list button opens the list of jumps, slide breaks and stops in the order of the final playing order: an item is placed where the playing position first meets it (a jump where it fires, a stop where it ends the order). Items that are never reached follow at the end, dimmed: jumps in creation order, then breaks, then stops. Labels use playing-order numbers: jump "<previous> → <next> ×<pass>" with its color, slide break scissors icon and "<previous> | <next>", stop the stop icon and "<previous>". Compact layouts show a sheet; expanded layouts show a panel beside the button on the side of the tool strip, which never covers the viewer's scroll bar. Tapping an entry navigates to it and selects it; a swipe to the left or a trash icon deletes it. *(Changed after review.)*
+- **ORG-022** [v1·done·M11] The break icon toggles a slide break on the selected junction; a break shows as a solid line in `T:colors.breakLine` with a scissors icon at the left edge.
+- **ORG-023** [v1·done·M11] The stop icon toggles a stop on the selected junction; it shows the stop icon on the bar.
+- **ORG-024** [v1·done·M11] Deleting a jump, break or stop is immediate and has no undo.
 
 ## SLD — Slide composition
 
@@ -208,7 +208,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **NAV-013** [v1·todo·M13] Ctrl+wheel and trackpad pinch zoom around the pointer (factor exp(−deltaY × `T:gestures.wheel.zoomSensitivity`)) in annotation and organization mode.
 - **NAV-014** [v1·todo·M13] Touch pinch zooms around the pinch center between `T:zoom.min` and `T:zoom.max`; one finger pans a zoomed view.
 - **NAV-015** [v1·todo·M13] In annotation mode zoom returns to fit on every slide change; in organization mode zoom persists across page changes.
-- **NAV-016** [v1·todo·M13] In organization mode a double tap outside bars and badges toggles between fit-width and `T:gestures.doubleTapZoomFactor` × fit-width (interval ≤ `doubleTapMaxIntervalMs`, distance ≤ `doubleTapMaxDistancePx`).
+- **NAV-016** [v1·todo·M13] In organization mode a double tap outside bars and jump markers toggles between fit-width and `T:gestures.doubleTapZoomFactor` × fit-width (interval ≤ `doubleTapMaxIntervalMs`, distance ≤ `doubleTapMaxDistancePx`).
 - **NAV-017** [v1·todo·M13] Presentation mode is always at fit scale; zoom input is ignored.
 - **NAV-018** [v1·todo·M13] Esc closes in this order: open popup, jump-target picking or selection, presentation mode (back to annotation mode).
 - **NAV-019** [v1·todo·M13] Pedals work in all modes and with a drawing tool active, because they arrive as keys.
@@ -221,7 +221,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **UIX-003** [v1·done·M7] The layout is compact if viewport width < `T:layout.compactMaxWidthPx` or height < `compactMaxHeightPx`, else expanded.
 - **UIX-004** [v1·done·M7] Compact annotation layout: top bar with tab switcher, open-file, mode switch, undo, redo; bottom bar with previous, "slide x of n", next, zoom −, zoom +, zoom reset; one floating button expands to pen, highlighter, eraser; aspect-ratio buttons and the version info sit in the overflow menu.
 - **UIX-005** [v1·done·M7] Expanded annotation layout: tab bar on top; vertical tool strip on `T:layout.toolStripSide` with pen, highlighter, eraser, undo, redo; popup next to it; the same bottom bar plus the aspect-ratio buttons.
-- **UIX-006** [v1·done·M7] Organization layout uses the same frame; the tool strip is replaced by level selector, jump-list button and overflow; the bottom bar shows "page x of n", previous, next and zoom buttons. In compact layout the organization controls sit behind one overflow button that opens a sheet.
+- **UIX-006** [v1·done·M7] Organization layout uses the same frame; the tool strip is replaced by level selector, marks-list button and overflow; the bottom bar shows "page x of n", previous, next and zoom buttons. In compact layout the organization controls sit behind one overflow button that opens a sheet.
 - **UIX-007** [v1·done·M7] Bars are `T:layout.barHeightPx` high, touch targets are at least `minTouchTargetPx`, icons are monochrome, bars never grow; additional controls go into overflow menus.
 - **UIX-008** [v1·done·M7] Bars stay visible in annotation and organization mode; there is no auto-hide.
 - **UIX-009** [v1·todo·M13] Presentation mode shows only the slide and the progress line, with no bars.
@@ -262,7 +262,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **NFR-004** [v1·done·M8] A bitmap cache with a byte budget (`T:resources.cacheBudgetByDeviceMemoryGb`, default `cacheBudgetDefaultBytes`) evicts least recently used bitmaps first.
 - **NFR-005** [v1·done·M8] The device pixel ratio used for rendering is capped at `T:resources.devicePixelRatioCap`.
 - **NFR-006** [v1·done·M8] No canvas exceeds `T:resources.maxCanvasPixels`.
-- **NFR-007** [v1·todo·M9] Zoomed views (organization pages and slides) render only the visible tiles, each at most `T:resources.tileSizePx` wide and high.
+- **NFR-007** [v1·done·M9] Zoomed views (organization pages and slides) render only the visible tiles, each at most `T:resources.tileSizePx` wide and high.
 - **NFR-008** [v1·done·M8] Stale render tasks are cancelled when the view changes.
 - **NFR-009** [v1·done·M8] Inactive tabs release their bitmaps and keep only lightweight document data.
 - **NFR-010** [v1·done·M8] Under memory pressure the app degrades in this order: drop prefetch, lower render resolution, free inactive tabs' bitmaps; it never fails outright.
@@ -284,7 +284,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 
 ## PIP — Pipelines and versioning
 
-- **PIP-001** [v1·done·M1] Pipeline `lint-test` runs on every push to every branch (not on tag pushes): lint, unit tests, E2E on three engines.
+- **PIP-001** [v1·changed·M1] Pipeline `lint-test` runs on every push to every branch (not on tag pushes): lint, lint self-test, unit tests and the production build. E2E on three engines runs in the separate workflow `e2e` on every push, one job per Playwright project (nine in parallel), each building for itself; it is temporarily optional: `deploy-web` and `android` do not wait for it (DEC-100). No artifacts are used (free-account storage quota).
 - **PIP-002** [v1·done·M1] Pipeline `deploy-web` builds and deploys to Firebase Hosting, triggered by `workflow_run` after a successful `lint-test` on any branch (each branch push deploys to the live channel).
 - **PIP-003** [v1·done·M3] Pipeline `android` builds a signed APK and uploads it to Firebase App Distribution, triggered like PIP-002.
 - **PIP-004** [v1-optional·todo·M18] Pipeline `ios-compile` runs an unsigned simulator build on a macOS runner, triggered like PIP-002.

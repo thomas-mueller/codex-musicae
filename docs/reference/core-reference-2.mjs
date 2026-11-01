@@ -214,11 +214,4 @@ export function findEntryForSystem(entries, s) {
   if (greater.length) return entries.indexOf(Math.min(...greater));
   return entries.length - 1;
 }
-export function junctionLabel(bars, junction) {
-  const i = bars.findIndex((b) => b.junction === junction);
-  if (i < 0) return null;
-  const page = bars[i].pageIndex;
-  const ordinal = bars.filter((b, k) => b.pageIndex === page && k <= i).length;
-  return { page: page + 1, ordinal };
-}
 export const sizeClassOf = (w, h, l) => (w < l.compactMaxWidthPx || h < l.compactMaxHeightPx ? 'compact' : 'expanded');

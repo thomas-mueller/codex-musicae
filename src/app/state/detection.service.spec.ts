@@ -19,7 +19,9 @@ const PAGES = 3;
 const PAGE_WIDTH = 600;
 const PAGE_HEIGHT = 800;
 const SYSTEM: Rect = { x: 50, y: 100, width: 500, height: 60 }; // display points; 500/600 > fullWidthSystemRatio of every level
+const SYSTEM_INK = 0.3; // share of the system box that is ink
 const RETRY = TUNABLES.detection.retryScaleFactor;
+const DEFAULT_SCALE = TUNABLES.detection.levels[TUNABLES.detection.defaultLevel].renderScale;
 
 const until = async (condition: () => boolean): Promise<void> => {
   for (let i = 0; i < 200 && !condition(); i++) {
@@ -38,6 +40,7 @@ function setup(engineErrors: (page: number, call: number) => DetectionError | nu
   const closed = vi.fn();
   const engine = {
     extractComponents: vi.fn(async (bitmap: ImageBitmap) => {
+      const { width, height } = bitmap;
       bitmap.close();
       closed();
       const call = (calls.get(lastPage) ?? 0) + 1;
@@ -46,9 +49,9 @@ function setup(engineErrors: (page: number, call: number) => DetectionError | nu
       if (failure) {
         return err(failure);
       }
-      const page: Rect = { x: 0, y: 0, width: PAGE_WIDTH * lastScale, height: PAGE_HEIGHT * lastScale };
+      // One component (the system), in bitmap pixels with its pixel count; the background is not reported (DET-004).
       const system: Rect = { x: SYSTEM.x * lastScale, y: SYSTEM.y * lastScale, width: SYSTEM.width * lastScale, height: SYSTEM.height * lastScale };
-      return ok([page, system]);
+      return ok({ width, height, components: [{ rect: system, area: Math.round(system.width * system.height * SYSTEM_INK) }] });
     }),
   };
   const clock = new FakeClock();
@@ -99,7 +102,11 @@ describe('DetectionService', () => {
     await until(() => doc.detectionComplete());
     expect(renders.map((r) => r.scale)).toEqual(Array(PAGES).fill(TUNABLES.detection.levels.standard.renderScale));
     const [first] = doc.systems();
-    expect(first?.box).toMatchObject({ x: SYSTEM.x, y: SYSTEM.y, width: SYSTEM.width, height: SYSTEM.height });
+    // The boxes are normalized by the bitmap size, so they match up to floating-point rounding.
+    expect(first?.box.x).toBeCloseTo(SYSTEM.x, 9);
+    expect(first?.box.y).toBeCloseTo(SYSTEM.y, 9);
+    expect(first?.box.width).toBeCloseTo(SYSTEM.width, 9);
+    expect(first?.box.height).toBeCloseTo(SYSTEM.height, 9);
   });
 
   it('DET-003 applies the resource governor scale factor and the canvas pixel cap', async () => {
@@ -121,7 +128,7 @@ describe('DetectionService', () => {
     service.start(doc);
     await until(() => doc.detectionComplete());
     expect(doc.detection.states()[0]).toBe('done');
-    expect(renders.filter((r) => r.page === 0).map((r) => r.scale)).toEqual([1, RETRY]);
+    expect(renders.filter((r) => r.page === 0).map((r) => r.scale)).toEqual([DEFAULT_SCALE, DEFAULT_SCALE * RETRY]);
     expect(governor.level()).toBe(1);
   });
 
@@ -139,8 +146,9 @@ describe('DetectionService', () => {
   it('DET-012 a page without systems produces no bars', async () => {
     const { service, open, engine } = setup();
     engine.extractComponents.mockImplementation(async (bitmap: ImageBitmap) => {
+      const { width, height } = bitmap;
       bitmap.close();
-      return ok([{ x: 0, y: 0, width: PAGE_WIDTH, height: PAGE_HEIGHT }]);
+      return ok({ width, height, components: [] }); // nothing but the background (not reported)
     });
     const doc = await open();
     service.start(doc);

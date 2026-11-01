@@ -30,7 +30,7 @@ A **step** is one agent session: one layer or feature area, about 15 requirement
 | M8 | v0.8.0 | File open, tabs, preferences store, pdf.js renderer, bitmap cache, scheduler | FIL-001…005, FIL-008, FIL-009, FIL-015, GEN-005, NFR-003…006, NFR-008…010 | mid, medium |
 | M9 | v0.9.0 | Organization mode as a normal PDF viewer, tiled zoom | ORG-001…007, NFR-007 | mid, medium |
 | M10 | v0.10.0 | Detection: S1 OpenCV extraction, S2 worker plumbing, S3 scheduling and resource management, S4 bars | DET-001…004, DET-012, DET-013, DET-016…022, ORG-008…010, NFR-011, NFR-012 | mid, medium (plan: strong) |
-| M11 | v0.11.0 | Jumps, breaks, stops, bar content, jump list, levels UI, re-run | ORG-011…024, DET-014, DET-015 | mid, medium |
+| M11 | v0.11.0 | Jumps, breaks, stops, system numbers, marks list, levels UI, re-run | ORG-011…024, DET-014, DET-015 | mid, medium |
 | M12 | v0.12.0 | Slide rendering in annotation mode (composition, filler, dimming, ratio, zoom render, indicator) | SLD-007…012, SLD-014…018, NAV-020 | mid, medium |
 | M13 | v0.13.0 | Input layer (S1 keys + presentation mode + progress, S2 taps + swipes, S3 wheel + pinch + double tap) | NAV-001…019, UIX-009, UIX-018…020, ARC-006 | mid, medium |
 | M14 | v0.14.0 | Drawing tools, undo/redo, eraser, stroke ownership | ANN-001…004, ANN-006…013, SAV-007 | mid, medium |

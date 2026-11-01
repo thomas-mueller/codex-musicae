@@ -21,7 +21,7 @@ test.beforeEach(({ browserName }, testInfo) => {
 });
 
 test.describe('development build with the debug hook', () => {
-  test('DET-002 DET-004 NFR-012 the engine finds the page and the four systems of page 1, loading OpenCV lazily from our own origin', async ({ page }) => {
+  test('DET-002 DET-004 NFR-012 the engine finds the four systems of page 1, loading OpenCV lazily from our own origin', async ({ page }) => {
     const requested: string[] = [];
     page.on('request', (r) => requested.push(r.url()));
     await page.goto(DEV_URL);
@@ -39,12 +39,10 @@ test.describe('development build with the debug hook', () => {
     expect(requested.some((u) => u.endsWith(OPENCV_ASSET))).toBe(true);
     expect(requested.filter((u) => !u.startsWith(DEV_URL) && !u.startsWith('blob:') && !u.startsWith('data:'))).toEqual([]);
 
-    const first = rects[0]!;
-    expect(first).toMatchObject({ x: 0, y: 0 });
-    expect(Math.abs(first.width - PAGE_WIDTH * SCALE)).toBeLessThanOrEqual(TOLERANCE_PX);
-    expect(Math.abs(first.height - PAGE_HEIGHT * SCALE)).toBeLessThanOrEqual(TOLERANCE_PX);
+    // The background component is not reported: no rectangle spans the whole page.
+    expect(rects.some((r) => r.width >= PAGE_WIDTH * SCALE - TOLERANCE_PX && r.height >= PAGE_HEIGHT * SCALE - TOLERANCE_PX)).toBe(false);
 
-    const wide = rects.slice(1).filter((r) => r.width >= WIDE_RATIO * PAGE_WIDTH * SCALE);
+    const wide = rects.filter((r) => r.width >= WIDE_RATIO * PAGE_WIDTH * SCALE);
     expect(wide.length).toBe(SYSTEM_TOPS.length);
     for (const top of SYSTEM_TOPS) {
       const match = wide.find(

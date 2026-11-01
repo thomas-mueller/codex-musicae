@@ -1,12 +1,17 @@
 import { effect, inject, Injectable } from '@angular/core';
 
 import { TUNABLES } from '../../config/tunables';
-import { bitmapRectToDisplay, fitScaleToPixelCap, nextPageToProcess, pickNext, selectSystemRects } from '../core';
+import type { DetectionLevelName } from '../../config/tunables';
+import {
+  fitScaleToPixelCap, flattenSystems, nextPageToProcess, pickNext, reconcileAfterRedetection, selectSystems,
+} from '../core';
 import type { DetectedPage, SchedulerContext } from '../core';
 import { APP_LIFECYCLE } from '../ports/app-lifecycle';
 import { DETECTION_ENGINE } from '../ports/detection-engine';
+import type { ExtractionParams } from '../ports/detection-engine';
 import type { PdfDocumentHandle, PdfPageInfo } from '../ports/pdf-renderer';
 import { CLOCK } from './clock';
+import { DetectionRun } from './detection-run';
 import type { DocumentStore } from './document.store';
 import { ResourceGovernor } from './resource-governor';
 import { Scheduler } from './scheduler';
@@ -25,6 +30,7 @@ export class DetectionService {
   private readonly lifecycle = inject(APP_LIFECYCLE);
   private readonly clock = inject(CLOCK);
   private readonly runs = new Map<DocumentStore, AbortController>();
+  private readonly candidates = new Map<DocumentStore, AbortController>();
   private context!: SchedulerContext;
   private governorPaused = false;
   private contextWaiters: Array<() => void> = [];
@@ -42,13 +48,57 @@ export class DetectionService {
     doc.detection.reset(doc.pageInfos().length);
     const controller = new AbortController();
     this.runs.set(doc, controller);
-    void this.drive(doc, controller.signal);
+    void this.drive(doc, doc.detection, controller.signal);
   }
 
-  /** Aborts the run of a document (tab closed). */
+  /** Aborts the run of a document (tab closed), including a re-run in progress. */
   stop(doc: DocumentStore): void {
     this.runs.get(doc)?.abort();
     this.runs.delete(doc);
+    this.cancelCandidate(doc);
+  }
+
+  /**
+   * DET-014, DET-015: re-runs detection at `level` as a candidate in the background. The active run stays displayed and
+   * usable; when the candidate completes its results are swapped in, and the marks are kept only if the system count is
+   * unchanged. A newer request supersedes an older candidate; asking for the active level drops a pending candidate.
+   */
+  redetect(doc: DocumentStore, level: DetectionLevelName): void {
+    this.cancelCandidate(doc);
+    if (level === doc.detection.level()) {
+      return;
+    }
+    const candidate = new DetectionRun();
+    candidate.reset(doc.pageInfos().length);
+    candidate.level.set(level);
+    const controller = new AbortController();
+    this.candidates.set(doc, controller);
+    doc.candidate.set(candidate);
+    void this.drive(doc, candidate, controller.signal).then(() => {
+      if (!controller.signal.aborted && doc.candidate() === candidate) {
+        this.swap(doc, candidate);
+      }
+    });
+  }
+
+  /** The candidate is dropped; the active run is untouched. */
+  cancelCandidate(doc: DocumentStore): void {
+    this.candidates.get(doc)?.abort();
+    this.candidates.delete(doc);
+    doc.candidate.set(null);
+  }
+
+  /** DET-015: failed pages count as pages without systems. */
+  private systemCount(run: DetectionRun): number {
+    return flattenSystems(run.pages().filter((page) => page !== null)).length;
+  }
+
+  private swap(doc: DocumentStore, candidate: DetectionRun): void {
+    const marks = reconcileAfterRedetection(doc.marks(), this.systemCount(doc.detection), this.systemCount(candidate));
+    doc.replaceMarks(marks);
+    doc.detection.adopt(candidate);
+    this.candidates.delete(doc);
+    doc.candidate.set(null);
   }
 
   /** DET-021: the viewer shows a pending page; it is processed next. */
@@ -61,7 +111,7 @@ export class DetectionService {
   private syncContext(): void {
     this.context = {
       userActive: this.lifecycle.userActive(),
-      hidden: !this.lifecycle.visible(),
+      hidden: TUNABLES.detection.pauseWhenHidden ? !this.lifecycle.visible() : false,
       batterySaver: TUNABLES.detection.pauseOnBatterySaver ? this.lifecycle.batterySaver() : null,
       strokeInProgress: false,
     };
@@ -80,15 +130,14 @@ export class DetectionService {
     return !this.governorPaused && pickNext([{ id: 'detection', cls: 'detection', seq: 0 }], this.context) !== null;
   }
 
-  private async drive(doc: DocumentStore, runSignal: AbortSignal): Promise<void> {
-    const run = doc.detection;
+  private async drive(doc: DocumentStore, run: DetectionRun, runSignal: AbortSignal): Promise<void> {
     while (!runSignal.aborted && run.states().includes('pending')) {
       // While paused (user active, hidden, battery saver) nothing is queued; a context change wakes the run (no polling).
       if (!this.canRun()) {
         await new Promise<void>((resolve) => this.contextWaiters.push(resolve));
         continue;
       }
-      const result = await this.scheduler.submit('detection', (taskSignal) => this.step(doc, AbortSignal.any([taskSignal, runSignal])));
+      const result = await this.scheduler.submit('detection', (taskSignal) => this.step(doc, run, AbortSignal.any([taskSignal, runSignal])));
       if (!result.ok) {
         // Cancelled by a visible render (or dropped): give the foreground work room instead of resubmitting in a tight loop.
         await new Promise<void>((resolve) => this.clock.schedule(TUNABLES.detection.cancelRetryDelayMs, resolve));
@@ -97,11 +146,10 @@ export class DetectionService {
   }
 
   /** One scheduler task: picks its page when it starts, so a later `prioritize` still wins. */
-  private async step(doc: DocumentStore, signal: AbortSignal): Promise<void> {
+  private async step(doc: DocumentStore, run: DetectionRun, signal: AbortSignal): Promise<void> {
     if (!this.canRun()) {
       return; // the level rose after this task was queued: leave the page pending, `drive` waits for the next context change
     }
-    const run = doc.detection;
     const pageIndex = nextPageToProcess(run.states(), run.priorityPage());
     if (pageIndex === null) {
       return;
@@ -113,7 +161,7 @@ export class DetectionService {
     run.setState(pageIndex, 'running');
     let outcome: PageOutcome;
     try {
-      outcome = await this.processPage(doc, pageIndex, signal);
+      outcome = await this.processPage(doc, run, pageIndex, signal);
     } catch {
       outcome = { kind: 'failed' };
     }
@@ -127,29 +175,25 @@ export class DetectionService {
   }
 
   /** DET-003, DET-018: render at the level's scale, retry once smaller on out-of-memory/unknown, then give up on the page. */
-  private async processPage(doc: DocumentStore, pageIndex: number, signal: AbortSignal): Promise<PageOutcome> {
+  private async processPage(doc: DocumentStore, run: DetectionRun, pageIndex: number, signal: AbortSignal): Promise<PageOutcome> {
     const handle = doc.handle();
     const info = doc.pageInfos()[pageIndex];
     if (!handle || !info) {
       return { kind: 'failed' };
     }
-    const level = TUNABLES.detection.levels[doc.detection.level()];
+    const level = TUNABLES.detection.levels[run.level()];
     const wanted = level.renderScale * this.governor.renderScaleFactor();
     let scale = fitScaleToPixelCap(info.width, info.height, wanted, TUNABLES.resources.maxCanvasPixels);
     for (let attempt = 0; attempt < 2; attempt++) {
-      const rects = await this.extract(handle, info, scale, signal);
-      if (rects.ok) {
-        const systems = selectSystemRects(
-          rects.value.map((r) => bitmapRectToDisplay(r, scale)),
-          info.width,
-          level,
-        );
+      const set = await this.extract(handle, info, scale, { blockSize: level.adaptiveBlockSize, c: level.adaptiveC }, signal);
+      if (set.ok) {
+        const systems = selectSystems(set.value.components, { width: set.value.width, height: set.value.height }, { width: info.width, height: info.height }, level);
         return { kind: 'done', page: { pageIndex, width: info.width, height: info.height, systems } };
       }
-      if (rects.error === 'cancelled') {
+      if (set.error === 'cancelled') {
         return { kind: 'cancelled' };
       }
-      if (rects.error === 'out-of-memory') {
+      if (set.error === 'out-of-memory') {
         this.governor.reportFailure();
       }
       scale *= TUNABLES.detection.retryScaleFactor;
@@ -157,13 +201,13 @@ export class DetectionService {
     return { kind: 'failed' };
   }
 
-  private async extract(handle: PdfDocumentHandle, info: PdfPageInfo, scale: number, signal: AbortSignal) {
+  private async extract(handle: PdfDocumentHandle, info: PdfPageInfo, scale: number, params: ExtractionParams, signal: AbortSignal) {
     const region = { x: 0, y: 0, width: info.width, height: info.height };
     const bitmap = await handle.renderRegion({ pageIndex: info.pageIndex, region, scale }, signal);
     if (!bitmap.ok) {
       return bitmap;
     }
     // DET-020: the engine takes the bitmap and closes it; nothing here keeps it.
-    return this.engine.extractComponents(bitmap.value, signal);
+    return this.engine.extractComponents(bitmap.value, signal, params);
   }
 }

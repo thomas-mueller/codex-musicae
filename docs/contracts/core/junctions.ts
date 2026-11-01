@@ -3,13 +3,6 @@
  */
 import type { Bar, DetectedPage, SystemInfo } from './model';
 
-export interface JunctionLabel {
-  /** 1-based page number. */
-  readonly page: number;
-  /** 1-based position of the bar among the bars of that page (top to bottom). */
-  readonly ordinal: number;
-}
-
 /**
  * All systems in print order: pages sorted by `pageIndex`, pages without systems skipped,
  * systems of a page sorted by y (ties by x); `index` counts 1, 2, 3, ...
@@ -38,14 +31,5 @@ export function computeBars(_pages: readonly DetectedPage[]): Bar[] {
 
 /** Bars of one junction, in the order returned by `computeBars`. */
 export function barsOfJunction(_bars: readonly Bar[], _junction: number): Bar[] {
-  throw new Error('not implemented');
-}
-
-/**
- * How a junction is named for the user (ORG-018, ORG-021): the page (1-based) and the bar number on that page (1-based)
- * of the FIRST bar of the junction in `bars` order (for a junction on a page change this is the bottom bar of the earlier page).
- * `bars` must be the output of `computeBars`. A junction without bars gives null.
- */
-export function junctionLabel(_bars: readonly Bar[], _junction: number): JunctionLabel | null {
   throw new Error('not implemented');
 }

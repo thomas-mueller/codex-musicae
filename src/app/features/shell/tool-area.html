@@ -53,10 +53,26 @@
       appIconButton
       [icon]="entry.icon"
       [labelKey]="entry.icon"
-      [toggled]="store.level() === entry.level"
+      [toggled]="view.level() === entry.level"
       [disabled]="noDocument()"
-      (pressed)="store.setLevel(entry.level)"
+      (pressed)="store.requestLevel(entry.level)"
     ></button>
   }
-  <button appIconButton icon="jumpList" labelKey="jumpList" [disabled]="noDocument()"></button>
+  <!-- ORG-021: beside the strip next to its button, on the strip's side, clear of the viewer's scroll bar -->
+  <div class="anchor">
+    <button
+      appIconButton
+      data-popup-trigger
+      icon="markList"
+      labelKey="markList"
+      [toggled]="store.popup()?.id === markListId"
+      [disabled]="noDocument()"
+      (pressed)="store.togglePopup(markListId)"
+    ></button>
+    @if (store.popup()?.id === markListId) {
+      <div class="side-panel" data-popup data-testid="mark-list-panel" [attr.data-side]="side">
+        <app-mark-list />
+      </div>
+    }
+  </div>
 }

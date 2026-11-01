@@ -9,6 +9,15 @@ export type Tool = 'pen' | 'highlighter' | 'eraser';
 export interface Popup {
   readonly id: string;
 }
+/** What organization mode has selected: a junction (both bars of a page change) or a jump (its markers). ORG-013, ORG-020 */
+export type Selection =
+  | { readonly kind: 'junction'; readonly junction: number }
+  | { readonly kind: 'jump'; readonly id: number };
+/** ORG-015: the user is choosing the target bar of a new jump, or of `editJumpId` (change target). */
+export interface PickingTarget {
+  readonly originJunction: number;
+  readonly editJumpId?: number;
+}
 export interface Viewport {
   readonly width: number;
   readonly height: number;
@@ -19,9 +28,11 @@ export interface Viewport {
 export class UiStore {
   readonly mode = signal<Mode>('annotation');
   readonly tool = signal<Tool | null>(null);
-  /** Selected detection level (organization mode). DET-013 */
-  readonly level = signal<DetectionLevel>(TUNABLES.detection.defaultLevel);
   readonly popup = signal<Popup | null>(null);
+  readonly selection = signal<Selection | null>(null);
+  readonly pickingTarget = signal<PickingTarget | null>(null);
+  /** DET-014: the level the user chose and has not yet confirmed (the dialog is open while it is set). */
+  readonly pendingLevel = signal<DetectionLevel | null>(null);
   /** Set by the shell's resize observer; unmeasured (0x0) until its first callback. */
   /** Placeholder until the DocumentStore (M8): no document can be open yet. FIL-007 */
   readonly hasDocument = signal(false);
@@ -36,6 +47,9 @@ export class UiStore {
       return;
     }
     this.mode.set(mode);
+    this.selection.set(null);
+    this.pickingTarget.set(null);
+    this.pendingLevel.set(null);
     if (mode !== 'annotation') {
       this.tool.set(null);
     }
@@ -53,10 +67,31 @@ export class UiStore {
     this.tool.set(this.tool() === tool ? null : tool);
   }
 
-  setLevel(level: DetectionLevel): void {
+  /** DET-014: asks for confirmation; nothing changes before it. */
+  requestLevel(level: DetectionLevel): void {
     if (this.hasDocument()) {
-      this.level.set(level);
+      this.pendingLevel.set(level);
     }
+  }
+
+  cancelLevel(): void {
+    this.pendingLevel.set(null);
+  }
+
+  select(selection: Selection): void {
+    this.selection.set(selection);
+  }
+
+  deselect(): void {
+    this.selection.set(null);
+  }
+
+  startPicking(target: PickingTarget): void {
+    this.pickingTarget.set(target);
+  }
+
+  cancelPicking(): void {
+    this.pickingTarget.set(null);
   }
 
   togglePopup(id: string): void {

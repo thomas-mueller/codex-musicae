@@ -71,6 +71,38 @@ export const TUNABLES = {
     progressLineHeightPx: 3, // UIX-020
     minSupportedWidthPx: 320, // UIX-016
     maxSupportedWidthPx: 2560, // UIX-016
+    numberSeparator: ', ', // ORG-012: between the playing-order numbers of a system
+    systemLabelHeightRatio: 0.8, // ORG-012: the digits of a system's label cover this share of the system height
+    systemLabelFontWeight: 200, // ORG-012: light, so the numbers do not dominate the page
+    systemLabelDigitEm: 0.72, // ORG-012: height of a digit in em for the label font (sans-serif)
+    barRowIconPx: 16, // ORG-011: break and stop icons in the bar row
+    barRowInsetPx: 4, // ORG-011: left inset and gap between the items of a bar row
+    breakLinePx: 2, // ORG-022: thickness of the slide-break line
+    barHitSlopPx: 8, // ORG-013: extra tap area above and below a bar (thin bars stay tappable)
+    chipGapPx: 8, // ORG-014: distance between the selection chip and its bar
+    chipPaddingPx: 4, // ORG-014: padding inside the selection chip
+    chipRadiusPx: 24, // ORG-014
+    markerGapPx: 4, // ORG-018: gap between stacked jump markers and from the page edge
+    markerPaddingPx: 3, // ORG-018: padding inside a jump marker
+    markerRadiusPx: 8, // ORG-018
+    markerFontPx: 11, // ORG-018
+    passPrefix: '×', // ORG-018: before the pass number in a jump label ("4 → 5 ×2")
+    hintBarHeightPx: 32, // ORG-015: slim hint bar while picking a jump target
+    stepperGapPx: 8, // ORG-016: gap between the pass stepper's buttons and number
+    jumpChipButtons: 3, // ORG-020: pass, change target, delete (also the width of the pass stepper: three parts)
+    markListSwipeMinPx: 60, // ORG-021: horizontal distance of a swipe-left that deletes an entry of the marks list
+    listArrow: '→', // ORG-018: between the previous and the next system number of a jump (markers and marks list)
+    breakSeparator: '|', // ORG-021: between the previous and the next system number of a slide break in the marks list
+    unknownNumber: '–', // ORG-018: shown where a mark has no number (not reached in the playing order, start or end of it)
+    dotPx: 12, // ORG-021: diameter of the color dot of a jump in the marks list
+    unreachedOpacity: 0.6, // ORG-021: entries that are never reached in the playing order are dimmed
+    dialogRadiusPx: 12, // DET-014: confirmation dialog
+    dialogGapPx: 8, // DET-014: gap between the level icon and the buttons
+    markerRotationDeg: 180, // ORG-018: the split points toward the end of the PDF, the merge arrows come from its beginning
+    markPanelWidthPx: 280, // ORG-021: width of the marks list beside its button (expanded layouts)
+    markPanelMaxHeightVh: 70, // ORG-021: the marks list scrolls inside this share of the window height
+    scrollbarGapPx: 20, // ORG-021: a panel on a right-hand strip keeps this distance so it never covers the scroll bar
+    chipMaxButtons: 4, // ORG-014: jump, slide break, stop, delete (sizes the chip for its placement)
   },
 
   /** Material Symbols (Outlined) names. The agent verifies each exists in the bundled set. UIX-010 */
@@ -97,7 +129,12 @@ export const TUNABLES = {
     next: 'chevron_right',
     showMore: 'unfold_more', // taller slide = lower aspect ratio
     showLess: 'unfold_less', // wider slide = higher aspect ratio
-    jump: 'alt_route',
+    jump: 'alt_route', // ORG-018: also the start marker of a jump, rotated by markerRotationDeg
+    jumpEnd: 'merge', // ORG-018: the end marker of a jump (arrows merge), rotated by markerRotationDeg
+    pass: 'counter_1', // ORG-020: chip button that opens the pass stepper
+    changeTarget: 'ads_click', // ORG-020
+    plus: 'add', // ORG-016
+    minus: 'remove', // ORG-016
     slideBreak: 'content_cut',
     stop: 'stop_circle',
     delete: 'delete',
@@ -105,10 +142,11 @@ export const TUNABLES = {
     levelFast: 'bolt', // DET-013: one icon per detection level
     levelStandard: 'balance',
     levelFine: 'grain',
-    jumpList: 'list',
+    markList: 'list', // ORG-021: button that opens the marks list (jumps, slide breaks, stops)
     overflow: 'more_vert',
     info: 'info',
     cancel: 'close',
+    confirm: 'check', // DET-014: confirmation dialog
     fullscreen: 'fullscreen',
     fullscreenExit: 'fullscreen_exit',
     fingerDrawing: 'touch_app', // STY-003
@@ -168,15 +206,19 @@ export const TUNABLES = {
   detection: {
     defaultLevel: 'fast' as 'fast' | 'standard' | 'fine', // DET-013
     /**
-     * Each level is a fixed set of three named parameters. DET-013
-     * minSystemWidthRatio:  rects narrower than this fraction of page width are never systems (DET-007)
-     * fullWidthSystemRatio: rects at least this wide are always systems (DET-008)
-     * renderScale:          bitmap pixels per PDF point used for detection (DET-003)
+     * Every level runs the same detection (adaptive mean threshold, 4-connected components, pixel areas, largest-gap area
+     * threshold); the levels differ in resolution and in how narrow a system may be. DET-004..DET-009, DET-013
+     * minSystemWidthRatio:  components narrower than this fraction of the page width are never systems
+     * fullWidthSystemRatio: components at least this wide are always systems
+     * renderScale:          bitmap pixels per PDF point used for detection (DET-003), written as dpi / 72
+     * adaptiveBlockSize:    neighbourhood of the adaptive threshold in bitmap pixels (odd), scaled with the resolution
+     * adaptiveC:            constant subtracted from the neighbourhood mean
+     * `fast`: 100 dpi, ratios 0.5 / 0.75, block 31, C 15; the other levels scale resolution and block size up.
      */
     levels: {
-      fast: { minSystemWidthRatio: 0.6, fullWidthSystemRatio: 0.8, renderScale: 1.0 },
-      standard: { minSystemWidthRatio: 0.5, fullWidthSystemRatio: 0.75, renderScale: 1.5 },
-      fine: { minSystemWidthRatio: 0.4, fullWidthSystemRatio: 0.7, renderScale: 2.5 },
+      fast: { minSystemWidthRatio: 0.5, fullWidthSystemRatio: 0.75, renderScale: 100 / 72, adaptiveBlockSize: 31, adaptiveC: 15 },
+      standard: { minSystemWidthRatio: 0.5, fullWidthSystemRatio: 0.75, renderScale: 150 / 72, adaptiveBlockSize: 47, adaptiveC: 15 },
+      fine: { minSystemWidthRatio: 0.4, fullWidthSystemRatio: 0.7, renderScale: 200 / 72, adaptiveBlockSize: 63, adaptiveC: 15 },
     },
     fallbackPaddingPageHeightRatio: 0.02, // DET-010: used when no spacing exists in the whole document
     retryScaleFactor: 0.6, // DET-018
@@ -185,10 +227,9 @@ export const TUNABLES = {
     pauseOnBatterySaver: true, // DET-017 (where detectable)
     cancelRetryDelayMs: 250, // DET-017: wait before a page cancelled by foreground work is submitted again
     opencvAssetPath: 'assets/opencv/opencv.js', // NFR-012: self-hosted, loaded only inside the detection worker
-    binaryThreshold: 0, // DET-004: ignored by Otsu, which picks the threshold
-    binaryMaxValue: 255, // DET-004: ink value in the binary image
-    connectivity: 8, // DET-004: 8-connected components
-    ccStat: { left: 0, top: 1, width: 2, height: 3 }, // DET-004: cv.CC_STAT_* columns of connectedComponentsWithStats
+    adaptiveMaxValue: 255, // DET-004: ink value in the binary image
+    connectivity: 4, // DET-004: 4-connected components
+    ccStat: { left: 0, top: 1, width: 2, height: 3, area: 4 }, // DET-004: cv.CC_STAT_* columns of connectedComponentsWithStats
   },
 
   playingOrder: {

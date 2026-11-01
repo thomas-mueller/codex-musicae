@@ -35,8 +35,9 @@ export function provideTestDetectionPorts(): Provider[] {
       provide: DETECTION_ENGINE,
       useValue: {
         extractComponents: (bitmap: ImageBitmap) => {
+          const { width, height } = bitmap;
           bitmap.close();
-          return Promise.resolve(ok([]));
+          return Promise.resolve(ok({ width, height, components: [] }));
         },
       },
     },

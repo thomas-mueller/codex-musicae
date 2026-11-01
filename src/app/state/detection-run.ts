@@ -18,6 +18,14 @@ export class DetectionRun {
   /** Page indices in the order processing started them; read by the dev-only debug hook (DET-021 E2E). */
   startedOrder: number[] = [];
 
+  /** DET-015: takes over the results of a completed candidate run; `startedOrder` stays that of the first run (debug hook). */
+  adopt(other: DetectionRun): void {
+    this.level.set(other.level());
+    this.states.set(other.states());
+    this.pages.set(other.pages());
+    this.priorityPage.set(null);
+  }
+
   reset(pageCount: number): void {
     this.startedOrder = [];
     this.states.set(Array.from({ length: pageCount }, () => 'pending' as const));

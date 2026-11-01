@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 
 import { TUNABLES } from '../../../config/tunables';
+import { MarkList, POPUP_MARK_LIST } from '../organization/mark-list';
+import { OrgViewStore } from '../../state/org-view.store';
 import { DetectionLevel, Tool, UiStore } from '../../state/ui.store';
 import { IconKey } from './icon';
 import { IconButton } from './icon-button';
@@ -28,7 +30,7 @@ export const LEVEL_ENTRIES: readonly { readonly level: DetectionLevel; readonly 
 /** Compact: one floating button. Expanded: vertical strip on the configured side. UIX-004, 005, 006 */
 @Component({
   selector: 'app-tool-area',
-  imports: [IconButton],
+  imports: [IconButton, MarkList],
   templateUrl: './tool-area.html',
   styleUrl: './tool-area.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -39,6 +41,8 @@ export const LEVEL_ENTRIES: readonly { readonly level: DetectionLevel; readonly 
 })
 export class ToolArea {
   protected readonly store = inject(UiStore);
+  protected readonly view = inject(OrgViewStore);
+  protected readonly markListId = POPUP_MARK_LIST;
   protected readonly side = TUNABLES.layout.toolStripSide;
   protected readonly tools = TOOL_ENTRIES;
   protected readonly levels = LEVEL_ENTRIES;

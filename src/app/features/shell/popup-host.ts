@@ -8,6 +8,7 @@ import { PreferencesStore } from '../../state/preferences.store';
 import { SessionStore } from '../../state/session.store';
 import { UiStore } from '../../state/ui.store';
 import { POPUP_OVERFLOW_BOTTOM, POPUP_SLIDER } from './bottom-bar';
+import { MarkList, POPUP_MARK_LIST } from '../organization/mark-list';
 import { POPUP_RECENT } from '../tabs/open-file.directive';
 import { POPUP_TABS } from '../tabs/tab-switcher';
 import { TabItem } from '../tabs/tab-item';
@@ -22,7 +23,7 @@ const POPUP_SELECTOR = '[data-popup], [data-popup-trigger]';
 /** Renders at most one popup: a sheet (compact) or a side panel (expanded). UIX-013, 015 */
 @Component({
   selector: 'app-popup-host',
-  imports: [Icon, IconButton, TabItem, TranslocoPipe],
+  imports: [Icon, IconButton, MarkList, TabItem, TranslocoPipe],
   templateUrl: './popup-host.html',
   styleUrl: './popup-host.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -47,6 +48,7 @@ export class PopupHost {
     info: POPUP_INFO,
     recent: POPUP_RECENT,
     tabs: POPUP_TABS,
+    markList: POPUP_MARK_LIST,
   };
   protected readonly compact = computed(() => this.store.sizeClass() === 'compact');
   protected readonly organization = computed(() => this.store.mode() === 'organization');
@@ -54,6 +56,9 @@ export class PopupHost {
   protected readonly noDocument = computed(() => !this.store.hasDocument());
   protected readonly popupId = computed(() => {
     const id = this.store.popup()?.id;
+    if (id === this.ids.markList && !this.compact()) {
+      return null; // expanded layouts open the marks list beside its button (ToolArea)
+    }
     return id !== undefined && Object.values(this.ids).includes(id) ? id : null;
   });
 
