@@ -11,6 +11,8 @@ name: e2e
 
 on:
   push:
+    branches:
+      - '**'
     tags-ignore:
       - '**'
   workflow_dispatch:
