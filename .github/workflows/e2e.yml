@@ -1,0 +1,79 @@
+name: e2e
+
+# End-to-end tests (Playwright, three engines x desktop/phone/tablet). Temporarily optional: this workflow is not
+# referenced by deploy-web or android, so a red run here never blocks a deployment or an APK (PIP-001, DEC-093).
+#
+# Designed for a free GitHub account: no artifacts (the storage quota is small and cannot be raised) and no uploads of
+# reports; every matrix job builds for itself, which takes seconds, and failures are read from the job log.
+#
+# To make the tests blocking again, move the `e2e` job (with `needs: lint-test`) into lint-test.yml: workflow_run fires
+# per workflow, so a separate workflow can never gate another one.
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer push to the same ref makes the older run obsolete.
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: e2e (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      # One Playwright project per job, all in parallel. `dev` is set only where the specs need the development build
+      # (window.__cm debug hook: e2e/resource.spec.ts and the dev section of e2e/detection-bars.spec.ts, desktop Chromium).
+      fail-fast: false
+      matrix:
+        include:
+          - { project: chromium, browser: chromium, dev: '1' }
+          - { project: chromium-pixel-phone, browser: chromium, dev: '0' }
+          - { project: chromium-galaxy-tablet, browser: chromium, dev: '0' }
+          - { project: firefox, browser: firefox, dev: '0' }
+          - { project: firefox-pixel-phone, browser: firefox, dev: '0' }
+          - { project: firefox-galaxy-tablet, browser: firefox, dev: '0' }
+          - { project: webkit, browser: webkit, dev: '0' }
+          - { project: webkit-iphone, browser: webkit, dev: '0' }
+          - { project: webkit-ipad, browser: webkit, dev: '0' }
+    env:
+      E2E_DEV_BUILD: ${{ matrix.dev }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ matrix.browser }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Production build
+        run: npm run build
+
+      - name: Development build
+        if: ${{ matrix.dev == '1' }}
+        run: npm run build -- --configuration development --output-path dist/codexmusicae-dev
+
+      # CI=true (set by GitHub) makes playwright.config.ts serve the builds above, retry twice and use two workers.
+      - name: End-to-end tests
+        run: npx playwright test --project=${{ matrix.project }}

@@ -6,8 +6,10 @@ on:
 permissions:
   contents: read
 
+# The end-to-end tests run in their own workflow (e2e.yml) so that deploy-web and android, which wait for this one,
+# never depend on them (PIP-001, DEC-093).
 jobs:
-  check:
+  lint-test:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -37,73 +39,3 @@ jobs:
 
       - name: Production build
         run: npm run build
-
-      # The development build carries the window.__cm debug hook that e2e/resource.spec.ts needs (PIP-001).
-      - name: Development build for the end-to-end tests
-        run: npm run build -- --configuration development --output-path dist/codexmusicae-dev
-
-      - name: Upload builds for the end-to-end jobs
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: dist
-          retention-days: 1
-
-  e2e:
-    needs: check
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    strategy:
-      # One engine per job: the engines do not compete for the runner's CPU, and one flaky engine does not hide the others.
-      fail-fast: false
-      matrix:
-        include:
-          - engine: chromium
-            projects: --project=chromium --project=chromium-pixel-phone --project=chromium-galaxy-tablet
-          - engine: firefox
-            projects: --project=firefox --project=firefox-pixel-phone --project=firefox-galaxy-tablet
-          - engine: webkit
-            projects: --project=webkit --project=webkit-iphone --project=webkit-ipad
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          lfs: true
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Download builds
-        uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist
-
-      - name: Cache Playwright browsers
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ matrix.engine }}-${{ hashFiles('package-lock.json') }}
-
-      - name: Install Playwright browser
-        run: npx playwright install --with-deps ${{ matrix.engine }}
-
-      # CI=true makes playwright.config.ts serve the downloaded builds, retry twice and use two workers.
-      - name: End-to-end tests
-        run: npx playwright test ${{ matrix.projects }}
-
-      - name: Upload Playwright report
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report-${{ matrix.engine }}
-          path: |
-            playwright-report
-            test-results
-          if-no-files-found: ignore

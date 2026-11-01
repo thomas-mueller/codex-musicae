@@ -284,7 +284,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 
 ## PIP — Pipelines and versioning
 
-- **PIP-001** [v1·changed·M1] Pipeline `lint-test` runs on every push to every branch (not on tag pushes): lint, unit tests, builds once, then E2E on three engines in one job per engine (serving the uploaded builds, two workers, two retries; DEC-093).
+- **PIP-001** [v1·changed·M1] Pipeline `lint-test` runs on every push to every branch (not on tag pushes): lint, lint self-test, unit tests and the production build. E2E on three engines runs in the separate workflow `e2e` on every push, one job per Playwright project (nine in parallel), each building for itself; it is temporarily optional: `deploy-web` and `android` do not wait for it (DEC-093). No artifacts are used (free-account storage quota).
 - **PIP-002** [v1·done·M1] Pipeline `deploy-web` builds and deploys to Firebase Hosting, triggered by `workflow_run` after a successful `lint-test` on any branch (each branch push deploys to the live channel).
 - **PIP-003** [v1·done·M3] Pipeline `android` builds a signed APK and uploads it to Firebase App Distribution, triggered like PIP-002.
 - **PIP-004** [v1-optional·todo·M18] Pipeline `ios-compile` runs an unsigned simulator build on a macOS runner, triggered like PIP-002.

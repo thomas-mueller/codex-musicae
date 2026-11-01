@@ -3,6 +3,9 @@ import { defineConfig, devices } from '@playwright/test';
 const E2E_BASE_URL = 'http://127.0.0.1:4173';
 export const E2E_DEV_BASE_URL = 'http://127.0.0.1:4174';
 const IN_CI = Boolean(process.env['CI']);
+// Locally both builds are made and served. In CI only the job that built the development output serves it (E2E_DEV_BUILD=1);
+// the specs that need it run on desktop Chromium only.
+const WITH_DEV_SERVER = !IN_CI || process.env['E2E_DEV_BUILD'] === '1';
 
 // Timeouts are generous on purpose: OpenCV and pdf.js are CPU-bound and the CI runners are small (PIP-001).
 const TEST_TIMEOUT_MS = 120_000;
@@ -52,7 +55,8 @@ export default defineConfig({
   workers: process.env['E2E_WORKERS'] ? Number(process.env['E2E_WORKERS']) : IN_CI ? CI_WORKERS : undefined,
   timeout: TEST_TIMEOUT_MS,
   expect: { timeout: EXPECT_TIMEOUT_MS },
-  reporter: IN_CI ? [['list'], ['html', { open: 'never' }]] : 'html',
+  // CI: the log is the report (no artifact storage on a free account): readable list plus GitHub annotations.
+  reporter: IN_CI ? [['list'], ['github']] : 'html',
   use: {
     baseURL: E2E_BASE_URL,
     trace: 'on-first-retry',
@@ -72,12 +76,16 @@ export default defineConfig({
       timeout: WEB_SERVER_TIMEOUT_MS,
       reuseExistingServer: !IN_CI,
     },
-    {
-      // Development build (ngDevMode): the only one that carries the `window.__cm` debug hook, used by e2e/resource.spec.ts.
-      command: `${buildFirst('npm run build -- --configuration development --output-path dist/codexmusicae-dev')}node scripts/serve-static.mjs dist/codexmusicae-dev/browser 4174`,
-      url: E2E_DEV_BASE_URL,
-      timeout: WEB_SERVER_TIMEOUT_MS,
-      reuseExistingServer: !IN_CI,
-    },
+    ...(WITH_DEV_SERVER
+      ? [
+          {
+            // Development build (ngDevMode): the only one that carries the `window.__cm` debug hook, used by e2e/resource.spec.ts.
+            command: `${buildFirst('npm run build -- --configuration development --output-path dist/codexmusicae-dev')}node scripts/serve-static.mjs dist/codexmusicae-dev/browser 4174`,
+            url: E2E_DEV_BASE_URL,
+            timeout: WEB_SERVER_TIMEOUT_MS,
+            reuseExistingServer: !IN_CI,
+          },
+        ]
+      : []),
   ],
 });
