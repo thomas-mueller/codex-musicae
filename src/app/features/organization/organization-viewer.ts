@@ -67,7 +67,6 @@ function groupByPage<T extends { readonly pageIndex: number }>(items: readonly T
 @Component({
   selector: 'app-organization-viewer',
   imports: [PageTiles, BarsLayer, JumpMarkers, SystemLabels, SelectionChip, PassStepper, IconButton, Icon, TranslocoPipe],
-  host: { '(document:keydown)': 'onKeydown($event)' },
   template: `
     @if (pickingOrigin() !== null) {
       <div class="hint" role="status" data-testid="org-hint-bar" [attr.aria-label]="'a11y.hintBar' | transloco">
@@ -400,18 +399,6 @@ export class OrganizationViewer {
   /** ORG-013: tapping empty space (outside bars, the chip and the pass stepper) deselects. */
   protected onBackgroundClick(event: MouseEvent): void {
     if (!(event.target instanceof Element) || event.target.closest('[data-bar],[data-chip],[data-popup]') === null) {
-      this.ui.deselect();
-    }
-  }
-
-  // TODO(M13): Escape and back arrive as semantic commands from input/; local until then.
-  protected onKeydown(event: KeyboardEvent): void {
-    if (!(TUNABLES.keymap.back as readonly string[]).includes(event.code)) {
-      return;
-    }
-    if (this.ui.pickingTarget() !== null) {
-      this.ui.cancelPicking();
-    } else if (this.ui.selection() !== null) {
       this.ui.deselect();
     }
   }

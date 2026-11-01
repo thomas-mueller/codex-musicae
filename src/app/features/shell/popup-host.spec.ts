@@ -2,6 +2,8 @@ import { TestBed } from '@angular/core/testing';
 
 import { provideTestPorts } from '../../../testing/provide-test-ports';
 import { provideTestTransloco } from '../../../testing/transloco';
+import { CommandBus } from '../../input/command-bus';
+import { NavigationHandler } from '../../input/navigation-handler';
 import { APP_VERSION } from '../../ports/app-version';
 import { UiStore } from '../../state/ui.store';
 import { PopupHost } from './popup-host';
@@ -34,8 +36,9 @@ describe('PopupHost', () => {
   });
 
   it('UIX-013 Escape closes the popup', async () => {
-    const { store, el } = await setup();
-    el.ownerDocument.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    const { store } = await setup();
+    TestBed.inject(NavigationHandler);
+    TestBed.inject(CommandBus).dispatch({ type: 'Back' });
     expect(store.popup()).toBeNull();
   });
 });

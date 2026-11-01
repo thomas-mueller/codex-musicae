@@ -35,3 +35,16 @@ The milestone asks for a brief error icon on the bar when an edit is rejected (`
 
 Nothing was guessed or added. Decision for the owner: keep the signal as store API for later input paths (M13), or show the icon once a path exists that can produce a rejection.
 
+
+## V1-M13 S1 — `NavigationHandler` in `state/` must subscribe to a `CommandBus` in `input/`
+
+The milestone puts `NavigationHandler` in `state/` and the `CommandBus` in `input/`. The import matrix (`docs/architecture.md`, `eslint.config.mjs`) lets `state/` import only `core/`, `ports/`, `config/`, so the handler cannot import the bus. `input/` may import `state/`, and features may import both.
+
+Options:
+1. Put `NavigationHandler` in `input/` (it may import `state/`; the architecture text says "features and stores subscribe to commands", so this reads as the intent). Recommended.
+2. Put `CommandBus` and the `Command` type in `state/`, `KeyboardInput` in `input/` dispatching into it.
+3. Allow `state/` → `input/` in the lint matrix (changes a lint-enforced rule).
+
+Nothing from S1 was written. The core part (`core/gestures.ts`, fixtures, `gestures.spec.ts`) is complete and green.
+
+Resolved by the owner: option 1. `NavigationHandler` lives in `src/app/input/navigation-handler.ts`.

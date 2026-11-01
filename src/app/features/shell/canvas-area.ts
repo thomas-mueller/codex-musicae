@@ -1,14 +1,15 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 
 import { OrganizationViewer } from '../organization/organization-viewer';
+import { PresentationView } from '../presentation/presentation-view';
 import { SlideView } from '../slides/slide-view';
 import { SessionStore } from '../../state/session.store';
 import { UiStore } from '../../state/ui.store';
 
-/** Middle row: canvas grey with the organization viewer or the slide view; presentation follows in their milestones. GEN-008 */
+/** Middle row: canvas grey with the organization viewer or the slide view; presentation shows the stage only. GEN-008 */
 @Component({
   selector: 'app-canvas-area',
-  imports: [OrganizationViewer, SlideView],
+  imports: [OrganizationViewer, PresentationView, SlideView],
   template: `
     <div class="content">
       @if (organizationDocument(); as doc) {
@@ -16,6 +17,9 @@ import { UiStore } from '../../state/ui.store';
       }
       @if (annotationDocument(); as doc) {
         <app-slide-view [document]="doc" />
+      }
+      @if (presentationDocument(); as doc) {
+        <app-presentation-view [document]="doc" />
       }
     </div>
   `,
@@ -39,5 +43,11 @@ export class CanvasArea {
   protected readonly annotationDocument = computed(() => {
     const doc = this.session.activeDocument();
     return this.ui.mode() === 'annotation' && doc?.status() === 'ready' ? doc : null;
+  });
+
+  /** UIX-009: presentation mode shows the slide stage only. */
+  protected readonly presentationDocument = computed(() => {
+    const doc = this.session.activeDocument();
+    return this.ui.mode() === 'presentation' && doc?.status() === 'ready' ? doc : null;
   });
 }
