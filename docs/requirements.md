@@ -162,18 +162,18 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **SLD-004** [v1·done·M6] Consecutive entries that are adjacent in print order on the same page merge into one region whose height runs from the top of the first padded area to the bottom of the last, keeping the PDF content between them.
 - **SLD-005** [v1·done·M6] Entries that are not adjacent in print order, or on different pages, form separate regions stacked directly without a gap.
 - **SLD-006** [v1·done·M6] If the first region of a slide is taller than the slide height, that slide holds only that entry and is enlarged to the region's height (and height × r wide); other slides keep their scale.
-- **SLD-007** [v1·todo·M12] The stack is centered vertically; leftover vertical space is split equally above and below.
-- **SLD-008** [v1·todo·M12] Leftover space (above, below, left, right) shows real PDF content of the neighboring page area, centered on each region; anything outside the page shows canvas grey.
-- **SLD-009** [v1·todo·M12] Filler that overlaps the padded area of a system not on this slide is covered, over the full slide width and the vertical extent of that area, by `T:colors.canvasGrey` at `T:colors.overlayOpacity`.
-- **SLD-010** [v1·todo·M12] The slide is fitted (contain) into the available area; remaining area shows canvas grey. Annotation and presentation mode use the same stored aspect ratio.
-- **SLD-011** [v1·todo·M12] The display scale is the same on all slides except for slides enlarged by SLD-006.
-- **SLD-012** [v1·todo·M12] After any change that recomputes slides (ratio, detection, jumps, breaks, stops), the current slide is the one containing the first entry of the previously shown slide.
+- **SLD-007** [v1·done·M12] The stack is centered vertically; leftover vertical space is split equally above and below.
+- **SLD-008** [v1·done·M12] Leftover space (above, below, left, right) shows real PDF content of the neighboring page area, centered on each region; anything outside the page shows canvas grey.
+- **SLD-009** [v1·done·M12] Filler that overlaps the padded area of a system not on this slide is covered, over the full slide width and the vertical extent of that area, by `T:colors.canvasGrey` at `T:colors.overlayOpacity`.
+- **SLD-010** [v1·done·M12] The slide is fitted (contain) into the available area; remaining area shows canvas grey. Annotation and presentation mode use the same stored aspect ratio.
+- **SLD-011** [v1·done·M12] The display scale is the same on all slides except for slides enlarged by SLD-006.
+- **SLD-012** [v1·done·M12] After any change that recomputes slides (ratio, detection, jumps, breaks, stops), the current slide is the one containing the first entry of the previously shown slide.
 - **SLD-013** [v1·done·M5] Aspect-ratio steps: range `T:aspectRatio.min` to `max`; "show more" moves to the next lower multiple of `T:aspectRatio.step` strictly below the current value, "show less" to the next higher multiple strictly above (1.78 → 1.7 / 1.8); results are clamped.
-- **SLD-014** [v1·todo·M12] The global default ratio is stored per orientation; its first value is the presentation-mode viewport ratio captured at the first presentation entry in that orientation, before that the device screen ratio; rounded to `T:aspectRatio.roundDecimals` and clamped.
-- **SLD-015** [v1·todo·M12] Changing the ratio with the buttons creates or updates a per-PDF override for the current orientation, stored in the embedded data; on read-only files it exists in memory only.
-- **SLD-016** [v1·todo·M12] Annotation mode shows "slide x of n" with previous/next buttons and a slider; presentation mode shows no indicator.
-- **SLD-017** [v1·todo·M12] "Show more" and "show less" buttons are in the bottom bar (expanded) or the overflow menu (compact), in annotation mode.
-- **SLD-018** [v1·todo·M12] When zoomed in, the visible part of the slide is re-rendered at higher resolution after the gesture settles; the old bitmap is stretched meanwhile.
+- **SLD-014** [v1·done·M12] The global default ratio is stored per orientation; its first value is the presentation-mode viewport ratio captured at the first presentation entry in that orientation, before that the device screen ratio; rounded to `T:aspectRatio.roundDecimals` and clamped.
+- **SLD-015** [v1·done·M12] Changing the ratio with the buttons creates or updates a per-PDF override for the current orientation, stored in the embedded data; on read-only files it exists in memory only.
+- **SLD-016** [v1·done·M12] Annotation mode shows "slide x of n" with previous/next buttons and a slider; presentation mode shows no indicator.
+- **SLD-017** [v1·done·M12] "Show more" and "show less" buttons are in the bottom bar (expanded) or the overflow menu (compact), in annotation mode.
+- **SLD-018** [v1·done·M12] When zoomed in, the visible part of the slide is re-rendered at higher resolution after the gesture settles; the old bitmap is stretched meanwhile.
 
 ## ANN — Annotation
 
@@ -212,7 +212,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **NAV-017** [v1·todo·M13] Presentation mode is always at fit scale; zoom input is ignored.
 - **NAV-018** [v1·todo·M13] Esc closes in this order: open popup, jump-target picking or selection, presentation mode (back to annotation mode).
 - **NAV-019** [v1·todo·M13] Pedals work in all modes and with a drawing tool active, because they arrive as keys.
-- **NAV-020** [v1·todo·M12] A slider and the previous/next buttons jump to a slide in annotation mode.
+- **NAV-020** [v1·done·M12] A slider and the previous/next buttons jump to a slide in annotation mode.
 
 ## UIX — Layout and modes
 

@@ -94,6 +94,17 @@ describe('SlideView', () => {
     expect(parseFloat(canvas.style.height)).toBeCloseTo(composition.height * SCALE);
   });
 
+  it('SLD-008 a detection result for another page does not re-render the slide on display', async () => {
+    const { doc, handle } = await openDocument(false);
+    TestBed.inject(ResourceGovernor).reportFailure();
+    await show(doc);
+    const calls = handle.renderRegion.mock.calls.length;
+    const systems = [0, 1, 2].map((i) => ({ x: 50, y: 50 + i * 250, width: 500, height: 150 }));
+    doc.detection.finish(1, 'done', { pageIndex: 1, width: PAGE_WIDTH, height: PAGE_HEIGHT, systems });
+    await settle();
+    expect(handle.renderRegion.mock.calls.length).toBe(calls);
+  });
+
   it('SLD-011 a normal slide keeps the same display scale on the next slide', async () => {
     const { doc, handle } = await openDocument();
     TestBed.inject(ResourceGovernor).reportFailure();

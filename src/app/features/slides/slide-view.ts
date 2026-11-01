@@ -80,10 +80,14 @@ export class SlideView {
   });
   private readonly pageSizes = computed(() => this.document().pageInfos().map((p) => ({ width: p.width, height: p.height })));
   /** SLD-007..SLD-009 */
-  protected readonly composition = computed(() => {
-    const plan = this.plan();
-    return plan ? composeSlide(plan, this.document().geoms(), this.pageSizes()) : null;
-  });
+  protected readonly composition = computed(
+    () => {
+      const plan = this.plan();
+      return plan ? composeSlide(plan, this.document().geoms(), this.pageSizes()) : null;
+    },
+    // Detection results of other pages recompute it without changing it; a render would cancel the running detection task.
+    { equal: (a, b) => JSON.stringify(a) === JSON.stringify(b) },
+  );
   /** SLD-010, SLD-011: CSS px per slide unit; equal for all normal slides because their width is equal. */
   private readonly displayScale = computed(() => {
     const plan = this.plan();
