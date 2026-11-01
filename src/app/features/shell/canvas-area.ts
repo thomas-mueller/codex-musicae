@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 
+import { PointerStage } from '../../input/pointer-input';
 import { OrganizationViewer } from '../organization/organization-viewer';
 import { PresentationView } from '../presentation/presentation-view';
 import { SlideView } from '../slides/slide-view';
@@ -9,9 +10,9 @@ import { UiStore } from '../../state/ui.store';
 /** Middle row: canvas grey with the organization viewer or the slide view; presentation shows the stage only. GEN-008 */
 @Component({
   selector: 'app-canvas-area',
-  imports: [OrganizationViewer, PresentationView, SlideView],
+  imports: [OrganizationViewer, PointerStage, PresentationView, SlideView],
   template: `
-    <div class="content">
+    <div class="content" appPointerStage>
       @if (organizationDocument(); as doc) {
         <app-organization-viewer [document]="doc" />
       }

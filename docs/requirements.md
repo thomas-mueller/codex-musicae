@@ -198,11 +198,11 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **NAV-003** [v1·done·M13] In annotation and presentation mode next/previous move one slide, first/last the first/last slide; there is no wrap-around.
 - **NAV-004** [v1·done·M13] Auto-repeated key events are ignored (`T:gestures.allowKeyRepeat`).
 - **NAV-005** [v1·done·M13] In organization mode next/previous scroll to the next/previous page and first/last to the first/last page.
-- **NAV-006** [v1·todo·M13] Tap zones in annotation and presentation mode split the viewport width by `T:gestures.tapZones`: left = previous, right = next, center = toggle presentation/annotation mode. They are off while a drawing tool is active.
-- **NAV-007** [v1·todo·M13] A tap is a single pointer with duration ≤ `T:gestures.tapMaxDurationMs` and movement ≤ `tapMaxMovePx`; a mouse click counts as a tap.
-- **NAV-008** [v1·todo·M13] A swipe moves ≥ `T:gestures.swipeMinDistanceFraction` of the viewport width, within `swipeMaxAngleDeg` of horizontal, at ≥ `swipeMinVelocityPxPerMs`; swipe left = next, swipe right = previous.
-- **NAV-009** [v1·todo·M13] Swipes navigate in presentation mode always, and in annotation mode only at fit zoom with no drawing tool active.
-- **NAV-010** [v1·todo·M13] Vertical swipes do nothing on slides.
+- **NAV-006** [v1·done·M13] Tap zones in annotation and presentation mode split the viewport width by `T:gestures.tapZones`: left = previous, right = next, center = toggle presentation/annotation mode. They are off while a drawing tool is active.
+- **NAV-007** [v1·done·M13] A tap is a single pointer with duration ≤ `T:gestures.tapMaxDurationMs` and movement ≤ `tapMaxMovePx`; a mouse click counts as a tap.
+- **NAV-008** [v1·done·M13] A swipe moves ≥ `T:gestures.swipeMinDistanceFraction` of the viewport width, within `swipeMaxAngleDeg` of horizontal, at ≥ `swipeMinVelocityPxPerMs`; swipe left = next, swipe right = previous.
+- **NAV-009** [v1·done·M13] Swipes navigate in presentation mode always, and in annotation mode only at fit zoom with no drawing tool active.
+- **NAV-010** [v1·done·M13] Vertical swipes do nothing on slides.
 - **NAV-011** [v1·todo·M13] Wheel at fit zoom in annotation and presentation mode: normalized deltas (`T:gestures.wheel`) accumulate; reaching `stepThresholdPx` turns one slide, then wheel input is ignored until `idleResetMs` without events or `cooldownMs`, whichever is longer.
 - **NAV-012** [v1·todo·M13] When zoomed in, the wheel pans (Shift+wheel horizontally) and never turns slides.
 - **NAV-013** [v1·todo·M13] Ctrl+wheel and trackpad pinch zoom around the pointer (factor exp(−deltaY × `T:gestures.wheel.zoomSensitivity`)) in annotation and organization mode.
@@ -280,7 +280,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **ARC-003** [v1·done·M1] The app uses standalone components, signals, OnPush, zoneless change detection and strict TypeScript, following the current official Angular style guide and `ng generate` naming.
 - **ARC-004** [v1·done·M1] All numbers, colors, icon names and key bindings come from `src/config/tunables.ts`.
 - **ARC-005** [v1·done·M4] Errors cross port boundaries as typed results; the UI shows icons, not messages.
-- **ARC-006** [v1·todo·M13] A single place in the input layer decides whether a pointer draws or navigates.
+- **ARC-006** [v1·done·M13] A single place in the input layer decides whether a pointer draws or navigates.
 
 ## PIP — Pipelines and versioning
 
