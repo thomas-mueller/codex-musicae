@@ -1,5 +1,5 @@
 @if (popupId(); as id) {
-  <div class="popup" [class.sheet]="compact()" [class.panel]="!compact()" data-popup>
+  <div class="popup" [class.sheet]="compact() && id !== ids.tabs" [class.top]="compact() && id === ids.tabs" [class.panel]="!compact()" data-popup>
     @switch (id) {
       @case (ids.overflowTop) {
         <button appIconButton icon="info" labelKey="info" (pressed)="store.openPopup(ids.info)"></button>

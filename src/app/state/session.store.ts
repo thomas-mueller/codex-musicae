@@ -6,6 +6,7 @@ import type { FileAccessError, FileRef, OpenedFile } from '../ports/file-access'
 import { PDF_RENDERER } from '../ports/pdf-renderer';
 import type { Result } from '../ports/result';
 import { BitmapCache } from './bitmap-cache';
+import { DetectionService } from './detection.service';
 import { DocumentStore } from './document.store';
 import type { DocumentErrorCode, DocumentStatus } from './document.store';
 import { PreferencesStore } from './preferences.store';
@@ -38,6 +39,7 @@ export class SessionStore {
   private readonly preferences = inject(PreferencesStore);
   private readonly bitmaps = inject(BitmapCache);
   private readonly governor = inject(ResourceGovernor);
+  private readonly detection = inject(DetectionService);
   private readonly entries = signal<readonly TabEntry[]>([]);
   private readonly activeIdSignal = signal<string | null>(null);
   private readonly repickSignal = signal<ReadonlySet<string>>(new Set());
@@ -123,6 +125,7 @@ export class SessionStore {
       this.activeIdSignal.set(remaining[index]?.id ?? remaining[index - 1]?.id ?? null);
     }
     this.bitmaps.releaseTab(id);
+    this.detection.stop(entry.document);
     void entry.document.dispose();
   }
 
@@ -173,7 +176,11 @@ export class SessionStore {
     const document = new DocumentStore(id, this.renderer);
     this.entries.update((list) => [...list, { id, ref: file.ref, document }]);
     this.activeIdSignal.set(id);
-    void document.load(file.bytes);
+    void document.load(file.bytes).then(() => {
+      if (document.status() === 'ready') {
+        this.detection.start(document);
+      }
+    });
     void this.preferences.addRecent(file.ref, (refId) => this.entries().some((e) => e.ref.id === refId));
   }
 }

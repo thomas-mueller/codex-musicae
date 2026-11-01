@@ -11,6 +11,7 @@ const fixtures = [
   ['platform-global', 'state/violates-platform.ts', 'export const width = window.innerWidth;\n'],
   ['capacitor-import', 'state/violates-capacitor.ts', "import { Preferences } from '@capacitor/preferences';\n"],
   ['magic-number', 'state/violates-magic-number.ts', 'export const value = 3 + 4;\n'],
+  ['console-log', 'state/violates-console.ts', "console.log('x');\n"],
   ['color-literal', 'state/violates-color.ts', "export const color = '#FFFFFF';\n"],
 ];
 

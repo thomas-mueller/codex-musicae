@@ -13,23 +13,40 @@ import {
   viewChild,
 } from '@angular/core';
 
+import { TranslocoPipe } from '@jsverse/transloco';
+
 import { TUNABLES } from '../../../config/tunables';
-import type { Rect } from '../../core';
+import type { Bar, Rect } from '../../core';
 import { DEVICE_INFO } from '../../ports/device-info';
 import { CLOCK } from '../../state/clock';
 import type { DocumentStore } from '../../state/document.store';
+import { DetectionService } from '../../state/detection.service';
+import type { ProvisionalBar } from '../../state/detection-run';
 import { OrgViewStore } from '../../state/org-view.store';
 import { ResourceGovernor } from '../../state/resource-governor';
 import { Scheduler } from '../../state/scheduler';
+import { Icon } from '../shell/icon';
+import { BarsLayer } from './bars-layer';
 import { PageTiles } from './page-tiles';
 
 interface TileJob {
   readonly index: number;
   readonly visible: Rect;
   readonly viewport: Rect;
+  /** True for pages in the viewport, false for margin pages (DET-021 only looks at the former). */
+  readonly inView: boolean;
 }
 
 const KEY_SEPARATOR = '|';
+const NO_BARS: readonly never[] = [];
+
+function groupByPage<T extends { readonly pageIndex: number }>(items: readonly T[]): Map<number, T[]> {
+  const groups = new Map<number, T[]>();
+  for (const item of items) {
+    groups.set(item.pageIndex, [...(groups.get(item.pageIndex) ?? []), item]);
+  }
+  return groups;
+}
 
 /**
  * Organization mode: the whole PDF as a continuous vertical-scroll viewer on canvas grey (ORG-001).
@@ -38,7 +55,7 @@ const KEY_SEPARATOR = '|';
  */
 @Component({
   selector: 'app-organization-viewer',
-  imports: [PageTiles],
+  imports: [PageTiles, BarsLayer, Icon, TranslocoPipe],
   template: `
     <div #scroller class="scroller" data-testid="org-viewer" (scroll)="onScroll()">
       <div class="sizer" data-testid="org-sizer" [style.width.px]="sizerWidth()" [style.height.px]="sizerHeight()">
@@ -65,6 +82,16 @@ const KEY_SEPARATOR = '|';
             />
           </div>
         }
+        @for (page of layout(); track $index) {
+          <div class="overlay" [style.top.px]="page.top + offsetY()" [style.left.px]="pageLeft($index)" [style.width.px]="page.width" [style.height.px]="page.height">
+            <app-bars-layer [bars]="barsOf($index)" [provisionalBars]="provisionalBarsOf($index)" [scale]="scale()" />
+            @if (isProcessing($index)) {
+              <span class="badge" role="img" [attr.data-testid]="'org-processing-' + $index" [attr.aria-label]="'a11y.processing' | transloco">
+                <app-icon name="processing" />
+              </span>
+            }
+          </div>
+        }
       </div>
     </div>
   `,
@@ -74,6 +101,9 @@ const KEY_SEPARATOR = '|';
     .sizer { position: relative; min-width: 100%; }
     .page { position: absolute; background: var(--cm-paper); }
     .tiles { position: absolute; }
+    /* Above the tile canvases: bars and the processing badge of a page (ORG-008, DET-016). */
+    .overlay { position: absolute; pointer-events: none; }
+    .badge { position: absolute; top: var(--cm-page-badge-inset); right: var(--cm-page-badge-inset); color: var(--cm-icon); display: inline-flex; }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -130,7 +160,7 @@ export class OrganizationViewer {
       const view = local(index);
       const visible = clip(view, page.width, page.height);
       if (visible) {
-        core.push({ index, visible, viewport: view });
+        core.push({ index, visible, viewport: view, inView: true });
       }
     });
     const first = core[0]?.index;
@@ -149,12 +179,30 @@ export class OrganizationViewer {
         // Margin pages: full height, but only the viewport's horizontal range.
         const visible = clip({ ...view, y: 0, height: page.height }, page.width, page.height);
         if (visible) {
-          jobs.push({ index, visible, viewport: view });
+          jobs.push({ index, visible, viewport: view, inView: false });
         }
       }
     }
     return jobs.sort((a, b) => a.index - b.index);
   });
+
+  private readonly detection = inject(DetectionService);
+  private readonly barsByPage = computed(() => groupByPage<Bar>(this.document().bars()));
+  private readonly provisionalByPage = computed(() => groupByPage<ProvisionalBar>(this.document().provisionalBars()));
+
+  protected barsOf(pageIndex: number): readonly Bar[] {
+    return this.barsByPage().get(pageIndex) ?? NO_BARS;
+  }
+
+  protected provisionalBarsOf(pageIndex: number): readonly ProvisionalBar[] {
+    return this.provisionalByPage().get(pageIndex) ?? NO_BARS;
+  }
+
+  /** DET-016: a page that is not done or failed shows the processing icon. */
+  protected isProcessing(pageIndex: number): boolean {
+    const state = this.document().detection.states()[pageIndex];
+    return state === 'pending' || state === 'running';
+  }
 
   protected pageLeft(index: number): number {
     return (this.sizerWidth() - (this.layout()[index]?.width ?? 0)) / 2;
@@ -166,6 +214,15 @@ export class OrganizationViewer {
       const scale = this.scale();
       const tabId = this.document().tabId;
       untracked(() => this.followScale(scale, tabId));
+    });
+    // DET-021: the first page in view that is still waiting becomes the next page to process.
+    effect(() => {
+      const doc = this.document();
+      const states = doc.detection.states();
+      const waiting = this.jobs().find((job) => job.inView && states[job.index] === 'pending');
+      if (waiting) {
+        untracked(() => this.detection.prioritize(doc, waiting.index));
+      }
     });
     afterNextRender(() => {
       const element = this.scroller().nativeElement;

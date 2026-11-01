@@ -6,6 +6,7 @@ import { provideTestTransloco } from '../../../testing/transloco';
 import { APP_VERSION } from '../../ports/app-version';
 import { PDF_RENDERER } from '../../ports/pdf-renderer';
 import { CLOCK } from '../../state/clock';
+import { DetectionService } from '../../state/detection.service';
 import { Scheduler } from '../../state/scheduler';
 import { ResourceGovernor } from '../../state/resource-governor';
 import { FakeClock } from '../../state/testing/fake-clock';
@@ -332,5 +333,86 @@ describe('OrganizationViewer tiles', () => {
     await flush(fixture);
     expect(drawImage).not.toHaveBeenCalled();
     expect(fixture.nativeElement.querySelector('app-organization-viewer')).toBeNull();
+  });
+});
+
+describe('OrganizationViewer detection overlay', () => {
+  const SYSTEM = { x: 0, y: 100, width: 600, height: 100 };
+
+  beforeEach(() => {
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(VIEW_WIDTH);
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(2000);
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ drawImage: vi.fn() } as never);
+    TestBed.configureTestingModule({
+      providers: [provideTestTransloco(), provideTestPorts(), { provide: APP_VERSION, useValue: 'v-test' }],
+    });
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  async function mount() {
+    const session = TestBed.inject(SessionStore);
+    await session.openFiles([{ ref: { id: 'id-a', name: 'a.pdf' }, bytes: new Uint8Array([1]), writable: true }]);
+    const doc = session.activeDocument()!;
+    const prioritize = vi.spyOn(TestBed.inject(DetectionService), 'prioritize');
+    doc.detection.reset(2);
+    const fixture = TestBed.createComponent(OrganizationViewer);
+    fixture.componentRef.setInput('document', doc);
+    await fixture.whenStable();
+    await settle();
+    await fixture.whenStable();
+    return { doc, fixture, prioritize };
+  }
+  const barsOnPage = (fixture: { nativeElement: HTMLElement }, testId: string) =>
+    fixture.nativeElement.querySelectorAll(`[data-testid="${testId}"]`).length;
+
+  it('ORG-008 draws the bars of a detected page above its tiles', async () => {
+    const { doc, fixture } = await mount();
+    doc.detection.finish(0, 'done', { pageIndex: 0, width: PAGE_WIDTH, height: PAGE_HEIGHT, systems: [SYSTEM] });
+    await fixture.whenStable();
+    expect(barsOnPage(fixture, 'org-bar')).toBe(2); // above and below the one system
+    const overlay = fixture.nativeElement.querySelector('.overlay app-bars-layer');
+    expect(overlay).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="org-page-0"] app-bars-layer')).toBeNull(); // not inside the paper box, which the canvases cover
+  });
+
+  it('ORG-009 a page that failed or has no systems has no bars', async () => {
+    const { doc, fixture } = await mount();
+    doc.detection.finish(0, 'done', { pageIndex: 0, width: PAGE_WIDTH, height: PAGE_HEIGHT, systems: [] });
+    doc.detection.finish(1, 'failed', null);
+    await fixture.whenStable();
+    expect(barsOnPage(fixture, 'org-bar')).toBe(0);
+    expect(barsOnPage(fixture, 'org-bar-provisional')).toBe(0);
+  });
+
+  it('DET-021 a page done behind an unfinished one shows provisional bars only', async () => {
+    const { doc, fixture } = await mount();
+    doc.detection.finish(1, 'done', { pageIndex: 1, width: PAGE_WIDTH, height: PAGE_HEIGHT, systems: [SYSTEM] });
+    await fixture.whenStable();
+    expect(barsOnPage(fixture, 'org-bar')).toBe(0);
+    expect(barsOnPage(fixture, 'org-bar-provisional')).toBe(2);
+  });
+
+  it('DET-016 only pages that are not done or failed show the processing icon', async () => {
+    const { doc, fixture } = await mount();
+    expect(barsOnPage(fixture, 'org-processing-0')).toBe(1);
+    expect(barsOnPage(fixture, 'org-processing-1')).toBe(1);
+    doc.detection.finish(0, 'done', { pageIndex: 0, width: PAGE_WIDTH, height: PAGE_HEIGHT, systems: [] });
+    doc.detection.finish(1, 'failed', null);
+    await fixture.whenStable();
+    expect(barsOnPage(fixture, 'org-processing-0')).toBe(0);
+    expect(barsOnPage(fixture, 'org-processing-1')).toBe(0);
+  });
+
+  it('DET-021 asks the service to process the first visible pending page', async () => {
+    const { doc, fixture, prioritize } = await mount();
+    expect(prioritize).toHaveBeenCalledWith(doc, 0);
+    prioritize.mockClear();
+    doc.detection.finish(0, 'done', { pageIndex: 0, width: PAGE_WIDTH, height: PAGE_HEIGHT, systems: [] });
+    await fixture.whenStable();
+    expect(prioritize).toHaveBeenCalledWith(doc, 1);
+    prioritize.mockClear();
+    doc.detection.finish(1, 'done', { pageIndex: 1, width: PAGE_WIDTH, height: PAGE_HEIGHT, systems: [] });
+    await fixture.whenStable();
+    expect(prioritize).not.toHaveBeenCalled();
   });
 });

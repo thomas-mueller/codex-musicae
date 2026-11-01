@@ -21,6 +21,16 @@
       }
     },
     {
+      "name": "opencv",
+      "installMode": "prefetch",
+      "updateMode": "lazy",
+      "resources": {
+        "files": [
+          "/assets/opencv/opencv.js"
+        ]
+      }
+    },
+    {
       "name": "large-lazy-assets",
       "installMode": "lazy",
       "updateMode": "lazy",

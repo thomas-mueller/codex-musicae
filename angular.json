@@ -64,6 +64,11 @@
                 "glob": "**/*",
                 "input": "node_modules/pdfjs-dist/iccs",
                 "output": "assets/pdfjs/iccs"
+              },
+              {
+                "glob": "opencv.js",
+                "input": "node_modules/@techstark/opencv-js/dist",
+                "output": "assets/opencv"
               }
             ],
             "styles": [

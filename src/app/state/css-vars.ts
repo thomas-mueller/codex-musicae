@@ -24,6 +24,12 @@ export function tunablesToCssVars(t: Tunables): Readonly<Record<string, string>>
     '--cm-tab-max-width': `${t.layout.tabMaxWidthPx}px`,
     '--cm-tab-min-width': `${t.layout.tabMinWidthPx}px`,
     '--cm-tab-radius': `${t.layout.tabRadiusPx}px`,
+    '--cm-org-bar-tint': t.colors.orgBar.tint,
+    '--cm-org-bar-opacity': String(t.colors.orgBar.opacity),
+    '--cm-org-bar-selected-opacity': String(t.colors.orgBar.selectedOpacity),
+    '--cm-org-bar-provisional-opacity': String(t.colors.orgBar.provisionalOpacity),
+    '--cm-progress-gap': `${t.layout.progressGapPx}px`,
+    '--cm-page-badge-inset': `${t.layout.pageBadgeInsetPx}px`,
     '--cm-disabled-opacity': String(t.layout.disabledOpacity),
   };
 }

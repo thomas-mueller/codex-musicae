@@ -61,6 +61,8 @@ export default tseslint.config(
         'error',
         { argsIgnorePattern: '^_' },
       ],
+      // M10 S3: nothing is logged in production builds; src/main.ts (bootstrap failure) is the one exception below.
+      'no-console': 'error',
       '@typescript-eslint/no-magic-numbers': [
         'error',
         { ignore: [0, 1, -1, 2], ignoreEnums: true, ignoreNumericLiteralTypes: true },
@@ -117,6 +119,10 @@ export default tseslint.config(
     rules: {
       'no-restricted-imports': 'off',
     },
+  },
+  {
+    files: ['src/main.ts', '**/*.spec.ts'],
+    rules: { 'no-console': 'off' },
   },
   {
     files: ['src/config/**/*.ts', '**/*.spec.ts', `${appRoot}/core/fixtures/**/*.ts`],

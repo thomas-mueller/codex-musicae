@@ -1,3 +1,9 @@
+@if (progressText() !== '') {
+  <span role="status" class="progress" data-testid="detection-progress" [attr.aria-label]="'a11y.processing' | transloco">
+    <app-icon name="processing" />
+    <span [textContent]="progressText()"></span>
+  </span>
+}
 <button appIconButton icon="previous" labelKey="previous" [disabled]="previousDisabled()" (pressed)="view.previous()"></button>
 @if (compact()) {
   <button

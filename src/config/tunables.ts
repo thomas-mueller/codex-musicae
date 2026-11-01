@@ -27,6 +27,7 @@ export const TUNABLES = {
       opacity: 0.3,
       selectedOpacity: 0.55,
       provisionalOpacity: 0.12, // DET-021
+      minHeightPx: 1, // ORG-008: a zero-height bar is drawn as a line this thick
     },
     jumpPalette: [
       '#E53935',
@@ -45,8 +46,11 @@ export const TUNABLES = {
   layout: {
     barHeightPx: 48, // UIX-007
     indicatorPlaceholder: '– / –', // UIX-004: shown instead of "x / n" while no document is open
+    progressGapPx: 4, // DET-016: gap between the processing icon and the numbers
+    progressSeparator: '/', // DET-016: between processed and total pages in the detection progress
     indicatorSeparator: ' / ', // ORG-004: between the current and the total page in "x / n"
     iconSizePx: 24, // UIX-010
+    pageBadgeInsetPx: 6, // DET-016: distance of the per-page processing icon from the page's top-right corner
     tooltipPaddingPx: 8, // UIX-014
     tooltipRadiusPx: 4, // UIX-014
     popupAnimationMs: 150, // UIX-013: sheet slide-in
@@ -179,6 +183,12 @@ export const TUNABLES = {
     idleBeforeResumeMs: 1000, // DET-017
     pauseWhenHidden: true, // DET-017
     pauseOnBatterySaver: true, // DET-017 (where detectable)
+    cancelRetryDelayMs: 250, // DET-017: wait before a page cancelled by foreground work is submitted again
+    opencvAssetPath: 'assets/opencv/opencv.js', // NFR-012: self-hosted, loaded only inside the detection worker
+    binaryThreshold: 0, // DET-004: ignored by Otsu, which picks the threshold
+    binaryMaxValue: 255, // DET-004: ink value in the binary image
+    connectivity: 8, // DET-004: 8-connected components
+    ccStat: { left: 0, top: 1, width: 2, height: 3 }, // DET-004: cv.CC_STAT_* columns of connectedComponentsWithStats
   },
 
   playingOrder: {

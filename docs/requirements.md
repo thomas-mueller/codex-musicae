@@ -86,10 +86,10 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 
 ## DET — Detection
 
-- **DET-001** [v1·todo·M10] When a PDF has no valid embedded data, detection runs automatically for all pages in page order in the background.
+- **DET-001** [v1·done·M10] When a PDF has no valid embedded data, detection runs automatically for all pages in page order in the background.
 - **DET-002** [v1·todo·M10] Detection runs in one dedicated web worker, one page at a time, and never blocks the UI thread.
-- **DET-003** [v1·todo·M10] A page is rendered to a bitmap at the level's `renderScale`; if width×height exceeds `T:resources.maxCanvasPixels` the scale is reduced to fit.
-- **DET-004** [v1·todo·M10] The bitmap is binarized with Otsu (ink = foreground); the bounding rectangle and area of every connected component are collected, including the background component (label 0), whose rectangle is the whole page.
+- **DET-003** [v1·done·M10] A page is rendered to a bitmap at the level's `renderScale`; if width×height exceeds `T:resources.maxCanvasPixels` the scale is reduced to fit.
+- **DET-004** [v1·done·M10] The bitmap is binarized with Otsu (ink = foreground); the bounding rectangle and area of every connected component are collected, including the background component (label 0), whose rectangle is the whole page.
 - **DET-005** [v1·done·M5] Filter step 0: rectangles with zero width or zero height are ignored. Filter step 1: the single rectangle with the largest area is dropped (the page); on equal areas the first in input order is dropped.
 - **DET-006** [v1·done·M5] Filter step 2: among the remaining rectangles, sort by area, find the largest gap between consecutive areas, and keep rectangles whose area is strictly greater than the middle of that gap; among equal gaps the one between the largest areas is used; with fewer than two remaining rectangles, or when all remaining areas are equal (largest gap 0), the threshold is 0.
 - **DET-007** [v1·done·M5] Filter step 3: from the kept rectangles, discard those narrower than `minSystemWidthRatio` × page width.
@@ -102,12 +102,12 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **DET-014** [v1·todo·M11] Organization mode offers a level selector (three icon steps); choosing a level asks for confirmation and then re-runs detection.
 - **DET-015** [v1·todo·M11] During a re-run the previous results stay active; at completion they are swapped in, and jumps, breaks and stops are kept only if the total system count is unchanged, else cleared.
 - **DET-016** [v1·todo·M10] Organization mode shows detection progress (processing icon, processed/total pages); slide modes show the slide count as "n+" until detection is complete.
-- **DET-017** [v1·todo·M10] Detection pauses while the user interacts (resumes after `T:detection.idleBeforeResumeMs` without input), while the app is hidden, and under battery saver where detectable.
-- **DET-018** [v1·todo·M10] If a page fails (error or out of memory), it is retried once at `renderScale` × `T:detection.retryScaleFactor`; if it fails again the page is marked not detected and processing continues.
-- **DET-019** [v1·todo·M10] Slides and organization bars are usable for every page whose prefix of earlier pages is finished while later pages are still processing.
-- **DET-020** [v1·todo·M10] Bitmaps are released after each page; only rectangles are retained.
-- **DET-021** [v1·todo·M10] Navigating to an unfinished page in organization mode makes it the next page processed; its bars are drawn provisional (`T:colors.orgBar.provisionalOpacity`, no numbers, not selectable) until all earlier pages are finished.
-- **DET-022** [v1·todo·M10] Detection results are cached in runtime memory only.
+- **DET-017** [v1·done·M10] Detection pauses while the user interacts (resumes after `T:detection.idleBeforeResumeMs` without input), while the app is hidden, and under battery saver where detectable.
+- **DET-018** [v1·done·M10] If a page fails (error or out of memory), it is retried once at `renderScale` × `T:detection.retryScaleFactor`; if it fails again the page is marked not detected and processing continues.
+- **DET-019** [v1·done·M10] Slides and organization bars are usable for every page whose prefix of earlier pages is finished while later pages are still processing.
+- **DET-020** [v1·done·M10] Bitmaps are released after each page; only rectangles are retained.
+- **DET-021** [v1·done·M10] Navigating to an unfinished page in organization mode makes it the next page processed; its bars are drawn provisional (`T:colors.orgBar.provisionalOpacity`, no numbers, not selectable) until all earlier pages are finished.
+- **DET-022** [v1·done·M10] Detection results are cached in runtime memory only.
 - **DET-023** [v1·todo·M15] If valid embedded detection data exists, detection is skipped.
 - **DET-024** [v1·done·M5] Page width, padding and thresholds are computed per page; documents with mixed page sizes are supported.
 
@@ -136,9 +136,9 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **ORG-005** [v1·done·M9] Previous/next page buttons and a page slider scroll to a page.
 - **ORG-006** [v1·done·M9] Horizontal swipes do not change pages; zoom stays unchanged when the page changes.
 - **ORG-007** [v1·done·M9] Drawing is not available in organization mode.
-- **ORG-008** [v1·todo·M10] Every junction is drawn as a translucent bar over the whitespace gap, full page width: between two systems on a page; for junction 0 from the page top to the top of system 1; for junction N from the bottom of system N to the page bottom; at a page change as two bars (bottom of page p, top of page p+1).
-- **ORG-009** [v1·todo·M10] Pages without systems have no bars.
-- **ORG-010** [v1·todo·M10] Bars use `T:colors.orgBar.tint` at `opacity`; a selected junction uses `selectedOpacity`, on both bars of a page change.
+- **ORG-008** [v1·done·M10] Every junction is drawn as a translucent bar over the whitespace gap, full page width: between two systems on a page; for junction 0 from the page top to the top of system 1; for junction N from the bottom of system N to the page bottom; at a page change as two bars (bottom of page p, top of page p+1).
+- **ORG-009** [v1·done·M10] Pages without systems have no bars.
+- **ORG-010** [v1·done·M10] Bars use `T:colors.orgBar.tint` at `opacity`; a selected junction uses `selectedOpacity`, on both bars of a page change.
 - **ORG-011** [v1·todo·M11] Each bar shows one compact row: the numbers of the system above it, jump badges, the stop symbol and the break scissors line. There is no numbering toggle.
 - **ORG-012** [v1·todo·M11] Numbers are shown ascending, comma separated ("3, 9"); junction 0 shows none; both bars of a page change show the numbers of the system above the junction.
 - **ORG-013** [v1·todo·M11] Tapping a bar selects its junction; tapping empty space, Esc or back deselects. Taps in organization mode never navigate.
@@ -266,8 +266,8 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **NFR-008** [v1·done·M8] Stale render tasks are cancelled when the view changes.
 - **NFR-009** [v1·done·M8] Inactive tabs release their bitmaps and keep only lightweight document data.
 - **NFR-010** [v1·done·M8] Under memory pressure the app degrades in this order: drop prefetch, lower render resolution, free inactive tabs' bitmaps; it never fails outright.
-- **NFR-011** [v1·todo·M10] Every OpenCV object is released in a `finally` block.
-- **NFR-012** [v1·todo·M10] OpenCV.js is loaded only inside the detection worker, lazily on first use, from the app's own assets (no CDN).
+- **NFR-011** [v1·done·M10] Every OpenCV object is released in a `finally` block.
+- **NFR-012** [v1·done·M10] OpenCV.js is loaded only inside the detection worker, lazily on first use, from the app's own assets (no CDN).
 - **NFR-013** [v1·todo·M15] There is no hard PDF size limit; a failed save shows the error icon and does not crash.
 - **NFR-014** [v1·done·M1] The initial bundle stays within `T:budgets.initialBundleKbGzip` (Angular build budget).
 - **NFR-015** [v1·todo·M16] After the OS kills the WebView, the next start restores tabs and positions; unsaved loss is limited to the autosave delay.

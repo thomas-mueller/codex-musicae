@@ -16,7 +16,7 @@ import { UiStore } from '../../state/ui.store';
     </div>
   `,
   styles: `
-    :host { display: block; min-height: 0; min-width: 0; background: var(--cm-canvas-grey); }
+    :host { display: block; min-height: 0; min-width: 0; background: var(--cm-canvas-grey); isolation: isolate; }
     .content { width: 100%; height: 100%; }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

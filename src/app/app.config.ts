@@ -19,13 +19,18 @@ import { APP_VERSION } from './ports/app-version';
 import { provideAppIdentity } from './adapters/web/app-identity';
 import { AppTranslocoLoader } from './adapters/web/transloco-loader';
 import { PwaUpdatePolicy } from './adapters/web/pwa-update-policy';
+import { OpenCvDetectionEngine } from './adapters/opencv/opencv-detection-engine';
 import { PdfJsRenderer } from './adapters/pdfjs/pdfjs-renderer';
 import { installDebugHook } from './adapters/web/debug-hook';
 import type { DebugHost } from './adapters/web/debug-hook';
 import { BitmapCache } from './state/bitmap-cache';
+import { SessionStore } from './state/session.store';
+import { WebAppLifecycle } from './adapters/web/web-app-lifecycle';
 import { WebDeviceInfo } from './adapters/web/web-device-info';
 import { WebFileAccess } from './adapters/web/web-file-access';
 import { WebPreferences } from './adapters/web/web-preferences';
+import { APP_LIFECYCLE } from './ports/app-lifecycle';
+import { DETECTION_ENGINE } from './ports/detection-engine';
 import { DEVICE_INFO } from './ports/device-info';
 import { FILE_ACCESS } from './ports/file-access';
 import { PDF_RENDERER } from './ports/pdf-renderer';
@@ -52,7 +57,30 @@ export const appConfig: ApplicationConfig = {
     provideEnvironmentInitializer(() => {
       // `ngDevMode` is replaced by `false` in production builds, so this branch and the hook module are removed.
       if (typeof ngDevMode !== 'undefined' && ngDevMode) {
-        installDebugHook(window as DebugHost, inject(BitmapCache));
+        const renderer = inject(PDF_RENDERER);
+        const engine = inject(DETECTION_ENGINE);
+        const session = inject(SessionStore);
+        const detect = async (pdf: Uint8Array, pageIndex: number, scale: number) => {
+          const signal = new AbortController().signal;
+          const doc = await renderer.open(pdf);
+          if (!doc.ok) throw new Error(doc.error);
+          try {
+            const info = await doc.value.getPageInfo(pageIndex);
+            if (!info.ok) throw new Error(info.error);
+            const region = { x: 0, y: 0, width: info.value.width, height: info.value.height };
+            const bitmap = await doc.value.renderRegion({ pageIndex, region, scale }, signal);
+            if (!bitmap.ok) throw new Error(bitmap.error);
+            const rects = await engine.extractComponents(bitmap.value, signal);
+            if (!rects.ok) throw new Error(rects.error);
+            return rects.value;
+          } finally {
+            await doc.value.destroy();
+          }
+        };
+        installDebugHook(window as DebugHost, inject(BitmapCache), {
+          detect,
+          startedOrder: () => session.activeDocument()?.detection.startedOrder ?? [],
+        });
       }
     }),
     ...provideTransloco({
@@ -66,6 +94,8 @@ export const appConfig: ApplicationConfig = {
     }),
     provideAppIdentity(),
     { provide: PDF_RENDERER, useFactory: () => new PdfJsRenderer() },
+    { provide: DETECTION_ENGINE, useFactory: () => new OpenCvDetectionEngine() },
+    { provide: APP_LIFECYCLE, useFactory: () => new WebAppLifecycle() },
     { provide: PREFERENCES, useFactory: () => new WebPreferences() },
     { provide: DEVICE_INFO, useFactory: () => new WebDeviceInfo() },
     { provide: FILE_ACCESS, useFactory: () => new WebFileAccess() },
