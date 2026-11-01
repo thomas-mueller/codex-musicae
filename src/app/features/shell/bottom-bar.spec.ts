@@ -194,6 +194,22 @@ describe('BottomBar in annotation mode', () => {
     expect(disabled(button('Show more'))).toBe(false);
   });
 
+  it('SLD-018 zoom in, zoom out and reset drive the slide view and their enabled state', async () => {
+    const { fixture, root, button, doc } = await mount();
+    await settle();
+    await fixture.whenStable();
+    expect(disabled(button('Zoom out'))).toBe(true);
+    expect(disabled(button('Reset zoom'))).toBe(true);
+    button('Zoom in').click();
+    await fixture.whenStable();
+    expect(doc.slideView().zoom).toBeCloseTo(TUNABLES.zoom.buttonStep);
+    expect(disabled(button('Zoom out'))).toBe(false);
+    expect(root.querySelector('app-slide-view [data-testid="slide"]')).not.toBeNull();
+    button('Reset zoom').click();
+    await fixture.whenStable();
+    expect(doc.slideView().zoom).toBe(1);
+  });
+
   it('SLD-017 compact layouts keep the ratio buttons in the overflow menu and the slider in the indicator popup', async () => {
     size = { width: 300, height: 400 };
     const { fixture, root, button, doc } = await mount();

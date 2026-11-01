@@ -1,12 +1,15 @@
 import { TestBed } from '@angular/core/testing';
 
+import { TUNABLES } from '../../../config/tunables';
 import { provideTestPorts } from '../../../testing/provide-test-ports';
 import { provideTestTransloco } from '../../../testing/transloco';
-import { composeSlide } from '../../core';
+import { FIT_VIEW, composeSlide } from '../../core';
 import { PDF_RENDERER } from '../../ports/pdf-renderer';
 import { ok } from '../../ports/result';
+import { CLOCK } from '../../state/clock';
 import { DocumentStore } from '../../state/document.store';
 import { ResourceGovernor } from '../../state/resource-governor';
+import { FakeClock } from '../../state/testing/fake-clock';
 import { fakeBitmap } from '../../state/testing/fake-bitmap';
 import { fakeRenderer } from '../../state/testing/fake-renderer';
 import type { FakeHandle } from '../../state/testing/fake-renderer';
@@ -129,5 +132,81 @@ describe('SlideView', () => {
     await show(doc);
     const composition = composeSlide(doc.slides()[1]!, doc.geoms(), doc.pageInfos());
     expect(handle.renderRegion.mock.calls.length).toBeGreaterThan(composition.contents.length);
+  });
+
+  describe('zoom', () => {
+    const ZOOM = 2;
+    let clock: FakeClock;
+    beforeEach(() => {
+      clock = new FakeClock();
+      TestBed.overrideProvider(CLOCK, { useValue: clock });
+    });
+
+    async function zoomed() {
+      const { doc, handle } = await openDocument();
+      TestBed.inject(ResourceGovernor).reportFailure(); // no prefetch
+      const fixture = await show(doc);
+      handle.renderRegion.mockClear();
+      const tiles = (): HTMLCanvasElement[] => [...fixture.nativeElement.querySelectorAll('[data-testid="slide-tiles"] canvas')];
+      return { doc, handle, fixture, tiles };
+    }
+
+    it('SLD-018 the view is a CSS transform at once and sharp tiles follow after the settle time', async () => {
+      const { doc, handle, fixture, tiles } = await zoomed();
+      doc.slideView.set({ zoom: ZOOM, panX: 0, panY: 0 });
+      await fixture.whenStable();
+      const slide = fixture.nativeElement.querySelector('[data-testid="slide"]') as HTMLElement;
+      expect(slide.style.transform).toBe(`translate(0px, 0px) scale(${ZOOM})`);
+      expect(tiles()).toHaveLength(0);
+      expect(handle.renderRegion).not.toHaveBeenCalled();
+      clock.advance(TUNABLES.rendering.zoomSettleMs);
+      await settle();
+      expect(tiles().length).toBeGreaterThan(0);
+      for (const [request] of handle.renderRegion.mock.calls) {
+        expect(request.scale).toBeCloseTo(SCALE * ZOOM);
+      }
+    });
+
+    it('NFR-007 tiles are at most the tile size wide and high at the zoomed scale', async () => {
+      const { doc, fixture, tiles } = await zoomed();
+      doc.slideView.set({ zoom: TUNABLES.zoom.max, panX: 0, panY: 0 });
+      await fixture.whenStable();
+      clock.advance(TUNABLES.rendering.zoomSettleMs);
+      await settle();
+      for (const tile of tiles()) {
+        expect(parseFloat(tile.style.width) * TUNABLES.zoom.max).toBeLessThanOrEqual(TUNABLES.resources.tileSizePx + 1e-6);
+        expect(parseFloat(tile.style.height) * TUNABLES.zoom.max).toBeLessThanOrEqual(TUNABLES.resources.tileSizePx + 1e-6);
+      }
+    });
+
+    it('NFR-008 another view change before the settle time renders only the last view', async () => {
+      const { doc, handle, fixture } = await zoomed();
+      doc.slideView.set({ zoom: ZOOM, panX: 0, panY: 0 });
+      await fixture.whenStable();
+      clock.advance(TUNABLES.rendering.zoomSettleMs / 2);
+      doc.slideView.set({ zoom: ZOOM * 1.5, panX: 0, panY: 0 });
+      await fixture.whenStable();
+      clock.advance(TUNABLES.rendering.zoomSettleMs / 2);
+      await settle();
+      expect(handle.renderRegion).not.toHaveBeenCalled();
+      clock.advance(TUNABLES.rendering.zoomSettleMs);
+      await settle();
+      for (const [request] of handle.renderRegion.mock.calls) {
+        expect(request.scale).toBeCloseTo(SCALE * ZOOM * 1.5);
+      }
+      expect(handle.renderRegion).toHaveBeenCalled();
+    });
+
+    it('SLD-018 back at fit zoom the tiles are removed', async () => {
+      const { doc, fixture, tiles } = await zoomed();
+      doc.slideView.set({ zoom: ZOOM, panX: 0, panY: 0 });
+      await fixture.whenStable();
+      clock.advance(TUNABLES.rendering.zoomSettleMs);
+      await settle();
+      expect(tiles().length).toBeGreaterThan(0);
+      doc.slideView.set(FIT_VIEW);
+      await fixture.whenStable();
+      expect(tiles()).toHaveLength(0);
+    });
   });
 });

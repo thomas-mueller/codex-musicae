@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 
+import { TUNABLES } from '../../config/tunables';
 import { provideTestPorts } from '../../testing/provide-test-ports';
+import { FIT_VIEW } from '../core';
 import { SessionStore } from './session.store';
 import { SlideNavStore } from './slide-nav.store';
 import { UiStore } from './ui.store';
@@ -94,5 +96,54 @@ describe('SlideNavStore', () => {
     expect(nav.active()).toBe(false);
     expect(nav.indicatorText()).toBe('');
     expect(nav.canNext()).toBe(false);
+  });
+
+  describe('zoom', () => {
+    it('SLD-018 the buttons zoom around the stage center by the button step and stop at the limits', async () => {
+      const { nav, doc } = await setup();
+      nav.stage.set({ width: 300, height: 400 });
+      expect(nav.canZoomIn()).toBe(true);
+      expect(nav.canZoomOut()).toBe(false);
+      expect(nav.canZoomReset()).toBe(false);
+      nav.zoomIn();
+      expect(doc.slideView()).toEqual({ zoom: TUNABLES.zoom.buttonStep, panX: 0, panY: 0 });
+      expect(nav.canZoomOut()).toBe(true);
+      expect(nav.canZoomReset()).toBe(true);
+      for (let i = 0; i < 20; i++) {
+        nav.zoomIn();
+      }
+      expect(doc.slideView().zoom).toBe(TUNABLES.zoom.max);
+      expect(nav.canZoomIn()).toBe(false);
+      for (let i = 0; i < 20; i++) {
+        nav.zoomOut();
+      }
+      expect(doc.slideView().zoom).toBe(TUNABLES.zoom.min);
+      expect(nav.canZoomOut()).toBe(false);
+    });
+
+    it('SLD-018 reset returns to the fit view', async () => {
+      const { nav, doc } = await setup();
+      nav.stage.set({ width: 300, height: 400 });
+      nav.zoomIn();
+      nav.zoomReset();
+      expect(doc.slideView()).toEqual(FIT_VIEW);
+    });
+
+    it('NAV-015 zoom returns to fit on every slide change, but not when the same slide is requested again', async () => {
+      const { nav, doc } = await setup();
+      nav.stage.set({ width: 300, height: 400 });
+      nav.zoomIn();
+      nav.goTo(0);
+      expect(doc.slideView().zoom).toBe(TUNABLES.zoom.buttonStep);
+      nav.next();
+      expect(doc.slideView()).toEqual(FIT_VIEW);
+    });
+
+    it('SLD-018 without a measured stage the zoom buttons are inert', async () => {
+      const { nav, doc } = await setup();
+      expect(nav.canZoomIn()).toBe(false);
+      nav.zoomIn();
+      expect(doc.slideView()).toEqual(FIT_VIEW);
+    });
   });
 });

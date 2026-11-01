@@ -39,9 +39,9 @@
   ></span>
 }
 <button appIconButton icon="next" labelKey="next" [disabled]="nextDisabled()" (pressed)="onNext()"></button>
-<button appIconButton icon="zoomOut" labelKey="zoomOut" [disabled]="zoomOutDisabled()" (pressed)="view.zoomOut()"></button>
-<button appIconButton icon="zoomIn" labelKey="zoomIn" [disabled]="zoomInDisabled()" (pressed)="view.zoomIn()"></button>
-<button appIconButton icon="zoomReset" labelKey="zoomReset" [disabled]="zoomResetDisabled()" (pressed)="view.zoomReset()"></button>
+<button appIconButton icon="zoomOut" labelKey="zoomOut" [disabled]="zoomOutDisabled()" (pressed)="onZoomOut()"></button>
+<button appIconButton icon="zoomIn" labelKey="zoomIn" [disabled]="zoomInDisabled()" (pressed)="onZoomIn()"></button>
+<button appIconButton icon="zoomReset" labelKey="zoomReset" [disabled]="zoomResetDisabled()" (pressed)="onZoomReset()"></button>
 @if (annotation() && !compact()) {
   <button appIconButton icon="showMore" labelKey="showMore" [disabled]="showMoreDisabled()" (pressed)="aspect.showMore()"></button>
   <button appIconButton icon="showLess" labelKey="showLess" [disabled]="showLessDisabled()" (pressed)="aspect.showLess()"></button>

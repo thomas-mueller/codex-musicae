@@ -2,11 +2,11 @@ import { computed, linkedSignal, signal } from '@angular/core';
 
 import { TUNABLES } from '../../config/tunables';
 import {
-  EMPTY_MARKS, addJump, clearJunction, computeBars, computePaddings, findEntryForSystem, flattenSystems, forcedBreaks,
+  EMPTY_MARKS, FIT_VIEW, addJump, clearJunction, computeBars, computePaddings, findEntryForSystem, flattenSystems, forcedBreaks,
   generatePlayingOrder, isComplete, isProvisional, junctionCount, markPositions, packSlides, paddedArea,
   referenceWidth, removeJump, slideIndexOfEntry, systemNumbers, toggleBreak, toggleStop, updateJump, usablePrefix,
 } from '../core';
-import type { DetectedPage, DocMarks, Jump, Orientation, Point, SlidePlan, SystemGeom } from '../core';
+import type { DetectedPage, DocMarks, Jump, Orientation, Point, SlidePlan, SystemGeom, ViewState } from '../core';
 import type { PdfDocumentHandle, PdfOpenError, PdfPageInfo, PdfRenderer } from '../ports/pdf-renderer';
 import { DetectionRun } from './detection-run';
 import { NO_RATIO_DEFAULTS } from './ratio-defaults';
@@ -160,12 +160,19 @@ export class DocumentStore {
   readonly position = this.positionSignal.asReadonly();
   readonly currentSlideIndex = computed(() => Math.max(0, slideIndexOfEntry(this.slides(), this.position().entry)));
 
+  /** SLD-018: zoom and pan of the slide on display, per tab; back to fit on every slide change (NAV-015). */
+  readonly slideView = signal<ViewState>(FIT_VIEW);
+
   /** NAV-020: clamps to the existing slides; the position becomes the slide's first entry. */
   goToSlide(index: number): void {
     const slides = this.slides();
-    const slide = slides[Math.min(Math.max(0, Math.trunc(index)), slides.length - 1)];
+    const target = Math.min(Math.max(0, Math.trunc(index)), slides.length - 1);
+    const slide = slides[target];
     const system = slide ? this.playingOrder().entries[slide.entryStart] : undefined;
     if (slide && system !== undefined) {
+      if (target !== this.currentSlideIndex()) {
+        this.slideView.set(FIT_VIEW);
+      }
       this.positionSignal.set({ entry: slide.entryStart, system });
     }
   }

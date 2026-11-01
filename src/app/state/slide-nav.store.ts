@@ -1,6 +1,8 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 
 import { TUNABLES } from '../../config/tunables';
+import { FIT_VIEW, fitScale, zoomAround } from '../core';
+import type { Size } from '../core';
 import { SessionStore } from './session.store';
 import { UiStore } from './ui.store';
 
@@ -27,6 +29,28 @@ export class SlideNavStore {
   readonly canPrevious = computed(() => this.active() && this.count() > 0 && this.shown() > 0);
   readonly canNext = computed(() => this.active() && this.shown() < this.count() - 1);
   readonly canSlide = computed(() => this.active() && this.count() > 0);
+  /** Size of the area the slide is shown in; reported by `SlideView`. */
+  readonly stage = signal<Size>({ width: 0, height: 0 });
+  private readonly plan = computed(() => {
+    const doc = this.document();
+    return doc?.slides()[doc.currentSlideIndex()] ?? null;
+  });
+  /** SLD-010, SLD-011: CSS px per slide unit that fits the current slide into the stage. */
+  readonly displayScale = computed(() => {
+    const plan = this.plan();
+    const stage = this.stage();
+    return plan && stage.width > 0 && stage.height > 0 ? fitScale({ width: plan.width, height: plan.height }, stage, 'contain') : 0;
+  });
+  /** The slide at zoom 1, in CSS px. */
+  readonly fitted = computed<Size>(() => {
+    const plan = this.plan();
+    const scale = this.displayScale();
+    return plan ? { width: plan.width * scale, height: plan.height * scale } : { width: 0, height: 0 };
+  });
+  readonly view = computed(() => this.document()?.slideView() ?? FIT_VIEW);
+  readonly canZoomIn = computed(() => this.active() && this.displayScale() > 0 && this.view().zoom < TUNABLES.zoom.max);
+  readonly canZoomOut = computed(() => this.active() && this.view().zoom > TUNABLES.zoom.min);
+  readonly canZoomReset = computed(() => this.active() && (this.view().zoom !== FIT_VIEW.zoom || this.view().panX !== 0 || this.view().panY !== 0));
   /** SLD-016: "x / n", "x / n+" while the count may still grow, empty when there is nothing to show. */
   readonly indicatorText = computed(() => {
     const doc = this.document();
@@ -36,6 +60,28 @@ export class SlideNavStore {
     const open = doc.slideCountIsFinal() ? '' : TUNABLES.layout.indicatorOpenSuffix;
     return `${this.shown() + 1}${TUNABLES.layout.indicatorSeparator}${this.count()}${open}`;
   });
+
+  zoomIn(): void {
+    this.zoomBy(TUNABLES.zoom.buttonStep);
+  }
+
+  zoomOut(): void {
+    this.zoomBy(1 / TUNABLES.zoom.buttonStep);
+  }
+
+  zoomReset(): void {
+    this.document()?.slideView.set(FIT_VIEW);
+  }
+
+  /** SLD-018: the buttons zoom around the stage center. */
+  private zoomBy(factor: number): void {
+    const doc = this.document();
+    const stage = this.stage();
+    if (doc && this.active() && this.displayScale() > 0) {
+      const center = { x: stage.width / 2, y: stage.height / 2 };
+      doc.slideView.set(zoomAround(doc.slideView(), factor, center, TUNABLES.zoom, this.fitted(), stage));
+    }
+  }
 
   previous(): void {
     this.goTo(this.shown() - 1);

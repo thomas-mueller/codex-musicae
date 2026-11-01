@@ -37,9 +37,9 @@ export class BottomBar {
   protected readonly organization = computed(() => this.store.mode() === 'organization');
   protected readonly previousDisabled = computed(() => this.byMode(!this.view.canPrevious(), !this.nav.canPrevious()));
   protected readonly nextDisabled = computed(() => this.byMode(!this.view.canNext(), !this.nav.canNext()));
-  protected readonly zoomOutDisabled = computed(() => (this.organization() ? !this.view.canZoomOut() : this.noDocument()));
-  protected readonly zoomInDisabled = computed(() => (this.organization() ? !this.view.canZoomIn() : this.noDocument()));
-  protected readonly zoomResetDisabled = computed(() => (this.organization() ? !this.view.active() : this.noDocument()));
+  protected readonly zoomOutDisabled = computed(() => this.byMode(!this.view.canZoomOut(), !this.nav.canZoomOut()));
+  protected readonly zoomInDisabled = computed(() => this.byMode(!this.view.canZoomIn(), !this.nav.canZoomIn()));
+  protected readonly zoomResetDisabled = computed(() => this.byMode(!this.view.active(), !this.nav.canZoomReset()));
   protected readonly sliderDisabled = computed(() => this.byMode(!this.view.active(), !this.nav.canSlide()));
   protected readonly sliderMax = computed(() => (this.annotation() ? this.nav.count() : this.view.pageCount()));
   protected readonly sliderValue = computed(() => (this.annotation() ? this.nav.shown() : this.view.currentPage()) + 1);
@@ -73,6 +73,18 @@ export class BottomBar {
 
   protected onNext(): void {
     return this.annotation() ? this.nav.next() : this.view.next();
+  }
+
+  protected onZoomIn(): void {
+    return this.annotation() ? this.nav.zoomIn() : this.view.zoomIn();
+  }
+
+  protected onZoomOut(): void {
+    return this.annotation() ? this.nav.zoomOut() : this.view.zoomOut();
+  }
+
+  protected onZoomReset(): void {
+    return this.annotation() ? this.nav.zoomReset() : this.view.zoomReset();
   }
 
   protected onSlide(event: Event): void {
