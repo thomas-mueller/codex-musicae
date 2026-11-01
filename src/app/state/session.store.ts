@@ -10,6 +10,7 @@ import { DetectionService } from './detection.service';
 import { DocumentStore } from './document.store';
 import type { DocumentErrorCode, DocumentStatus } from './document.store';
 import { PreferencesStore } from './preferences.store';
+import { RatioDefaultsProvider } from './ratio-defaults';
 import { ResourceGovernor } from './resource-governor';
 
 export interface Tab {
@@ -40,6 +41,7 @@ export class SessionStore {
   private readonly bitmaps = inject(BitmapCache);
   private readonly governor = inject(ResourceGovernor);
   private readonly detection = inject(DetectionService);
+  private readonly ratioDefaults = inject(RatioDefaultsProvider);
   private readonly entries = signal<readonly TabEntry[]>([]);
   private readonly activeIdSignal = signal<string | null>(null);
   private readonly repickSignal = signal<ReadonlySet<string>>(new Set());
@@ -173,7 +175,7 @@ export class SessionStore {
       }
     }
     const id = `t${++this.tabCounter}`;
-    const document = new DocumentStore(id, this.renderer);
+    const document = new DocumentStore(id, this.renderer, this.ratioDefaults);
     this.entries.update((list) => [...list, { id, ref: file.ref, document }]);
     this.activeIdSignal.set(id);
     void document.load(file.bytes).then(() => {

@@ -1,17 +1,27 @@
-import { computed, signal } from '@angular/core';
+import { computed, linkedSignal, signal } from '@angular/core';
 
 import { TUNABLES } from '../../config/tunables';
 import {
-  EMPTY_MARKS, addJump, clearJunction, computeBars, flattenSystems, forcedBreaks, generatePlayingOrder, isComplete,
-  isProvisional, junctionCount, markPositions, removeJump, systemNumbers, toggleBreak, toggleStop, updateJump, usablePrefix,
+  EMPTY_MARKS, FIT_VIEW, addJump, clearJunction, computeBars, computePaddings, findEntryForSystem, flattenSystems, forcedBreaks,
+  generatePlayingOrder, isComplete, isProvisional, junctionCount, markPositions, packSlides, paddedArea,
+  referenceWidth, removeJump, slideIndexOfEntry, systemNumbers, toggleBreak, toggleStop, updateJump, usablePrefix,
 } from '../core';
-import type { DetectedPage, DocMarks, Jump, Point } from '../core';
+import type { DetectedPage, DocMarks, Jump, Orientation, Point, SlidePlan, SystemGeom, ViewState } from '../core';
 import type { PdfDocumentHandle, PdfOpenError, PdfPageInfo, PdfRenderer } from '../ports/pdf-renderer';
 import { DetectionRun } from './detection-run';
+import { NO_RATIO_DEFAULTS } from './ratio-defaults';
+import type { RatioDefaults } from './ratio-defaults';
 import type { ProvisionalBar } from './detection-run';
 
 export type DocumentStatus = 'loading' | 'ready' | 'error';
 export type DocumentErrorCode = PdfOpenError;
+/** SLD-012: `entry` = index into the playing order of the first entry on the current slide, `system` = that entry's system. */
+export interface SlidePosition {
+  readonly entry: number;
+  readonly system: number;
+}
+/** SLD-015: per-PDF aspect-ratio overrides, in memory (saving comes in M15). */
+export type RatioOverride = { readonly [O in Orientation]?: number };
 
 /**
  * One per tab (FIL-005). Holds the pdf.js handle and lightweight page data; later milestones add position,
@@ -85,6 +95,88 @@ export class DocumentStore {
   /** ORG-018, ORG-021: where jumps, breaks and stops are met in the playing order (playing-order numbers, never print numbers). */
   readonly markPositions = computed(() => markPositions(this.marks(), this.junctionCount(), TUNABLES.playingOrder.maxLength));
 
+  /** DET-010: padding per usable page, in the order of `pagesUsable`. */
+  readonly paddings = computed(() => computePaddings(this.pagesUsable(), TUNABLES.detection.fallbackPaddingPageHeightRatio));
+  /** Systems with their padded areas; the padding is matched to a system's page by `pageIndex`, never by position. */
+  readonly geoms = computed<readonly SystemGeom[]>(() => {
+    const pages = this.pagesUsable();
+    const paddings = this.paddings();
+    const slotOf = new Map(pages.map((page, slot) => [page.pageIndex, slot]));
+    return this.systems().flatMap((system) => {
+      const slot = slotOf.get(system.pageIndex);
+      const page = slot === undefined ? undefined : pages[slot];
+      const padding = slot === undefined ? undefined : paddings[slot];
+      return page && padding !== undefined
+        ? [{ index: system.index, pageIndex: system.pageIndex, box: system.box, padded: paddedArea(system.box, padding, page) }]
+        : [];
+    });
+  });
+  /** SLD-002 */
+  readonly slideWidth = computed(() => referenceWidth(this.geoms()));
+
+  /** SLD-014, SLD-015: override beats the global default beats the screen ratio. */
+  readonly ratioOverride = signal<RatioOverride>({});
+  readonly orientation = computed(() => this.ratioDefaults.orientation());
+  readonly aspectRatio = computed(() => {
+    const orientation = this.orientation();
+    return (
+      this.ratioOverride()[orientation] ?? this.ratioDefaults.globalRatio(orientation) ?? this.ratioDefaults.screenRatio(orientation)
+    );
+  });
+
+  /** SLD-003; no systems (or an unusable ratio) means no slides. */
+  readonly slides = computed<readonly SlidePlan[]>(() => {
+    const geoms = this.geoms();
+    const slideWidth = this.slideWidth();
+    if (geoms.length === 0 || slideWidth <= 0) {
+      return [];
+    }
+    return packSlides({
+      entries: this.playingOrder().entries,
+      forcedBreakAfter: this.forcedBreakAfter(),
+      systems: geoms,
+      slideWidth,
+      aspectRatio: this.aspectRatio(),
+    });
+  });
+  readonly slideCount = computed(() => this.slides().length);
+  /** SLD-016: shown as "n+" until detection is complete. */
+  readonly slideCountIsFinal = computed(() => this.detectionComplete());
+
+  /**
+   * SLD-012: follows the system, not the entry, when the playing order changes; a new ratio or orientation leaves the entries
+   * (and so the entry) untouched.
+   */
+  private readonly positionSignal = linkedSignal<readonly number[], SlidePosition>({
+    source: () => this.playingOrder().entries,
+    computation: (entries, previous) => {
+      if (!previous) {
+        return { entry: 0, system: entries[0] ?? 1 };
+      }
+      const entry = findEntryForSystem(entries, previous.value.system);
+      return { entry: Math.max(0, entry), system: previous.value.system };
+    },
+  });
+  readonly position = this.positionSignal.asReadonly();
+  readonly currentSlideIndex = computed(() => Math.max(0, slideIndexOfEntry(this.slides(), this.position().entry)));
+
+  /** SLD-018: zoom and pan of the slide on display, per tab; back to fit on every slide change (NAV-015). */
+  readonly slideView = signal<ViewState>(FIT_VIEW);
+
+  /** NAV-020: clamps to the existing slides; the position becomes the slide's first entry. */
+  goToSlide(index: number): void {
+    const slides = this.slides();
+    const target = Math.min(Math.max(0, Math.trunc(index)), slides.length - 1);
+    const slide = slides[target];
+    const system = slide ? this.playingOrder().entries[slide.entryStart] : undefined;
+    if (slide && system !== undefined) {
+      if (target !== this.currentSlideIndex()) {
+        this.slideView.set(FIT_VIEW);
+      }
+      this.positionSignal.set({ entry: slide.entryStart, system });
+    }
+  }
+
   readonly handle = this.handleSignal.asReadonly();
   readonly pageInfos = this.pageInfosSignal.asReadonly();
   readonly status = this.statusSignal.asReadonly();
@@ -93,6 +185,7 @@ export class DocumentStore {
   constructor(
     readonly tabId: string,
     private readonly renderer: PdfRenderer,
+    private readonly ratioDefaults: RatioDefaults = NO_RATIO_DEFAULTS,
   ) {}
 
   /** FIL-009: never throws; failures end in status 'error' with a code. */

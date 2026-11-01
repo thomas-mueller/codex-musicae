@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { findEntryForSystemCases } from './fixtures/entry-lookup.cases';
 import { packSlidesCases, referenceWidthCases, slideIndexOfEntryCases } from './fixtures/slides.cases';
-import { packSlides, referenceWidth, slideIndexOfEntry } from './slides';
+import { findEntryForSystem, packSlides, referenceWidth, slideIndexOfEntry } from './slides';
 import { caseTitle, expectCloseDeep } from '../../testing/expect-close-deep';
 
 const EPS = 1e-9;
@@ -53,6 +54,14 @@ describe('slideIndexOfEntry', () => {
         throw new Error('fixture SP02 missing');
       }
       expect(slideIndexOfEntry(packSlides(sp02.input), c.entryIndex)).toBe(c.expected);
+    });
+  }
+});
+
+describe('findEntryForSystem', () => {
+  for (const c of findEntryForSystemCases) {
+    it(caseTitle(c, 'SLD-012'), () => {
+      expect(findEntryForSystem(c.entries, c.systemIndex)).toBe(c.expected);
     });
   }
 });

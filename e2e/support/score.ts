@@ -47,3 +47,24 @@ export async function openScoreInOrganization(page: Page): Promise<void> {
   await enterOrganization(page);
   await waitForBars(page);
 }
+
+/** Opens the app and the synthetic score in annotation mode (the default) and waits for the final slide count ("x / n", no plus). */
+export async function openScoreInAnnotation(page: Page): Promise<number> {
+  await forceFileInput(page);
+  await page.goto('/');
+  await openScore(page);
+  return waitForFinalSlideCount(page);
+}
+
+/** Waits until detection is complete (the indicator has no "+") and returns n. */
+export async function waitForFinalSlideCount(page: Page): Promise<number> {
+  const indicator = page.locator('app-bottom-bar .indicator');
+  await expect(indicator).toHaveText(/^\d+ \/ \d+$/, { timeout: DETECTION_TIMEOUT_MS });
+  return slideCount(page);
+}
+
+/** n of the indicator "x / n(+)". */
+export async function slideCount(page: Page): Promise<number> {
+  const text = (await page.locator('app-bottom-bar .indicator').textContent()) ?? '';
+  return Number(/\/\s*(\d+)/.exec(text)?.[1]);
+}

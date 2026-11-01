@@ -1,17 +1,21 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 
 import { OrganizationViewer } from '../organization/organization-viewer';
+import { SlideView } from '../slides/slide-view';
 import { SessionStore } from '../../state/session.store';
 import { UiStore } from '../../state/ui.store';
 
-/** Middle row: canvas grey with the organization viewer; the other modes follow in their milestones. GEN-008 */
+/** Middle row: canvas grey with the organization viewer or the slide view; presentation follows in their milestones. GEN-008 */
 @Component({
   selector: 'app-canvas-area',
-  imports: [OrganizationViewer],
+  imports: [OrganizationViewer, SlideView],
   template: `
     <div class="content">
       @if (organizationDocument(); as doc) {
         <app-organization-viewer [document]="doc" />
+      }
+      @if (annotationDocument(); as doc) {
+        <app-slide-view [document]="doc" />
       }
     </div>
   `,
@@ -29,5 +33,11 @@ export class CanvasArea {
   protected readonly organizationDocument = computed(() => {
     const doc = this.session.activeDocument();
     return this.ui.mode() === 'organization' && doc?.status() === 'ready' ? doc : null;
+  });
+
+  /** SLD-007: annotation mode shows the current slide while the active tab is ready. */
+  protected readonly annotationDocument = computed(() => {
+    const doc = this.session.activeDocument();
+    return this.ui.mode() === 'annotation' && doc?.status() === 'ready' ? doc : null;
   });
 }

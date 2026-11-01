@@ -7,6 +7,8 @@ export interface DeviceInfo {
   devicePixelRatio(): number;
   /** `prefers-reduced-motion: reduce`: animations are replaced by instant changes. */
   prefersReducedMotion(): boolean;
+  /** Physical screen size in CSS px, whatever the orientation (SLD-014 fallback ratio). */
+  screenSize(): { readonly width: number; readonly height: number };
 }
 
 export const DEVICE_INFO = new InjectionToken<DeviceInfo>('DeviceInfo');

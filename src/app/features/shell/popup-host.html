@@ -6,8 +6,8 @@
       }
       @case (ids.overflowBottom) {
         @if (annotation() && compact()) {
-          <button appIconButton icon="showMore" labelKey="showMore" [disabled]="noDocument()"></button>
-          <button appIconButton icon="showLess" labelKey="showLess" [disabled]="noDocument()"></button>
+          <button appIconButton icon="showMore" labelKey="showMore" [disabled]="showMoreDisabled()" (pressed)="aspect.showMore()"></button>
+          <button appIconButton icon="showLess" labelKey="showLess" [disabled]="showLessDisabled()" (pressed)="aspect.showLess()"></button>
         }
         <button appIconButton icon="info" labelKey="info" (pressed)="store.openPopup(ids.info)"></button>
       }
@@ -19,9 +19,9 @@
           type="range"
           class="slider"
           min="1"
-          [max]="view.pageCount()"
-          [value]="view.currentPage() + 1"
-          [disabled]="organization() ? !view.active() : noDocument()"
+          [max]="sliderMax()"
+          [value]="sliderValue()"
+          [disabled]="sliderDisabled()"
           [attr.aria-label]="'a11y.' + (organization() ? 'pageSlider' : 'slideSlider') | transloco"
           (input)="onSlide($event)"
         />

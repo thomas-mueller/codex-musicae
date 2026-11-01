@@ -8,7 +8,7 @@ import { fakeBitmap } from './testing/fake-bitmap';
 
 function setup(memoryGb: number | null = 1) {
   TestBed.configureTestingModule({
-    providers: [{ provide: DEVICE_INFO, useValue: { deviceMemoryGb: () => memoryGb ?? undefined, devicePixelRatio: () => 1, prefersReducedMotion: () => false } }],
+    providers: [{ provide: DEVICE_INFO, useValue: { deviceMemoryGb: () => memoryGb ?? undefined, devicePixelRatio: () => 1, prefersReducedMotion: () => false, screenSize: () => ({ width: 1280, height: 800 }) } }],
   });
   return { cache: TestBed.inject(BitmapCache), governor: TestBed.inject(ResourceGovernor) };
 }
