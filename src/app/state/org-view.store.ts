@@ -37,7 +37,7 @@ export class OrgViewStore {
   readonly active = computed(() => this.ui.mode() === 'organization' && this.document() !== null);
 
   /** DET-014: the level of the results on display (the active run), not of a re-run still in progress. */
-  readonly level = computed(() => this.document()?.detection.level() ?? this.ui.level());
+  readonly level = computed(() => this.document()?.detection.level() ?? TUNABLES.detection.defaultLevel);
 
   readonly pageSizes = computed<Size[]>(() =>
     (this.document()?.pageInfos() ?? []).map((info) => ({ width: info.width, height: info.height })),

@@ -82,11 +82,11 @@ export const TUNABLES = {
     chipGapPx: 8, // ORG-014: distance between the selection chip and its bar
     chipPaddingPx: 4, // ORG-014: padding inside the selection chip
     chipRadiusPx: 24, // ORG-014
-    badgeGapPx: 4, // ORG-018: gap between stacked jump badges and from the bar's right edge
-    badgePaddingPx: 3, // ORG-018: padding inside a jump badge
-    badgeRadiusPx: 8, // ORG-018
-    badgeFontPx: 11, // ORG-018
-    passPrefix: '×', // ORG-018: before the pass number in a badge ("×2")
+    markerGapPx: 4, // ORG-018: gap between stacked jump markers and from the page edge
+    markerPaddingPx: 3, // ORG-018: padding inside a jump marker
+    markerRadiusPx: 8, // ORG-018
+    markerFontPx: 11, // ORG-018
+    passPrefix: '×', // ORG-018: before the pass number in a jump label ("4 → 5 ×2")
     hintBarHeightPx: 32, // ORG-015: slim hint bar while picking a jump target
     stepperGapPx: 8, // ORG-016: gap between the pass stepper's buttons and number
     jumpChipButtons: 3, // ORG-020: pass, change target, delete (also the width of the pass stepper: three parts)

@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 
-import { provideTestTransloco } from '../../../testing/transloco';
+import { provideTestTransloco, translate } from '../../../testing/transloco';
 import { PassStepper, stepPass } from './pass-stepper';
 
 describe('PassStepper', () => {
@@ -34,5 +34,12 @@ describe('PassStepper', () => {
     expect(part('minus').classList.contains('disabled')).toBe(false);
     part('minus').click();
     expect(emitted).toEqual([2, 2]);
+  });
+
+  it('ORG-016 the stepper is a labelled group for assistive technology', async () => {
+    const { fixture } = await mount(1);
+    const root: HTMLElement = fixture.nativeElement;
+    expect(root.getAttribute('role')).toBe('group');
+    expect(root.getAttribute('aria-label')).toBe(translate('a11y.passStepper'));
   });
 });

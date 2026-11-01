@@ -4,7 +4,7 @@ Goal: robust, testable, extendable code that a small agent model can change safe
 
 ## Principles
 
-1. **Pure core.** All logic that decides something (detection filter, junctions, playing order, slide packing, geometry, coordinate transforms, scheduling priorities, version parsing) is plain TypeScript in `core/`, takes all values as arguments, and is covered by fast unit tests.
+1. **Pure core.** All logic that decides something (system selection, junctions, playing order, slide packing, geometry, coordinate transforms, scheduling priorities, version parsing) is plain TypeScript in `core/`, takes all values as arguments, and is covered by fast unit tests.
 2. **Thin adapters.** Everything that touches a platform or a library (pdf.js, pdf-lib, OpenCV.js, file access, fullscreen, wake lock, Capacitor) sits behind a **port** (interface + injection token). Features never call platform APIs.
 3. **One-way data flow.** Ports and input produce events → stores hold state as signals → derived state is `computed()` over `core/` functions → components render.
 4. **Commands, not event handlers.** Every user input becomes a semantic command in `input/`; components react to commands.
@@ -22,9 +22,12 @@ src/
     core/                       pure TypeScript, one file per topic (subfolders only when a topic grows)
       model.ts                  DetectedPage, SystemInfo, Bar, Jump
       geometry.ts               Rect, page display space <-> PDF user space transforms, pixel cap
-      detection.ts              filter steps, padding
+      system-selection.ts       choice of the systems among the connected components
+      detection.ts              padding of the detected systems
       junctions.ts              system numbering, bars
       playing-order.ts          replay, stops, numbering, forced breaks
+      edits.ts                  jumps, breaks and stops: add, update, remove, reconcile
+      mark-positions.ts         where marks are met in the playing order (labels, list order)
       slides.ts                 packing
       aspect-ratio.ts           ratio steps, orientation
       fixtures/                 verified test data (see docs/contracts)
@@ -65,7 +68,7 @@ Signatures are fixed in the milestone files (M4); this table fixes responsibilit
 |---|---|---|---|
 | `PdfRenderer` | open a document from bytes; page count; page geometry in display space; render a region or tile to an `ImageBitmap` with cancellation | pdf.js | M8 |
 | `PdfWriter` | read embedded metadata and existing ink; produce new file bytes with ink annotations and metadata (runs in a worker) | pdf-lib | M15 |
-| `DetectionEngine` | detect connected-component rectangles for one page at a level's render scale | OpenCV.js worker | M10 |
+| `DetectionEngine` | binarize one page's bitmap (rendered at a level's scale) with the level's adaptive threshold and return its connected components (rectangle and pixel area) | OpenCV.js worker | M10 |
 | `FileAccess` | pick files; read bytes; check writability; write in place; save a copy; persist and restore file references | web (File System Access / download), Android (SAF plugin) | M8, M15, M16 |
 | `Preferences` | small JSON key-value store for UI state and file references | localStorage + IndexedDB, Capacitor Preferences | M8 |
 | `AppLifecycle` | signals for hidden/visible, pause/resume, battery saver where detectable | web, Capacitor | M10, M15 |

@@ -225,9 +225,9 @@ describe('OrganizationViewer selection and marks', () => {
     const scroll = vi.spyOn(view, 'scrollToJunction');
     doc.addJump({ origin: 2, target: 0, pass: 1 });
     await fixture.whenStable();
-    const badge = root.querySelector<HTMLElement>('[data-testid="jump-marker"][data-role="origin"]')!;
+    const marker = root.querySelector<HTMLElement>('[data-testid="jump-marker"][data-role="origin"]')!;
     vi.useFakeTimers();
-    badge.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    marker.dispatchEvent(new Event('pointerdown', { bubbles: true }));
     vi.advanceTimersByTime(TUNABLES.layout.longPressMs);
     vi.useRealTimers();
     expect(scroll).toHaveBeenCalledWith(doc.bars(), 0);

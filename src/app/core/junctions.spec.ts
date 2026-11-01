@@ -1,8 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, it } from 'vitest';
 
 import { barsOfJunctionCases, junctionCases } from './fixtures/junctions.cases';
-import { junctionLabelCases, labelBars } from './fixtures/junction-labels.cases';
-import { barsOfJunction, computeBars, flattenSystems, junctionCount, junctionLabel } from './junctions';
+import { barsOfJunction, computeBars, flattenSystems, junctionCount } from './junctions';
 import { expectCloseDeep } from '../../testing/expect-close-deep';
 
 describe('junctions', () => {
@@ -27,14 +26,6 @@ describe('barsOfJunction', () => {
         throw new Error(`fixture ${c.from} missing`);
       }
       expectCloseDeep(barsOfJunction(source.bars, c.junction), c.expected);
-    });
-  }
-});
-
-describe('junctionLabel', () => {
-  for (const c of junctionLabelCases) {
-    it(`${c.req} ${c.id}: junction ${c.junction}`, () => {
-      expect(junctionLabel(labelBars, c.junction)).toEqual(c.expected);
     });
   }
 });

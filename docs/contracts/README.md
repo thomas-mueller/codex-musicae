@@ -20,7 +20,7 @@ Verified inputs for milestones M4, M5 and M6. Everything here compiles under `st
 
 ## Which milestone copies which contract
 
-M4 copies and tests the first set (`geometry`, `model`, `detection`, `junctions`, `aspect-ratio`, `playing-order`, `slides`, all `ports/`). `junctions.ts` and `slides.ts` are copied complete, so `junctionLabel` (M11) and `findEntryForSystem` (M12) exist as stubs from M4 on and are specified and implemented later. Every later milestone copies the files it needs from here **at its start**, writes the table-driven spec from the fixtures first (red, only `not implemented` failures), then implements until green. No strong model is needed for these: the specs are mechanical.
+M4 copies and tests the first set (`geometry`, `model`, `system-selection`, `detection`, `junctions`, `aspect-ratio`, `playing-order`, `slides`, all `ports/`). `junctions.ts` and `slides.ts` are copied complete, so `findEntryForSystem` (M12) exists as a stub from M4 on and is specified and implemented later. Every later milestone copies the files it needs from here **at its start**, writes the table-driven spec from the fixtures first (red, only `not implemented` failures), then implements until green. No strong model is needed for these: the specs are mechanical.
 
 | Milestone | Contracts and fixtures to copy and implement |
 |---|---|
@@ -28,7 +28,7 @@ M4 copies and tests the first set (`geometry`, `model`, `detection`, `junctions`
 | M8 | `lru-cache.ts`, `scheduler.ts` (+ cases) |
 | M9 | `view.ts` incl. `tilesCovering` (+ `view.cases.ts`) |
 | M10 | `detection-queue.ts` (+ cases) |
-| M11 | `edits.ts`, `junctionLabel` in `junctions.ts` (+ `edits.cases.ts`, `junction-labels.cases.ts`) |
+| M11 | `edits.ts` (+ `edits.cases.ts`) |
 | M12 | `composition.ts`, `findEntryForSystem` in `slides.ts` (+ `composition.cases.ts`, `entry-lookup.cases.ts`) |
 | M13 | `gestures.ts` (+ `gestures.cases.ts`) |
 | M14 | `annotation.ts` (+ `annotation.cases.ts`; needs `composition.cases.ts` for the composition inputs named there) |
@@ -36,6 +36,6 @@ M4 copies and tests the first set (`geometry`, `model`, `detection`, `junctions`
 | M16 | `session.ts` (+ `session.cases.ts`) |
 | M19 | `palm.ts` (+ `palm.cases.ts`); the stylus rows PP09–PP16 of `gestures.cases.ts` are already covered by M13 |
 
-Never overwrite a file in `src/` that already contains implementations; when a milestone needs a function whose stub already exists (`junctionLabel`, `findEntryForSystem`), only copy its fixtures and implement the stub. Each milestone adds the exports of the files it copied to `src/app/core/index.ts`.
+Never overwrite a file in `src/` that already contains implementations; when a milestone needs a function whose stub already exists (`findEntryForSystem`), only copy its fixtures and implement the stub. Each milestone adds the exports of the files it copied to `src/app/core/index.ts`.
 
 Reference implementations: `docs/reference/core-reference.mjs` (first set), `core-reference-2.mjs` (second), `core-reference-3.mjs` (third: annotation, metadata, autosave, session, palm).

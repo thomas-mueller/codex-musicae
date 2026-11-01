@@ -99,7 +99,7 @@ Calls made while compiling the documents that go beyond what was explicitly disc
 - **ASM-18** Ink loaded from a file counts as highlighter (`multiply`) when its opacity is below 1 (heuristic).
 - **ASM-19** Android in-place writing goes through a temp file and one native copy with a truncating write; a crash during that short window can still corrupt the file (LIM-011).
 - **ASM-20** A jump may start at junction N (D.C. at the end of a piece) (DEC-066).
-- **ASM-21** Jumps are named for the user as "page·bar" (for example 7·1), computed by `junctionLabel`.
+- **ASM-21** Jumps, slide breaks and stops are named for the user by playing-order numbers: a jump "<previous> → <next> ×<pass>", a slide break "<previous> | <next>", a stop "<previous>" (DEC-102); numbers in the original PDF order are never shown.
 - **ASM-22** The wheel unlocks again only when both the idle gap and the cooldown have passed (NAV-011), so trackpad inertia never turns a second slide.
 - **ASM-23** The persisted position of a tab is the system index of the first entry on the current slide; after a restart the first occurrence is used, within a session the exact entry is kept.
 - **ASM-24** "Save a copy" lives in the overflow menu and behind the tab's lock icon.

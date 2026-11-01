@@ -11,6 +11,8 @@ name: e2e
 
 on:
   push:
+    tags-ignore:
+      - '**'
   workflow_dispatch:
 
 permissions:

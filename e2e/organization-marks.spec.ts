@@ -35,6 +35,11 @@ test('ORG-013 ORG-014 ORG-022 ORG-023 ORG-024 select a bar, set a break and a st
   const chip = page.getByTestId('selection-chip');
   await expect(chip).toBeVisible();
   await expect(chip.getByTestId('chip-delete')).toHaveCount(0);
+  // Touch targets of the chip buttons (M11 acceptance): the rendered size, not only the tunable.
+  for (const button of await chip.getByRole('button').all()) {
+    const box = (await button.boundingBox())!;
+    expect(Math.min(box.width, box.height)).toBeGreaterThanOrEqual(TUNABLES.layout.minTouchTargetPx - 1);
+  }
 
   await chip.getByTestId('chip-break').click();
   await chip.getByTestId('chip-stop').click();

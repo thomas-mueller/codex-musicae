@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { translateSignal } from '@jsverse/transloco';
 
 import { IconButton } from '../shell/icon-button';
 
@@ -24,11 +25,12 @@ export function stepPass(pass: number, delta: number): number {
     .value { min-width: 1.5em; text-align: center; font-family: monospace; color: var(--cm-icon); }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { 'data-popup': '', 'data-testid': 'pass-stepper' },
+  host: { role: 'group', '[attr.aria-label]': 'label()', 'data-popup': '', 'data-testid': 'pass-stepper' },
 })
 export class PassStepper {
   readonly pass = input.required<number>();
   readonly passChange = output<number>();
+  protected readonly label = translateSignal('a11y.passStepper');
 
   protected step(delta: number): number {
     return stepPass(this.pass(), delta);

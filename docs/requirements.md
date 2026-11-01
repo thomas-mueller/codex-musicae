@@ -87,7 +87,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 ## DET — Detection
 
 - **DET-001** [v1·done·M10] When a PDF has no valid embedded data, detection runs automatically for all pages in page order in the background.
-- **DET-002** [v1·todo·M10] Detection runs in one dedicated web worker, one page at a time, and never blocks the UI thread.
+- **DET-002** [v1·done·M10] Detection runs in one dedicated web worker, one page at a time, and never blocks the UI thread.
 - **DET-003** [v1·done·M10] A page is rendered to a bitmap at the level's `renderScale`; if width×height exceeds `T:resources.maxCanvasPixels` the scale is reduced to fit.
 - **DET-004** [v1·done·M10] The bitmap is converted to gray and binarized with the adaptive mean threshold (`THRESH_BINARY_INV`, ink = foreground; block size and constant per level, `T:detection.levels`); the bounding rectangle and the pixel area of every 4-connected component are collected. The background component (label 0) is not collected.
 - **DET-005** [v1·done·M5] Selection step 0: without components there are no systems; the pixel areas of all components form the list the threshold is computed from. The function does not modify its input.
@@ -97,11 +97,11 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **DET-009** [v1·done·M5] The result is sorted top to bottom (ties left to right); boxes are normalized by the bitmap size and converted to page display space.
 - **DET-010** [v1·done·M5] The padding of a page is the median gap between consecutive systems on that page; a page with fewer than two systems uses the median over all pages; if no gap exists, `T:detection.fallbackPaddingPageHeightRatio` × page height.
 - **DET-011** [v1·done·M5] A system's padded area is its box expanded by the padding on all four sides, clamped to the page bounds.
-- **DET-012** [v1·todo·M10] Pages without systems take no part in junctions, slides or the playing order; organization mode shows them as plain PDF pages.
-- **DET-013** [v1·todo·M10] Three levels `fast`, `standard`, `fine` each define `minSystemWidthRatio`, `fullWidthSystemRatio`, `renderScale`, `adaptiveBlockSize` and `adaptiveC` (`T:detection.levels`); the default is `T:detection.defaultLevel`. `renderScale` is bitmap pixels per PDF point, written as dpi / 72: `fast` 100 dpi, `standard` 150 dpi, `fine` 200 dpi (ASM-09).
+- **DET-012** [v1·done·M10] Pages without systems take no part in junctions, slides or the playing order; organization mode shows them as plain PDF pages.
+- **DET-013** [v1·done·M10] Three levels `fast`, `standard`, `fine` each define `minSystemWidthRatio`, `fullWidthSystemRatio`, `renderScale`, `adaptiveBlockSize` and `adaptiveC` (`T:detection.levels`); the default is `T:detection.defaultLevel`. `renderScale` is bitmap pixels per PDF point, written as dpi / 72: `fast` 100 dpi, `standard` 150 dpi, `fine` 200 dpi (ASM-09).
 - **DET-014** [v1·done·M11] Organization mode offers a level selector (three icon steps); choosing a level asks for confirmation and then re-runs detection.
 - **DET-015** [v1·done·M11] During a re-run the previous results stay active; at completion they are swapped in, and jumps, breaks and stops are kept only if the total system count is unchanged, else cleared.
-- **DET-016** [v1·todo·M10] Organization mode shows detection progress (processing icon, processed/total pages); slide modes show the slide count as "n+" until detection is complete.
+- **DET-016** [v1·done·M10] Organization mode shows detection progress (processing icon, processed/total pages); slide modes show the slide count as "n+" until detection is complete.
 - **DET-017** [v1·done·M10] Detection pauses while the user interacts (resumes after `T:detection.idleBeforeResumeMs` without input), while the app is hidden, and under battery saver where detectable.
 - **DET-018** [v1·done·M10] If a page fails (error or out of memory), it is retried once at `renderScale` × `T:detection.retryScaleFactor`; if it fails again the page is marked not detected and processing continues.
 - **DET-019** [v1·done·M10] Slides and organization bars are usable for every page whose prefix of earlier pages is finished while later pages are still processing.
@@ -208,7 +208,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **NAV-013** [v1·todo·M13] Ctrl+wheel and trackpad pinch zoom around the pointer (factor exp(−deltaY × `T:gestures.wheel.zoomSensitivity`)) in annotation and organization mode.
 - **NAV-014** [v1·todo·M13] Touch pinch zooms around the pinch center between `T:zoom.min` and `T:zoom.max`; one finger pans a zoomed view.
 - **NAV-015** [v1·todo·M13] In annotation mode zoom returns to fit on every slide change; in organization mode zoom persists across page changes.
-- **NAV-016** [v1·todo·M13] In organization mode a double tap outside bars and badges toggles between fit-width and `T:gestures.doubleTapZoomFactor` × fit-width (interval ≤ `doubleTapMaxIntervalMs`, distance ≤ `doubleTapMaxDistancePx`).
+- **NAV-016** [v1·todo·M13] In organization mode a double tap outside bars and jump markers toggles between fit-width and `T:gestures.doubleTapZoomFactor` × fit-width (interval ≤ `doubleTapMaxIntervalMs`, distance ≤ `doubleTapMaxDistancePx`).
 - **NAV-017** [v1·todo·M13] Presentation mode is always at fit scale; zoom input is ignored.
 - **NAV-018** [v1·todo·M13] Esc closes in this order: open popup, jump-target picking or selection, presentation mode (back to annotation mode).
 - **NAV-019** [v1·todo·M13] Pedals work in all modes and with a drawing tool active, because they arrive as keys.
@@ -221,7 +221,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **UIX-003** [v1·done·M7] The layout is compact if viewport width < `T:layout.compactMaxWidthPx` or height < `compactMaxHeightPx`, else expanded.
 - **UIX-004** [v1·done·M7] Compact annotation layout: top bar with tab switcher, open-file, mode switch, undo, redo; bottom bar with previous, "slide x of n", next, zoom −, zoom +, zoom reset; one floating button expands to pen, highlighter, eraser; aspect-ratio buttons and the version info sit in the overflow menu.
 - **UIX-005** [v1·done·M7] Expanded annotation layout: tab bar on top; vertical tool strip on `T:layout.toolStripSide` with pen, highlighter, eraser, undo, redo; popup next to it; the same bottom bar plus the aspect-ratio buttons.
-- **UIX-006** [v1·done·M7] Organization layout uses the same frame; the tool strip is replaced by level selector, jump-list button and overflow; the bottom bar shows "page x of n", previous, next and zoom buttons. In compact layout the organization controls sit behind one overflow button that opens a sheet.
+- **UIX-006** [v1·done·M7] Organization layout uses the same frame; the tool strip is replaced by level selector, marks-list button and overflow; the bottom bar shows "page x of n", previous, next and zoom buttons. In compact layout the organization controls sit behind one overflow button that opens a sheet.
 - **UIX-007** [v1·done·M7] Bars are `T:layout.barHeightPx` high, touch targets are at least `minTouchTargetPx`, icons are monochrome, bars never grow; additional controls go into overflow menus.
 - **UIX-008** [v1·done·M7] Bars stay visible in annotation and organization mode; there is no auto-hide.
 - **UIX-009** [v1·todo·M13] Presentation mode shows only the slide and the progress line, with no bars.
@@ -262,7 +262,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **NFR-004** [v1·done·M8] A bitmap cache with a byte budget (`T:resources.cacheBudgetByDeviceMemoryGb`, default `cacheBudgetDefaultBytes`) evicts least recently used bitmaps first.
 - **NFR-005** [v1·done·M8] The device pixel ratio used for rendering is capped at `T:resources.devicePixelRatioCap`.
 - **NFR-006** [v1·done·M8] No canvas exceeds `T:resources.maxCanvasPixels`.
-- **NFR-007** [v1·todo·M9] Zoomed views (organization pages and slides) render only the visible tiles, each at most `T:resources.tileSizePx` wide and high.
+- **NFR-007** [v1·done·M9] Zoomed views (organization pages and slides) render only the visible tiles, each at most `T:resources.tileSizePx` wide and high.
 - **NFR-008** [v1·done·M8] Stale render tasks are cancelled when the view changes.
 - **NFR-009** [v1·done·M8] Inactive tabs release their bitmaps and keep only lightweight document data.
 - **NFR-010** [v1·done·M8] Under memory pressure the app degrades in this order: drop prefetch, lower render resolution, free inactive tabs' bitmaps; it never fails outright.

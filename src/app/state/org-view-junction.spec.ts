@@ -60,3 +60,20 @@ describe('UiStore picking', () => {
     expect(ui.pickingTarget()).toBeNull();
   });
 });
+
+describe('OrgViewStore.level', () => {
+  beforeEach(() => TestBed.configureTestingModule({ providers: [provideTestPorts()] }));
+
+  it('DET-013 without a document the level is the default level', () => {
+    expect(TestBed.inject(OrgViewStore).level()).toBe(TUNABLES.detection.defaultLevel);
+  });
+
+  it('DET-014 with a document it is the level of the results on display', async () => {
+    const session = TestBed.inject(SessionStore);
+    await session.openFiles([{ ref: { id: 'a', name: 'a.pdf' }, bytes: new Uint8Array([1]), writable: true }]);
+    const doc = session.activeDocument()!;
+    const other = TUNABLES.detection.defaultLevel === 'fine' ? 'fast' : 'fine';
+    doc.detection.level.set(other);
+    expect(TestBed.inject(OrgViewStore).level()).toBe(other);
+  });
+});

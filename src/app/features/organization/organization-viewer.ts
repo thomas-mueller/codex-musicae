@@ -152,8 +152,8 @@ function groupByPage<T extends { readonly pageIndex: number }>(items: readonly T
     .sizer { position: relative; min-width: 100%; }
     .page { position: absolute; background: var(--cm-paper); }
     .tiles { position: absolute; }
-    /* Above the tile canvases: bars and the processing badge of a page (ORG-008, DET-016). */
-    /* z-index: the tile canvases use 0 and 1, so the overlay (bars, badges) needs 2 to paint above them. */
+    /* Above the tile canvases: system numbers, bars, jump markers and the processing icon of a page (ORG-008, ORG-012, ORG-018, DET-016). */
+    /* z-index: the tile canvases use 0 and 1, so the overlay (system numbers, bars, markers) needs 2 to paint above them. */
     .overlay { position: absolute; z-index: 2; pointer-events: none; }
     .chip { position: absolute; z-index: 3; }
     .badge { position: absolute; top: var(--cm-page-badge-inset); right: var(--cm-page-badge-inset); color: var(--cm-icon); display: inline-flex; }
@@ -467,7 +467,7 @@ export class OrganizationViewer {
         untracked(() => {
           this.ui.deselect();
           if (this.ui.popup()?.id === POPUP_PASS_STEPPER) {
-            this.ui.closePopup(); // other popups (the jump list) stay open
+            this.ui.closePopup(); // other popups (the marks list) stay open
           }
         });
       }

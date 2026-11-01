@@ -12,13 +12,6 @@ function sortedPages(pages: readonly DetectedPage[]): DetectedPage[] {
   return [...pages].sort((a, b) => a.pageIndex - b.pageIndex);
 }
 
-export interface JunctionLabel {
-  /** 1-based page number. */
-  readonly page: number;
-  /** 1-based position of the bar among the bars of that page (top to bottom). */
-  readonly ordinal: number;
-}
-
 /**
  * All systems in print order: pages sorted by `pageIndex`, pages without systems skipped,
  * systems of a page sorted by y (ties by x); `index` counts 1, 2, 3, ...
@@ -77,19 +70,4 @@ export function computeBars(pages: readonly DetectedPage[]): Bar[] {
 /** Bars of one junction, in the order returned by `computeBars`. */
 export function barsOfJunction(bars: readonly Bar[], junction: number): Bar[] {
   return bars.filter((b) => b.junction === junction);
-}
-
-/**
- * How a junction is named for the user (ORG-018, ORG-021): the page (1-based) and the bar number on that page (1-based)
- * of the FIRST bar of the junction in `bars` order (for a junction on a page change this is the bottom bar of the earlier page).
- * `bars` must be the output of `computeBars`. A junction without bars gives null.
- */
-export function junctionLabel(bars: readonly Bar[], junction: number): JunctionLabel | null {
-  const index = bars.findIndex((b) => b.junction === junction);
-  const bar = bars[index];
-  if (bar === undefined) {
-    return null;
-  }
-  const ordinal = bars.slice(0, index + 1).filter((b) => b.pageIndex === bar.pageIndex).length;
-  return { page: bar.pageIndex + 1, ordinal };
 }

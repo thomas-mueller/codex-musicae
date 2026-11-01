@@ -111,7 +111,7 @@ export class DetectionService {
   private syncContext(): void {
     this.context = {
       userActive: this.lifecycle.userActive(),
-      hidden: !this.lifecycle.visible(),
+      hidden: TUNABLES.detection.pauseWhenHidden ? !this.lifecycle.visible() : false,
       batterySaver: TUNABLES.detection.pauseOnBatterySaver ? this.lifecycle.batterySaver() : null,
       strokeInProgress: false,
     };

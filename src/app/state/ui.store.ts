@@ -9,7 +9,7 @@ export type Tool = 'pen' | 'highlighter' | 'eraser';
 export interface Popup {
   readonly id: string;
 }
-/** What organization mode has selected: a junction (both bars of a page change) or a jump badge (S3). ORG-013 */
+/** What organization mode has selected: a junction (both bars of a page change) or a jump (its markers). ORG-013, ORG-020 */
 export type Selection =
   | { readonly kind: 'junction'; readonly junction: number }
   | { readonly kind: 'jump'; readonly id: number };
@@ -28,8 +28,6 @@ export interface Viewport {
 export class UiStore {
   readonly mode = signal<Mode>('annotation');
   readonly tool = signal<Tool | null>(null);
-  /** Selected detection level (organization mode). DET-013 */
-  readonly level = signal<DetectionLevel>(TUNABLES.detection.defaultLevel);
   readonly popup = signal<Popup | null>(null);
   readonly selection = signal<Selection | null>(null);
   readonly pickingTarget = signal<PickingTarget | null>(null);
@@ -78,12 +76,6 @@ export class UiStore {
 
   cancelLevel(): void {
     this.pendingLevel.set(null);
-  }
-
-  setLevel(level: DetectionLevel): void {
-    if (this.hasDocument()) {
-      this.level.set(level);
-    }
   }
 
   select(selection: Selection): void {

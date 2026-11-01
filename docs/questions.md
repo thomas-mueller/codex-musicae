@@ -8,7 +8,6 @@ Method: for the cases below the expected value was derived by hand from the doc 
 |---|---|---|
 | playing order | O03, O04, O06, O11, O17 | all match (entries and `between`; O06: last arrival of stop 3 has entriesSoFar 9, so 9 entries and 8 `between` elements are kept) |
 | slides | SP02, SP03, SP05, SP06, SP10 | all match (SP05/SP06: the adjacent merge goes into the LAST region and is rejected as a whole when the stack exceeds H; SP10: H = 940 / 1.119047619047619 = 840 within 1e-9) |
-| detection | D06, D07, D09, D11, D13 | all match (D06 threshold 94500, rescued by step 4; D07 threshold 45600, title block removed by step 3; D09 threshold 790000; D11 threshold 69350; D13 equal areas give threshold 0) |
 | junctions | J1, J2 | all match (bars, heights and the doubled junction on a page change) |
 
 **Result: no findings.**
@@ -29,3 +28,10 @@ The existing test requires `main` to have empty `textContent`. The M7 table requ
 ## M8 — resource E2E and the debug hook (resolved)
 
 The milestone's resource E2E reads the cache size through `window.__cm`, available only when `ngDevMode`. All other E2E tests run against the production build, where the hook must not exist. Resolution: `playwright.config.ts` starts a second web server (development build, port 4174, output `dist/codexmusicae-dev`); `e2e/resource.spec.ts` runs against it, forces the smallest memory bucket and asserts `totalBytes <= budgetBytes` after every open. A short test in the same file checks that the production build has no `__cm`. `src/app/state/cache-stress.spec.ts` stays as a fast unit-level complement.
+
+## V1-M11 S1 — `DocumentStore.lastRejected` has no visible effect
+
+The milestone asks for a brief error icon on the bar when an edit is rejected (`lastRejected`). The store implements the signal (`{ seq }`, reset with `clearRejected()`), but nothing in the UI can trigger a rejection: tapping the origin while picking a target does nothing, `change target` cannot pick the origin either, and the break and stop buttons are disabled on junctions 0 and N. A rejection would only appear through a future caller.
+
+Nothing was guessed or added. Decision for the owner: keep the signal as store API for later input paths (M13), or show the icon once a path exists that can produce a rejection.
+
