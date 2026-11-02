@@ -33,7 +33,11 @@ export class CapFileAccess implements FileAccess {
     let files: NativeFile[];
     try {
       files = (await this.plugin.pickDocuments({ multiple: true })).files;
+      // eslint-disable-next-line no-console -- TEMPORARY diagnostic
+      console.log('CM-DIAG pickDocuments ->', JSON.stringify(files));
     } catch (e) {
+      // eslint-disable-next-line no-console -- TEMPORARY diagnostic
+      console.log('CM-DIAG pickDocuments rejected', JSON.stringify(e), String(e));
       return err(readErrorOf(e));
     }
     if (files.length === 0) {
@@ -42,6 +46,8 @@ export class CapFileAccess implements FileAccess {
     const opened: OpenedFile[] = [];
     for (const file of files) {
       const content = await this.readAll(file.id);
+      // eslint-disable-next-line no-console -- TEMPORARY diagnostic
+      console.log('CM-DIAG readAll ->', content.ok ? `ok ${content.value.bytes.length}` : `error ${content.error}`);
       if (!content.ok) {
         return err(content.error);
       }
@@ -132,6 +138,8 @@ export class CapFileAccess implements FileAccess {
       }
       return ok({ bytes, writable: opened.writable });
     } catch (e) {
+      // eslint-disable-next-line no-console -- TEMPORARY diagnostic
+      console.log('CM-DIAG readAll threw', JSON.stringify(e), String(e));
       return err(readErrorOf(e));
     } finally {
       if (handle !== null) {
