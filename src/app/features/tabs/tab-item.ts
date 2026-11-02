@@ -27,6 +27,9 @@ export function markersOf(tab: Tab): TabMarker[] {
   if (tab.status === 'error') {
     markers.push({ icon: 'error', labelKey: ERROR_KEYS[tab.errorCode ?? 'unknown'] ?? 'errorUnknown' });
   }
+  if (tab.saveFailed) {
+    markers.push({ icon: 'error', labelKey: 'saveFailed' });
+  }
   if (tab.unsaved) {
     markers.push({ icon: 'unsaved', labelKey: 'unsaved' });
   }

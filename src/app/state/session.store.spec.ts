@@ -1,7 +1,9 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
 import { TUNABLES } from '../../config/tunables';
 import { provideTestDetectionPorts } from '../../testing/provide-test-ports';
+import { APP_LIFECYCLE } from '../ports/app-lifecycle';
 import { DEVICE_INFO } from '../ports/device-info';
 import { FILE_ACCESS } from '../ports/file-access';
 import type { OpenedFile } from '../ports/file-access';
@@ -26,7 +28,24 @@ function file(name: string, firstByte = GOOD): OpenedFile {
 
 const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
-function setup() {
+/** Lifecycle fake that remembers the pause callback so a spec can fire it. */
+function pausableLifecycle() {
+  const pauseCallbacks: Array<() => void | Promise<void>> = [];
+  return {
+    pause: () => pauseCallbacks.forEach((cb) => void cb()),
+    value: {
+      visible: signal(true),
+      userActive: signal(true),
+      batterySaver: signal<boolean | null>(null),
+      onPause: (cb: () => void | Promise<void>) => {
+        pauseCallbacks.push(cb);
+        return () => undefined;
+      },
+    },
+  };
+}
+
+function setup(lifecycle = pausableLifecycle()) {
   const clock = new FakeClock();
   const files = fakeFileAccess();
   TestBed.configureTestingModule({
@@ -35,6 +54,7 @@ function setup() {
       { provide: FILE_ACCESS, useValue: files },
       { provide: PREFERENCES, useValue: memoryPreferences() },
       ...provideTestDetectionPorts(),
+      { provide: APP_LIFECYCLE, useValue: lifecycle.value },
       { provide: CLOCK, useValue: clock },
       { provide: DEVICE_INFO, useValue: { deviceMemoryGb: () => 4, devicePixelRatio: () => 1, prefersReducedMotion: () => false, screenSize: () => ({ width: 1280, height: 800 }) } },
     ],
@@ -46,6 +66,7 @@ function setup() {
     governor: TestBed.inject(ResourceGovernor),
     clock,
     files,
+    lifecycle,
   };
 }
 
@@ -216,6 +237,38 @@ describe('SessionStore picker and recents', () => {
   it('FIL-003 tabs expose the marker flags of their document', async () => {
     const { session } = setupPicker();
     await session.openFiles([file('a.pdf')]);
-    expect(session.tabs()[0]).toMatchObject({ unsaved: false, readOnly: false, needsReopen: false });
+    expect(session.tabs()[0]).toMatchObject({ unsaved: false, saveFailed: false, readOnly: false, needsReopen: false });
+  });
+
+  const STROKE = { id: 's1', pageIndex: 0, points: [{ x: 1, y: 1 }], color: '#000000', widthPt: 1, opacity: 1, multiply: false };
+
+  it('FIL-016 a file opened non-writable makes a read-only tab', async () => {
+    const { session } = setup();
+    await session.openFiles([{ ...file('a.pdf'), writable: false }]);
+    expect(session.tabs()[0]?.readOnly).toBe(true);
+  });
+
+  it('SAV-009 switching tabs saves the tab being left', async () => {
+    const { session } = setup();
+    await session.openFiles([file('a.pdf'), file('b.pdf')]);
+    await settle();
+    const [a, b] = session.tabs();
+    session.setActive(a?.id ?? '');
+    session.activeDocument()?.addStroke(STROKE);
+    expect(session.tabs()[0]?.unsaved).toBe(true);
+    session.setActive(b?.id ?? '');
+    await settle();
+    expect(session.tabs()[0]?.unsaved).toBe(false);
+  });
+
+  it('SAV-009 pausing the app saves every dirty tab', async () => {
+    const { session, lifecycle } = setup();
+    await session.openFiles([file('a.pdf')]);
+    await settle();
+    session.activeDocument()?.addStroke(STROKE);
+    expect(session.tabs()[0]?.unsaved).toBe(true);
+    lifecycle.pause();
+    await settle();
+    expect(session.tabs()[0]?.unsaved).toBe(false);
   });
 });

@@ -59,6 +59,17 @@ describe('tabs', () => {
     expect(marker?.getAttribute('aria-label')).toBe(translate('a11y.errorInvalid'));
   });
 
+  it('FIL-010 a failed save shows the error marker', async () => {
+    const session = await openTabs(file('a.pdf'));
+    session.activeDocument()?.saveFailed.set(true);
+    const fixture = TestBed.createComponent(TabBar);
+    await fixture.whenStable();
+    const labels = Array.from(fixture.nativeElement.querySelectorAll('.marker')).map((m) =>
+      (m as HTMLElement).getAttribute('aria-label'),
+    );
+    expect(labels).toEqual([translate('a11y.saveFailed')]);
+  });
+
   it('FIL-003 the unsaved, read-only and needs-re-open markers follow the document flags', async () => {
     const session = await openTabs(file('a.pdf'));
     const doc = session.activeDocument();
