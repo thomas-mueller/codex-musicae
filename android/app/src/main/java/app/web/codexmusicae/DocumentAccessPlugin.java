@@ -11,7 +11,6 @@ import android.os.ParcelFileDescriptor;
 import android.provider.DocumentsContract;
 import android.provider.OpenableColumns;
 import android.util.Base64;
-import android.util.Log;
 
 import androidx.activity.result.ActivityResult;
 
@@ -90,7 +89,6 @@ public class DocumentAccessPlugin extends Plugin {
 
     @ActivityCallback
     private void onPicked(PluginCall call, ActivityResult result) {
-        Log.i("CM-DIAG", "onPicked call=" + call + " resultCode=" + result.getResultCode() + " data=" + result.getData());
         if (call == null) {
             return;
         }
@@ -111,7 +109,6 @@ public class DocumentAccessPlugin extends Plugin {
         }
         JSObject response = new JSObject();
         response.put("files", files);
-        Log.i("CM-DIAG", "onPicked resolving files=" + files);
         call.resolve(response);
     }
 
@@ -141,13 +138,10 @@ public class DocumentAccessPlugin extends Plugin {
             response.put("writable", hasPersistedWrite(getContext(), uri));
             call.resolve(response);
         } catch (SecurityException e) {
-            Log.e("CM-DIAG", "openRead denied", e);
             call.reject("permission lost", "denied");
         } catch (java.io.FileNotFoundException e) {
-            Log.e("CM-DIAG", "openRead not found", e);
             call.reject("file not found", "not-found");
         } catch (Exception e) {
-            Log.e("CM-DIAG", "openRead failed", e);
             call.reject("read failed", "read-failed");
         }
     }
@@ -178,7 +172,6 @@ public class DocumentAccessPlugin extends Plugin {
             response.put("data", Base64.encodeToString(buffer.array(), 0, total, Base64.NO_WRAP));
             call.resolve(response);
         } catch (IOException e) {
-            Log.e("CM-DIAG", "readChunk failed", e);
             call.reject("read failed", "read-failed");
         }
     }
