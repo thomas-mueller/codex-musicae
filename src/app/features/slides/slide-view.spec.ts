@@ -4,6 +4,7 @@ import { TUNABLES } from '../../../config/tunables';
 import { provideTestPorts } from '../../../testing/provide-test-ports';
 import { provideTestTransloco } from '../../../testing/transloco';
 import { FIT_VIEW, composeSlide } from '../../core';
+import { InkInput } from '../../input/ink-input';
 import { PDF_RENDERER } from '../../ports/pdf-renderer';
 import { ok } from '../../ports/result';
 import { CLOCK } from '../../state/clock';
@@ -92,6 +93,33 @@ describe('SlideView', () => {
     const canvas = fixture.nativeElement.querySelector('canvas') as HTMLCanvasElement;
     expect(parseFloat(canvas.style.width)).toBeCloseTo(composition.width * SCALE);
     expect(parseFloat(canvas.style.height)).toBeCloseTo(composition.height * SCALE);
+  });
+
+  it('ANN-011 the live stroke layer has the size of the slide canvas and sits above the tiles', async () => {
+    const { doc } = await openDocument();
+    const fixture = await show(doc);
+    const root: HTMLElement = fixture.nativeElement;
+    const base = root.querySelector('[data-testid="slide-canvas"]') as HTMLCanvasElement;
+    const live = root.querySelector('[data-testid="live-canvas"]') as HTMLCanvasElement;
+    expect(live.width).toBe(base.width);
+    expect(live.height).toBe(base.height);
+    expect(live.style.width).toBe(base.style.width);
+    expect(live.style.height).toBe(base.style.height);
+    const order = Array.from(base.parentElement!.children);
+    expect(order.indexOf(live)).toBeGreaterThan(order.indexOf(root.querySelector('[data-testid="slide-tiles"]')!));
+  });
+
+  it('ANN-011 the view registers its composition and live layer with the stroke input and removes them when destroyed', async () => {
+    const detach = vi.fn();
+    const attach = vi.spyOn(TestBed.inject(InkInput), 'attach').mockReturnValue(detach);
+    const { doc } = await openDocument();
+    const fixture = await show(doc);
+    expect(attach).toHaveBeenCalledTimes(1);
+    const surface = attach.mock.calls[0]![0];
+    expect(surface.composition()).toEqual(composeSlide(doc.slides()[0]!, doc.geoms(), doc.pageInfos()));
+    expect(typeof surface.live.begin).toBe('function');
+    fixture.destroy();
+    expect(detach).toHaveBeenCalled();
   });
 
   it('SLD-008 a detection result for another page does not re-render the slide on display', async () => {

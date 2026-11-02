@@ -5,6 +5,7 @@ import type { ComponentFixture } from '@angular/core/testing';
 import { TUNABLES } from '../../config/tunables';
 import { provideTestPorts } from '../../testing/provide-test-ports';
 import { CommandBus } from './command-bus';
+import { InkInput } from './ink-input';
 import type { Command } from './command-bus';
 import { PointerStage } from './pointer-input';
 import { SlideNavStore } from '../state/slide-nav.store';
@@ -233,5 +234,96 @@ describe('PointerStage', () => {
       fire('pointerup', 1, 0.9 * WIDTH, 300, 250);
       expect(types()).toEqual(['Next', 'Next']);
     });
+  });
+});
+
+describe('PointerStage drawing (M14 S3)', () => {
+  let stage: HTMLElement;
+  let ink: { begin: ReturnType<typeof vi.fn>; move: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn>; cancel: ReturnType<typeof vi.fn> };
+  let commands: Command[];
+
+  function setup(begins = true): void {
+    ink = { begin: vi.fn(() => begins), move: vi.fn(), end: vi.fn(), cancel: vi.fn() };
+    TestBed.configureTestingModule({ providers: [provideTestPorts(), { provide: InkInput, useValue: ink }] });
+    const ui = TestBed.inject(UiStore);
+    ui.hasDocument.set(true);
+    ui.setTool('pen');
+    commands = [];
+    TestBed.inject(CommandBus).commands$.subscribe((c) => commands.push(c));
+    const fixture = TestBed.createComponent(Host);
+    stage = fixture.nativeElement.querySelector('.stage') as HTMLElement;
+    stage.getBoundingClientRect = () => ({ left: 10, top: 20, width: WIDTH, height: HEIGHT, right: WIDTH, bottom: HEIGHT, x: 10, y: 20 }) as DOMRect;
+    stage.setPointerCapture = vi.fn();
+  }
+
+  function fire(type: string, id: number, x: number, y: number, extra: object = {}): void {
+    const event = new Event(type, { bubbles: true, cancelable: true });
+    Object.assign(event, { pointerId: id, pointerType: 'mouse', button: 0, clientX: x, clientY: y }, extra);
+    stage.dispatchEvent(event);
+  }
+
+  it('ANN-008 one pointer with a tool draws: down begins a stroke at the client position, moves feed it, up ends it', () => {
+    setup();
+    fire('pointerdown', 1, 100, 200);
+    expect(ink.begin).toHaveBeenCalledWith({ x: 100, y: 200 }, expect.objectContaining({ x: 10, y: 20, width: WIDTH, height: HEIGHT }));
+    expect(stage.setPointerCapture).toHaveBeenCalledWith(1);
+    fire('pointermove', 1, 110, 210);
+    expect(ink.move).toHaveBeenCalledWith([{ x: 110, y: 210 }]);
+    fire('pointerup', 1, 120, 220);
+    expect(ink.end).toHaveBeenCalledTimes(1);
+  });
+
+  it('ANN-008 tap zones and swipes are off while a tool is active: nothing is dispatched', () => {
+    setup();
+    fire('pointerdown', 1, 0.9 * WIDTH, 300);
+    fire('pointermove', 1, 0.5 * WIDTH, 300);
+    fire('pointerup', 1, 0.1 * WIDTH, 300);
+    expect(commands).toEqual([]);
+  });
+
+  it('ANN-011 all coalesced events of a move are used, in order', () => {
+    setup();
+    fire('pointerdown', 1, 100, 200);
+    const coalesced = [{ clientX: 101, clientY: 201 }, { clientX: 102, clientY: 202 }, { clientX: 103, clientY: 203 }];
+    fire('pointermove', 1, 103, 203, { getCoalescedEvents: () => coalesced });
+    expect(ink.move).toHaveBeenCalledWith([{ x: 101, y: 201 }, { x: 102, y: 202 }, { x: 103, y: 203 }]);
+  });
+
+  it('ANN-011 without coalesced events (or an empty list) the event itself is used', () => {
+    setup();
+    fire('pointerdown', 1, 100, 200);
+    fire('pointermove', 1, 105, 205, { getCoalescedEvents: () => [] });
+    expect(ink.move).toHaveBeenCalledWith([{ x: 105, y: 205 }]);
+  });
+
+  it('ANN-008 a second pointer discards the stroke and turns into a pinch', () => {
+    setup();
+    fire('pointerdown', 1, 100, 200);
+    fire('pointerdown', 2, 300, 200);
+    expect(ink.cancel).toHaveBeenCalledTimes(1);
+    fire('pointermove', 1, 90, 200);
+    fire('pointerup', 1, 90, 200);
+    expect(ink.move).not.toHaveBeenCalled();
+    expect(ink.end).not.toHaveBeenCalled();
+  });
+
+  it('ANN-011 pointercancel discards the stroke', () => {
+    setup();
+    fire('pointerdown', 1, 100, 200);
+    fire('pointercancel', 1, 100, 200);
+    fire('pointerup', 1, 100, 200);
+    expect(ink.cancel).toHaveBeenCalledTimes(1);
+    expect(ink.end).not.toHaveBeenCalled();
+  });
+
+  it('ANN-010 a gesture the ink input refuses is ignored for its whole length', () => {
+    setup(false);
+    fire('pointerdown', 1, 100, 200);
+    fire('pointermove', 1, 110, 210);
+    fire('pointerup', 1, 110, 210);
+    expect(stage.setPointerCapture).not.toHaveBeenCalled();
+    expect(ink.move).not.toHaveBeenCalled();
+    expect(ink.end).not.toHaveBeenCalled();
+    expect(commands).toEqual([]);
   });
 });

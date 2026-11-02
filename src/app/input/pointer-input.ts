@@ -1,4 +1,4 @@
-import { computed, Directive, ElementRef, inject } from '@angular/core';
+import { computed, DestroyRef, Directive, ElementRef, inject } from '@angular/core';
 
 import { TUNABLES } from '../../config/tunables';
 import { classifyTrack, isDoubleTap, pointerPolicy, tapZoneOf } from '../core';
@@ -6,6 +6,7 @@ import type { PointerPolicy, PointerSample } from '../core';
 import { SlideNavStore } from '../state/slide-nav.store';
 import { UiStore } from '../state/ui.store';
 import { CommandBus } from './command-bus';
+import { InkInput } from './ink-input';
 import type { Command, Point } from './command-bus';
 import { WheelInput } from './wheel-input';
 
@@ -28,7 +29,6 @@ const OWN_TAP_TARGETS = '[data-bar],[data-marker],[data-chip],[data-popup]';
   host: {
     '[style.touch-action]': 'touchAction()',
     '(pointerdown)': 'onDown($event)',
-    '(pointermove)': 'onMove($event)',
     '(pointerup)': 'onUp($event)',
     '(pointercancel)': 'onCancel($event)',
     '(wheel)': 'onWheel($event)',
@@ -39,6 +39,7 @@ export class PointerStage {
   private readonly ui = inject(UiStore);
   private readonly nav = inject(SlideNavStore);
   private readonly bus = inject(CommandBus);
+  private readonly ink = inject(InkInput);
   private readonly wheel = new WheelInput();
   /** Active pointers; only those with a single-pointer gesture role carry a track. */
   private readonly pointers = new Map<number, Track | null>();
@@ -46,15 +47,28 @@ export class PointerStage {
   private readonly positions = new Map<number, Point>();
   private pinchDistance: number | null = null;
   private lastTap: PointerSample | null = null;
+  /** The pointer that draws a stroke (role 'draw'), if any. ANN-008 */
+  private drawPointerId: number | null = null;
 
   /** Organization mode scrolls natively (one finger, both axes) but never zooms the page itself. */
   protected readonly touchAction = computed(() => (this.ui.mode() === 'organization' ? 'pan-x pan-y' : 'none'));
+
+  constructor() {
+    // Native listener: a host binding would schedule change detection for every move, which a stroke must not cause (ANN-011).
+    const onMove = (event: PointerEvent): void => this.onMove(event);
+    this.element.addEventListener('pointermove', onMove, { passive: true });
+    inject(DestroyRef).onDestroy(() => {
+      this.element.removeEventListener('pointermove', onMove);
+      this.cancelDrawing();
+    });
+  }
 
   protected onDown(event: PointerEvent): void {
     if (event.button !== 0 || this.ui.popup() !== null) {
       return;
     }
-    // A further pointer ends the single-pointer gestures in progress (pinch, S3).
+    // A further pointer ends the single-pointer gestures in progress (pinch, S3) and discards a stroke being drawn.
+    this.cancelDrawing();
     for (const id of this.pointers.keys()) {
       this.pointers.set(id, null);
     }
@@ -72,6 +86,11 @@ export class PointerStage {
     this.positions.set(event.pointerId, { x: first.x, y: first.y });
     if (policy.role === 'pinch') {
       this.pinchDistance = this.distance();
+    } else if (policy.role === 'draw') {
+      if (this.ink.begin({ x: event.clientX, y: event.clientY }, this.element.getBoundingClientRect())) {
+        this.drawPointerId = event.pointerId;
+        this.element.setPointerCapture(event.pointerId); // the stroke continues beyond the stage
+      }
     } else if (policy.role === 'gestures' || policy.role === 'org-select') {
       const interactive = event.target instanceof Element && event.target.closest(OWN_TAP_TARGETS) !== null;
       this.pointers.set(event.pointerId, { policy, samples: [first], interactive });
@@ -81,7 +100,11 @@ export class PointerStage {
     }
   }
 
-  protected onMove(event: PointerEvent): void {
+  private onMove(event: PointerEvent): void {
+    if (event.pointerId === this.drawPointerId) {
+      this.ink.move(clientPoints(event));
+      return;
+    }
     const sample = this.sample(event);
     if (this.positions.has(event.pointerId)) {
       this.positions.set(event.pointerId, { x: sample.x, y: sample.y });
@@ -115,6 +138,10 @@ export class PointerStage {
   }
 
   protected onUp(event: PointerEvent): void {
+    if (event.pointerId === this.drawPointerId) {
+      this.drawPointerId = null;
+      this.ink.end();
+    }
     const track = this.pointers.get(event.pointerId);
     this.forget(event.pointerId);
     if (!track) {
@@ -128,7 +155,17 @@ export class PointerStage {
   }
 
   protected onCancel(event: PointerEvent): void {
+    if (event.pointerId === this.drawPointerId) {
+      this.cancelDrawing();
+    }
     this.forget(event.pointerId);
+  }
+
+  private cancelDrawing(): void {
+    if (this.drawPointerId !== null) {
+      this.drawPointerId = null;
+      this.ink.cancel();
+    }
   }
 
   private forget(pointerId: number): void {
@@ -196,6 +233,12 @@ export class PointerStage {
     const rect = this.element.getBoundingClientRect();
     return { x: event.clientX - rect.left, y: event.clientY - rect.top, t: event.timeStamp };
   }
+}
+
+/** Every sample of the move (coalesced events where the browser has them), oldest first. */
+function clientPoints(event: PointerEvent): Point[] {
+  const coalesced = typeof event.getCoalescedEvents === 'function' ? event.getCoalescedEvents() : [];
+  return (coalesced.length > 0 ? coalesced : [event]).map((e) => ({ x: e.clientX, y: e.clientY }));
 }
 
 function pointerTypeOf(event: PointerEvent): 'touch' | 'mouse' | 'pen' {

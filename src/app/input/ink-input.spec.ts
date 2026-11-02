@@ -1,0 +1,195 @@
+import { ApplicationRef } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { vi } from 'vitest';
+
+import { TUNABLES } from '../../config/tunables';
+import { provideTestPorts } from '../../testing/provide-test-ports';
+import type { Point, Rect } from '../core';
+import { synComposition } from '../core/fixtures/annotation.cases';
+import type { DocumentStore } from '../state/document.store';
+import { SessionStore } from '../state/session.store';
+import { SlideNavStore } from '../state/slide-nav.store';
+import { ToolSettingsStore } from '../state/tool-settings.store';
+import { UiStore } from '../state/ui.store';
+import { InkInput } from './ink-input';
+import type { InkSurface } from './ink-input';
+
+const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 10));
+const STAGE: Rect = { x: 0, y: 0, width: 800, height: 600 };
+
+async function setup() {
+  TestBed.configureTestingModule({ providers: provideTestPorts() });
+  const session = TestBed.inject(SessionStore);
+  await session.openFiles([{ ref: { id: 'a', name: 'a.pdf' }, bytes: new Uint8Array([1]), writable: true }]);
+  await settle();
+  const doc = session.activeDocument() as DocumentStore;
+  doc.detection.reset(2);
+  const systems = [0, 1, 2].map((i) => ({ x: 50, y: 50 + i * 250, width: 500, height: 150 }));
+  for (const pageIndex of [0, 1]) {
+    doc.detection.finish(pageIndex, 'done', { pageIndex, width: 600, height: 800, systems });
+  }
+  const ui = TestBed.inject(UiStore);
+  ui.hasDocument.set(true);
+  ui.setTool('pen');
+  const nav = TestBed.inject(SlideNavStore);
+  nav.stage.set({ width: STAGE.width, height: STAGE.height });
+  const live = { begin: vi.fn(), add: vi.fn(), clear: vi.fn() };
+  const surface: InkSurface = { composition: () => synComposition, live };
+  const ink = TestBed.inject(InkInput);
+  ink.attach(surface);
+  /** Client position that shows slide point `p` (view at fit). */
+  const clientOf = (p: Point): Point => {
+    const scale = nav.displayScale();
+    return { x: STAGE.width / 2 + (p.x - synComposition.width / 2) * scale, y: STAGE.height / 2 + (p.y - synComposition.height / 2) * scale };
+  };
+  const pageHeight = doc.pageInfos()[0]!.box.view[3];
+  return { doc, ui, ink, live, surface, clientOf, pageHeight, strokes: () => doc.strokes() };
+}
+
+describe('InkInput', () => {
+  it('ANN-009 a stroke belongs to the page of the region where it started and is stored in that page user space', async () => {
+    const { ink, doc, clientOf, pageHeight } = await setup();
+    expect(ink.begin(clientOf({ x: 50, y: 20 }), STAGE)).toBe(true);
+    ink.move([clientOf({ x: 60, y: 30 }), clientOf({ x: 70, y: 40 })]);
+    ink.end();
+    const [stroke] = doc.strokes();
+    expect(stroke?.pageIndex).toBe(0);
+    expect(stroke?.points[0]?.x).toBeCloseTo(50, 6);
+    expect(stroke?.points[0]?.y).toBeCloseTo(pageHeight - 20, 6);
+    expect(stroke?.points.at(-1)?.y).toBeCloseTo(pageHeight - 40, 6);
+  });
+
+  it('ANN-009 ANN-010 a stroke started on filler belongs to the filler page and keeps its translation over other regions and beyond the page', async () => {
+    const { ink, doc, clientOf, pageHeight } = await setup();
+    // (50, 130) lies on the filler of page 1: translation (-10, +40); then over the region of page 0 and outside the slide.
+    ink.begin(clientOf({ x: 50, y: 130 }), STAGE);
+    ink.move([clientOf({ x: 50, y: 10 }), clientOf({ x: 400, y: 10 })]);
+    ink.end();
+    const stroke = doc.strokes()[0]!;
+    expect(stroke.pageIndex).toBe(1);
+    expect(stroke.points[0]?.x).toBeCloseTo(60, 6);
+    expect(stroke.points[0]?.y).toBeCloseTo(pageHeight - 90, 6);
+    expect(stroke.points[1]?.y).toBeCloseTo(pageHeight - (10 - 40), 6); // over the region, still the filler's translation
+    expect(stroke.points.at(-1)?.x).toBeCloseTo(410, 6); // beyond the page edge
+  });
+
+  it('ANN-010 a gesture that starts on canvas grey is ignored: no stroke, no events, nothing drawn', async () => {
+    const { ink, doc, live, clientOf } = await setup();
+    const events: string[] = [];
+    doc.changes.subscribe((e) => events.push(e.type));
+    expect(ink.begin(clientOf({ x: 150, y: 20 }), STAGE)).toBe(false);
+    ink.move([clientOf({ x: 50, y: 20 })]);
+    ink.end();
+    expect(doc.strokes()).toEqual([]);
+    expect(events).toEqual([]);
+    expect(live.begin).not.toHaveBeenCalled();
+  });
+
+  it('ANN-008 without pen or highlighter nothing is drawn', async () => {
+    const { ink, ui, clientOf } = await setup();
+    for (const tool of [null, 'eraser'] as const) {
+      ui.setTool(tool);
+      expect(ink.begin(clientOf({ x: 50, y: 20 }), STAGE)).toBe(false);
+    }
+  });
+
+  it('ANN-011 consecutive duplicate points are skipped', async () => {
+    const { ink, live, clientOf } = await setup();
+    const p = clientOf({ x: 50, y: 20 });
+    ink.begin(p, STAGE);
+    ink.move([p, p, clientOf({ x: 60, y: 20 }), clientOf({ x: 60, y: 20 })]);
+    const drawn = live.add.mock.calls.flatMap(([points]) => points as Point[]);
+    expect(drawn).toHaveLength(2);
+    ink.cancel();
+  });
+
+  it('ANN-011 the live layer gets the slide-space points and the tool style; the finished stroke is simplified and committed once', async () => {
+    const { ink, doc, live, clientOf } = await setup();
+    const settings = TestBed.inject(ToolSettingsStore);
+    ink.begin(clientOf({ x: 10, y: 10 }), STAGE);
+    expect(live.begin).toHaveBeenCalledWith(settings.style('pen'));
+    const line = Array.from({ length: 20 }, (_, i) => clientOf({ x: 10 + i, y: 10 }));
+    ink.move(line);
+    ink.end();
+    expect(doc.strokes()).toHaveLength(1);
+    expect(doc.strokes()[0]?.points).toHaveLength(2); // a straight line collapses to its ends (T:annotation.simplifyEpsilonPt)
+    expect(doc.history().undo).toHaveLength(1);
+    expect(live.clear).toHaveBeenCalled();
+    expect(TUNABLES.annotation.simplifyEpsilonPt).toBeGreaterThan(0);
+  });
+
+  it('ANN-011 the stroke takes the style of the active tool, with the highlighter opacity and multiply', async () => {
+    const { ink, ui, doc, clientOf } = await setup();
+    ui.setTool('highlighter');
+    ink.begin(clientOf({ x: 10, y: 10 }), STAGE);
+    ink.move([clientOf({ x: 40, y: 30 })]);
+    ink.end();
+    expect(doc.strokes()[0]).toMatchObject({ opacity: TUNABLES.annotation.highlighterOpacity, multiply: true, widthPt: TUNABLES.annotation.highlighterWidthsPt[TUNABLES.annotation.defaultHighlighter.widthIndex] });
+  });
+
+  it('ANN-011 a tap makes a dot of two equal points', async () => {
+    const { ink, doc, clientOf } = await setup();
+    ink.begin(clientOf({ x: 30, y: 30 }), STAGE);
+    ink.end();
+    const points = doc.strokes()[0]!.points;
+    expect(points).toHaveLength(2);
+    expect(points[0]).toEqual(points[1]);
+  });
+
+  it('ANN-011 each stroke gets its own id', async () => {
+    const { ink, doc, clientOf } = await setup();
+    for (let i = 0; i < 2; i++) {
+      ink.begin(clientOf({ x: 30, y: 30 }), STAGE);
+      ink.move([clientOf({ x: 40 + i, y: 50 })]);
+      ink.end();
+    }
+    expect(new Set(doc.strokes().map((s) => s.id)).size).toBe(2);
+  });
+
+  it('ANN-011 cancel discards the stroke: nothing added, no undo step, live layer cleared, stroke end reported', async () => {
+    const { ink, doc, live, clientOf } = await setup();
+    const events: string[] = [];
+    doc.changes.subscribe((e) => events.push(e.type));
+    ink.begin(clientOf({ x: 30, y: 30 }), STAGE);
+    ink.move([clientOf({ x: 40, y: 50 })]);
+    ink.cancel();
+    expect(doc.strokes()).toEqual([]);
+    expect(doc.history().undo).toEqual([]);
+    expect(live.clear).toHaveBeenCalled();
+    expect(events).toEqual(['strokeStart', 'strokeEnd']);
+  });
+
+  it('ANN-013 strokeStart and strokeEnd bracket the stroke, and the commit comes in between', async () => {
+    const { ink, doc, clientOf } = await setup();
+    const events: string[] = [];
+    doc.changes.subscribe((e) => events.push(e.type));
+    ink.begin(clientOf({ x: 30, y: 30 }), STAGE);
+    ink.move([clientOf({ x: 40, y: 50 })]);
+    ink.end();
+    expect(events).toEqual(['strokeStart', 'change', 'strokeEnd']);
+  });
+
+  it('ANN-011 detaching the surface cancels a running stroke', async () => {
+    const { ink, doc, surface, clientOf } = await setup();
+    const detach = ink.attach(surface);
+    ink.begin(clientOf({ x: 30, y: 30 }), STAGE);
+    detach();
+    ink.end();
+    expect(doc.strokes()).toEqual([]);
+  });
+
+  it('ANN-011 a 200-point stroke causes at most 2 change-detection ticks', async () => {
+    const { ink, clientOf } = await setup();
+    const fixtureLike = TestBed.inject(ApplicationRef);
+    await fixtureLike.whenStable();
+    const tick = vi.spyOn(fixtureLike, 'tick');
+    ink.begin(clientOf({ x: 10, y: 10 }), STAGE);
+    for (let i = 0; i < 200; i++) {
+      ink.move([clientOf({ x: 10 + i * 0.4, y: 10 + (i % 7) })]);
+    }
+    ink.end();
+    await fixtureLike.whenStable();
+    await settle();
+    expect(tick.mock.calls.length).toBeLessThanOrEqual(2);
+  });
+});

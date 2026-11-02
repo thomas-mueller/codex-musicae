@@ -4,6 +4,7 @@ import { TUNABLES } from '../../config/tunables';
 import { clampPan, FIT_VIEW, fitScale, zoomAround } from '../core';
 import type { Point, Size } from '../core';
 import { SessionStore } from './session.store';
+import { StrokeGate } from './stroke-gate';
 import { UiStore } from './ui.store';
 
 /**
@@ -14,6 +15,7 @@ import { UiStore } from './ui.store';
 export class SlideNavStore {
   private readonly session = inject(SessionStore);
   private readonly ui = inject(UiStore);
+  private readonly gate = inject(StrokeGate);
   private readonly scrubSignal = signal<number | null>(null);
   private frame: number | null = null;
 
@@ -96,12 +98,13 @@ export class SlideNavStore {
     }
   }
 
+  /** ANN-013: buttons and slider wait for a stroke in progress, like the navigation commands. */
   previous(): void {
-    this.goTo(this.shown() - 1);
+    this.gate.run(() => this.goTo(this.shown() - 1));
   }
 
   next(): void {
-    this.goTo(this.shown() + 1);
+    this.gate.run(() => this.goTo(this.shown() + 1));
   }
 
   goTo(index: number): void {
@@ -112,6 +115,10 @@ export class SlideNavStore {
 
   /** Slider `input` event: the display updates now, rendering follows with the next animation frame. */
   scrub(index: number): void {
+    this.gate.run(() => this.scrubNow(index));
+  }
+
+  private scrubNow(index: number): void {
     if (!this.canSlide()) {
       return;
     }

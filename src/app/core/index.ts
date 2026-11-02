@@ -17,3 +17,4 @@ export * from './mark-positions';
 export * from './composition';
 export * from './gestures';
 export * from './annotation';
+export * from './client-to-slide';

@@ -6,6 +6,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { TUNABLES } from '../../../config/tunables';
 import { composeSlide, fitScale, fitScaleToPixelCap, tilesCovering } from '../../core';
 import type { Rect, Size, SlideComposition, SlideContent, SlidePlan, ViewState } from '../../core';
+import { InkInput } from '../../input/ink-input';
 import { DEVICE_INFO } from '../../ports/device-info';
 import { CLOCK } from '../../state/clock';
 import type { DocumentStore } from '../../state/document.store';
@@ -16,6 +17,7 @@ import { SlideNavStore } from '../../state/slide-nav.store';
 import { Icon } from '../shell/icon';
 import { TooltipDirective } from '../shell/tooltip.directive';
 import { drawComposition } from './draw-composition';
+import { LiveStrokeRenderer } from './live-stroke-renderer';
 import { tileComposition } from './tile-composition';
 
 const KEY_SEPARATOR = '|';
@@ -32,6 +34,7 @@ const KEY_SEPARATOR = '|';
     <div #slide class="slide" data-testid="slide" [hidden]="composition() === null">
       <canvas #canvas data-testid="slide-canvas"></canvas>
       <div #tiles class="tiles" data-testid="slide-tiles"></div>
+      <canvas #live class="live" data-testid="live-canvas"></canvas>
     </div>
     @if (composition() === null) {
       @if (document().detectionComplete()) {
@@ -51,6 +54,7 @@ const KEY_SEPARATOR = '|';
     canvas { display: block; }
     .tiles { position: absolute; inset: 0; pointer-events: none; }
     .tiles canvas { position: absolute; }
+    .live { position: absolute; inset: 0; display: block; pointer-events: none; }
     .empty { display: inline-flex; color: var(--cm-on-canvas, inherit); }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -62,6 +66,9 @@ export class SlideView {
   private readonly canvas = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
   private readonly slideElement = viewChild.required<ElementRef<HTMLElement>>('slide');
   private readonly tilesElement = viewChild.required<ElementRef<HTMLElement>>('tiles');
+  private readonly liveCanvas = viewChild.required<ElementRef<HTMLCanvasElement>>('live');
+  private readonly ink = inject(InkInput);
+  private liveRenderer: LiveStrokeRenderer | null = null;
   private readonly scheduler = inject(Scheduler);
   private readonly regions = inject(RegionRenderer);
   private readonly governor = inject(ResourceGovernor);
@@ -125,6 +132,9 @@ export class SlideView {
         inject(DestroyRef).onDestroy(() => observer.disconnect());
       }
     });
+    // ANN-011: the live layer of a stroke being drawn; the stroke input draws into it.
+    const destroyRef = inject(DestroyRef);
+    afterNextRender(() => destroyRef.onDestroy(this.ink.attach({ composition: () => this.composition(), live: this.live() })));
     inject(DestroyRef).onDestroy(() => {
       this.cancelSettle?.();
       this.controller?.abort();
@@ -165,10 +175,16 @@ export class SlideView {
     canvas.style.height = height;
     this.slideElement().nativeElement.style.width = width;
     this.slideElement().nativeElement.style.height = height;
+    this.live().resize(canvas.width, canvas.height, width, height, pxPerUnit); // same geometry, so ink lines up with the page
     const context = canvas.getContext('2d');
     if (context) {
       drawComposition(context, composition, bitmaps, pxPerUnit);
     }
+  }
+
+  private live(): LiveStrokeRenderer {
+    this.liveRenderer ??= new LiveStrokeRenderer(this.liveCanvas().nativeElement);
+    return this.liveRenderer;
   }
 
   /** NFR-003, NFR-004: warm the cache for the neighbors; without a view key, because those would be dropped as stale. */

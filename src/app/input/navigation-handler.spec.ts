@@ -58,6 +58,47 @@ describe('NavigationHandler', () => {
     expect(doc.currentSlideIndex()).toBe(2);
   });
 
+  it('ANN-013 navigation commands during a stroke wait and are applied in order after it ends', async () => {
+    const { doc, ui, send } = await setup();
+    const slides = doc.slideCount();
+    expect(slides).toBeGreaterThan(2);
+    ui.strokeInProgress.set(true);
+    send('Next');
+    send('Next');
+    send('Previous');
+    expect(doc.currentSlideIndex()).toBe(0);
+    ui.strokeInProgress.set(false);
+    TestBed.tick();
+    expect(doc.currentSlideIndex()).toBe(1); // +1 +1 -1
+  });
+
+  it('ANN-013 First and Last wait too, and the last request wins', async () => {
+    const { doc, ui, send } = await setup();
+    ui.strokeInProgress.set(true);
+    send('Last');
+    send('First');
+    expect(doc.currentSlideIndex()).toBe(0);
+    send('Last');
+    ui.strokeInProgress.set(false);
+    TestBed.tick();
+    expect(doc.currentSlideIndex()).toBe(doc.slideCount() - 1);
+  });
+
+  it('ANN-013 the bottom-bar buttons and the slider wait for the stroke as well', async () => {
+    const { doc, ui } = await setup();
+    const nav = TestBed.inject(SlideNavStore);
+    ui.strokeInProgress.set(true);
+    nav.next();
+    nav.next();
+    nav.scrub(doc.slideCount() - 1);
+    expect(doc.currentSlideIndex()).toBe(0);
+    expect(nav.shown()).toBe(0); // the slider does not even show the request yet
+    ui.strokeInProgress.set(false);
+    TestBed.tick();
+    expect(doc.currentSlideIndex()).toBe(2); // the two steps; the slider request follows with the next animation frame
+    expect(nav.shown()).toBe(doc.slideCount() - 1);
+  });
+
   it('NAV-015 a slide change resets the slide view', async () => {
     const { doc, send } = await setup();
     doc.slideView.set({ zoom: 2, panX: 5, panY: 5 });

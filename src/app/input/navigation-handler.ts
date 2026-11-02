@@ -5,6 +5,7 @@ import { FIT_VIEW } from '../core';
 import { AspectRatioService } from '../state/aspect-ratio.service';
 import { OrgViewStore } from '../state/org-view.store';
 import { SessionStore } from '../state/session.store';
+import { StrokeGate } from '../state/stroke-gate';
 import { UiStore } from '../state/ui.store';
 import { SlideNavStore } from '../state/slide-nav.store';
 import { CommandBus } from './command-bus';
@@ -21,6 +22,7 @@ export class NavigationHandler {
   private readonly org = inject(OrgViewStore);
   private readonly slideNav = inject(SlideNavStore);
   private readonly aspect = inject(AspectRatioService);
+  private readonly gate = inject(StrokeGate);
   private previousMode = this.ui.mode();
 
   constructor() {
@@ -39,14 +41,15 @@ export class NavigationHandler {
 
   private handle(command: Command): void {
     switch (command.type) {
+      // ANN-013: while a stroke is in progress these wait until it has ended.
       case 'Next':
-        return this.step(1);
+        return this.gate.run(() => this.step(1));
       case 'Previous':
-        return this.step(-1);
+        return this.gate.run(() => this.step(-1));
       case 'First':
-        return this.jump('first');
+        return this.gate.run(() => this.jump('first'));
       case 'Last':
-        return this.jump('last');
+        return this.gate.run(() => this.jump('last'));
       case 'ToggleMode':
         return this.toggleMode();
       case 'ExitPresentation':
