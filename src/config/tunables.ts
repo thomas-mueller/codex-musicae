@@ -239,7 +239,7 @@ export const TUNABLES = {
   },
 
   annotation: {
-    penWidthsPt: [1, 2.5, 5], // ANN-004
+    penWidthsPt: [0.5, 1, 2], // ANN-004
     highlighterWidthsPt: [8, 14, 22], // ANN-004
     defaultPen: { color: '#D32F2F', widthIndex: 1 }, // ANN-003
     defaultHighlighter: { color: '#FDD835', widthIndex: 1 }, // ANN-003
