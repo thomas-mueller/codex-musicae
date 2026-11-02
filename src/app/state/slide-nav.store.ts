@@ -1,8 +1,8 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 
 import { TUNABLES } from '../../config/tunables';
-import { FIT_VIEW, fitScale, zoomAround } from '../core';
-import type { Size } from '../core';
+import { clampPan, FIT_VIEW, fitScale, zoomAround } from '../core';
+import type { Point, Size } from '../core';
 import { SessionStore } from './session.store';
 import { UiStore } from './ui.store';
 
@@ -75,11 +75,24 @@ export class SlideNavStore {
 
   /** SLD-018: the buttons zoom around the stage center. */
   private zoomBy(factor: number): void {
-    const doc = this.document();
     const stage = this.stage();
+    this.zoomAt(factor, { x: stage.width / 2, y: stage.height / 2 });
+  }
+
+  /** NAV-013, NAV-014: zoom around `anchor` (stage px), limited to `zoom.min`..`zoom.max`. */
+  zoomAt(factor: number, anchor: Point): void {
+    const doc = this.document();
     if (doc && this.active() && this.displayScale() > 0) {
-      const center = { x: stage.width / 2, y: stage.height / 2 };
-      doc.slideView.set(zoomAround(doc.slideView(), factor, center, TUNABLES.zoom, this.fitted(), stage));
+      doc.slideView.set(zoomAround(doc.slideView(), factor, anchor, TUNABLES.zoom, this.fitted(), this.stage()));
+    }
+  }
+
+  /** NAV-012, NAV-014: moves the zoomed slide by (dx, dy) px, kept inside the stage. */
+  panBy(dx: number, dy: number): void {
+    const doc = this.document();
+    if (doc && this.active() && this.displayScale() > 0) {
+      const view = doc.slideView();
+      doc.slideView.set(clampPan({ ...view, panX: view.panX + dx, panY: view.panY + dy }, this.fitted(), this.stage()));
     }
   }
 

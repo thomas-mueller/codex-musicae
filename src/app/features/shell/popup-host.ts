@@ -31,8 +31,6 @@ const POPUP_SELECTOR = '[data-popup], [data-popup-trigger]';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     '(document:pointerdown)': 'onOutside($event)',
-    // TODO(M13): move to command bus
-    '(document:keydown.escape)': 'store.closePopup()',
   },
 })
 export class PopupHost {

@@ -32,8 +32,6 @@ import { LEVEL_ENTRIES } from './tool-area';
     .dialog { display: flex; align-items: center; gap: var(--cm-dialog-gap); padding: var(--cm-dialog-gap); border-radius: var(--cm-dialog-radius); background: var(--cm-bar-bg); color: var(--cm-icon); }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  // TODO(M13): move to command bus
-  host: { '(document:keydown.escape)': 'ui.cancelLevel()' },
 })
 export class LevelConfirm {
   protected readonly ui = inject(UiStore);

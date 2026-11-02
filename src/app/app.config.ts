@@ -35,6 +35,8 @@ import { DEVICE_INFO } from './ports/device-info';
 import { FILE_ACCESS } from './ports/file-access';
 import { PDF_RENDERER } from './ports/pdf-renderer';
 import { PREFERENCES } from './ports/preferences';
+import { KeyboardInput } from './input/keyboard-input';
+import { NavigationHandler } from './input/navigation-handler';
 import { routes } from './app.routes';
 
 declare const ngDevMode: boolean | object | undefined;
@@ -50,6 +52,10 @@ export const appConfig: ApplicationConfig = {
       registrationStrategy: 'registerWhenStable:30000',
     }),
     provideEnvironmentInitializer(() => applyTunablesToCss(document.documentElement)),
+    provideEnvironmentInitializer(() => {
+      inject(KeyboardInput);
+      inject(NavigationHandler);
+    }),
     provideEnvironmentInitializer(() => {
       void inject(PwaUpdatePolicy).checkAtStartup();
     }),

@@ -28,6 +28,8 @@ export function tunablesToCssVars(t: Tunables): Readonly<Record<string, string>>
     '--cm-org-bar-opacity': String(t.colors.orgBar.opacity),
     '--cm-org-bar-selected-opacity': String(t.colors.orgBar.selectedOpacity),
     '--cm-org-bar-provisional-opacity': String(t.colors.orgBar.provisionalOpacity),
+    '--cm-progress-line': t.colors.progressLine,
+    '--cm-progress-line-height': `${t.layout.progressLineHeightPx}px`,
     '--cm-progress-gap': `${t.layout.progressGapPx}px`,
     '--cm-page-badge-inset': `${t.layout.pageBadgeInsetPx}px`,
     '--cm-break-line': t.colors.breakLine,

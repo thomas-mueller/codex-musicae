@@ -2,7 +2,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 
 import { TUNABLES } from '../../config/tunables';
 import { barsOfJunction, fitScale, layoutPages, orgZoomLimits, pageAtOffset, scrollAfterZoom } from '../core';
-import type { Bar, Size } from '../core';
+import type { Bar, Point, Size } from '../core';
 import { SessionStore } from './session.store';
 import { UiStore } from './ui.store';
 
@@ -141,8 +141,20 @@ export class OrgViewStore {
     this.zoomTo(1);
   }
 
-  /** ORG-003: clamp to the limits and keep the content under the viewport center in place. */
-  private zoomTo(target: number): void {
+  /** NAV-013, NAV-014: zoom by `factor`, keeping the content under `anchor` (scroll viewport px) in place. */
+  zoomAt(factor: number, anchor: Point): void {
+    this.zoomTo((this.document()?.orgZoom() ?? 1) * factor, anchor);
+  }
+
+  /** NAV-016: fit-width <-> `doubleTapZoomFactor` x fit-width, around `anchor`. */
+  toggleDoubleTapZoom(anchor: Point): void {
+    const fitWidthZoom = 1 / this.zoomBase();
+    const zoomedIn = (this.document()?.orgZoom() ?? 1) > fitWidthZoom * (1 + TUNABLES.zoom.fitEpsilon);
+    this.zoomTo(zoomedIn ? fitWidthZoom : fitWidthZoom * TUNABLES.gestures.doubleTapZoomFactor, anchor);
+  }
+
+  /** ORG-003: clamp to the limits and keep the content under `anchor` (default: the viewport center) in place. */
+  private zoomTo(target: number, anchor?: Point): void {
     const doc = this.document();
     const viewport = this.viewport();
     if (!doc || !this.active() || viewport.width <= 0) {
@@ -154,7 +166,7 @@ export class OrgViewStore {
     if (next === old) {
       return;
     }
-    const scroll = scrollAfterZoom(doc.orgScroll(), { x: viewport.width / 2, y: viewport.height / 2 }, old, next);
+    const scroll = scrollAfterZoom(doc.orgScroll(), anchor ?? { x: viewport.width / 2, y: viewport.height / 2 }, old, next);
     doc.orgZoom.set(next);
     doc.orgScroll.set({ x: Math.max(0, scroll.x), y: Math.max(0, scroll.y) });
   }

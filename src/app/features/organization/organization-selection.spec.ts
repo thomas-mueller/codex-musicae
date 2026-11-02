@@ -3,6 +3,8 @@ import { TestBed } from '@angular/core/testing';
 import { TUNABLES } from '../../../config/tunables';
 import { provideTestPorts } from '../../../testing/provide-test-ports';
 import { provideTestTransloco } from '../../../testing/transloco';
+import { CommandBus } from '../../input/command-bus';
+import { NavigationHandler } from '../../input/navigation-handler';
 import { APP_VERSION } from '../../ports/app-version';
 import { SessionStore } from '../../state/session.store';
 import { OrgViewStore } from '../../state/org-view.store';
@@ -67,10 +69,11 @@ describe('OrganizationViewer selection and marks', () => {
   });
 
   it('ORG-013 Escape deselects', async () => {
-    const { fixture, root, bar, chip } = await mount();
+    const { fixture, bar, chip } = await mount();
     bar(1).click();
     await fixture.whenStable();
-    root.dispatchEvent(new KeyboardEvent('keydown', { code: TUNABLES.keymap.back[0], bubbles: true }));
+    TestBed.inject(NavigationHandler);
+    TestBed.inject(CommandBus).dispatch({ type: 'Back' });
     await fixture.whenStable();
     expect(TestBed.inject(UiStore).selection()).toBeNull();
     expect(chip()).toBeNull();
@@ -170,7 +173,8 @@ describe('OrganizationViewer selection and marks', () => {
     const ui = TestBed.inject(UiStore);
     await tap(fixture, bar(1));
     await press('jump');
-    root.dispatchEvent(new KeyboardEvent('keydown', { code: TUNABLES.keymap.back[0], bubbles: true }));
+    TestBed.inject(NavigationHandler);
+    TestBed.inject(CommandBus).dispatch({ type: 'Back' });
     await fixture.whenStable();
     expect(ui.pickingTarget()).toBeNull();
     await press('jump');

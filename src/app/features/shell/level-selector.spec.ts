@@ -3,6 +3,8 @@ import { TestBed } from '@angular/core/testing';
 import { TUNABLES } from '../../../config/tunables';
 import { provideTestPorts } from '../../../testing/provide-test-ports';
 import { provideTestTransloco } from '../../../testing/transloco';
+import { CommandBus } from '../../input/command-bus';
+import { NavigationHandler } from '../../input/navigation-handler';
 import { APP_VERSION } from '../../ports/app-version';
 import { DetectionService } from '../../state/detection.service';
 import { SessionStore } from '../../state/session.store';
@@ -79,7 +81,8 @@ describe('level selector', () => {
     expect(ui.pendingLevel()).toBeNull();
     ui.requestLevel(OTHER_LEVEL);
     await fixture.whenStable();
-    fixture.nativeElement.ownerDocument.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    TestBed.inject(NavigationHandler);
+    TestBed.inject(CommandBus).dispatch({ type: 'Back' });
     expect(ui.pendingLevel()).toBeNull();
     expect(redetect).not.toHaveBeenCalled();
   });
