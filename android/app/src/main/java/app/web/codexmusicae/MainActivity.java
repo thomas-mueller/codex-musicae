@@ -2,6 +2,7 @@ package app.web.codexmusicae;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 
 import com.getcapacitor.BridgeActivity;
 
@@ -19,6 +20,18 @@ public class MainActivity extends BridgeActivity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         DocumentAccessPlugin.handleViewIntent(this, intent);
+    }
+
+    /** TEMPORARY diagnostic: logs the full stack of an exception thrown while an activity result is delivered. */
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        Log.i("CM-DIAG", "onActivityResult enter: request=" + requestCode + " result=" + resultCode + " data=" + data);
+        try {
+            super.onActivityResult(requestCode, resultCode, data);
+        } catch (RuntimeException e) {
+            Log.e("CM-DIAG", "onActivityResult failed: request=" + requestCode + " result=" + resultCode, e);
+            throw e;
+        }
     }
 
     @Override
