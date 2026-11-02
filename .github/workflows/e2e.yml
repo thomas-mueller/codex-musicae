@@ -6,7 +6,7 @@ name: e2e
 # Designed for a free GitHub account: no artifacts (the storage quota is small and cannot be raised) and no uploads of
 # reports; every matrix job builds for itself, which takes seconds, and failures are read from the job log.
 #
-# To make the tests blocking again, move the `e2e` job (with `needs: lint-test`) into lint-test.yml: workflow_run fires
+# To make the tests blocking again, move the `e2e` and `perf` jobs (with `needs: lint-test`) into lint-test.yml: workflow_run fires
 # per workflow, so a separate workflow can never gate another one.
 
 on:
@@ -84,3 +84,49 @@ jobs:
       # CI=true (set by GitHub) makes playwright.config.ts serve the builds above, retry twice and use two workers.
       - name: End-to-end tests
         run: npx playwright test --project=${{ matrix.project }}
+
+  # TST-008: the performance budgets of T:budgets on the 120-page reference PDF (Chromium only, no retries). Runs after the
+  # e2e matrix (also when it failed); like the rest of this workflow a breach never blocks a deployment or an APK.
+  perf:
+    runs-on: ubuntu-latest
+    needs: e2e
+    if: ${{ !cancelled() }}
+    timeout-minutes: 30
+    env:
+      PERF: '1'
+      E2E_DEV_BUILD: '1'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-chromium-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Generate the reference PDF
+        run: npm run make:large-pdf
+
+      - name: Production build
+        run: npm run build
+
+      - name: Development build (debug hook for the memory test)
+        run: npm run build -- --configuration development --output-path dist/codexmusicae-dev
+
+      - name: Performance tests
+        run: npx playwright test --project=perf

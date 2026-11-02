@@ -256,8 +256,8 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 
 ## NFR — Non-functional
 
-- **NFR-001** [v1·todo·M17] A slide change completes in ≤ `T:budgets.slideChangeP95Ms` (95th percentile) with neighbors prefetched.
-- **NFR-002** [v1·todo·M17] While drawing, added latency stays ≤ `T:budgets.drawingMaxAddedLatencyMs` and no main-thread task exceeds `drawingMaxLongTaskMs`.
+- **NFR-001** [v1·done·M17] A slide change completes in ≤ `T:budgets.slideChangeP95Ms` (95th percentile) with neighbors prefetched.
+- **NFR-002** [v1·done·M17] While drawing, added latency stays ≤ `T:budgets.drawingMaxAddedLatencyMs` and no main-thread task exceeds `drawingMaxLongTaskMs`.
 - **NFR-003** [v1·done·M8] One scheduler ranks work: input and drawing, then visible rendering, then neighbor prefetch, then saving, then detection; lower-priority work is paused or cancelled when higher-priority work needs the CPU.
 - **NFR-004** [v1·done·M8] A bitmap cache with a byte budget (`T:resources.cacheBudgetByDeviceMemoryGb`, default `cacheBudgetDefaultBytes`) evicts least recently used bitmaps first.
 - **NFR-005** [v1·done·M8] The device pixel ratio used for rendering is capped at `T:resources.devicePixelRatioCap`.
@@ -303,7 +303,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **TST-005** [v1·done·M1] Code that exists only for Safari/WebKit changes only together with a Playwright WebKit test.
 - **TST-006** [v1·todo·M17] A manual device checklist covers pedals, full screen, wake lock, "open with", in-place save and performance on a real Android tablet.
 - **TST-007** [v1·todo·M17] A tester checklist for iOS Safari (open, scroll, draw, save a copy, presentation mode, pedal) is delivered with the hosted URL.
-- **TST-008** [v1·todo·M17] A performance test on the reference PDF fails the pipeline when a budget in `T:budgets` is exceeded.
+- **TST-008** [v1·done·M17] A performance test on the reference PDF fails the pipeline when a budget in `T:budgets` is exceeded.
 
 ## STY — Stylus support (v1-optional)
 

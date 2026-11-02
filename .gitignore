@@ -55,3 +55,4 @@ Thumbs.db
 
 # Real scores for the detection corpus (M17 S1): only PDFs you own or that are public domain
 e2e/corpus/real/
+e2e/perf/reference-120.pdf

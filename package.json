@@ -10,6 +10,8 @@
     "build:icons": "node scripts/build-icons.mjs",
     "make:test-pdfs": "node scripts/make-test-pdfs.mjs",
     "make:corpus": "node scripts/make-corpus.mjs",
+    "make:large-pdf": "node scripts/make-large-pdf.mjs",
+    "e2e:perf": "PERF=1 playwright test --project=perf",
     "prebuild": "node scripts/generate-version.mjs && node scripts/generate-index-metadata.mjs",
     "pretest": "node scripts/generate-version.mjs",
     "watch": "node scripts/generate-index-metadata.mjs && ng build --watch --configuration development",
