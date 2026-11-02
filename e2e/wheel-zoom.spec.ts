@@ -60,13 +60,17 @@ desktopTest('NAV-011 one wheel notch turns one slide; a second notch 100 ms late
   const n = await openScoreInAnnotation(page);
   const { x, y } = await center(page);
   await page.mouse.move(x, y);
-  // Both notches are dispatched inside the page: the gap must be QUICK_MS on the page clock, which separate
-  // Playwright round trips (plus an assertion between them) cannot guarantee on a slow CI browser.
+  // The handler measures the gap with the events' own time stamps (creation time). Both notches are therefore made in one task
+  // of the page and the gap is waited out by spinning, not by a timer: a timer on a stalled CI browser (WebKit) can fire after
+  // the cooldown and the second notch would count. The spin cannot be stretched by event-loop delays.
   await stage(page).evaluate(
-    async (el, { delta, gap }) => {
+    (el, { delta, gap }) => {
       const notch = () => el.dispatchEvent(new WheelEvent('wheel', { deltaY: delta, bubbles: true, cancelable: true }));
       notch();
-      await new Promise((resolve) => setTimeout(resolve, gap));
+      const start = performance.now();
+      while (performance.now() - start < gap) {
+        // wait
+      }
       notch();
     },
     { delta: NOTCH, gap: QUICK_MS },
