@@ -130,6 +130,18 @@ export const appConfig: ApplicationConfig = {
             const doc = session.activeDocument();
             if (doc !== null) detection.redetect(doc, level);
           },
+          strokes: () => session.activeDocument()?.strokes() ?? [],
+          applyOps: (ops) => {
+            const doc = session.activeDocument();
+            for (const op of ops) {
+              if (doc === null) break;
+              if (op.op === 'add') doc.addStroke(op.stroke);
+              else if (op.op === 'erase')
+                doc.eraseStrokes(doc.strokes().filter((s) => s.id === op.id));
+              else if (op.op === 'undo') doc.undo();
+              else doc.redo();
+            }
+          },
           strokeCount: () => session.activeDocument()?.strokes().length ?? 0,
         });
       }

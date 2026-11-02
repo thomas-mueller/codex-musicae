@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { expect, type Page } from '@playwright/test';
-import { PDFDocument } from 'pdf-lib';
+import { PDFArray, PDFDict, PDFDocument, PDFName, PDFString } from 'pdf-lib';
 
 import { TUNABLES } from '../../src/config/tunables';
 import { createPdfWriterApi } from '../../src/app/adapters/pdflib/pdf-writer-api';
@@ -33,6 +33,8 @@ const hexRgb = (hex: string): number[] =>
   );
 /** The default pen color as RGB. */
 export const RED: readonly number[] = hexRgb(TUNABLES.annotation.defaultPen.color);
+/** The default highlighter color as RGB. */
+export const YELLOW: readonly number[] = hexRgb(TUNABLES.annotation.defaultHighlighter.color);
 export const COLOR_TOLERANCE = 3;
 export const KEY = TUNABLES.saving.metadataFileName;
 
@@ -85,7 +87,7 @@ export async function enterAnnotation(page: Page): Promise<void> {
 
 export { enterOrganization };
 
-export const tool = (page: Page, key: 'pen' | 'eraser') => page.getByRole('button', { name: label(key), exact: true });
+export const tool = (page: Page, key: 'pen' | 'highlighter' | 'eraser') => page.getByRole('button', { name: label(key), exact: true });
 
 export async function slideBox(page: Page) {
   const box = await page.getByTestId('slide-canvas').boundingBox();
@@ -100,10 +102,10 @@ export async function drag(page: Page, from: { x: number; y: number }, to: { x: 
   await page.mouse.up();
 }
 
-/** A horizontal line on the slide, at a quarter of its height. */
-export async function strokeLine(page: Page, from = STROKE_FROM, to = STROKE_TO) {
+/** A horizontal line on the slide, by default at a quarter of its height (`row` is the fraction from the top). */
+export async function strokeLine(page: Page, from = STROKE_FROM, to = STROKE_TO, row = SLIDE_INK_ROW) {
   const slide = await slideBox(page);
-  const y = slide.y + slide.height * SLIDE_INK_ROW;
+  const y = slide.y + slide.height * row;
   return { from: { x: slide.x + slide.width * from, y }, to: { x: slide.x + slide.width * to, y } };
 }
 
@@ -165,4 +167,115 @@ export async function shorterPdfWithMetadata(json: string, pages = COPIES): Prom
   }
   await doc.attach(new TextEncoder().encode(json), KEY, { mimeType: TUNABLES.pdfWriter.embeddedFileMime });
   return doc.save({ useObjectStreams: false });
+}
+
+// A foreign ink annotation (another app's: no /NM) on page 1 of the score: a horizontal line over the first system.
+const FOREIGN_PAGE_HEIGHT = 842;
+const FOREIGN_INK_FROM_TOP = 130;
+const FOREIGN_INK_Y = FOREIGN_PAGE_HEIGHT - FOREIGN_INK_FROM_TOP;
+const FOREIGN_INK_X0 = 100;
+const FOREIGN_INK_X1 = 400;
+const FOREIGN_INK_WIDTH = 3;
+const FOREIGN_RECT_PAD = 5;
+const FOREIGN_NOTE_ORIGIN = 5;
+const FOREIGN_NOTE_SIZE = 20;
+const FOREIGN_NOTE_RECT = [FOREIGN_NOTE_ORIGIN, FOREIGN_NOTE_ORIGIN, FOREIGN_NOTE_ORIGIN + FOREIGN_NOTE_SIZE, FOREIGN_NOTE_ORIGIN + FOREIGN_NOTE_SIZE];
+export const FOREIGN_ATTACHMENT = 'foreign.txt';
+export const FOREIGN_ATTACHMENT_TEXT = 'foreign';
+/** Where the foreign line lies on page 1, in fractions of the system's x range (50..545 pt): used to aim the eraser. */
+export const FOREIGN_INK_MIDDLE_X_PT = (FOREIGN_INK_X0 + FOREIGN_INK_X1) / 2;
+
+/** The synthetic score with a foreign ink annotation, a foreign text annotation and a foreign attachment (SAV-013). */
+export async function foreignScoreBytes(): Promise<Uint8Array> {
+  const doc = await PDFDocument.load(scoreBytes);
+  const { context } = doc;
+  const foreignInk = context.register(
+    context.obj({
+      Type: 'Annot',
+      Subtype: 'Ink',
+      Rect: [FOREIGN_INK_X0 - FOREIGN_RECT_PAD, FOREIGN_INK_Y - FOREIGN_RECT_PAD, FOREIGN_INK_X1 + FOREIGN_RECT_PAD, FOREIGN_INK_Y + FOREIGN_RECT_PAD],
+      InkList: [[FOREIGN_INK_X0, FOREIGN_INK_Y, FOREIGN_INK_MIDDLE_X_PT, FOREIGN_INK_Y, FOREIGN_INK_X1, FOREIGN_INK_Y]],
+      C: [0, 0, 1],
+      Border: [0, 0, FOREIGN_INK_WIDTH],
+    }),
+  );
+  const note = context.register(context.obj({ Type: 'Annot', Subtype: 'Text', Rect: FOREIGN_NOTE_RECT, Contents: PDFString.of('note') }));
+  doc.getPages()[0]!.node.set(PDFName.of('Annots'), context.obj([foreignInk, note]));
+  await doc.attach(new TextEncoder().encode(FOREIGN_ATTACHMENT_TEXT), FOREIGN_ATTACHMENT, { mimeType: 'text/plain' });
+  return doc.save({ useObjectStreams: false });
+}
+
+const COORDINATES_PER_POINT = 2;
+
+/** Raw file facts read with pdf-lib only (not the app's reader): the number of points of every /Ink annotation, and the other subtypes. */
+export async function annotationFacts(bytes: Uint8Array): Promise<{ inkPoints: number[]; otherSubtypes: string[] }> {
+  const doc = await PDFDocument.load(bytes);
+  const inkPoints: number[] = [];
+  const otherSubtypes: string[] = [];
+  for (const page of doc.getPages()) {
+    const annots = page.node.lookupMaybe(PDFName.of('Annots'), PDFArray);
+    for (let i = 0; annots && i < annots.size(); i++) {
+      const annot = annots.lookup(i, PDFDict);
+      const subtype = annot.lookup(PDFName.of('Subtype'))?.toString() ?? '';
+      if (subtype === '/Ink') {
+        const lists = annot.lookup(PDFName.of('InkList'), PDFArray);
+        let coordinates = 0;
+        for (let l = 0; l < lists.size(); l++) {
+          coordinates += lists.lookup(l, PDFArray).size();
+        }
+        inkPoints.push(coordinates / COORDINATES_PER_POINT);
+      } else {
+        otherSubtypes.push(subtype);
+      }
+    }
+  }
+  return { inkPoints, otherSubtypes };
+}
+
+/** Text of an attachment by name. */
+export async function attachmentText(bytes: Uint8Array, name: string): Promise<string | null> {
+  const text = await api.readEmbeddedJson(bytes, name);
+  return text.ok ? text.value : null;
+}
+
+const ALPHA_OFFSET = 3;
+
+/** The bounding box, in page (CSS) pixels, of the canvas pixels near `rgb`; null when there are none. */
+export async function inkBounds(page: Page, testId: string, rgb: readonly number[], tolerance: number): Promise<{ x: number; y: number; width: number; height: number } | null> {
+  const canvas = page.getByTestId(testId);
+  const box = await canvas.boundingBox();
+  if (box === null) {
+    return null;
+  }
+  const found = await canvas.evaluate(
+    (element: HTMLCanvasElement, { color, delta, stride, alpha }: { color: number[]; delta: number; stride: number; alpha: number }) => {
+      const context = element.getContext('2d');
+      if (!context) {
+        return null;
+      }
+      const { data } = context.getImageData(0, 0, element.width, element.height);
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -1;
+      let maxY = -1;
+      for (let i = 0; i < data.length; i += stride) {
+        if (data[i + alpha]! > 0 && color.every((v, k) => Math.abs(data[i + k]! - v) <= delta)) {
+          const px = (i / stride) % element.width;
+          const py = Math.floor(i / stride / element.width);
+          minX = Math.min(minX, px);
+          minY = Math.min(minY, py);
+          maxX = Math.max(maxX, px);
+          maxY = Math.max(maxY, py);
+        }
+      }
+      return maxX < 0 ? null : { minX, minY, maxX, maxY, width: element.width, height: element.height };
+    },
+    { color: [...rgb], delta: tolerance, stride: RGBA, alpha: ALPHA_OFFSET },
+  );
+  if (found === null) {
+    return null;
+  }
+  const scaleX = box.width / found.width;
+  const scaleY = box.height / found.height;
+  return { x: box.x + found.minX * scaleX, y: box.y + found.minY * scaleY, width: (found.maxX - found.minX) * scaleX, height: (found.maxY - found.minY) * scaleY };
 }
