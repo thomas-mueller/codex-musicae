@@ -4,7 +4,7 @@ import {
 import { TranslocoPipe } from '@jsverse/transloco';
 
 import { TUNABLES } from '../../../config/tunables';
-import { composeSlide, fitScale, fitScaleToPixelCap, tilesCovering } from '../../core';
+import { composeSlide, fitScale, fitScaleToPixelCap, placeStrokes, tilesCovering } from '../../core';
 import type { Rect, Size, SlideComposition, SlideContent, SlidePlan, ViewState } from '../../core';
 import { InkInput } from '../../input/ink-input';
 import { DEVICE_INFO } from '../../ports/device-info';
@@ -17,6 +17,7 @@ import { SlideNavStore } from '../../state/slide-nav.store';
 import { Icon } from '../shell/icon';
 import { TooltipDirective } from '../shell/tooltip.directive';
 import { drawComposition } from './draw-composition';
+import { InkLayer } from './ink-layer';
 import { LiveStrokeRenderer } from './live-stroke-renderer';
 import { tileComposition } from './tile-composition';
 
@@ -34,6 +35,9 @@ const KEY_SEPARATOR = '|';
     <div #slide class="slide" data-testid="slide" [hidden]="composition() === null">
       <canvas #canvas data-testid="slide-canvas"></canvas>
       <div #tiles class="tiles" data-testid="slide-tiles"></div>
+      <canvas #inkHighlighter class="ink highlighter" data-testid="ink-highlighter-canvas"></canvas>
+      <canvas #ink class="ink" data-testid="ink-canvas"></canvas>
+      <div #inkSharp class="ink-sharp" data-testid="ink-sharp"></div>
       <canvas #live class="live" data-testid="live-canvas"></canvas>
     </div>
     @if (composition() === null) {
@@ -54,7 +58,9 @@ const KEY_SEPARATOR = '|';
     canvas { display: block; }
     .tiles { position: absolute; inset: 0; pointer-events: none; }
     .tiles canvas { position: absolute; }
-    .live { position: absolute; inset: 0; display: block; pointer-events: none; }
+    .ink, .ink-sharp, .live { position: absolute; inset: 0; pointer-events: none; }
+    .ink.highlighter { mix-blend-mode: multiply; }
+    .live { display: block; }
     .empty { display: inline-flex; color: var(--cm-on-canvas, inherit); }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -67,8 +73,16 @@ export class SlideView {
   private readonly slideElement = viewChild.required<ElementRef<HTMLElement>>('slide');
   private readonly tilesElement = viewChild.required<ElementRef<HTMLElement>>('tiles');
   private readonly liveCanvas = viewChild.required<ElementRef<HTMLCanvasElement>>('live');
-  private readonly ink = inject(InkInput);
+  private readonly inkInput = inject(InkInput);
+  private readonly inkHighlighterCanvas = viewChild.required<ElementRef<HTMLCanvasElement>>('inkHighlighter');
+  private readonly inkCanvas = viewChild.required<ElementRef<HTMLCanvasElement>>('ink');
+  private readonly inkSharpHost = viewChild.required<ElementRef<HTMLElement>>('inkSharp');
   private liveRenderer: LiveStrokeRenderer | null = null;
+  private inkLayer: InkLayer | null = null;
+  /** What the canvases show right now: ink is always placed with this, never with a composition that is still loading. */
+  private painted: { doc: DocumentStore; composition: SlideComposition } | null = null;
+  private hiddenStrokes: ReadonlySet<string> = new Set();
+  private cancelInkSettle: (() => void) | null = null;
   private readonly scheduler = inject(Scheduler);
   private readonly regions = inject(RegionRenderer);
   private readonly governor = inject(ResourceGovernor);
@@ -121,7 +135,15 @@ export class SlideView {
       const composition = this.composition();
       const scale = this.displayScale();
       const stage = this.nav.stage();
-      untracked(() => this.scheduleTiles(doc, view, composition, scale, stage));
+      untracked(() => {
+        this.scheduleTiles(doc, view, composition, scale, stage);
+        this.scheduleSharpInk(view, composition, scale, stage);
+      });
+    });
+    // ANN-012: the ink follows the strokes of the document (add, erase, undo, redo).
+    effect(() => {
+      this.document().strokes();
+      untracked(() => this.redrawInk());
     });
     afterNextRender(() => {
       const measure = (): void => this.nav.stage.set({ width: this.host.clientWidth, height: this.host.clientHeight });
@@ -134,9 +156,10 @@ export class SlideView {
     });
     // ANN-011: the live layer of a stroke being drawn; the stroke input draws into it.
     const destroyRef = inject(DestroyRef);
-    afterNextRender(() => destroyRef.onDestroy(this.ink.attach({ composition: () => this.composition(), live: this.live() })));
+    afterNextRender(() => destroyRef.onDestroy(this.inkInput.attach({ composition: () => this.composition(), live: this.live(), hideStrokes: (ids) => this.hideStrokes(ids) })));
     inject(DestroyRef).onDestroy(() => {
       this.cancelSettle?.();
+      this.cancelInkSettle?.();
       this.controller?.abort();
       this.tileController?.abort();
     });
@@ -176,10 +199,69 @@ export class SlideView {
     this.slideElement().nativeElement.style.width = width;
     this.slideElement().nativeElement.style.height = height;
     this.live().resize(canvas.width, canvas.height, width, height, pxPerUnit); // same geometry, so ink lines up with the page
+    this.ink().resize(canvas.width, canvas.height, width, height, pxPerUnit);
     const context = canvas.getContext('2d');
     if (context) {
       drawComposition(context, composition, bitmaps, pxPerUnit);
     }
+    this.painted = { doc: this.document(), composition };
+    this.redrawInk();
+  }
+
+  private ink(): InkLayer {
+    this.inkLayer ??= new InkLayer(
+      { highlighter: this.inkHighlighterCanvas().nativeElement, pen: this.inkCanvas().nativeElement },
+      this.inkSharpHost().nativeElement,
+    );
+    return this.inkLayer;
+  }
+
+  /** Strokes of the pages on the painted slide, in every placement (repeated systems show them again). */
+  private redrawInk(): void {
+    const doc = this.document();
+    if (this.painted?.doc !== doc) {
+      return;
+    }
+    const placed = placeStrokes(this.painted.composition, (page) => doc.strokesOfPage(page), (page) => doc.pageInfos()[page]?.box);
+    this.ink().setStrokes(placed, this.hiddenStrokes);
+  }
+
+  /** The eraser hides the strokes it has touched at once; the model changes when the pointer is released. */
+  private hideStrokes(ids: ReadonlySet<string>): void {
+    this.hiddenStrokes = ids;
+    this.redrawInk();
+  }
+
+  /** NFR-002: at zoom > 1 the ink is redrawn at the zoomed scale for the visible part, once the view has settled. */
+  private scheduleSharpInk(view: ViewState, composition: SlideComposition | null, scale: number, stage: Size): void {
+    this.cancelInkSettle?.();
+    this.cancelInkSettle = null;
+    this.ink().hideSharp();
+    if (view.zoom <= 1 || !composition || scale <= 0) {
+      return;
+    }
+    this.cancelInkSettle = this.clock.schedule(TUNABLES.rendering.zoomSettleMs, () => {
+      this.cancelInkSettle = null;
+      const zoomedScale = scale * view.zoom;
+      const visible = this.visibleZoomedRect(view, composition, scale, stage);
+      if (visible) {
+        const dpr = Math.min(this.device.devicePixelRatio(), TUNABLES.resources.devicePixelRatioCap);
+        const region: Rect = { x: visible.x / zoomedScale, y: visible.y / zoomedScale, width: visible.width / zoomedScale, height: visible.height / zoomedScale };
+        this.ink().showSharp(region, scale, zoomedScale, dpr);
+      }
+    });
+  }
+
+  /** The part of the zoomed slide that is inside the stage, in zoomed CSS px measured from the slide's top-left; null if none. */
+  private visibleZoomedRect(view: ViewState, composition: SlideComposition, scale: number, stage: Size): Rect | null {
+    const zoomed = { width: composition.width * scale * view.zoom, height: composition.height * scale * view.zoom };
+    const left = stage.width / 2 + view.panX - zoomed.width / 2;
+    const top = stage.height / 2 + view.panY - zoomed.height / 2;
+    const x0 = Math.max(0, -left);
+    const y0 = Math.max(0, -top);
+    const x1 = Math.min(zoomed.width, stage.width - left);
+    const y1 = Math.min(zoomed.height, stage.height - top);
+    return x1 > x0 && y1 > y0 ? { x: x0, y: y0, width: x1 - x0, height: y1 - y0 } : null;
   }
 
   private live(): LiveStrokeRenderer {
@@ -224,13 +306,8 @@ export class SlideView {
   /** SLD-018, NFR-007: only the visible part of the zoomed slide, in tiles of at most `tileSizePx`; they replace the stretched part together. */
   private renderTiles(doc: DocumentStore, view: ViewState, composition: SlideComposition, scale: number, stage: Size): void {
     const zoomed = { width: composition.width * scale * view.zoom, height: composition.height * scale * view.zoom };
-    const left = stage.width / 2 + view.panX - zoomed.width / 2;
-    const top = stage.height / 2 + view.panY - zoomed.height / 2;
-    const x0 = Math.max(0, -left);
-    const y0 = Math.max(0, -top);
-    const x1 = Math.min(zoomed.width, stage.width - left);
-    const y1 = Math.min(zoomed.height, stage.height - top);
-    if (x1 <= x0 || y1 <= y0) {
+    const visible = this.visibleZoomedRect(view, composition, scale, stage);
+    if (!visible) {
       return;
     }
     const controller = new AbortController();
@@ -239,7 +316,7 @@ export class SlideView {
     const zoomedScale = scale * view.zoom;
     const viewKey = [doc.tabId, 'slide', doc.currentSlideIndex(), scale, 'zoom', view.zoom, generation].join(KEY_SEPARATOR);
     this.scheduler.setViewKey(viewKey);
-    const jobs = tilesCovering({ x: x0, y: y0, width: x1 - x0, height: y1 - y0 }, zoomed, TUNABLES.resources.tileSizePx).map(async (tile) => {
+    const jobs = tilesCovering(visible, zoomed, TUNABLES.resources.tileSizePx).map(async (tile) => {
       const units: Rect = { x: tile.x / zoomedScale, y: tile.y / zoomedScale, width: tile.width / zoomedScale, height: tile.height / zoomedScale };
       const part = tileComposition(composition, units);
       const bitmaps = await Promise.all(part.contents.map((c) => this.fetchPiece(doc, c, zoomedScale, 'visible', controller.signal, viewKey)));

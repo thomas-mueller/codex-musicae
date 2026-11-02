@@ -16,8 +16,8 @@
 }
 
 :host(.toggled) {
-  background: var(--cm-accent);
-  color: var(--cm-on-accent);
+  background: var(--cm-toggled-bg, var(--cm-accent));
+  color: var(--cm-toggled-fg, var(--cm-on-accent));
 }
 
 :host(.disabled) {

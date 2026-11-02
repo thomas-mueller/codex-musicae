@@ -34,7 +34,8 @@ async function setup() {
   const nav = TestBed.inject(SlideNavStore);
   nav.stage.set({ width: STAGE.width, height: STAGE.height });
   const live = { begin: vi.fn(), add: vi.fn(), clear: vi.fn() };
-  const surface: InkSurface = { composition: () => synComposition, live };
+  const hideStrokes = vi.fn();
+  const surface: InkSurface = { composition: () => synComposition, live, hideStrokes };
   const ink = TestBed.inject(InkInput);
   ink.attach(surface);
   /** Client position that shows slide point `p` (view at fit). */
@@ -43,7 +44,7 @@ async function setup() {
     return { x: STAGE.width / 2 + (p.x - synComposition.width / 2) * scale, y: STAGE.height / 2 + (p.y - synComposition.height / 2) * scale };
   };
   const pageHeight = doc.pageInfos()[0]!.box.view[3];
-  return { doc, ui, ink, live, surface, clientOf, pageHeight, strokes: () => doc.strokes() };
+  return { doc, ui, ink, live, surface, hideStrokes, nav, clientOf, pageHeight, strokes: () => doc.strokes() };
 }
 
 describe('InkInput', () => {
@@ -85,12 +86,10 @@ describe('InkInput', () => {
     expect(live.begin).not.toHaveBeenCalled();
   });
 
-  it('ANN-008 without pen or highlighter nothing is drawn', async () => {
+  it('ANN-008 without a tool nothing is drawn', async () => {
     const { ink, ui, clientOf } = await setup();
-    for (const tool of [null, 'eraser'] as const) {
-      ui.setTool(tool);
-      expect(ink.begin(clientOf({ x: 50, y: 20 }), STAGE)).toBe(false);
-    }
+    ui.setTool(null);
+    expect(ink.begin(clientOf({ x: 50, y: 20 }), STAGE)).toBe(false);
   });
 
   it('ANN-011 consecutive duplicate points are skipped', async () => {
@@ -191,5 +190,119 @@ describe('InkInput', () => {
     await fixtureLike.whenStable();
     await settle();
     expect(tick.mock.calls.length).toBeLessThanOrEqual(2);
+  });
+});
+
+describe('InkInput eraser (M14 S4)', () => {
+  /** A stroke along slide y = 20 (page 0, placements at dy 0 and dy 120) from x = 40 to x = 60. */
+  async function withStroke() {
+    const t = await setup();
+    t.ui.setTool('eraser');
+    const stroke = {
+      id: 's1',
+      pageIndex: 0,
+      points: [{ x: 40, y: t.pageHeight - 20 }, { x: 60, y: t.pageHeight - 20 }],
+      color: TUNABLES.colors.penPresets[0] as string,
+      widthPt: 2,
+      opacity: 1,
+      multiply: false,
+    };
+    t.doc.addStroke(stroke);
+    return { ...t, stroke };
+  }
+
+  it('ANN-005 a stroke within the hit radius disappears at once and is erased by one undoable step on release', async () => {
+    const { ink, doc, hideStrokes, clientOf } = await withStroke();
+    expect(ink.begin(clientOf({ x: 50, y: 20 }), STAGE)).toBe(true);
+    expect(hideStrokes).toHaveBeenLastCalledWith(new Set(['s1']));
+    expect(doc.strokes()).toHaveLength(1); // still in the model until the release
+    ink.end();
+    expect(doc.strokes()).toEqual([]);
+    expect(hideStrokes).toHaveBeenLastCalledWith(new Set());
+    doc.undo();
+    expect(doc.strokes().map((s) => s.id)).toEqual(['s1']);
+  });
+
+  it('ANN-005 several strokes touched in one gesture are one undo step', async () => {
+    const { ink, doc, pageHeight, clientOf, stroke } = await withStroke();
+    doc.addStroke({ ...stroke, id: 's2', points: [{ x: 40, y: pageHeight - 60 }, { x: 60, y: pageHeight - 60 }] });
+    ink.begin(clientOf({ x: 50, y: 20 }), STAGE);
+    ink.move([clientOf({ x: 50, y: 40 }), clientOf({ x: 50, y: 60 })]);
+    ink.end();
+    expect(doc.strokes()).toEqual([]);
+    expect(doc.history().undo.at(-1)).toMatchObject({ kind: 'erase' });
+    doc.undo();
+    expect(doc.strokes().map((s) => s.id).sort()).toEqual(['s1', 's2']);
+  });
+
+  it('ANN-005 a gesture that touches nothing makes no action', async () => {
+    const { ink, doc, hideStrokes, clientOf } = await withStroke();
+    const before = doc.history();
+    ink.begin(clientOf({ x: 50, y: 90 }), STAGE);
+    ink.move([clientOf({ x: 70, y: 90 })]);
+    ink.end();
+    expect(hideStrokes).not.toHaveBeenCalledWith(new Set(['s1']));
+    expect(doc.history()).toBe(before);
+    expect(doc.strokes()).toHaveLength(1);
+  });
+
+  it('ANN-012 the stroke is also found at its second placement', async () => {
+    const { ink, doc, clientOf } = await withStroke();
+    ink.begin(clientOf({ x: 50, y: 140 }), STAGE); // filler-top shows page 0 again, 120 lower
+    ink.end();
+    expect(doc.strokes()).toEqual([]);
+  });
+
+  it('ANN-005 the hit radius is T:annotation.eraserHitRadiusPx on screen: smaller in page units when zoomed', async () => {
+    const { ink, doc, nav, hideStrokes, clientOf } = await withStroke();
+    const slideDistance = (TUNABLES.annotation.eraserHitRadiusPx / nav.displayScale()) * 0.75;
+    // 0.75 of the radius at fit zoom touches the stroke ...
+    ink.begin(clientOf({ x: 50, y: 20 + slideDistance }), STAGE);
+    expect(hideStrokes).toHaveBeenLastCalledWith(new Set(['s1']));
+    ink.cancel();
+    expect(doc.strokes()).toHaveLength(1);
+    // ... but at zoom 2 the radius is half as large in page units, so it does not.
+    doc.slideView.set({ zoom: 2, panX: 0, panY: 0 });
+    const scale = nav.displayScale() * 2;
+    const client = { x: STAGE.width / 2 + (50 - synComposition.width / 2) * scale, y: STAGE.height / 2 + (20 + slideDistance - synComposition.height / 2) * scale };
+    hideStrokes.mockClear();
+    ink.begin(client, STAGE);
+    expect(hideStrokes).not.toHaveBeenCalled();
+    ink.end();
+    expect(doc.strokes()).toHaveLength(1);
+  });
+
+  it('ANN-005 the gesture may start on the grey and still touches strokes it moves over', async () => {
+    const { ink, doc, clientOf } = await withStroke();
+    expect(ink.begin(clientOf({ x: 150, y: 20 }), STAGE)).toBe(true);
+    ink.move([clientOf({ x: 100, y: 20 }), clientOf({ x: 50, y: 20 })]);
+    ink.end();
+    expect(doc.strokes()).toEqual([]);
+  });
+
+  it('ANN-005 cancel shows the strokes again and changes nothing', async () => {
+    const { ink, doc, hideStrokes, clientOf } = await withStroke();
+    ink.begin(clientOf({ x: 50, y: 20 }), STAGE);
+    ink.cancel();
+    expect(hideStrokes).toHaveBeenLastCalledWith(new Set());
+    expect(doc.strokes()).toHaveLength(1);
+    expect(doc.history().undo).toHaveLength(1);
+  });
+
+  it('ANN-013 the eraser gesture is bracketed by stroke start and end, with the erase in between', async () => {
+    const { ink, doc, clientOf } = await withStroke();
+    const events: string[] = [];
+    doc.changes.subscribe((e) => events.push(e.type));
+    ink.begin(clientOf({ x: 50, y: 20 }), STAGE);
+    ink.end();
+    expect(events).toEqual(['strokeStart', 'change', 'strokeEnd']);
+  });
+
+  it('ANN-005 the eraser only ever removes strokes of the model', async () => {
+    const { ink, doc, live, clientOf } = await withStroke();
+    ink.begin(clientOf({ x: 50, y: 20 }), STAGE);
+    ink.end();
+    expect(live.begin).not.toHaveBeenCalled();
+    expect(doc.strokes()).toEqual([]);
   });
 });

@@ -6,6 +6,8 @@
       [icon]="entry().icon"
       [labelKey]="entry().tool"
       [toggled]="active()"
+      [style.--cm-toggled-bg]="fill()"
+      [style.--cm-toggled-fg]="onFill()"
       [disabled]="noDocument()"
       (pressed)="store.toggleTool(entry().tool)"
       (longPress)="onLongPress()"

@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 
 import { TUNABLES } from '../../../config/tunables';
-import { StyledTool } from '../../state/tool-settings.store';
+import { readableOn } from '../../core';
+import { StyledTool, ToolSettingsStore } from '../../state/tool-settings.store';
 import { Tool, UiStore } from '../../state/ui.store';
 import { ToolPopup } from '../annotation/tool-popup';
 import { LongPressDirective } from '../organization/long-press.directive';
@@ -30,12 +31,22 @@ export class ToolButton {
   readonly entry = input.required<ToolEntry>();
   readonly panel = input(false);
   protected readonly store = inject(UiStore);
+  private readonly settings = inject(ToolSettingsStore);
   protected readonly side = TUNABLES.layout.toolStripSide;
   protected readonly noDocument = computed(() => !this.store.hasDocument());
   /** The tool when it has settings (pen, highlighter), else null. */
   protected readonly styled = computed<StyledTool | null>(() => {
     const tool = this.entry().tool;
     return tool === 'eraser' ? null : tool;
+  });
+  /** The toggled pen or highlighter is filled with its stroke color (icon dark or light, whichever reads better); the eraser keeps the accent. UIX-011, ANN-001 */
+  protected readonly fill = computed(() => {
+    const tool = this.styled();
+    return tool === null ? null : this.settings.setting(tool).color;
+  });
+  protected readonly onFill = computed(() => {
+    const fill = this.fill();
+    return fill === null ? null : readableOn(fill, TUNABLES.colors.iconDefault, TUNABLES.colors.onAccent);
   });
   protected readonly active = computed(() => this.store.tool() === this.entry().tool);
   protected readonly settingsOpen = computed(() => this.store.popup()?.id === POPUP_TOOL_SETTINGS);

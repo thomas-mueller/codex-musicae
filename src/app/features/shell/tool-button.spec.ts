@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { TUNABLES } from '../../../config/tunables';
 import { provideTestPorts } from '../../../testing/provide-test-ports';
 import { provideTestTransloco } from '../../../testing/transloco';
+import { ToolSettingsStore } from '../../state/tool-settings.store';
 import { UiStore } from '../../state/ui.store';
 import { TOOL_ENTRIES } from './tool-area';
 import { POPUP_TOOL_SETTINGS, ToolButton } from './tool-button';
@@ -47,6 +48,31 @@ describe('ToolButton', () => {
     await settle();
     expect(ui.tool()).toBeNull();
     expect(main().classList.contains('toggled')).toBe(false);
+  });
+
+  it('ANN-001 the active pen or highlighter is filled with its stroke color and follows a color change; the icon reads on it', async () => {
+    const { ui, main, settle } = await setup('highlighter');
+    const settings = TestBed.inject(ToolSettingsStore);
+    ui.setTool('highlighter');
+    await settle();
+    const yellow = settings.setting('highlighter').color;
+    expect(main().style.getPropertyValue('--cm-toggled-bg')).toBe(yellow);
+    expect(main().style.getPropertyValue('--cm-toggled-fg')).toBe(TUNABLES.colors.iconDefault); // dark icon on yellow
+    const dark = TUNABLES.colors.highlighterPresets.find((c) => c === '#BA68C8') ?? TUNABLES.colors.highlighterPresets[5]!;
+    await settings.setColor('highlighter', dark);
+    await settle();
+    expect(main().style.getPropertyValue('--cm-toggled-bg')).toBe(dark);
+  });
+
+  it('ANN-001 a dark stroke color gets the light icon; the eraser keeps the accent look', async () => {
+    const { ui, main, settle } = await setup('pen');
+    const settings = TestBed.inject(ToolSettingsStore);
+    await settings.setColor('pen', TUNABLES.colors.penPresets[TUNABLES.colors.penPresets.length - 1]!);
+    ui.setTool('pen');
+    await settle();
+    expect(main().style.getPropertyValue('--cm-toggled-fg')).toBe(TUNABLES.colors.onAccent);
+    const eraser = await setup('eraser');
+    expect(eraser.main().style.getPropertyValue('--cm-toggled-bg')).toBe('');
   });
 
   it('ANN-002 the active pen has no extra settings button; the popup comes from the long press', async () => {
