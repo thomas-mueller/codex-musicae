@@ -145,19 +145,19 @@ export class SlideView {
       this.document().strokes();
       untracked(() => this.redrawInk());
     });
+    const destroyRef = inject(DestroyRef);
     afterNextRender(() => {
       const measure = (): void => this.nav.stage.set({ width: this.host.clientWidth, height: this.host.clientHeight });
       measure();
       if (typeof ResizeObserver !== 'undefined') {
         const observer = new ResizeObserver(measure);
         observer.observe(this.host);
-        inject(DestroyRef).onDestroy(() => observer.disconnect());
+        destroyRef.onDestroy(() => observer.disconnect());
       }
     });
     // ANN-011: the live layer of a stroke being drawn; the stroke input draws into it.
-    const destroyRef = inject(DestroyRef);
     afterNextRender(() => destroyRef.onDestroy(this.inkInput.attach({ composition: () => this.composition(), live: this.live(), hideStrokes: (ids) => this.hideStrokes(ids) })));
-    inject(DestroyRef).onDestroy(() => {
+    destroyRef.onDestroy(() => {
       this.cancelSettle?.();
       this.cancelInkSettle?.();
       this.controller?.abort();
