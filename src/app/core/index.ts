@@ -16,3 +16,4 @@ export * from './edits';
 export * from './mark-positions';
 export * from './composition';
 export * from './gestures';
+export * from './annotation';
