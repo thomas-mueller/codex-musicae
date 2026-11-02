@@ -312,6 +312,7 @@ export const TUNABLES = {
     standardFontDataUrl: 'assets/pdfjs/standard_fonts/', // GEN-005
     wasmUrl: 'assets/pdfjs/wasm/', // GEN-005
     iccUrl: 'assets/pdfjs/iccs/', // GEN-005
+    annotationModeDisable: 0, // SAV-006: pdf.js AnnotationMode.DISABLE; the app draws every stroke itself
   },
 
   rendering: {

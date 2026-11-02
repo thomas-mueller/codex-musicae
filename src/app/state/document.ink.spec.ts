@@ -144,4 +144,26 @@ describe('DocumentStore ink (M14 S2)', () => {
     await doc.dispose();
     expect(completed).toBe(true);
   });
+
+  it('SAV-006 ANN-005 saved strokes load without an undo step or a change event, and can be erased in one step', () => {
+    const doc = new DocumentStore('t1', fakeRenderer());
+    const events: DocChange[] = [];
+    doc.changes.subscribe((e) => events.push(e));
+    doc.loadSavedStrokes([stroke('a'), stroke('b', 1)]);
+    expect(ids(doc)).toEqual(['a', 'b']);
+    expect(doc.strokesOfPage(1).map((s) => s.id)).toEqual(['b']);
+    expect(doc.canUndo()).toBe(false);
+    expect(events).toEqual([]);
+    doc.eraseStrokes([stroke('a')]);
+    expect(ids(doc)).toEqual(['b']);
+    expect(doc.canUndo()).toBe(true);
+    doc.undo();
+    expect([...ids(doc)].sort()).toEqual(['a', 'b']);
+  });
+
+  it('SAV-006 loading no strokes changes nothing', () => {
+    const doc = new DocumentStore('t1', fakeRenderer());
+    doc.loadSavedStrokes([]);
+    expect(doc.strokes()).toEqual([]);
+  });
 });

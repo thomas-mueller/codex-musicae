@@ -89,6 +89,11 @@ export const appConfig: ApplicationConfig = {
         installDebugHook(window as DebugHost, inject(BitmapCache), {
           detect,
           startedOrder: () => session.activeDocument()?.detection.startedOrder ?? [],
+          detectionState: () => {
+            const doc = session.activeDocument();
+            return { complete: doc?.detectionComplete() ?? false, startedOrder: doc?.detection.startedOrder ?? [] };
+          },
+          strokeCount: () => session.activeDocument()?.strokes().length ?? 0,
         });
       }
     }),

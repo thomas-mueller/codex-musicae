@@ -144,6 +144,14 @@ describe('PdfJsRenderer handle', () => {
     expect(canvases[0]).toMatchObject({ width: 0, height: 0 });
   });
 
+  it('SAV-006 pdf.js draws no annotations: the app renders every stroke itself, so ink is never drawn twice', async () => {
+    const page = fakePage();
+    const { handle } = await openHandle(page, []);
+    await handle.renderRegion({ pageIndex: 0, region, scale: 1 }, new AbortController().signal);
+    expect(page.render).toHaveBeenCalledWith(expect.objectContaining({ annotationMode: TUNABLES.pdf.annotationModeDisable }));
+    expect(TUNABLES.pdf.annotationModeDisable).toBe(0);
+  });
+
   it('NFR-006 rejects a region above the canvas pixel cap before allocating', async () => {
     const canvases: FakeCanvas[] = [];
     const { handle } = await openHandle(fakePage(), canvases);

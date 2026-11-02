@@ -1,6 +1,7 @@
 import { computed, effect, inject, Injectable, Injector, signal } from '@angular/core';
 
 import { TUNABLES } from '../../config/tunables';
+import { parseMetadata, reconcileMetadata } from '../core';
 import { APP_LIFECYCLE } from '../ports/app-lifecycle';
 import { APP_VERSION } from '../ports/app-version';
 import { FILE_ACCESS } from '../ports/file-access';
@@ -17,6 +18,7 @@ import type { DocumentErrorCode, DocumentStatus } from './document.store';
 import { PreferencesStore } from './preferences.store';
 import { RatioDefaultsProvider } from './ratio-defaults';
 import { ResourceGovernor } from './resource-governor';
+import { loadInk } from './loaded-ink';
 import { SavePipeline } from './save-pipeline';
 import { SaveService } from './save.service';
 import { Scheduler } from './scheduler';
@@ -228,6 +230,42 @@ export class SessionStore {
     });
   }
 
+  /**
+   * SAV-005, SAV-006, SAV-012, DET-023: reads what an earlier session (or another app) left in the file. Data that cannot be
+   * used (none, invalid, other page count, read error) is ignored and detection runs as for any new file; data from a newer
+   * version is never overwritten. Detection starts only when it was not restored.
+   */
+  private async restoreFromFile(entry: TabEntry, bytes: Uint8Array): Promise<void> {
+    const { document, pipeline, saver } = entry;
+    let detectionRestored = false;
+    try {
+      const [json, ink] = await Promise.all([this.writer.readEmbeddedJson(bytes), this.writer.listInk(bytes)]);
+      if (!this.entries().includes(entry)) {
+        return;
+      }
+      if (json.ok && json.value !== null) {
+        const parsed = parseMetadata(json.value);
+        if (parsed.kind === 'newer') {
+          pipeline.metadataNewer = true;
+        } else if (parsed.kind === 'ok') {
+          const meta = reconcileMetadata(parsed.value, document.pageInfos().length);
+          detectionRestored = meta !== null && document.hydrateFromMetadata(meta);
+        }
+      }
+      if (ink.ok) {
+        const loaded = loadInk(ink.value, document.pageInfos().length);
+        document.loadSavedStrokes(loaded.strokes);
+        pipeline.registerSavedInk(loaded.saved);
+      }
+      saver.rebaseline();
+    } catch {
+      // unreadable data counts as no data
+    }
+    if (!detectionRestored && this.entries().includes(entry)) {
+      this.detection.start(document);
+    }
+  }
+
   private async openOne(file: OpenedFile): Promise<void> {
     for (const entry of this.entries()) {
       if (await this.files.isSame(entry.ref, file.ref)) {
@@ -243,12 +281,13 @@ export class SessionStore {
     document.readOnly.set(!file.writable);
     const pipeline = new SavePipeline(document, file.ref, file.bytes, this.files, this.writer, this.scheduler, this.appVersion);
     const saver = new SaveService(document, this.clock, pipeline.run, TUNABLES.saving.autosaveIdleMs, this.injector);
-    this.entries.update((list) => [...list, { id, ref: file.ref, document, saver, pipeline }]);
+    const entry: TabEntry = { id, ref: file.ref, document, saver, pipeline };
+    this.entries.update((list) => [...list, entry]);
     this.forceSave(this.activeIdSignal(), id);
     this.activeIdSignal.set(id);
     void document.load(file.bytes).then(() => {
       if (document.status() === 'ready') {
-        this.detection.start(document);
+        void this.restoreFromFile(entry, file.bytes);
       }
     });
     void this.preferences.addRecent(file.ref, (refId) => this.entries().some((e) => e.ref.id === refId));

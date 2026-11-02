@@ -239,6 +239,13 @@ export class DocumentStore {
     this.record({ kind: 'add', stroke });
   }
 
+  /** SAV-006, ANN-005: ink that already is in the file; no undo step and no change event (it is saved, not an edit). */
+  loadSavedStrokes(strokes: readonly InkStroke[]): void {
+    if (strokes.length > 0) {
+      this.strokesSignal.update((current) => [...current, ...strokes]);
+    }
+  }
+
   /** ANN-006: one undo step for all given strokes that are present; nothing to erase, no step. */
   eraseStrokes(strokes: readonly InkStroke[]): void {
     const present = new Set(this.strokesSignal().map((s) => s.id));
@@ -335,8 +342,8 @@ export class DocumentStore {
     };
   }
 
-  /** SAV-005, DET-023: restores marks, ratios and (when stored) the finished detection; no detection run is started. */
-  hydrateFromMetadata(meta: EmbeddedMetadata): void {
+  /** SAV-005, DET-023: restores marks, ratios and (when stored) the finished detection; no detection run is started. True when detection was restored. */
+  hydrateFromMetadata(meta: EmbeddedMetadata): boolean {
     this.marksSignal.set({
       jumps: meta.marks.jumps.map((j) => ({ ...j })),
       breaks: [...meta.marks.breaks],
@@ -352,6 +359,7 @@ export class DocumentStore {
         this.detection.finish(pageIndex, page.state, page.state === 'done' ? { pageIndex, width, height, systems: [...systems] } : null);
       }
     }
+    return meta.detection !== null;
   }
 
   /** Complete means every page of the file has a final state; before detection starts the state list is still empty. */

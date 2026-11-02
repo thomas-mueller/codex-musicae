@@ -154,6 +154,45 @@ describe('SaveService (M15 S1)', () => {
     expect(run).toHaveBeenCalledTimes(1);
   });
 
+  it('SAV-005 restoring data after the effects took their baseline is no change (rebaseline), later edits and detection are', async () => {
+    const { doc, clock, run, saver } = await setup();
+    // the restore happens after the watchers' first run: marks, ratios and a finished detection arrive
+    doc.hydrateFromMetadata({
+      schemaVersion: 1,
+      appVersion: 'v',
+      pageCount: 2,
+      detection: {
+        level: 'standard',
+        pages: [0, 1].map((pageIndex) => ({ pageIndex, width: 1, height: 1, state: 'done' as const, systems: [] })),
+      },
+      marks: { jumps: [], breaks: [1], stops: [], nextJumpId: 1 },
+      aspectRatio: { landscape: 1.4 },
+    });
+    saver.rebaseline();
+    TestBed.tick();
+    clock.advance(IDLE * 3);
+    await settle();
+    expect(run).not.toHaveBeenCalled();
+    expect(doc.unsaved()).toBe(false);
+    editMarks(doc);
+    TestBed.tick();
+    clock.advance(IDLE);
+    await settle();
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it('SAV-012 a detection that completes after the rebaseline is a change', async () => {
+    const { doc, clock, run, saver } = await setup();
+    saver.rebaseline();
+    doc.detection.reset(1);
+    TestBed.tick();
+    doc.detection.finish(0, 'done', { pageIndex: 0, width: 1, height: 1, systems: [] });
+    TestBed.tick();
+    clock.advance(IDLE);
+    await settle();
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
   it('SAV-009 dispose stops the timer', async () => {
     const { doc, clock, run, saver } = await setup();
     doc.addStroke(STROKE);

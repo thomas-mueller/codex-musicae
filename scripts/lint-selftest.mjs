@@ -6,10 +6,10 @@ const repositoryRoot = new URL('..', import.meta.url).pathname;
 const fixtureRoot = await mkdtemp(join(repositoryRoot, 'src/app/lint-selftest-'));
 
 const fixtures = [
-  ['boundary', 'core/violates-boundary.ts', "import '../features/shell/violates-boundary.ts';\n"],
-  ['core-angular', 'core/violates-core-import.ts', "import { Component } from '@angular/core';\n"],
-  ['platform-global', 'state/violates-platform.ts', 'export const width = window.innerWidth;\n'],
-  ['capacitor-import', 'state/violates-capacitor.ts', "import { Preferences } from '@capacitor/preferences';\n"],
+  ['ARC-001 boundary', 'core/violates-boundary.ts', "import '../features/shell/violates-boundary.ts';\n"],
+  ['ARC-002 core-angular', 'core/violates-core-import.ts', "import { Component } from '@angular/core';\n"],
+  ['PLT-003 platform-global', 'state/violates-platform.ts', 'export const width = window.innerWidth;\n'],
+  ['PLT-003 capacitor-import', 'state/violates-capacitor.ts', "import { Preferences } from '@capacitor/preferences';\n"],
   ['magic-number', 'state/violates-magic-number.ts', 'export const value = 3 + 4;\n'],
   ['console-log', 'state/violates-console.ts', "console.log('x');\n"],
   ['color-literal', 'state/violates-color.ts', "export const color = '#FFFFFF';\n"],
@@ -45,7 +45,7 @@ try {
     const file = join(fixtureRoot, path);
     await mkdir(join(file, '..'), { recursive: true });
     await writeFile(file, source, 'utf8');
-    if (name === 'boundary') {
+    if (name.endsWith('boundary')) {
       await mkdir(join(fixtureRoot, 'features/shell'), { recursive: true });
       await writeFile(join(fixtureRoot, 'features/shell/violates-boundary.ts'), 'export const fixture = true;\n', 'utf8');
     }
@@ -53,6 +53,7 @@ try {
     if (result.code === 0) {
       throw new Error(`lint self-test fixture passed unexpectedly: ${name}\n${result.output}`);
     }
+    console.log(`  ok  ${name} is rejected`);
   }
   const rawTemplate = join(fixtureRoot, 'raw.html');
   const translatedTemplate = join(fixtureRoot, 'translated.html');

@@ -52,37 +52,37 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **FIL-003** [v1·done·M8] Each tab shows the file name, a close icon and a status marker (unsaved dot, error icon, read-only lock icon, needs-re-open icon).
 - **FIL-004** [v1·done·M8] In expanded layout the tabs are a tab bar; in compact layout one button shows the current tab name and opens the list of all tabs.
 - **FIL-005** [v1·done·M8] Switching tabs keeps the global mode, tool and tool settings; per tab are position, zoom, aspect-ratio override, undo history and document data.
-- **FIL-006** [v1·todo·M15] Closing a tab saves it first; if saving fails the tab stays open and shows the error icon.
+- **FIL-006** [v1·done·M15] Closing a tab saves it first; if saving fails the tab stays open and shows the error icon.
 - **FIL-007** [v1·done·M7] With no tab open, all chrome stays visible, the PDF area shows only canvas grey, controls that need a document are disabled, open-file and recent files stay enabled.
 - **FIL-008** [v1·done·M8] A recent-files list (max `T:resources.recentFilesMax`, newest first) opens from the open-file control; selecting an entry reopens it, or asks to re-pick the file if access is lost.
 - **FIL-009** [v1·done·M8] An encrypted, damaged or zero-page PDF opens as a tab in error state (error icon, tooltip with reason); it never crashes the app.
-- **FIL-010** [v1·todo·M15] While a tab has pending changes it shows the unsaved dot; it disappears after a successful save.
+- **FIL-010** [v1·done·M15] While a tab has pending changes it shows the unsaved dot; it disappears after a successful save.
 - **FIL-011** [v1·todo·M16] At startup the app reopens the previous tabs, selects the last active tab and restores each tab's position.
 - **FIL-012** [v1·todo·M16] After startup the mode is annotation mode, even if the app was closed in presentation mode.
 - **FIL-013** [v1·todo·M16] A tab whose file access cannot be restored shows the needs-re-open state; one tap re-picks the file or re-grants permission.
 - **FIL-014** [v1·todo·M16] The persisted position per tab is the playing-order system index of the first entry on the current slide plus the organization-mode page and scroll offset.
 - **FIL-015** [v1·done·M8] The preferences store (`T:persistence.keyPrefix`) holds UI state and file references only, never PDF-derived data. _P: web stores file handles in IndexedDB, other values in localStorage; Android uses Capacitor Preferences._
-- **FIL-016** [v1·todo·M15] If a file cannot be written, its tab shows the read-only lock icon and offers "save a copy"; ink, jumps and breaks stay editable in memory.
+- **FIL-016** [v1·done·M15] If a file cannot be written, its tab shows the read-only lock icon and offers "save a copy"; ink, jumps and breaks stay editable in memory.
 - **FIL-017** [v1·todo·M15] "Save a copy" writes the modified PDF to a new file. _P: web download or save picker; Android document-create intent._
 - **FIL-018** [v1·todo·M16] The Android app is offered for PDF `VIEW` intents ("Open with…") and opens the file in a tab, requesting write access.
 - **FIL-019** [v1·todo·M16] The PWA manifest registers a PDF file handler. _P: effective only in desktop Chromium._
 
 ## SAV — Saving and embedded data
 
-- **SAV-001** [v1·todo·M15] App data is embedded as one PDF file attachment named `T:saving.metadataFileName` in the `/EmbeddedFiles` name tree; the PDF stays valid and other viewers ignore it.
-- **SAV-002** [v1·todo·M15] The embedded JSON has an integer `schemaVersion` (`T:saving.schemaVersion`) and is validated by a schema on read.
-- **SAV-003** [v1·todo·M15] Older schema versions are upgraded on read by migration functions; a newer unknown version is ignored and never overwritten.
-- **SAV-004** [v1·todo·M15] The JSON contains: `schemaVersion`, `appVersion`, `pageCount`, detection level, system rectangles per page, jumps, breaks, stops, and optional aspect-ratio overrides per orientation.
-- **SAV-005** [v1·todo·M15] If the embedded `pageCount` differs from the PDF, the embedded data is discarded and detection runs again.
-- **SAV-006** [v1·todo·M15] Strokes are saved as standard PDF Ink annotations (`/Subtype /Ink`) with `/InkList`, color, border width, opacity (highlighter) and an appearance stream, so other viewers display them.
+- **SAV-001** [v1·done·M15] App data is embedded as one PDF file attachment named `T:saving.metadataFileName` in the `/EmbeddedFiles` name tree; the PDF stays valid and other viewers ignore it.
+- **SAV-002** [v1·done·M15] The embedded JSON has an integer `schemaVersion` (`T:saving.schemaVersion`) and is validated by a schema on read.
+- **SAV-003** [v1·done·M15] Older schema versions are upgraded on read by migration functions; a newer unknown version is ignored and never overwritten.
+- **SAV-004** [v1·done·M15] The JSON contains: `schemaVersion`, `appVersion`, `pageCount`, detection level, system rectangles per page, jumps, breaks, stops, and optional aspect-ratio overrides per orientation.
+- **SAV-005** [v1·done·M15] If the embedded `pageCount` differs from the PDF, the embedded data is discarded and detection runs again.
+- **SAV-006** [v1·done·M15] Strokes are saved as standard PDF Ink annotations (`/Subtype /Ink`) with `/InkList`, color, border width, opacity (highlighter) and an appearance stream, so other viewers display them.
 - **SAV-007** [v1·done·M14] A stroke is stored in the PDF user space of the page it belongs to, with the PDF's own transform (CropBox, `/Rotate`) applied inversely.
-- **SAV-008** [v1·todo·M15] Saving triggers: `T:saving.autosaveIdleMs` after the last change, tab switch, tab close, app hidden or paused. Saving never starts while a stroke is in progress.
-- **SAV-009** [v1·todo·M15] A save builds the complete file bytes in memory first and only then writes; on failure the in-memory state is kept, the tab shows the error icon and the next trigger retries.
-- **SAV-010** [v1·todo·M15] Saving runs in a worker and does not block drawing or rendering.
+- **SAV-008** [v1·done·M15] Saving triggers: `T:saving.autosaveIdleMs` after the last change, tab switch, tab close, app hidden or paused. Saving never starts while a stroke is in progress.
+- **SAV-009** [v1·done·M15] A save builds the complete file bytes in memory first and only then writes; on failure the in-memory state is kept, the tab shows the error icon and the next trigger retries.
+- **SAV-010** [v1·done·M15] Saving runs in a worker and does not block drawing or rendering.
 - **SAV-011** [v1·todo·M15] Where the platform allows, saving writes to the same file. _P: web in-place only in Chromium (File System Access); Safari and Firefox offer "save a copy" only._
-- **SAV-012** [v1·todo·M15] After detection completes on a writable file, a save is scheduled so that later opens find embedded detection data and skip detection.
-- **SAV-013** [v1·todo·M15] Existing annotations of other apps and existing attachments are preserved on save, except ink removed by the eraser (ANN-005).
-- **SAV-014** [v1·todo·M15] Ink annotation edits made in a tab persist across tab switches within the session even if saving failed.
+- **SAV-012** [v1·done·M15] After detection completes on a writable file, a save is scheduled so that later opens find embedded detection data and skip detection.
+- **SAV-013** [v1·done·M15] Existing annotations of other apps and existing attachments are preserved on save, except ink removed by the eraser (ANN-005).
+- **SAV-014** [v1·done·M15] Ink annotation edits made in a tab persist across tab switches within the session even if saving failed.
 
 ## DET — Detection
 
@@ -108,7 +108,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **DET-020** [v1·done·M10] Bitmaps are released after each page; only rectangles are retained.
 - **DET-021** [v1·done·M10] Navigating to an unfinished page in organization mode makes it the next page processed; its bars are drawn provisional (`T:colors.orgBar.provisionalOpacity`, no numbers, not selectable) until all earlier pages are finished.
 - **DET-022** [v1·done·M10] Detection results are cached in runtime memory only.
-- **DET-023** [v1·todo·M15] If valid embedded detection data exists, detection is skipped.
+- **DET-023** [v1·done·M15] If valid embedded detection data exists, detection is skipped.
 - **DET-024** [v1·done·M5] Page width, padding and thresholds are computed per page; documents with mixed page sizes are supported.
 
 ## PLY — Junctions and playing order (pure logic)
@@ -181,7 +181,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **ANN-002** [v1·done·M14] Tapping an inactive tool activates it; tapping the active tool deactivates it; a long press on the pen or highlighter button opens the color/width popup.
 - **ANN-003** [v1·done·M14] Each tool remembers its last color and width index in the preferences store; defaults `T:annotation.defaultPen` and `defaultHighlighter`.
 - **ANN-004** [v1·done·M14] Pen and highlighter each offer 6 color presets and 3 widths (`T:colors.penPresets`, `highlighterPresets`, `T:annotation.penWidthsPt`, `highlighterWidthsPt`); the highlighter uses opacity `T:annotation.highlighterOpacity` with multiply blending.
-- **ANN-005** [v1·todo·M15] The eraser removes whole ink annotations whose path lies within `T:annotation.eraserHitRadiusPx` of the pointer, including ink made by other apps; it has no width setting.
+- **ANN-005** [v1·done·M15] The eraser removes whole ink annotations whose path lies within `T:annotation.eraserHitRadiusPx` of the pointer, including ink made by other apps; it has no width setting.
 - **ANN-006** [v1·done·M14] Undo and redo cover added and erased strokes per document, up to `T:annotation.undoDepth` steps, and are cleared when the document closes.
 - **ANN-007** [v1·done·M14] Drawing works only in annotation mode; entering presentation or organization mode deactivates the tool, and returning does not restore it.
 - **ANN-008** [v1·done·M14] While a tool is active, one pointer draws, two pointers zoom and pan; tap zones and swipes are off; pedals, buttons, slider and wheel still navigate.
@@ -248,7 +248,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **PLT-007** [v1·todo·M16] The Android back button closes popups first, in presentation mode returns to annotation mode, and otherwise has the default behavior.
 - **PLT-008** [v1·todo·M16] Android opens files through the Storage Access Framework with persistable read-write permission and writes in place; if write access is not granted the file is read-only (FIL-016). _Risk: the write is a truncating write, not atomic._
 - **PLT-009** [v1·done·M2] The web app is a PWA: it works offline after the first load, and a new version activates only at the next app start, never mid-use.
-- **PLT-010** [v1·todo·M15] Safari and Firefox have no in-place save; saving offers "save a copy".
+- **PLT-010** [v1·done·M15] Safari and Firefox have no in-place save; saving offers "save a copy".
 - **PLT-011** [v1·todo·M17] On every push the E2E suite runs on Chromium, Firefox and WebKit, including Android and iPad/iPhone device profiles.
 - **PLT-012** [v1-optional·todo·M18] The `ios` Capacitor shell is committed; deployment target iOS 16.4; Info.plist declares PDF as a supported document type with open-in-place.
 - **PLT-013** [v1-optional·todo·M18] iOS adapters provide: status bar and home indicator hidden in presentation, keep-awake, document picker with write access, "open with" via the URL-open event, safe-area insets.
@@ -268,7 +268,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **NFR-010** [v1·done·M8] Under memory pressure the app degrades in this order: drop prefetch, lower render resolution, free inactive tabs' bitmaps; it never fails outright.
 - **NFR-011** [v1·done·M10] Every OpenCV object is released in a `finally` block.
 - **NFR-012** [v1·done·M10] OpenCV.js is loaded only inside the detection worker, lazily on first use, from the app's own assets (no CDN).
-- **NFR-013** [v1·todo·M15] There is no hard PDF size limit; a failed save shows the error icon and does not crash.
+- **NFR-013** [v1·done·M15] There is no hard PDF size limit; a failed save shows the error icon and does not crash.
 - **NFR-014** [v1·done·M1] The initial bundle stays within `T:budgets.initialBundleKbGzip` (Angular build budget).
 - **NFR-015** [v1·todo·M16] After the OS kills the WebView, the next start restores tabs and positions; unsaved loss is limited to the autosave delay.
 - **NFR-016** [v1·todo·M17] A reference PDF with 100+ pages (one scanned) runs within the budgets on a mid-range small tablet.

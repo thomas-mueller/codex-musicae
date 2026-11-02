@@ -29,6 +29,8 @@ export class SaveService {
   private disposed = false;
   private readonly subscription: Subscription;
   private readonly effects: EffectRef[];
+  /** Each watcher forgets its baseline here, so the next run only records the current value again. */
+  private readonly baselineResets: Array<() => void> = [];
 
   constructor(
     private readonly doc: DocumentStore,
@@ -61,6 +63,20 @@ export class SaveService {
     return !this.failed();
   }
 
+  /**
+   * SAV-005, DET-023: restoring saved data on open is no edit. Called after hydration and loading ink: the watchers take a
+   * fresh baseline at their next run (whichever order effects and hydration happened in) and the state machine starts clean.
+   * A detection that is started afterwards and completes still counts as a change (SAV-012).
+   */
+  rebaseline(): void {
+    this.baselineResets.forEach((reset) => reset());
+    this.cancelTimer?.();
+    this.cancelTimer = null;
+    this.state.set(SAVE_INITIAL);
+    this.doc.unsaved.set(false);
+    this.doc.saveFailed.set(false);
+  }
+
   dispose(): void {
     this.disposed = true;
     this.subscription.unsubscribe();
@@ -88,6 +104,7 @@ export class SaveService {
   /** The first run only takes the baseline, so restoring saved data on open is no change. */
   private watch(read: () => unknown, injector: Injector): EffectRef {
     let first = true;
+    this.baselineResets.push(() => (first = true));
     return effect(
       () => {
         read();
@@ -103,6 +120,7 @@ export class SaveService {
 
   private watchDetectionCompletion(injector: Injector): EffectRef {
     let previous: boolean | null = null;
+    this.baselineResets.push(() => (previous = null));
     return effect(
       () => {
         const complete = this.doc.detectionComplete();

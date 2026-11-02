@@ -1,7 +1,7 @@
 import { vi } from 'vitest';
 
 import type { FileAccess, FileAccessError, FileRef } from '../../ports/file-access';
-import type { PdfEdits, PdfWriteError, PdfWriter } from '../../ports/pdf-writer';
+import type { ExistingInk, PdfEdits, PdfWriteError, PdfWriter } from '../../ports/pdf-writer';
 import { err, ok } from '../../ports/result';
 import type { Result } from '../../ports/result';
 import type { Preferences } from '../../ports/preferences';
@@ -42,14 +42,16 @@ export function fakeFileAccess(): FakeFileAccess {
 }
 
 export type FakePdfWriter = PdfWriter & {
+  readEmbeddedJson: ReturnType<typeof vi.fn<(bytes: Uint8Array) => Promise<Result<string | null, PdfWriteError>>>>;
+  listInk: ReturnType<typeof vi.fn<(bytes: Uint8Array) => Promise<Result<readonly ExistingInk[], PdfWriteError>>>>;
   apply: ReturnType<typeof vi.fn<(bytes: Uint8Array, edits: PdfEdits, signal: AbortSignal) => Promise<Result<Uint8Array, PdfWriteError>>>>;
 };
 
 /** `apply` answers new bytes (the input plus one byte per call) and records its edits. */
 export function fakePdfWriter(): FakePdfWriter {
   return {
-    readEmbeddedJson: () => Promise.resolve(ok(null)),
-    listInk: () => Promise.resolve(ok([])),
+    readEmbeddedJson: vi.fn(() => Promise.resolve(ok(null))),
+    listInk: vi.fn(() => Promise.resolve(ok([]))),
     apply: vi.fn((bytes: Uint8Array) => Promise.resolve(ok(new Uint8Array([...bytes, 1])))),
   };
 }
