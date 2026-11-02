@@ -1,0 +1,10 @@
+[
+  { "file": "engraved-clean.pdf", "level": "standard", "systemsPerPage": [4, 4, 4], "note": "the M8 synthetic score", "knownLimitation": null },
+  { "file": "engraved-single.pdf", "level": "standard", "systemsPerPage": [1], "note": "one system, no frame", "knownLimitation": null },
+  { "file": "engraved-mixed-sizes.pdf", "level": "standard", "systemsPerPage": [3, 3, 3], "note": "A4 portrait, Letter, A3 landscape", "knownLimitation": null },
+  { "file": "flat-staves.pdf", "level": "standard", "systemsPerPage": [8], "note": "single staves without a joining barline, full width", "knownLimitation": null },
+  { "file": "title-then-score.pdf", "level": "standard", "systemsPerPage": [0, 3], "note": "page 1 is a filled 280x280 pt logo block (under minSystemWidthRatio of the page width)", "knownLimitation": null },
+  { "file": "blank.pdf", "level": "standard", "systemsPerPage": [0, 0], "note": "two empty pages", "knownLimitation": null },
+  { "file": "scanned-noise.pdf", "level": "standard", "systemsPerPage": [4, 4], "note": "200 dpi raster with speckle noise", "knownLimitation": null },
+  { "file": "scanned-frame.pdf", "level": "standard", "systemsPerPage": [5, 5], "note": "the page border is taken as a fifth system on each page", "knownLimitation": "LIM-002" }
+]

@@ -13,6 +13,7 @@ import { provideTransloco } from '@jsverse/transloco';
 import { provideRouter } from '@angular/router';
 import { TUNABLES } from '../config/tunables';
 import { tunablesToCssVars } from './state/css-vars';
+import { DetectionService } from './state/detection.service';
 import { APP_VERSION_RAW } from '../config/version.generated';
 import { APP_VERSION } from './ports/app-version';
 
@@ -95,6 +96,7 @@ export const appConfig: ApplicationConfig = {
         const renderer = inject(PDF_RENDERER);
         const engine = inject(DETECTION_ENGINE);
         const session = inject(SessionStore);
+        const detection = inject(DetectionService);
         const detect = async (pdf: Uint8Array, pageIndex: number, scale: number) => {
           const signal = new AbortController().signal;
           const doc = await renderer.open(pdf);
@@ -119,6 +121,14 @@ export const appConfig: ApplicationConfig = {
           detectionState: () => {
             const doc = session.activeDocument();
             return { complete: doc?.detectionComplete() ?? false, startedOrder: doc?.detection.startedOrder ?? [] };
+          },
+          systemCounts: () => {
+            const run = session.activeDocument()?.detection;
+            return { level: run?.level() ?? '', counts: (run?.pages() ?? []).map((page) => page?.systems.length ?? null) };
+          },
+          redetect: (level) => {
+            const doc = session.activeDocument();
+            if (doc !== null) detection.redetect(doc, level);
           },
           strokeCount: () => session.activeDocument()?.strokes().length ?? 0,
         });

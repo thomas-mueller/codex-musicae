@@ -297,7 +297,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 ## TST — Testing
 
 - **TST-001** [v1·done·M4] Every `core/` function has unit tests written before its implementation; test names contain the requirement ID.
-- **TST-002** [v1·todo·M17] A golden detection corpus (engraved and scanned PDFs with expected system counts per page) runs in CI; every reported problem PDF joins it.
+- **TST-002** [v1·done·M17] A golden detection corpus (engraved and scanned PDFs with expected system counts per page) runs in CI; every reported problem PDF joins it.
 - **TST-003** [v1·todo·M17] A round-trip test annotates, saves, reopens and checks that strokes and embedded data survive and the PDF still loads.
 - **TST-004** [v1·done·M1] Playwright is configured with Chromium, Firefox and WebKit projects and phone and tablet device profiles.
 - **TST-005** [v1·done·M1] Code that exists only for Safari/WebKit changes only together with a Playwright WebKit test.
