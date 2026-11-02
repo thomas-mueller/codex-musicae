@@ -6,6 +6,7 @@ import type { FileAccessError, FileRef, OpenedFile } from '../ports/file-access'
 import { PDF_RENDERER } from '../ports/pdf-renderer';
 import type { Result } from '../ports/result';
 import { BitmapCache } from './bitmap-cache';
+import { CLOCK } from './clock';
 import { DetectionService } from './detection.service';
 import { DocumentStore } from './document.store';
 import type { DocumentErrorCode, DocumentStatus } from './document.store';
@@ -42,6 +43,7 @@ export class SessionStore {
   private readonly governor = inject(ResourceGovernor);
   private readonly detection = inject(DetectionService);
   private readonly ratioDefaults = inject(RatioDefaultsProvider);
+  private readonly clock = inject(CLOCK);
   private readonly entries = signal<readonly TabEntry[]>([]);
   private readonly activeIdSignal = signal<string | null>(null);
   private readonly repickSignal = signal<ReadonlySet<string>>(new Set());
@@ -175,7 +177,7 @@ export class SessionStore {
       }
     }
     const id = `t${++this.tabCounter}`;
-    const document = new DocumentStore(id, this.renderer, this.ratioDefaults);
+    const document = new DocumentStore(id, this.renderer, this.ratioDefaults, () => this.clock.now());
     this.entries.update((list) => [...list, { id, ref: file.ref, document }]);
     this.activeIdSignal.set(id);
     void document.load(file.bytes).then(() => {

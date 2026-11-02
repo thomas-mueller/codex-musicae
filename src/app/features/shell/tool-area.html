@@ -20,8 +20,8 @@
     @for (entry of tools; track entry.tool) {
       <app-tool-button [entry]="entry" [panel]="true" />
     }
-    <button appIconButton icon="undo" labelKey="undo" [disabled]="noDocument()"></button>
-    <button appIconButton icon="redo" labelKey="redo" [disabled]="noDocument()"></button>
+    <button appIconButton icon="undo" labelKey="undo" [disabled]="!canUndo()" (pressed)="session.activeDocument()?.undo()"></button>
+    <button appIconButton icon="redo" labelKey="redo" [disabled]="!canRedo()" (pressed)="session.activeDocument()?.redo()"></button>
   }
 } @else if (compact()) {
   <button

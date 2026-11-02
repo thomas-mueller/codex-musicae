@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 
+import { SessionStore } from '../../state/session.store';
 import { UiStore } from '../../state/ui.store';
 import { OpenFileDirective } from '../tabs/open-file.directive';
 import { TabBar } from '../tabs/tab-bar';
@@ -20,5 +21,9 @@ export const POPUP_OVERFLOW_TOP = 'overflow-top';
 })
 export class TopBar {
   protected readonly store = inject(UiStore);
+  protected readonly session = inject(SessionStore);
   protected readonly popupId = POPUP_OVERFLOW_TOP;
+  /** ANN-006: both act on the active tab; not while a stroke is being drawn. */
+  protected readonly canUndo = computed(() => !this.store.strokeInProgress() && (this.session.activeDocument()?.canUndo() ?? false));
+  protected readonly canRedo = computed(() => !this.store.strokeInProgress() && (this.session.activeDocument()?.canRedo() ?? false));
 }

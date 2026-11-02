@@ -31,5 +31,17 @@ export class AppShell {
   constructor() {
     // Controls that need a document follow the active tab (FIL-007): the one place that mirrors it into UiStore.
     effect(() => this.store.hasDocument.set(this.session.activeTab()?.status === 'ready'));
+    // ANN-013: the stroke state of the active tab (a tab switch or close ends the mirror).
+    effect((onCleanup) => {
+      const subscription = this.session.activeDocument()?.changes.subscribe(({ type }) => {
+        if (type !== 'change') {
+          this.store.strokeInProgress.set(type === 'strokeStart');
+        }
+      });
+      onCleanup(() => {
+        subscription?.unsubscribe();
+        this.store.strokeInProgress.set(false);
+      });
+    });
   }
 }

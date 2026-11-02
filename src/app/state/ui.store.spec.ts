@@ -34,6 +34,10 @@ describe('UiStore', () => {
     expect(store.tool()).toBeNull();
   });
 
+  it('ANN-013 strokeInProgress is false by default', () => {
+    expect(store.strokeInProgress()).toBe(false);
+  });
+
   it('UIX-001 switching to a mode other than annotation clears the tool', () => {
     store.setTool('pen');
     store.setMode('organization');
