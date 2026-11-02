@@ -27,11 +27,15 @@ import { BitmapCache } from './state/bitmap-cache';
 import { SessionStore } from './state/session.store';
 import { WebAppLifecycle } from './adapters/web/web-app-lifecycle';
 import { WebDeviceInfo } from './adapters/web/web-device-info';
+import { WebFullscreen } from './adapters/web/web-fullscreen';
+import { WebWakeLock } from './adapters/web/web-wake-lock';
 import { WebFileAccess } from './adapters/web/web-file-access';
 import { WebPreferences } from './adapters/web/web-preferences';
 import { APP_LIFECYCLE } from './ports/app-lifecycle';
 import { DETECTION_ENGINE } from './ports/detection-engine';
 import { DEVICE_INFO } from './ports/device-info';
+import { FULLSCREEN } from './ports/fullscreen';
+import { WAKE_LOCK } from './ports/wake-lock';
 import { FILE_ACCESS } from './ports/file-access';
 import { PdfLibWriter } from './adapters/pdflib/pdflib-pdf-writer';
 import { PDF_RENDERER } from './ports/pdf-renderer';
@@ -114,6 +118,8 @@ export const appConfig: ApplicationConfig = {
     { provide: PREFERENCES, useFactory: () => new WebPreferences() },
     { provide: DEVICE_INFO, useFactory: () => new WebDeviceInfo() },
     { provide: FILE_ACCESS, useFactory: () => new WebFileAccess() },
+    { provide: FULLSCREEN, useFactory: () => new WebFullscreen() },
+    { provide: WAKE_LOCK, useFactory: () => new WebWakeLock() },
     provideRouter(routes),
   ]
 };

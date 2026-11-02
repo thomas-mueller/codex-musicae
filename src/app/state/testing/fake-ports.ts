@@ -1,9 +1,12 @@
+import { signal } from '@angular/core';
 import { vi } from 'vitest';
 
 import type { FileAccess, FileAccessError, FileRef } from '../../ports/file-access';
 import type { ExistingInk, PdfEdits, PdfWriteError, PdfWriter } from '../../ports/pdf-writer';
 import { err, ok } from '../../ports/result';
 import type { Result } from '../../ports/result';
+import type { Fullscreen, FullscreenError } from '../../ports/fullscreen';
+import type { WakeLock, WakeLockError } from '../../ports/wake-lock';
 import type { Preferences } from '../../ports/preferences';
 
 export function memoryPreferences(initial: Record<string, unknown> = {}): Preferences & { data: Map<string, unknown> } {
@@ -56,4 +59,58 @@ export function fakePdfWriter(): FakePdfWriter {
     listInk: vi.fn(() => Promise.resolve(ok([]))),
     apply: vi.fn((bytes: Uint8Array) => Promise.resolve(ok(new Uint8Array([...bytes, 1])))),
   };
+}
+
+export type FakeFullscreen = Fullscreen & {
+  enterCalls: number;
+  exitCalls: number;
+  /** Simulates Esc or a system gesture. */
+  externalExit(): void;
+};
+
+export function fakeFullscreen(result: Result<void, FullscreenError> = ok(undefined)): FakeFullscreen {
+  const active = signal(false);
+  const callbacks = new Set<() => void>();
+  const fake: FakeFullscreen = {
+    active: active.asReadonly(),
+    enterCalls: 0,
+    exitCalls: 0,
+    enter: () => {
+      fake.enterCalls++;
+      active.set(result.ok);
+      return Promise.resolve(result);
+    },
+    exit: () => {
+      fake.exitCalls++;
+      active.set(false);
+      return Promise.resolve();
+    },
+    onExternalExit: (callback) => {
+      callbacks.add(callback);
+      return () => callbacks.delete(callback);
+    },
+    externalExit: () => {
+      active.set(false);
+      for (const callback of callbacks) callback();
+    },
+  };
+  return fake;
+}
+
+export type FakeWakeLock = WakeLock & { acquireCalls: number; releaseCalls: number };
+
+export function fakeWakeLock(result: Result<void, WakeLockError> = ok(undefined)): FakeWakeLock {
+  const fake: FakeWakeLock = {
+    acquireCalls: 0,
+    releaseCalls: 0,
+    acquire: () => {
+      fake.acquireCalls++;
+      return Promise.resolve(result);
+    },
+    release: () => {
+      fake.releaseCalls++;
+      return Promise.resolve();
+    },
+  };
+  return fake;
 }

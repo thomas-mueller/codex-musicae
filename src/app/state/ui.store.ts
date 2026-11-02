@@ -1,7 +1,8 @@
-import { computed, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 
 import { TUNABLES } from '../../config/tunables';
 import { sizeClassOf } from '../core';
+import { PresentationPlatform } from './presentation-platform';
 
 export type Mode = 'organization' | 'annotation' | 'presentation';
 export type DetectionLevel = keyof typeof TUNABLES.detection.levels;
@@ -26,6 +27,7 @@ export interface Viewport {
 /** Global UI state: mode, tool, popup, viewport. UIX-001, UIX-003 */
 @Injectable({ providedIn: 'root' })
 export class UiStore {
+  private readonly platform = inject(PresentationPlatform);
   readonly mode = signal<Mode>('annotation');
   readonly tool = signal<Tool | null>(null);
   readonly popup = signal<Popup | null>(null);
@@ -48,7 +50,14 @@ export class UiStore {
     if (mode === 'presentation' && !this.hasDocument()) {
       return;
     }
+    const previous = this.mode();
     this.mode.set(mode);
+    // PLT-004, PLT-005: synchronous, because the browser demands the user gesture that is still running.
+    if (mode === 'presentation' && previous !== 'presentation') {
+      this.platform.enter();
+    } else if (mode !== 'presentation' && previous === 'presentation') {
+      this.platform.leave();
+    }
     this.selection.set(null);
     this.pickingTarget.set(null);
     this.pendingLevel.set(null);

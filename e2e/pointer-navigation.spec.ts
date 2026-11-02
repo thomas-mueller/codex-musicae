@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { desktopTest } from './support/desktop';
 
+import { leavePresentationWithEscape } from './support/fullscreen';
 import { label, openScoreInAnnotation, openScoreInOrganization } from './support/score';
 
 const SWIPE_FRACTION = 0.2; // NAV-008: above the 15% minimum
@@ -52,7 +53,8 @@ desktopTest('NAV-006 NAV-007 clicks in the left, right and center tap zones go b
   await expect(indicator(page)).toHaveText(`2 / ${n}`);
   await clickAt(page, 0.5);
   await expect(shell(page)).toHaveAttribute('data-mode', 'presentation');
-  await page.keyboard.press('Escape');
+  // PLT-004: presentation requests fullscreen; WebKit drops keys while that transition runs, so Escape is retried.
+  await leavePresentationWithEscape(page);
   await expect(shell(page)).toHaveAttribute('data-mode', 'annotation');
 });
 

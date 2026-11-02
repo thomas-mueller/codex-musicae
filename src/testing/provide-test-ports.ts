@@ -11,17 +11,21 @@ import { APP_VERSION } from '../app/ports/app-version';
 import { PDF_RENDERER } from '../app/ports/pdf-renderer';
 import { PDF_WRITER } from '../app/ports/pdf-writer';
 import { PREFERENCES } from '../app/ports/preferences';
-import { fakeFileAccess, fakePdfWriter, memoryPreferences } from '../app/state/testing/fake-ports';
+import { FULLSCREEN } from '../app/ports/fullscreen';
+import { WAKE_LOCK } from '../app/ports/wake-lock';
+import { fakeFileAccess, fakeFullscreen, fakeWakeLock, fakePdfWriter, memoryPreferences } from '../app/state/testing/fake-ports';
 import { fakeRenderer } from '../app/state/testing/fake-renderer';
 
 const TEST_MEMORY_GB = 4;
 
 /** Fake platform ports for specs that render the shell or use the stores. */
-export function provideTestPorts(): Provider[] {
+export function provideTestPorts(fullscreen = fakeFullscreen()): Provider[] {
   return [
     { provide: PDF_RENDERER, useValue: fakeRenderer() },
     { provide: FILE_ACCESS, useValue: fakeFileAccess() },
     { provide: PREFERENCES, useValue: memoryPreferences() },
+    { provide: FULLSCREEN, useValue: fullscreen },
+    { provide: WAKE_LOCK, useValue: fakeWakeLock() },
     ...provideTestDetectionPorts(),
     ...provideTestSavePorts(),
   ];

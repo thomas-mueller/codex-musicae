@@ -1,0 +1,19 @@
+import { TestBed } from '@angular/core/testing';
+
+import { provideTestPorts } from '../../testing/provide-test-ports';
+import { fakeFullscreen } from '../state/testing/fake-ports';
+import { UiStore } from '../state/ui.store';
+import { NavigationHandler } from './navigation-handler';
+
+describe('presentation exit from the platform', () => {
+  it('PLT-004 an external fullscreen exit (Esc) returns to annotation mode', () => {
+    const fullscreen = fakeFullscreen();
+    TestBed.configureTestingModule({ providers: provideTestPorts(fullscreen) });
+    const ui = TestBed.inject(UiStore);
+    ui.hasDocument.set(true);
+    TestBed.inject(NavigationHandler);
+    ui.setMode('presentation');
+    fullscreen.externalExit();
+    expect(ui.mode()).toBe('annotation');
+  });
+});
