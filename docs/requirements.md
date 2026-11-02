@@ -57,15 +57,15 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **FIL-008** [v1·done·M8] A recent-files list (max `T:resources.recentFilesMax`, newest first) opens from the open-file control; selecting an entry reopens it, or asks to re-pick the file if access is lost.
 - **FIL-009** [v1·done·M8] An encrypted, damaged or zero-page PDF opens as a tab in error state (error icon, tooltip with reason); it never crashes the app.
 - **FIL-010** [v1·done·M15] While a tab has pending changes it shows the unsaved dot; it disappears after a successful save.
-- **FIL-011** [v1·todo·M16] At startup the app reopens the previous tabs, selects the last active tab and restores each tab's position.
-- **FIL-012** [v1·todo·M16] After startup the mode is annotation mode, even if the app was closed in presentation mode.
-- **FIL-013** [v1·todo·M16] A tab whose file access cannot be restored shows the needs-re-open state; one tap re-picks the file or re-grants permission.
-- **FIL-014** [v1·todo·M16] The persisted position per tab is the playing-order system index of the first entry on the current slide plus the organization-mode page and scroll offset.
+- **FIL-011** [v1·done·M16] At startup the app reopens the previous tabs, selects the last active tab and restores each tab's position.
+- **FIL-012** [v1·done·M16] After startup the mode is annotation mode, even if the app was closed in presentation mode.
+- **FIL-013** [v1·done·M16] A tab whose file access cannot be restored shows the needs-re-open state; one tap re-picks the file or re-grants permission.
+- **FIL-014** [v1·done·M16] The persisted position per tab is the playing-order system index of the first entry on the current slide plus the organization-mode page and scroll offset.
 - **FIL-015** [v1·done·M8] The preferences store (`T:persistence.keyPrefix`) holds UI state and file references only, never PDF-derived data. _P: web stores file handles in IndexedDB, other values in localStorage; Android uses Capacitor Preferences._
 - **FIL-016** [v1·done·M15] If a file cannot be written, its tab shows the read-only lock icon and offers "save a copy"; ink, jumps and breaks stay editable in memory.
 - **FIL-017** [v1·todo·M15] "Save a copy" writes the modified PDF to a new file. _P: web download or save picker; Android document-create intent._
 - **FIL-018** [v1·todo·M16] The Android app is offered for PDF `VIEW` intents ("Open with…") and opens the file in a tab, requesting write access.
-- **FIL-019** [v1·todo·M16] The PWA manifest registers a PDF file handler. _P: effective only in desktop Chromium._
+- **FIL-019** [v1·done·M16] The PWA manifest registers a PDF file handler. _P: effective only in desktop Chromium._
 
 ## SAV — Saving and embedded data
 
@@ -242,8 +242,8 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **PLT-001** [v1·done·M1] Supported browsers: latest two versions of Chrome, Edge, Firefox and Safari (min 16.4) on desktop; Chrome, Firefox, Samsung Internet, Edge on Android; Safari on iPad and iPhone. The targets live in one `browserslist` config.
 - **PLT-002** [v1·done·M3] The Android app has `minSdk` 29 (Android 10) in one Gradle location.
 - **PLT-003** [v1·done·M1] Platform APIs (Fullscreen API, Wake Lock, File System Access, localStorage, IndexedDB, Capacitor plugins) may be used only in `adapters/` and the composition root; lint fails otherwise. The ports are PdfRenderer, PdfWriter, DetectionEngine, FileAccess, Fullscreen, WakeLock, Preferences, AppLifecycle, OpenWith, BackButton; each gets its implementations in the milestone that first needs it (see `architecture.md`).
-- **PLT-004** [v1·todo·M16] Presentation mode in browsers uses the Fullscreen API on entry (user gesture); leaving fullscreen with Esc switches to annotation mode; where the API is missing (iPhone Safari) only the app UI is hidden.
-- **PLT-005** [v1·todo·M16] Presentation mode holds a wake lock (browser Screen Wake Lock, Android keep-awake), releases it on exit and re-acquires it when the app becomes visible again.
+- **PLT-004** [v1·done·M16] Presentation mode in browsers uses the Fullscreen API on entry (user gesture); leaving fullscreen with Esc switches to annotation mode; where the API is missing (iPhone Safari) only the app UI is hidden.
+- **PLT-005** [v1·done·M16] Presentation mode holds a wake lock (browser Screen Wake Lock, Android keep-awake), releases it on exit and re-acquires it when the app becomes visible again.
 - **PLT-006** [v1·todo·M16] Android presentation uses sticky immersive mode and draws under display cutouts (`shortEdges`); exiting restores the system bars.
 - **PLT-007** [v1·todo·M16] The Android back button closes popups first, in presentation mode returns to annotation mode, and otherwise has the default behavior.
 - **PLT-008** [v1·todo·M16] Android opens files through the Storage Access Framework with persistable read-write permission and writes in place; if write access is not granted the file is read-only (FIL-016). _Risk: the write is a truncating write, not atomic._

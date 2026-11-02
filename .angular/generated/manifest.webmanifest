@@ -5,6 +5,19 @@
   "background_color": "#B0B4BA",
   "theme_color": "#B0B4BA",
   "start_url": "./",
+  "file_handlers": [
+    {
+      "action": "./",
+      "accept": {
+        "application/pdf": [
+          ".pdf"
+        ]
+      }
+    }
+  ],
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
   "icons": [
     {
       "src": "icons/icon-192.png",

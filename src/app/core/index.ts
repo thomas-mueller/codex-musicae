@@ -22,3 +22,4 @@ export * from './ink-placement';
 export * from './color';
 export * from './metadata';
 export * from './autosave';
+export * from './session';

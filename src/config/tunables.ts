@@ -334,6 +334,7 @@ export const TUNABLES = {
   persistence: {
     keyPrefix: 'cm.v1.', // FIL-015 (Preferences store: UI state and file references only)
     sessionDebounceMs: 500, // FIL-011: delay before the session snapshot is written
+    sessionKey: 'session', // FIL-011: preference key of the session snapshot
   },
 
   stylus: {

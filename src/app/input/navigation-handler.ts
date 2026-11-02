@@ -1,9 +1,10 @@
-import { effect, inject, Injectable, untracked } from '@angular/core';
+import { DestroyRef, effect, inject, Injectable, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { FIT_VIEW } from '../core';
 import { AspectRatioService } from '../state/aspect-ratio.service';
 import { OrgViewStore } from '../state/org-view.store';
+import { PresentationPlatform } from '../state/presentation-platform';
 import { SessionStore } from '../state/session.store';
 import { StrokeGate } from '../state/stroke-gate';
 import { UiStore } from '../state/ui.store';
@@ -26,7 +27,11 @@ export class NavigationHandler {
   private previousMode = this.ui.mode();
 
   constructor() {
-    inject(CommandBus).commands$.pipe(takeUntilDestroyed()).subscribe((command) => this.handle(command));
+    const bus = inject(CommandBus);
+    bus.commands$.pipe(takeUntilDestroyed()).subscribe((command) => this.handle(command));
+    // PLT-004: Esc or a system gesture left fullscreen; presentation mode ends with it.
+    const stopExternalExit = inject(PresentationPlatform).onExternalExit(() => bus.dispatch({ type: 'ExitPresentation' }));
+    inject(DestroyRef).onDestroy(stopExternalExit);
     // UIX-018: entering presentation, however it happens (command or mode button).
     effect(() => {
       const mode = this.ui.mode();
@@ -55,7 +60,8 @@ export class NavigationHandler {
       case 'ExitPresentation':
         return this.exitPresentation();
       case 'Back':
-        return this.back();
+        this.handleBack();
+        return;
       case 'ZoomBy':
         return this.zoomBy(command.factor, command.anchor);
       case 'ZoomReset':
@@ -142,8 +148,8 @@ export class NavigationHandler {
     }
   }
 
-  /** NAV-018: the first applicable step wins. */
-  private back(): void {
+  /** NAV-018: the first applicable step wins. Returns whether one applied (the Android back button minimizes the app otherwise, PLT-007). */
+  handleBack(): boolean {
     if (this.ui.pendingLevel() !== null) {
       this.ui.cancelLevel();
     } else if (this.ui.popup() !== null) {
@@ -154,7 +160,10 @@ export class NavigationHandler {
       this.ui.deselect();
     } else if (this.ui.mode() === 'presentation') {
       this.ui.setMode('annotation');
+    } else {
+      return false;
     }
+    return true;
   }
 
   private enterPresentation(): void {

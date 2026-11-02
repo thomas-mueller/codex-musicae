@@ -33,6 +33,9 @@ await writeFile(manifestPath, `${JSON.stringify({
   background_color: colorMatch[1],
   theme_color: colorMatch[1],
   start_url: './',
+  // FIL-019: "Open with" in desktop Chromium; later files go to the running window.
+  file_handlers: [{ action: './', accept: { 'application/pdf': ['.pdf'] } }],
+  launch_handler: { client_mode: 'focus-existing' },
   icons: [
     { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
     { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
