@@ -227,6 +227,19 @@ export class WebFileAccess implements FileAccess {
     }
   }
 
+  /** FIL-019: takes over a handle the browser launched the app with; null when it cannot be read. */
+  async adoptHandle(handle: FsFileHandle): Promise<OpenedFile | null> {
+    try {
+      const file = await handle.getFile();
+      const id = this.newId();
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      await this.handleStore.put(id, handle);
+      return { ref: refOf(id, file), bytes, writable: handle.createWritable !== undefined };
+    } catch {
+      return null;
+    }
+  }
+
   /** SAV-009, NFR-013: in place through the handle; the browser keeps the original until `close` succeeds. */
   async write(ref: FileRef, bytes: Uint8Array): Promise<Result<void, FileAccessError>> {
     const handle = await this.handleOf(ref);

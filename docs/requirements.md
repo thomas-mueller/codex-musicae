@@ -65,7 +65,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **FIL-016** [v1·done·M15] If a file cannot be written, its tab shows the read-only lock icon and offers "save a copy"; ink, jumps and breaks stay editable in memory.
 - **FIL-017** [v1·todo·M15] "Save a copy" writes the modified PDF to a new file. _P: web download or save picker; Android document-create intent._
 - **FIL-018** [v1·todo·M16] The Android app is offered for PDF `VIEW` intents ("Open with…") and opens the file in a tab, requesting write access.
-- **FIL-019** [v1·todo·M16] The PWA manifest registers a PDF file handler. _P: effective only in desktop Chromium._
+- **FIL-019** [v1·done·M16] The PWA manifest registers a PDF file handler. _P: effective only in desktop Chromium._
 
 ## SAV — Saving and embedded data
 

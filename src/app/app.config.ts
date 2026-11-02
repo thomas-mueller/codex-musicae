@@ -27,9 +27,12 @@ import { BitmapCache } from './state/bitmap-cache';
 import { SessionStore } from './state/session.store';
 import { WebAppLifecycle } from './adapters/web/web-app-lifecycle';
 import { WebDeviceInfo } from './adapters/web/web-device-info';
+import { CapFileAccess } from './adapters/capacitor/cap-file-access';
+import { CapOpenWith } from './adapters/capacitor/cap-open-with';
 import { CapBackButton } from './adapters/capacitor/cap-back-button';
 import { CapImmersiveFullscreen } from './adapters/capacitor/cap-immersive-fullscreen';
 import { CapWakeLock } from './adapters/capacitor/cap-wake-lock';
+import { WebOpenWith } from './adapters/web/web-open-with';
 import { WebFullscreen } from './adapters/web/web-fullscreen';
 import { WebWakeLock } from './adapters/web/web-wake-lock';
 import { WebFileAccess } from './adapters/web/web-file-access';
@@ -37,6 +40,8 @@ import { WebPreferences } from './adapters/web/web-preferences';
 import { APP_LIFECYCLE } from './ports/app-lifecycle';
 import { DETECTION_ENGINE } from './ports/detection-engine';
 import { DEVICE_INFO } from './ports/device-info';
+import { OPEN_WITH } from './ports/open-with';
+import { IncomingFilesService } from './state/incoming-files.service';
 import { BACK_BUTTON } from './ports/back-button';
 import { FULLSCREEN } from './ports/fullscreen';
 import { WAKE_LOCK } from './ports/wake-lock';
@@ -70,6 +75,9 @@ export const appConfig: ApplicationConfig = {
     provideEnvironmentInitializer(() => {
       const navigation = inject(NavigationHandler);
       inject(BACK_BUTTON, { optional: true })?.register(0, () => navigation.handleBack());
+    }),
+    provideEnvironmentInitializer(() => {
+      inject(IncomingFilesService);
     }),
     provideEnvironmentInitializer(() => {
       void inject(PwaUpdatePolicy).checkAtStartup();
@@ -126,7 +134,17 @@ export const appConfig: ApplicationConfig = {
     { provide: APP_LIFECYCLE, useFactory: () => new WebAppLifecycle() },
     { provide: PREFERENCES, useFactory: () => new WebPreferences() },
     { provide: DEVICE_INFO, useFactory: () => new WebDeviceInfo() },
-    { provide: FILE_ACCESS, useFactory: () => new WebFileAccess() },
+    // One instance per platform: the open-with adapter hands its files to the same handle store the file access reads from.
+    { provide: FILE_ACCESS, useFactory: () => (Capacitor.isNativePlatform() ? new CapFileAccess() : new WebFileAccess()) },
+    {
+      provide: OPEN_WITH,
+      useFactory: () => {
+        const access = inject(FILE_ACCESS);
+        return access instanceof CapFileAccess
+          ? new CapOpenWith((file) => access.openIncoming(file))
+          : new WebOpenWith((handle) => (access as WebFileAccess).adoptHandle(handle));
+      },
+    },
     { provide: FULLSCREEN, useFactory: () => (Capacitor.isNativePlatform() ? new CapImmersiveFullscreen() : new WebFullscreen()) },
     { provide: WAKE_LOCK, useFactory: () => (Capacitor.isNativePlatform() ? new CapWakeLock() : new WebWakeLock()) },
     // The web has no back button: no provider there, consumers inject it optionally.
