@@ -39,7 +39,7 @@ export const TUNABLES = {
       '#FB8C00',
       '#6D4C41',
     ], // ORG-018: colors are assigned cyclically by jump id
-    penPresets: ['#D32F2F', '#1565C0', '#2E7D32', '#EF6C00', '#6A1B9A'], // ANN-004
+    penPresets: ['#D32F2F', '#1565C0', '#2E7D32', '#EF6C00', '#6A1B9A', '#212121'], // ANN-004
     highlighterPresets: ['#FDD835', '#9CCC65', '#FFA726', '#F06292', '#4FC3F7', '#BA68C8'], // ANN-004
   },
 
@@ -68,6 +68,7 @@ export const TUNABLES = {
     disabledOpacity: 0.38, // UIX-012
     tooltipHoverDelayMs: 600, // UIX-014
     longPressMs: 500, // UIX-014, ORG-019, ANN-002
+    toolAffordancePx: 20, // ANN-002: size of the small settings button on the active pen/highlighter button
     cursorHideMs: 2000, // UIX-019
     progressLineHeightPx: 3, // UIX-020
     minSupportedWidthPx: 320, // UIX-016

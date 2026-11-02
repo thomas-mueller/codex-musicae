@@ -3,17 +3,13 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { TUNABLES } from '../../../config/tunables';
 import { MarkList, POPUP_MARK_LIST } from '../organization/mark-list';
 import { OrgViewStore } from '../../state/org-view.store';
-import { DetectionLevel, Tool, UiStore } from '../../state/ui.store';
+import { DetectionLevel, UiStore } from '../../state/ui.store';
 import { IconKey } from './icon';
 import { IconButton } from './icon-button';
+import { ToolButton, ToolEntry } from './tool-button';
 
 export const POPUP_TOOLS = 'tools';
 export const POPUP_ORG = 'org';
-
-interface ToolEntry {
-  readonly tool: Tool;
-  readonly icon: IconKey;
-}
 
 export const TOOL_ENTRIES: readonly ToolEntry[] = [
   { tool: 'pen', icon: 'pen' },
@@ -30,7 +26,7 @@ export const LEVEL_ENTRIES: readonly { readonly level: DetectionLevel; readonly 
 /** Compact: one floating button. Expanded: vertical strip on the configured side. UIX-004, 005, 006 */
 @Component({
   selector: 'app-tool-area',
-  imports: [IconButton, MarkList],
+  imports: [IconButton, MarkList, ToolButton],
   templateUrl: './tool-area.html',
   styleUrl: './tool-area.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -8,7 +8,9 @@ import { OrgViewStore } from '../../state/org-view.store';
 import { PreferencesStore } from '../../state/preferences.store';
 import { SessionStore } from '../../state/session.store';
 import { SlideNavStore } from '../../state/slide-nav.store';
+import type { StyledTool } from '../../state/tool-settings.store';
 import { UiStore } from '../../state/ui.store';
+import { ToolPopup } from '../annotation/tool-popup';
 import { POPUP_OVERFLOW_BOTTOM, POPUP_SLIDER } from './bottom-bar';
 import { MarkList, POPUP_MARK_LIST } from '../organization/mark-list';
 import { POPUP_RECENT } from '../tabs/open-file.directive';
@@ -17,6 +19,7 @@ import { TabItem } from '../tabs/tab-item';
 import { Icon } from './icon';
 import { IconButton } from './icon-button';
 import { LEVEL_ENTRIES, POPUP_ORG } from './tool-area';
+import { POPUP_TOOL_SETTINGS } from './tool-button';
 import { POPUP_OVERFLOW_TOP } from './top-bar';
 
 export const POPUP_INFO = 'info';
@@ -25,7 +28,7 @@ const POPUP_SELECTOR = '[data-popup], [data-popup-trigger]';
 /** Renders at most one popup: a sheet (compact) or a side panel (expanded). UIX-013, 015 */
 @Component({
   selector: 'app-popup-host',
-  imports: [Icon, IconButton, MarkList, TabItem, TranslocoPipe],
+  imports: [Icon, IconButton, MarkList, TabItem, ToolPopup, TranslocoPipe],
   templateUrl: './popup-host.html',
   styleUrl: './popup-host.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -51,6 +54,7 @@ export class PopupHost {
     recent: POPUP_RECENT,
     tabs: POPUP_TABS,
     markList: POPUP_MARK_LIST,
+    toolSettings: POPUP_TOOL_SETTINGS,
   };
   protected readonly compact = computed(() => this.store.sizeClass() === 'compact');
   protected readonly organization = computed(() => this.store.mode() === 'organization');
@@ -63,10 +67,17 @@ export class PopupHost {
   protected readonly showMoreDisabled = computed(() => !this.nav.active() || !this.aspect.canShowMore());
   protected readonly showLessDisabled = computed(() => !this.nav.active() || !this.aspect.canShowLess());
   protected readonly noDocument = computed(() => !this.store.hasDocument());
+  protected readonly settingsTool = computed<StyledTool | null>(() => {
+    const tool = this.store.tool();
+    return tool === 'pen' || tool === 'highlighter' ? tool : null;
+  });
   protected readonly popupId = computed(() => {
     const id = this.store.popup()?.id;
     if (id === this.ids.markList && !this.compact()) {
       return null; // expanded layouts open the marks list beside its button (ToolArea)
+    }
+    if (id === this.ids.toolSettings && (this.settingsTool() === null || !this.compact())) {
+      return null; // expanded layouts open the settings beside the tool button (ToolButton); no pen/highlighter, no settings
     }
     return id !== undefined && Object.values(this.ids).includes(id) ? id : null;
   });

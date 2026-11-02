@@ -14,6 +14,26 @@ describe('UiStore', () => {
     expect(store.popup()).toBeNull();
   });
 
+  it('ANN-007 leaving annotation mode deactivates the tool and returning does not restore it', () => {
+    store.hasDocument.set(true);
+    for (const other of ['presentation', 'organization'] as const) {
+      store.setMode('annotation');
+      store.toggleTool('highlighter');
+      expect(store.tool()).toBe('highlighter');
+      store.setMode(other);
+      expect(store.tool()).toBeNull();
+      store.setMode('annotation');
+      expect(store.tool()).toBeNull();
+    }
+  });
+
+  it('ANN-007 tools can only be activated in annotation mode', () => {
+    store.hasDocument.set(true);
+    store.setMode('organization');
+    store.toggleTool('pen');
+    expect(store.tool()).toBeNull();
+  });
+
   it('UIX-001 switching to a mode other than annotation clears the tool', () => {
     store.setTool('pen');
     store.setMode('organization');

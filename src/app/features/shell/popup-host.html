@@ -61,6 +61,11 @@
       @case (ids.markList) {
         <app-mark-list />
       }
+      @case (ids.toolSettings) {
+        @if (settingsTool(); as tool) {
+          <app-tool-popup [tool]="tool" />
+        }
+      }
     }
   </div>
 }

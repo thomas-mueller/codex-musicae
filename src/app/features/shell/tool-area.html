@@ -3,14 +3,7 @@
     @if (store.popup()?.id === toolsId) {
       <div class="fab-tools" data-popup>
         @for (entry of tools; track entry.tool) {
-          <button
-            appIconButton
-            [icon]="entry.icon"
-            [labelKey]="entry.tool"
-            [toggled]="store.tool() === entry.tool"
-            [disabled]="noDocument()"
-            (pressed)="store.toggleTool(entry.tool)"
-          ></button>
+          <app-tool-button [entry]="entry" />
         }
       </div>
     }
@@ -25,14 +18,7 @@
     ></button>
   } @else {
     @for (entry of tools; track entry.tool) {
-      <button
-        appIconButton
-        [icon]="entry.icon"
-        [labelKey]="entry.tool"
-        [toggled]="store.tool() === entry.tool"
-        [disabled]="noDocument()"
-        (pressed)="store.toggleTool(entry.tool)"
-      ></button>
+      <app-tool-button [entry]="entry" [panel]="true" />
     }
     <button appIconButton icon="undo" labelKey="undo" [disabled]="noDocument()"></button>
     <button appIconButton icon="redo" labelKey="redo" [disabled]="noDocument()"></button>

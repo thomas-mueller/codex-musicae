@@ -1,0 +1,27 @@
+<div class="grid colors" role="group" [attr.aria-label]="'a11y.toolColor' | transloco">
+  @for (color of colors(); track color) {
+    <button
+      type="button"
+      class="swatch"
+      [class.toggled]="color === current().color"
+      [attr.aria-pressed]="color === current().color"
+      [attr.aria-label]="'a11y.toolColor' | transloco"
+      [style.background]="color"
+      (click)="pickColor(color)"
+    ></button>
+  }
+</div>
+<div class="grid widths" role="group" [attr.aria-label]="'a11y.toolWidth' | transloco">
+  @for (width of widths(); track $index) {
+    <button
+      type="button"
+      class="sample"
+      [class.toggled]="$index === current().widthIndex"
+      [attr.aria-pressed]="$index === current().widthIndex"
+      [attr.aria-label]="'a11y.toolWidth' | transloco"
+      (click)="pickWidth($index)"
+    >
+      <span class="line" [style.height.px]="width" [style.background]="current().color"></span>
+    </button>
+  }
+</div>
