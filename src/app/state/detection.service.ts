@@ -15,6 +15,7 @@ import { DetectionRun } from './detection-run';
 import type { DocumentStore } from './document.store';
 import { ResourceGovernor } from './resource-governor';
 import { Scheduler } from './scheduler';
+import { UiStore } from './ui.store';
 
 type PageOutcome = { readonly kind: 'done'; readonly page: DetectedPage } | { readonly kind: 'failed' } | { readonly kind: 'cancelled' };
 
@@ -29,6 +30,7 @@ export class DetectionService {
   private readonly governor = inject(ResourceGovernor);
   private readonly lifecycle = inject(APP_LIFECYCLE);
   private readonly clock = inject(CLOCK);
+  private readonly ui = inject(UiStore);
   private readonly runs = new Map<DocumentStore, AbortController>();
   private readonly candidates = new Map<DocumentStore, AbortController>();
   private context!: SchedulerContext;
@@ -113,7 +115,7 @@ export class DetectionService {
       userActive: this.lifecycle.userActive(),
       hidden: TUNABLES.detection.pauseWhenHidden ? !this.lifecycle.visible() : false,
       batterySaver: TUNABLES.detection.pauseOnBatterySaver ? this.lifecycle.batterySaver() : null,
-      strokeInProgress: false,
+      strokeInProgress: this.ui.strokeInProgress(),
     };
     // NFR-010: at the heaviest memory pressure detection pauses until the governor level drops. Read here, so the effect tracks it.
     this.governorPaused = this.governor.level() >= TUNABLES.resources.governorMaxLevel;

@@ -2,9 +2,12 @@ import { computed, effect, inject, Injectable, Injector, signal } from '@angular
 
 import { TUNABLES } from '../../config/tunables';
 import { APP_LIFECYCLE } from '../ports/app-lifecycle';
+import { APP_VERSION } from '../ports/app-version';
 import { FILE_ACCESS } from '../ports/file-access';
 import type { FileAccessError, FileRef, OpenedFile } from '../ports/file-access';
 import { PDF_RENDERER } from '../ports/pdf-renderer';
+import { PDF_WRITER } from '../ports/pdf-writer';
+import { err } from '../ports/result';
 import type { Result } from '../ports/result';
 import { BitmapCache } from './bitmap-cache';
 import { CLOCK } from './clock';
@@ -14,7 +17,9 @@ import type { DocumentErrorCode, DocumentStatus } from './document.store';
 import { PreferencesStore } from './preferences.store';
 import { RatioDefaultsProvider } from './ratio-defaults';
 import { ResourceGovernor } from './resource-governor';
+import { SavePipeline } from './save-pipeline';
 import { SaveService } from './save.service';
+import { Scheduler } from './scheduler';
 
 export interface Tab {
   readonly id: string;
@@ -35,6 +40,7 @@ interface TabEntry {
   readonly ref: FileRef;
   readonly document: DocumentStore;
   readonly saver: SaveService;
+  readonly pipeline: SavePipeline;
 }
 
 /** Open tabs and the active one. FIL-001, FIL-002, FIL-005, FIL-009, NFR-009, NFR-010 */
@@ -50,6 +56,9 @@ export class SessionStore {
   private readonly clock = inject(CLOCK);
   private readonly lifecycle = inject(APP_LIFECYCLE);
   private readonly injector = inject(Injector);
+  private readonly writer = inject(PDF_WRITER);
+  private readonly scheduler = inject(Scheduler);
+  private readonly appVersion = inject(APP_VERSION);
   private readonly entries = signal<readonly TabEntry[]>([]);
   private readonly activeIdSignal = signal<string | null>(null);
   private readonly repickSignal = signal<ReadonlySet<string>>(new Set());
@@ -131,20 +140,46 @@ export class SessionStore {
     return 'opened';
   }
 
-  closeTab(id: string): void {
-    const list = this.entries();
-    const index = list.findIndex((e) => e.id === id);
-    const entry = list[index];
+  /**
+   * FIL-006: a tab with unsaved changes saves first; when that fails it stays open (error icon) and this resolves false.
+   * A tab with nothing to save closes at once.
+   */
+  closeTab(id: string): Promise<boolean> {
+    const entry = this.entries().find((e) => e.id === id);
     if (!entry) {
+      return Promise.resolve(true);
+    }
+    if (!entry.saver.dirty() && !entry.saver.saving()) {
+      this.remove(entry);
+      return Promise.resolve(true);
+    }
+    return entry.saver.force().then((saved) => {
+      if (saved) {
+        this.remove(entry);
+      }
+      return saved;
+    });
+  }
+
+  /** SAV-011, PLT-010: saves a copy of a tab (default: the active one) as "<name> (annotated).pdf". */
+  saveCopy(id: string | null = this.activeIdSignal()): Promise<Result<void, FileAccessError | 'failed'>> {
+    const entry = this.entries().find((e) => e.id === id);
+    return entry ? entry.pipeline.saveCopy(new AbortController().signal) : Promise.resolve(err('failed'));
+  }
+
+  private remove(entry: TabEntry): void {
+    const list = this.entries();
+    const index = list.indexOf(entry);
+    if (index < 0) {
       return;
     }
-    const remaining = list.filter((e) => e.id !== id);
+    const remaining = list.filter((e) => e !== entry);
     this.entries.set(remaining);
-    if (this.activeIdSignal() === id) {
+    if (this.activeIdSignal() === entry.id) {
       this.activeIdSignal.set(remaining[index]?.id ?? remaining[index - 1]?.id ?? null);
     }
     entry.saver.dispose();
-    this.bitmaps.releaseTab(id);
+    this.bitmaps.releaseTab(entry.id);
     this.detection.stop(entry.document);
     void entry.document.dispose();
   }
@@ -206,9 +241,9 @@ export class SessionStore {
     const id = `t${++this.tabCounter}`;
     const document = new DocumentStore(id, this.renderer, this.ratioDefaults, () => this.clock.now());
     document.readOnly.set(!file.writable);
-    // The save pipeline (M15 S3) replaces this runner; until then a save has nothing to write.
-    const saver = new SaveService(document, this.clock, () => Promise.resolve(true), TUNABLES.saving.autosaveIdleMs, this.injector);
-    this.entries.update((list) => [...list, { id, ref: file.ref, document, saver }]);
+    const pipeline = new SavePipeline(document, file.ref, file.bytes, this.files, this.writer, this.scheduler, this.appVersion);
+    const saver = new SaveService(document, this.clock, pipeline.run, TUNABLES.saving.autosaveIdleMs, this.injector);
+    this.entries.update((list) => [...list, { id, ref: file.ref, document, saver, pipeline }]);
     this.forceSave(this.activeIdSignal(), id);
     this.activeIdSignal.set(id);
     void document.load(file.bytes).then(() => {

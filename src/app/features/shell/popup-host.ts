@@ -66,6 +66,12 @@ export class PopupHost {
   protected readonly sliderValue = computed(() => (this.annotation() ? this.nav.shown() : this.view.currentPage()) + 1);
   protected readonly showMoreDisabled = computed(() => !this.nav.active() || !this.aspect.canShowMore());
   protected readonly showLessDisabled = computed(() => !this.nav.active() || !this.aspect.canShowLess());
+  /** SAV-011: save a copy of the active tab, then close the menu. */
+  protected saveCopy(): void {
+    void this.session.saveCopy();
+    this.store.closePopup();
+  }
+
   protected readonly noDocument = computed(() => !this.store.hasDocument());
   protected readonly settingsTool = computed<StyledTool | null>(() => {
     const tool = this.store.tool();

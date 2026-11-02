@@ -7,8 +7,11 @@ import type { SaveEvent, SaveState } from '../core';
 import type { Clock } from './clock';
 import type { DocChange, DocumentStore } from './document.store';
 
-/** Writes the document; resolves to true when the file now holds the current state. Supplied by the save pipeline. */
-export type SaveRunner = (signal: AbortSignal) => Promise<boolean>;
+/**
+ * Writes the document; resolves to true when the file now holds the current state, to false when saving failed, and to
+ * 'readOnly' when the file turned out not to be writable (the changes stay unsaved, without an error). Supplied by the save pipeline.
+ */
+export type SaveRunner = (signal: AbortSignal) => Promise<boolean | 'readOnly'>;
 
 /**
  * SAV-008, SAV-009, FIL-010: one per tab. Feeds the pure autosave state machine with the tab's changes, arms the idle
@@ -147,9 +150,12 @@ export class SaveService {
     this.dispatch({ type: 'saveStarted' });
     const abort = new AbortController();
     this.abort = abort;
-    const ok = await this.run(abort.signal).catch(() => false);
+    const outcome = await this.run(abort.signal).catch(() => false);
     this.abort = null;
-    this.dispatch({ type: 'saveFinished', ok, t: this.clock.now() });
+    this.dispatch({ type: 'saveFinished', ok: outcome !== false, t: this.clock.now() });
+    if (outcome === 'readOnly') {
+      this.dispatch({ type: 'change', t: this.clock.now() });
+    }
     this.current = null;
     this.evaluate();
   }

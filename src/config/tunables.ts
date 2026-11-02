@@ -302,6 +302,8 @@ export const TUNABLES = {
     handleDbVersion: 1, // FIL-015
     pdfMimeType: 'application/pdf', // FIL-001
     pdfExtension: '.pdf', // FIL-001
+    copySuffix: ' (annotated)', // SAV-011: "<name> (annotated).pdf"
+    writeChunkBytes: 4 * 1024 * 1024, // NFR-013: large writes go out in chunks
   },
 
   pdf: {

@@ -4,6 +4,7 @@ import { provideTestPorts } from '../../../testing/provide-test-ports';
 import { provideTestTransloco, translate } from '../../../testing/transloco';
 import { FILE_ACCESS } from '../../ports/file-access';
 import type { OpenedFile } from '../../ports/file-access';
+import { fakeFileAccess } from '../../state/testing/fake-ports';
 import { SessionStore } from '../../state/session.store';
 import { UiStore } from '../../state/ui.store';
 import { TabBar } from './tab-bar';
@@ -57,6 +58,19 @@ describe('tabs', () => {
     await fixture.whenStable();
     const marker = fixture.nativeElement.querySelector('.marker');
     expect(marker?.getAttribute('aria-label')).toBe(translate('a11y.errorInvalid'));
+  });
+
+  it('FIL-016 the lock of a read-only tab is a control that offers to save a copy', async () => {
+    const session = await openTabs({ ...file('a.pdf'), writable: false });
+    const files = TestBed.inject(FILE_ACCESS) as ReturnType<typeof fakeFileAccess>;
+    const fixture = TestBed.createComponent(TabBar);
+    await fixture.whenStable();
+    const lock = fixture.nativeElement.querySelector('button.marker') as HTMLElement;
+    expect(lock.getAttribute('aria-label')).toBe(translate('a11y.readOnly'));
+    lock.click();
+    await settle();
+    expect(files.saveCopy).toHaveBeenCalledWith('a (annotated).pdf', expect.any(Uint8Array));
+    expect(session.tabs()).toHaveLength(1);
   });
 
   it('FIL-010 a failed save shows the error marker', async () => {

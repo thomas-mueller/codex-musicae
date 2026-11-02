@@ -138,6 +138,22 @@ describe('SaveService (M15 S1)', () => {
     expect(run).toHaveBeenCalledTimes(1);
   });
 
+  it('FIL-016 a read-only outcome keeps the changes unsaved without an error and is not retried', async () => {
+    const { doc, clock, run } = await setup();
+    run.mockImplementationOnce(() => {
+      doc.readOnly.set(true);
+      return Promise.resolve('readOnly' as never);
+    });
+    doc.addStroke(STROKE);
+    clock.advance(IDLE);
+    await settle();
+    expect(doc.saveFailed()).toBe(false);
+    expect(doc.unsaved()).toBe(true);
+    clock.advance(IDLE * 5);
+    await settle();
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
   it('SAV-009 dispose stops the timer', async () => {
     const { doc, clock, run, saver } = await setup();
     doc.addStroke(STROKE);

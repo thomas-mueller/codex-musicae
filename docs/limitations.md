@@ -61,3 +61,4 @@ Ideas not yet refined into requirements. To promote an item: create a requiremen
 - **BKL-023** Drawing in organization mode and annotating unplayed systems.
 - **BKL-024** Password-protected PDFs.
 - **LIM-028** Ink annotations that are direct dictionaries inside `/Annots` (not indirect objects) are not listed by `PdfWriter.listInk` because they have no object number to erase; with pdf.js annotations disabled they are not drawn by the app but stay in the file. Extremely rare in practice. (M15 S2)
+- **LIM-029** Closing a read-only tab (or one whose file turned out not to be writable) drops its unsaved in-memory changes without asking; "save a copy" is the way to keep them. (FIL-016, M15 S3)

@@ -2,12 +2,13 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
 import { TUNABLES } from '../../config/tunables';
-import { provideTestDetectionPorts } from '../../testing/provide-test-ports';
+import { provideTestDetectionPorts, provideTestSavePorts } from '../../testing/provide-test-ports';
 import { APP_LIFECYCLE } from '../ports/app-lifecycle';
 import { DEVICE_INFO } from '../ports/device-info';
 import { FILE_ACCESS } from '../ports/file-access';
 import type { OpenedFile } from '../ports/file-access';
 import { PDF_RENDERER } from '../ports/pdf-renderer';
+import { err } from '../ports/result';
 import { PREFERENCES } from '../ports/preferences';
 import { BitmapCache } from './bitmap-cache';
 import { CLOCK } from './clock';
@@ -54,6 +55,7 @@ function setup(lifecycle = pausableLifecycle()) {
       { provide: FILE_ACCESS, useValue: files },
       { provide: PREFERENCES, useValue: memoryPreferences() },
       ...provideTestDetectionPorts(),
+      ...provideTestSavePorts(),
       { provide: APP_LIFECYCLE, useValue: lifecycle.value },
       { provide: CLOCK, useValue: clock },
       { provide: DEVICE_INFO, useValue: { deviceMemoryGb: () => 4, devicePixelRatio: () => 1, prefersReducedMotion: () => false, screenSize: () => ({ width: 1280, height: 800 }) } },
@@ -270,5 +272,66 @@ describe('SessionStore picker and recents', () => {
     lifecycle.pause();
     await settle();
     expect(session.tabs()[0]?.unsaved).toBe(false);
+  });
+
+  describe('saving (M15 S3)', () => {
+    it('FIL-006 closing a tab with unsaved changes saves first and then closes it', async () => {
+      const { session, files } = setup();
+      await session.openFiles([file('a.pdf')]);
+      await settle();
+      const id = session.activeTabId() ?? '';
+      session.activeDocument()?.addStroke(STROKE);
+      expect(await session.closeTab(id)).toBe(true);
+      expect(files.write).toHaveBeenCalledTimes(1);
+      expect(session.tabs()).toEqual([]);
+    });
+
+    it('FIL-006 a failed save keeps the tab open with the error icon', async () => {
+      const { session, files } = setup();
+      files.write.mockResolvedValue(err('write-failed'));
+      await session.openFiles([file('a.pdf')]);
+      await settle();
+      session.activeDocument()?.addStroke(STROKE);
+      expect(await session.closeTab(session.activeTabId() ?? '')).toBe(false);
+      expect(session.tabs()).toHaveLength(1);
+      expect(session.tabs()[0]).toMatchObject({ saveFailed: true });
+      expect(session.activeDocument()?.strokes()).toHaveLength(1);
+    });
+
+    it('FIL-016 a read-only tab closes without writing', async () => {
+      const { session, files } = setup();
+      await session.openFiles([{ ...file('a.pdf'), writable: false }]);
+      await settle();
+      session.activeDocument()?.addStroke(STROKE);
+      expect(await session.closeTab(session.activeTabId() ?? '')).toBe(true);
+      expect(files.write).not.toHaveBeenCalled();
+    });
+
+    it('FIL-016 a write that is denied turns the tab read-only and never retries by itself', async () => {
+      const { session, files, clock } = setup();
+      files.write.mockResolvedValue(err('denied'));
+      await session.openFiles([file('a.pdf')]);
+      await settle();
+      session.activeDocument()?.addStroke(STROKE);
+      clock.advance(TUNABLES.saving.autosaveIdleMs);
+      await settle();
+      expect(session.tabs()[0]).toMatchObject({ readOnly: true, unsaved: true, saveFailed: false });
+      clock.advance(TUNABLES.saving.autosaveIdleMs * 5);
+      await settle();
+      expect(files.write).toHaveBeenCalledTimes(1);
+    });
+
+    it('SAV-011 PLT-010 save a copy works for writable and read-only tabs and keeps the changes unsaved', async () => {
+      const { session, files } = setup();
+      await session.openFiles([file('a.pdf'), { ...file('b.pdf'), writable: false }]);
+      await settle();
+      session.activeDocument()?.addStroke(STROKE);
+      expect((await session.saveCopy()).ok).toBe(true);
+      expect(files.saveCopy).toHaveBeenLastCalledWith('b (annotated).pdf', expect.any(Uint8Array));
+      expect((await session.saveCopy(session.tabs()[0]?.id)).ok).toBe(true);
+      expect(files.saveCopy).toHaveBeenLastCalledWith('a (annotated).pdf', expect.any(Uint8Array));
+      expect(session.tabs()[1]?.unsaved).toBe(true);
+      expect(files.write).not.toHaveBeenCalled();
+    });
   });
 });
