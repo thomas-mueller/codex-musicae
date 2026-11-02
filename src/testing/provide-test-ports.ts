@@ -7,9 +7,11 @@ import { DETECTION_ENGINE } from '../app/ports/detection-engine';
 import { ok } from '../app/ports/result';
 import { DEVICE_INFO } from '../app/ports/device-info';
 import { FILE_ACCESS } from '../app/ports/file-access';
+import { APP_VERSION } from '../app/ports/app-version';
 import { PDF_RENDERER } from '../app/ports/pdf-renderer';
+import { PDF_WRITER } from '../app/ports/pdf-writer';
 import { PREFERENCES } from '../app/ports/preferences';
-import { fakeFileAccess, memoryPreferences } from '../app/state/testing/fake-ports';
+import { fakeFileAccess, fakePdfWriter, memoryPreferences } from '../app/state/testing/fake-ports';
 import { fakeRenderer } from '../app/state/testing/fake-renderer';
 
 const TEST_MEMORY_GB = 4;
@@ -21,6 +23,15 @@ export function provideTestPorts(): Provider[] {
     { provide: FILE_ACCESS, useValue: fakeFileAccess() },
     { provide: PREFERENCES, useValue: memoryPreferences() },
     ...provideTestDetectionPorts(),
+    ...provideTestSavePorts(),
+  ];
+}
+
+/** The ports the save pipeline of every tab needs (M15). */
+export function provideTestSavePorts(): Provider[] {
+  return [
+    { provide: PDF_WRITER, useValue: fakePdfWriter() },
+    { provide: APP_VERSION, useValue: 'v0.0.0-test' },
   ];
 }
 

@@ -1,9 +1,14 @@
-import { computed, effect, inject, Injectable, signal } from '@angular/core';
+import { computed, effect, inject, Injectable, Injector, signal } from '@angular/core';
 
 import { TUNABLES } from '../../config/tunables';
+import { parseMetadata, reconcileMetadata } from '../core';
+import { APP_LIFECYCLE } from '../ports/app-lifecycle';
+import { APP_VERSION } from '../ports/app-version';
 import { FILE_ACCESS } from '../ports/file-access';
 import type { FileAccessError, FileRef, OpenedFile } from '../ports/file-access';
 import { PDF_RENDERER } from '../ports/pdf-renderer';
+import { PDF_WRITER } from '../ports/pdf-writer';
+import { err } from '../ports/result';
 import type { Result } from '../ports/result';
 import { BitmapCache } from './bitmap-cache';
 import { CLOCK } from './clock';
@@ -13,6 +18,10 @@ import type { DocumentErrorCode, DocumentStatus } from './document.store';
 import { PreferencesStore } from './preferences.store';
 import { RatioDefaultsProvider } from './ratio-defaults';
 import { ResourceGovernor } from './resource-governor';
+import { loadInk } from './loaded-ink';
+import { SavePipeline } from './save-pipeline';
+import { SaveService } from './save.service';
+import { Scheduler } from './scheduler';
 
 export interface Tab {
   readonly id: string;
@@ -21,6 +30,8 @@ export interface Tab {
   readonly status: DocumentStatus;
   readonly errorCode: DocumentErrorCode | null;
   readonly unsaved: boolean;
+  readonly saveFailed: boolean;
+  readonly needsWriteAccess: boolean;
   readonly readOnly: boolean;
   readonly needsReopen: boolean;
 }
@@ -31,6 +42,8 @@ interface TabEntry {
   readonly id: string;
   readonly ref: FileRef;
   readonly document: DocumentStore;
+  readonly saver: SaveService;
+  readonly pipeline: SavePipeline;
 }
 
 /** Open tabs and the active one. FIL-001, FIL-002, FIL-005, FIL-009, NFR-009, NFR-010 */
@@ -44,6 +57,11 @@ export class SessionStore {
   private readonly detection = inject(DetectionService);
   private readonly ratioDefaults = inject(RatioDefaultsProvider);
   private readonly clock = inject(CLOCK);
+  private readonly lifecycle = inject(APP_LIFECYCLE);
+  private readonly injector = inject(Injector);
+  private readonly writer = inject(PDF_WRITER);
+  private readonly scheduler = inject(Scheduler);
+  private readonly appVersion = inject(APP_VERSION);
   private readonly entries = signal<readonly TabEntry[]>([]);
   private readonly activeIdSignal = signal<string | null>(null);
   private readonly repickSignal = signal<ReadonlySet<string>>(new Set());
@@ -59,6 +77,8 @@ export class SessionStore {
       status: e.document.status(),
       errorCode: e.document.errorCode(),
       unsaved: e.document.unsaved(),
+      saveFailed: e.document.saveFailed(),
+      needsWriteAccess: e.document.needsWriteAccess(),
       readOnly: e.document.readOnly(),
       needsReopen: e.document.needsReopen(),
     })),
@@ -70,6 +90,14 @@ export class SessionStore {
   readonly activeDocument = computed(() => this.entries().find((e) => e.id === this.activeIdSignal())?.document ?? null);
 
   constructor() {
+    // SAV-009: when the app is paused or hidden every dirty tab saves; nothing waits for it.
+    this.lifecycle.onPause(() => {
+      for (const entry of this.entries()) {
+        if (entry.saver.dirty()) {
+          void entry.saver.force();
+        }
+      }
+    });
     // NFR-010, last step: under the heaviest memory pressure inactive tabs give up their bitmaps.
     effect(() => {
       if (this.governor.level() >= TUNABLES.resources.governorMaxLevel) {
@@ -116,26 +144,99 @@ export class SessionStore {
     return 'opened';
   }
 
-  closeTab(id: string): void {
-    const list = this.entries();
-    const index = list.findIndex((e) => e.id === id);
-    const entry = list[index];
+  /**
+   * FIL-006: a tab with unsaved changes saves first; when that fails it stays open (error icon) and this resolves false.
+   * A tab with nothing to save closes at once.
+   */
+  closeTab(id: string): Promise<boolean> {
+    const entry = this.entries().find((e) => e.id === id);
     if (!entry) {
+      return Promise.resolve(true);
+    }
+    if (entry.document.needsWriteAccess()) {
+      // the click on the close icon is the gesture the browser needs for its permission prompt
+      return this.grantWriteAccess(id).then((saved) => {
+        if (saved) {
+          this.remove(entry);
+        }
+        return saved;
+      });
+    }
+    if (!entry.saver.dirty() && !entry.saver.saving()) {
+      this.remove(entry);
+      return Promise.resolve(true);
+    }
+    return entry.saver.force().then((saved) => {
+      if (saved) {
+        this.remove(entry);
+      }
+      return saved;
+    });
+  }
+
+  /**
+   * FIL-016: asks the user for the write permission an autosave could not ask for, then saves. Must be called inside a user
+   * gesture (the click on the tab, its marker or its close icon). A refusal makes the tab read-only.
+   */
+  grantWriteAccess(id: string): Promise<boolean> {
+    const entry = this.entries().find((e) => e.id === id);
+    if (!entry) {
+      return Promise.resolve(false);
+    }
+    return this.files.requestWriteAccess(entry.ref).then((result) => {
+      if (result.ok) {
+        entry.document.needsWriteAccess.set(false);
+        return entry.saver.force();
+      }
+      if (result.error === 'denied' || result.error === 'unsupported') {
+        entry.document.needsWriteAccess.set(false);
+        entry.document.readOnly.set(true);
+      }
+      return false;
+    });
+  }
+
+  /** SAV-011, PLT-010: saves a copy of a tab (default: the active one) as "<name> (annotated).pdf". */
+  saveCopy(id: string | null = this.activeIdSignal()): Promise<Result<void, FileAccessError | 'failed'>> {
+    const entry = this.entries().find((e) => e.id === id);
+    return entry ? entry.pipeline.saveCopy(new AbortController().signal) : Promise.resolve(err('failed'));
+  }
+
+  private remove(entry: TabEntry): void {
+    const list = this.entries();
+    const index = list.indexOf(entry);
+    if (index < 0) {
       return;
     }
-    const remaining = list.filter((e) => e.id !== id);
+    const remaining = list.filter((e) => e !== entry);
     this.entries.set(remaining);
-    if (this.activeIdSignal() === id) {
+    if (this.activeIdSignal() === entry.id) {
       this.activeIdSignal.set(remaining[index]?.id ?? remaining[index - 1]?.id ?? null);
     }
-    this.bitmaps.releaseTab(id);
+    entry.saver.dispose();
+    this.bitmaps.releaseTab(entry.id);
     this.detection.stop(entry.document);
     void entry.document.dispose();
   }
 
   setActive(id: string): void {
-    if (this.entries().some((e) => e.id === id)) {
+    const entry = this.entries().find((e) => e.id === id);
+    if (entry) {
+      if (entry.document.needsWriteAccess()) {
+        void this.grantWriteAccess(id); // the click that selects the tab is a user gesture
+      }
+      this.forceSave(this.activeIdSignal(), id);
       this.activeIdSignal.set(id);
+    }
+  }
+
+  /** SAV-009: the tab being left saves at once (not awaited). */
+  private forceSave(leftId: string | null, enteredId: string): void {
+    if (leftId !== null && leftId !== enteredId) {
+      const left = this.entries().find((e) => e.id === leftId);
+      if (left?.saver.dirty()) {
+        void left.saver.force();
+      }
     }
   }
 
@@ -166,6 +267,42 @@ export class SessionStore {
     });
   }
 
+  /**
+   * SAV-005, SAV-006, SAV-012, DET-023: reads what an earlier session (or another app) left in the file. Data that cannot be
+   * used (none, invalid, other page count, read error) is ignored and detection runs as for any new file; data from a newer
+   * version is never overwritten. Detection starts only when it was not restored.
+   */
+  private async restoreFromFile(entry: TabEntry, bytes: Uint8Array): Promise<void> {
+    const { document, pipeline, saver } = entry;
+    let detectionRestored = false;
+    try {
+      const [json, ink] = await Promise.all([this.writer.readEmbeddedJson(bytes), this.writer.listInk(bytes)]);
+      if (!this.entries().includes(entry)) {
+        return;
+      }
+      if (json.ok && json.value !== null) {
+        const parsed = parseMetadata(json.value);
+        if (parsed.kind === 'newer') {
+          pipeline.metadataNewer = true;
+        } else if (parsed.kind === 'ok') {
+          const meta = reconcileMetadata(parsed.value, document.pageInfos().length);
+          detectionRestored = meta !== null && document.hydrateFromMetadata(meta);
+        }
+      }
+      if (ink.ok) {
+        const loaded = loadInk(ink.value, document.pageInfos().length);
+        document.loadSavedStrokes(loaded.strokes);
+        pipeline.registerSavedInk(loaded.saved);
+      }
+      saver.rebaseline();
+    } catch {
+      // unreadable data counts as no data
+    }
+    if (!detectionRestored && this.entries().includes(entry)) {
+      this.detection.start(document);
+    }
+  }
+
   private async openOne(file: OpenedFile): Promise<void> {
     for (const entry of this.entries()) {
       if (await this.files.isSame(entry.ref, file.ref)) {
@@ -178,11 +315,16 @@ export class SessionStore {
     }
     const id = `t${++this.tabCounter}`;
     const document = new DocumentStore(id, this.renderer, this.ratioDefaults, () => this.clock.now());
-    this.entries.update((list) => [...list, { id, ref: file.ref, document }]);
+    document.readOnly.set(!file.writable);
+    const pipeline = new SavePipeline(document, file.ref, file.bytes, this.files, this.writer, this.scheduler, this.appVersion);
+    const saver = new SaveService(document, this.clock, pipeline.run, TUNABLES.saving.autosaveIdleMs, this.injector);
+    const entry: TabEntry = { id, ref: file.ref, document, saver, pipeline };
+    this.entries.update((list) => [...list, entry]);
+    this.forceSave(this.activeIdSignal(), id);
     this.activeIdSignal.set(id);
     void document.load(file.bytes).then(() => {
       if (document.status() === 'ready') {
-        this.detection.start(document);
+        void this.restoreFromFile(entry, file.bytes);
       }
     });
     void this.preferences.addRecent(file.ref, (refId) => this.entries().some((e) => e.ref.id === refId));

@@ -12,6 +12,10 @@ export interface DebugHook {
   readonly detect?: (pdf: Uint8Array, pageIndex: number, scale: number) => Promise<readonly Rect[]>;
   /** Page indices of the active document in the order detection started them (DET-021 E2E). */
   readonly startedOrder?: () => readonly number[];
+  /** Detection state of the active document: whether it is complete and which pages ran (SAV-012, DET-023 E2E). */
+  readonly detectionState?: () => { readonly complete: boolean; readonly startedOrder: readonly number[] };
+  /** Number of strokes in the active document's model (ANN-005 E2E). */
+  readonly strokeCount?: () => number;
 }
 
 export type DebugHost = { __cm?: DebugHook };

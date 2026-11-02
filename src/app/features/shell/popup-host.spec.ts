@@ -1,10 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 
 import { provideTestPorts } from '../../../testing/provide-test-ports';
-import { provideTestTransloco } from '../../../testing/transloco';
+import { provideTestTransloco, translate } from '../../../testing/transloco';
 import { CommandBus } from '../../input/command-bus';
 import { NavigationHandler } from '../../input/navigation-handler';
+import { FILE_ACCESS } from '../../ports/file-access';
 import { APP_VERSION } from '../../ports/app-version';
+import { SessionStore } from '../../state/session.store';
+import type { fakeFileAccess } from '../../state/testing/fake-ports';
 import { UiStore } from '../../state/ui.store';
 import { PopupHost } from './popup-host';
 
@@ -39,6 +42,24 @@ describe('PopupHost', () => {
     const { store } = await setup();
     TestBed.inject(NavigationHandler);
     TestBed.inject(CommandBus).dispatch({ type: 'Back' });
+    expect(store.popup()).toBeNull();
+  });
+
+  it('SAV-011 PLT-010 the overflow menu offers save a copy once a document is open', async () => {
+    const { fixture, store, el } = await setup();
+    store.openPopup('overflow-top');
+    await fixture.whenStable();
+    const button = (): HTMLButtonElement => el.querySelector(`button[aria-label="${translate('a11y.saveCopy')}"]`) as HTMLButtonElement;
+    expect(button().getAttribute('aria-disabled')).toBe('true');
+    await TestBed.inject(SessionStore).openFiles([{ ref: { id: 'a', name: 'a.pdf' }, bytes: new Uint8Array([1]), writable: true }]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    store.hasDocument.set(true);
+    await fixture.whenStable();
+    expect(button().getAttribute('aria-disabled')).toBeNull();
+    button().click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const files = TestBed.inject(FILE_ACCESS) as ReturnType<typeof fakeFileAccess>;
+    expect(files.saveCopy).toHaveBeenCalledWith('a (annotated).pdf', expect.any(Uint8Array));
     expect(store.popup()).toBeNull();
   });
 });

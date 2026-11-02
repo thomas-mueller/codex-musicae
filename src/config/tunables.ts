@@ -255,6 +255,25 @@ export const TUNABLES = {
     schemaVersion: 1, // SAV-002
   },
 
+  /** SAV-006, SAV-010: how ink and the metadata attachment are written into the PDF (adapters/pdflib). */
+  pdfWriter: {
+    author: 'CodexMusicae', // /T of every ink annotation we write
+    annotationFlags: 4, // /F: print
+    bboxPaddingPt: 1, // added to half the stroke width around the stroke bounds
+    defaultInkColor: '#000000', // annotations without /C
+    defaultInkWidthPt: 1, // annotations without /BS and /Border
+    numberDecimals: 4, // fixed-point digits in content streams and arrays
+    colorByteMax: 255,
+    hexRadix: 16,
+    hexDigitsPerChannel: 2,
+    grayComponents: 1,
+    rgbComponents: 3,
+    cmykComponents: 4,
+    borderWidthIndex: 2, // /Border [h v width]
+    embeddedFileDescription: 'CodexMusicae metadata', // SAV-001
+    embeddedFileMime: 'application/json',
+  },
+
   resources: {
     cacheBudgetDefaultBytes: 96 * 1024 * 1024, // NFR-004
     cacheBudgetByDeviceMemoryGb: {
@@ -283,6 +302,8 @@ export const TUNABLES = {
     handleDbVersion: 1, // FIL-015
     pdfMimeType: 'application/pdf', // FIL-001
     pdfExtension: '.pdf', // FIL-001
+    copySuffix: ' (annotated)', // SAV-011: "<name> (annotated).pdf"
+    writeChunkBytes: 4 * 1024 * 1024, // NFR-013: large writes go out in chunks
   },
 
   pdf: {
@@ -291,6 +312,7 @@ export const TUNABLES = {
     standardFontDataUrl: 'assets/pdfjs/standard_fonts/', // GEN-005
     wasmUrl: 'assets/pdfjs/wasm/', // GEN-005
     iccUrl: 'assets/pdfjs/iccs/', // GEN-005
+    annotationModeDisable: 0, // SAV-006: pdf.js AnnotationMode.DISABLE; the app draws every stroke itself
   },
 
   rendering: {

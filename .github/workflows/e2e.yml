@@ -62,6 +62,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install qpdf (checks the PDFs the saving tests download)
+        run: sudo apt-get install -y qpdf
+
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         with:

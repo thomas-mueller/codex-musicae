@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { TUNABLES } from '../../../config/tunables';
 import { WebFileAccess } from './web-file-access';
-import type { FsFileHandle, HandleStore, OpenFilePicker } from './web-file-access';
+import type { FsFileHandle, FsWritable, HandleStore, OpenFilePicker, SaveFilePicker } from './web-file-access';
 import type { FileRef } from '../../ports/file-access';
 
 class NamedError extends Error {
@@ -57,6 +58,8 @@ function makeAccess(overrides: {
   picker?: OpenFilePicker | undefined;
   input?: () => Promise<File[]>;
   activation?: boolean;
+  savePicker?: SaveFilePicker;
+  download?: (name: string, bytes: Uint8Array) => void;
 } = {}) {
   const store = (overrides.store ?? memoryStore()) as MemoryStore;
   let counter = 0;
@@ -66,6 +69,8 @@ function makeAccess(overrides: {
     getPicker: () => overrides.picker,
     pickViaInput: overrides.input ?? (() => Promise.resolve([])),
     hasUserActivation: () => overrides.activation ?? true,
+    getSavePicker: () => overrides.savePicker,
+    download: overrides.download ?? (() => undefined),
   });
   return { access, store };
 }
@@ -232,9 +237,161 @@ describe('WebFileAccess misc', () => {
     await expect(makeAccess({ store }).access.forget({ id: 'x', name: 'a.pdf' })).resolves.toBeUndefined();
   });
 
-  it('FIL-001 write and saveCopy are unsupported until M15', async () => {
+  it('SAV-009 write without a stored handle is unsupported', async () => {
     const { access } = makeAccess();
     expect(await access.write({ id: 'x', name: 'a.pdf' }, new Uint8Array())).toMatchObject({ error: 'unsupported' });
-    expect(await access.saveCopy('a.pdf', new Uint8Array())).toMatchObject({ error: 'unsupported' });
+  });
+});
+
+interface FakeWritable extends FsWritable {
+  chunks: number[][];
+  closed: boolean;
+  aborted: boolean;
+}
+
+function fakeWritable(failAt?: 'write' | 'close', error: Error = new NamedError('UnknownError')): FakeWritable {
+  const writable: FakeWritable = {
+    chunks: [],
+    closed: false,
+    aborted: false,
+    write: (data) => {
+      if (failAt === 'write') {
+        return Promise.reject(error);
+      }
+      writable.chunks.push([...data]);
+      return Promise.resolve();
+    },
+    close: () => {
+      if (failAt === 'close') {
+        return Promise.reject(error);
+      }
+      writable.closed = true;
+      return Promise.resolve();
+    },
+    abort: () => {
+      writable.aborted = true;
+      return Promise.resolve();
+    },
+  };
+  return writable;
+}
+
+describe('WebFileAccess.write', () => {
+  const ref: FileRef = { id: 'id-1', name: 'a.pdf' };
+
+  async function writeSetup(writable: FakeWritable, handle: Partial<HandleOptions> = {}) {
+    const store = memoryStore();
+    store.data.set('id-1', { ...fakeHandle(handle), createWritable: () => Promise.resolve(writable) });
+    return makeAccess({ store }).access;
+  }
+
+  it('SAV-009 NFR-013 writes the bytes in chunks and closes the stream', async () => {
+    const writable = fakeWritable();
+    const access = await writeSetup(writable);
+    const bytes = new Uint8Array(TUNABLES.files.writeChunkBytes + 3).fill(7);
+    expect((await access.write(ref, bytes)).ok).toBe(true);
+    expect(writable.chunks.map((c) => c.length)).toEqual([TUNABLES.files.writeChunkBytes, 3]);
+    expect(writable.closed).toBe(true);
+  });
+
+  it('SAV-010 a failing write aborts the stream so the original file stays', async () => {
+    const writable = fakeWritable('write');
+    const access = await writeSetup(writable);
+    expect(await access.write(ref, new Uint8Array([1]))).toMatchObject({ ok: false, error: 'write-failed' });
+    expect(writable.aborted).toBe(true);
+    expect(writable.closed).toBe(false);
+  });
+
+  it('SAV-010 a failing close aborts too', async () => {
+    const writable = fakeWritable('close');
+    const access = await writeSetup(writable);
+    expect(await access.write(ref, new Uint8Array([1]))).toMatchObject({ ok: false, error: 'write-failed' });
+    expect(writable.aborted).toBe(true);
+  });
+
+  it('FIL-016 missing write permission is denied, a refused one too', async () => {
+    const denied = await writeSetup(fakeWritable(), { query: 'denied' });
+    expect(await denied.write(ref, new Uint8Array([1]))).toMatchObject({ error: 'denied' });
+    const refused = await writeSetup(fakeWritable(), { query: 'prompt', request: 'denied' });
+    expect(await refused.write(ref, new Uint8Array([1]))).toMatchObject({ error: 'denied' });
+  });
+
+  it('FIL-016 a security error while writing is denied', async () => {
+    const access = await writeSetup(fakeWritable('write', new NamedError('SecurityError')));
+    expect(await access.write(ref, new Uint8Array([1]))).toMatchObject({ error: 'denied' });
+  });
+
+  it('FIL-016 a permission that needs a prompt cannot be asked for by an autosave: needs-user-gesture, nothing written', async () => {
+    const writable = fakeWritable();
+    const store = memoryStore();
+    store.data.set('id-1', { ...fakeHandle({ query: 'prompt' }), createWritable: () => Promise.resolve(writable) });
+    const { access } = makeAccess({ store, activation: false });
+    expect(await access.write(ref, new Uint8Array([1]))).toMatchObject({ ok: false, error: 'needs-user-gesture' });
+    expect(writable.chunks).toEqual([]);
+  });
+
+  it('FIL-016 requestWriteAccess asks inside the gesture: granted, refused, unsupported, without gesture', async () => {
+    const store = memoryStore();
+    const withHandle = (id: string, options: HandleOptions, gestureError?: Error) =>
+      store.data.set(id, {
+        ...fakeHandle(options),
+        createWritable: () => Promise.resolve(fakeWritable()),
+        requestPermission: () => (gestureError ? Promise.reject(gestureError) : Promise.resolve(options.request ?? 'granted')),
+      });
+    withHandle('granted', { query: 'prompt', request: 'granted' });
+    withHandle('refused', { query: 'prompt', request: 'denied' });
+    withHandle('nogesture', { query: 'prompt' }, new NamedError('SecurityError'));
+    const { access } = makeAccess({ store });
+    expect((await access.requestWriteAccess({ id: 'granted', name: 'a.pdf' })).ok).toBe(true);
+    expect(await access.requestWriteAccess({ id: 'refused', name: 'a.pdf' })).toMatchObject({ error: 'denied' });
+    expect(await access.requestWriteAccess({ id: 'nogesture', name: 'a.pdf' })).toMatchObject({ error: 'needs-user-gesture' });
+    expect(await access.requestWriteAccess({ id: 'unknown', name: 'a.pdf' })).toMatchObject({ error: 'unsupported' });
+  });
+
+  it('SAV-009 the open picker asks for write access up front', async () => {
+    const picker = vi.fn(() => Promise.resolve([fakeHandle()]));
+    await makeAccess({ picker }).access.pickPdfs();
+    expect(picker).toHaveBeenCalledWith(expect.objectContaining({ mode: 'readwrite' }));
+  });
+});
+
+describe('WebFileAccess.saveCopy', () => {
+  it('SAV-011 PLT-010 writes through the save picker under the suggested name', async () => {
+    const writable = fakeWritable();
+    const savePicker = vi.fn(() => Promise.resolve({ ...fakeHandle(), createWritable: () => Promise.resolve(writable) }));
+    const { access } = makeAccess({ savePicker });
+    expect((await access.saveCopy('x (annotated).pdf', new Uint8Array([5]))).ok).toBe(true);
+    expect(savePicker).toHaveBeenCalledWith(expect.objectContaining({ suggestedName: 'x (annotated).pdf' }));
+    expect(writable.chunks).toEqual([[5]]);
+    expect(writable.closed).toBe(true);
+  });
+
+  it('SAV-011 a dismissed save picker is cancelled and downloads nothing', async () => {
+    const download = vi.fn();
+    const { access } = makeAccess({ savePicker: () => Promise.reject(new NamedError('AbortError')), download });
+    expect(await access.saveCopy('x.pdf', new Uint8Array())).toMatchObject({ error: 'cancelled' });
+    expect(download).not.toHaveBeenCalled();
+  });
+
+  it('PLT-010 without a picker (Safari, Firefox) the copy is downloaded', async () => {
+    const download = vi.fn();
+    const { access } = makeAccess({ download });
+    const bytes = new Uint8Array([1, 2]);
+    expect((await access.saveCopy('x.pdf', bytes)).ok).toBe(true);
+    expect(download).toHaveBeenCalledWith('x.pdf', bytes);
+  });
+
+  it('PLT-010 a refused picker (no user activation) falls back to the download', async () => {
+    const download = vi.fn();
+    const { access } = makeAccess({ savePicker: () => Promise.reject(new NamedError('SecurityError')), download });
+    expect((await access.saveCopy('x.pdf', new Uint8Array([1]))).ok).toBe(true);
+    expect(download).toHaveBeenCalledTimes(1);
+  });
+
+  it('SAV-011 a failing picker write reports write-failed', async () => {
+    const writable = fakeWritable('write');
+    const { access } = makeAccess({ savePicker: () => Promise.resolve({ ...fakeHandle(), createWritable: () => Promise.resolve(writable) }) });
+    expect(await access.saveCopy('x.pdf', new Uint8Array([1]))).toMatchObject({ error: 'write-failed' });
+    expect(writable.aborted).toBe(true);
   });
 });

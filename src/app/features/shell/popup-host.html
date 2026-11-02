@@ -2,6 +2,7 @@
   <div class="popup" [class.sheet]="compact() && id !== ids.tabs" [class.top]="compact() && id === ids.tabs" [class.panel]="!compact()" data-popup>
     @switch (id) {
       @case (ids.overflowTop) {
+        <button appIconButton icon="saveCopy" labelKey="saveCopy" [disabled]="noDocument()" (pressed)="saveCopy()"></button>
         <button appIconButton icon="info" labelKey="info" (pressed)="store.openPopup(ids.info)"></button>
       }
       @case (ids.overflowBottom) {
@@ -10,6 +11,7 @@
           <button appIconButton icon="showLess" labelKey="showLess" [disabled]="showLessDisabled()" (pressed)="aspect.showLess()"></button>
         }
         <button appIconButton icon="info" labelKey="info" (pressed)="store.openPopup(ids.info)"></button>
+        <button appIconButton icon="saveCopy" labelKey="saveCopy" [disabled]="noDocument()" (pressed)="saveCopy()"></button>
       }
       @case (ids.info) {
         <span class="version" [attr.aria-label]="'a11y.versionInfo' | transloco" [textContent]="version"></span>

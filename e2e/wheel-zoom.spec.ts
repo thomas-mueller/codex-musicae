@@ -60,10 +60,21 @@ desktopTest('NAV-011 one wheel notch turns one slide; a second notch 100 ms late
   const n = await openScoreInAnnotation(page);
   const { x, y } = await center(page);
   await page.mouse.move(x, y);
-  await wheel(page, NOTCH);
-  await expect(indicator(page)).toHaveText(`2 / ${n}`);
-  await page.waitForTimeout(QUICK_MS);
-  await wheel(page, NOTCH);
+  // The handler measures the gap with the events' own time stamps (creation time). Both notches are therefore made in one task
+  // of the page and the gap is waited out by spinning, not by a timer: a timer on a stalled CI browser (WebKit) can fire after
+  // the cooldown and the second notch would count. The spin cannot be stretched by event-loop delays.
+  await stage(page).evaluate(
+    (el, { delta, gap }) => {
+      const notch = () => el.dispatchEvent(new WheelEvent('wheel', { deltaY: delta, bubbles: true, cancelable: true }));
+      notch();
+      const start = performance.now();
+      while (performance.now() - start < gap) {
+        // wait
+      }
+      notch();
+    },
+    { delta: NOTCH, gap: QUICK_MS },
+  );
   await page.waitForTimeout(SETTLE_MS);
   await expect(indicator(page)).toHaveText(`2 / ${n}`);
   await wheel(page, -NOTCH);

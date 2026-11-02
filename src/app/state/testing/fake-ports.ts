@@ -1,7 +1,9 @@
 import { vi } from 'vitest';
 
-import type { FileAccess, FileRef } from '../../ports/file-access';
-import { err } from '../../ports/result';
+import type { FileAccess, FileAccessError, FileRef } from '../../ports/file-access';
+import type { ExistingInk, PdfEdits, PdfWriteError, PdfWriter } from '../../ports/pdf-writer';
+import { err, ok } from '../../ports/result';
+import type { Result } from '../../ports/result';
 import type { Preferences } from '../../ports/preferences';
 
 export function memoryPreferences(initial: Record<string, unknown> = {}): Preferences & { data: Map<string, unknown> } {
@@ -21,13 +23,37 @@ export function memoryPreferences(initial: Record<string, unknown> = {}): Prefer
 }
 
 /** Files with the same name count as the same file. */
-export function fakeFileAccess(): FileAccess & { forget: ReturnType<typeof vi.fn<(ref: FileRef) => Promise<void>>> } {
+export type FakeFileAccess = FileAccess & {
+  forget: ReturnType<typeof vi.fn<(ref: FileRef) => Promise<void>>>;
+  write: ReturnType<typeof vi.fn<(ref: FileRef, bytes: Uint8Array) => Promise<Result<void, FileAccessError>>>>;
+  saveCopy: ReturnType<typeof vi.fn<(name: string, bytes: Uint8Array) => Promise<Result<void, FileAccessError>>>>;
+  requestWriteAccess: ReturnType<typeof vi.fn<(ref: FileRef) => Promise<Result<void, FileAccessError>>>>;
+};
+
+/** `write` and `saveCopy` succeed by default; specs override them with `mockImplementation`. */
+export function fakeFileAccess(): FakeFileAccess {
   return {
     pickPdfs: () => Promise.resolve(err('cancelled')),
     reopen: () => Promise.resolve(err('not-found')),
-    write: () => Promise.resolve(err('unsupported')),
-    saveCopy: () => Promise.resolve(err('unsupported')),
+    write: vi.fn(() => Promise.resolve(ok(undefined))),
+    saveCopy: vi.fn(() => Promise.resolve(ok(undefined))),
+    requestWriteAccess: vi.fn(() => Promise.resolve(ok(undefined))),
     isSame: (a, b) => Promise.resolve(a.name === b.name),
     forget: vi.fn(() => Promise.resolve()),
+  };
+}
+
+export type FakePdfWriter = PdfWriter & {
+  readEmbeddedJson: ReturnType<typeof vi.fn<(bytes: Uint8Array) => Promise<Result<string | null, PdfWriteError>>>>;
+  listInk: ReturnType<typeof vi.fn<(bytes: Uint8Array) => Promise<Result<readonly ExistingInk[], PdfWriteError>>>>;
+  apply: ReturnType<typeof vi.fn<(bytes: Uint8Array, edits: PdfEdits, signal: AbortSignal) => Promise<Result<Uint8Array, PdfWriteError>>>>;
+};
+
+/** `apply` answers new bytes (the input plus one byte per call) and records its edits. */
+export function fakePdfWriter(): FakePdfWriter {
+  return {
+    readEmbeddedJson: vi.fn(() => Promise.resolve(ok(null))),
+    listInk: vi.fn(() => Promise.resolve(ok([]))),
+    apply: vi.fn((bytes: Uint8Array) => Promise.resolve(ok(new Uint8Array([...bytes, 1])))),
   };
 }

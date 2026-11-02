@@ -12,6 +12,8 @@ export interface TabMarker {
   readonly icon: IconKey;
   /** Translation key under `a11y.` and `tooltip.`. */
   readonly labelKey: string;
+  /** Present when the marker is a control: FIL-016 the lock offers "save a copy". */
+  readonly action?: 'saveCopy' | 'grantAccess';
 }
 
 const ERROR_KEYS: Readonly<Record<string, string>> = {
@@ -27,11 +29,17 @@ export function markersOf(tab: Tab): TabMarker[] {
   if (tab.status === 'error') {
     markers.push({ icon: 'error', labelKey: ERROR_KEYS[tab.errorCode ?? 'unknown'] ?? 'errorUnknown' });
   }
+  if (tab.saveFailed) {
+    markers.push({ icon: 'error', labelKey: 'saveFailed' });
+  }
+  if (tab.needsWriteAccess) {
+    markers.push({ icon: 'save', labelKey: 'grantWriteAccess', action: 'grantAccess' });
+  }
   if (tab.unsaved) {
     markers.push({ icon: 'unsaved', labelKey: 'unsaved' });
   }
   if (tab.readOnly) {
-    markers.push({ icon: 'readOnly', labelKey: 'readOnly' });
+    markers.push({ icon: 'readOnly', labelKey: 'readOnly', action: 'saveCopy' });
   }
   if (tab.needsReopen) {
     markers.push({ icon: 'needsReopen', labelKey: 'needsReopen' });
@@ -55,9 +63,21 @@ export function markersOf(tab: Tab): TabMarker[] {
       <span [textContent]="tab().name"></span>
     </button>
     @for (marker of markers(); track marker.labelKey) {
-      <span class="marker" role="img" [appTooltip]="marker.labelKey" [attr.aria-label]="'a11y.' + marker.labelKey | transloco">
-        <app-icon [name]="marker.icon" />
-      </span>
+      @if (marker.action) {
+        <button
+          type="button"
+          class="marker"
+          [appTooltip]="marker.labelKey"
+          [attr.aria-label]="'a11y.' + marker.labelKey | transloco"
+          (click)="onMarker(marker.action)"
+        >
+          <app-icon [name]="marker.icon" />
+        </button>
+      } @else {
+        <span class="marker" role="img" [appTooltip]="marker.labelKey" [attr.aria-label]="'a11y.' + marker.labelKey | transloco">
+          <app-icon [name]="marker.icon" />
+        </span>
+      }
     }
     <button appIconButton icon="closeTab" labelKey="closeTab" (pressed)="session.closeTab(tab().id)"></button>
   `,
@@ -70,4 +90,12 @@ export class TabItem {
   readonly tab = input.required<Tab>();
   readonly active = input(false);
   protected readonly markers = computed(() => markersOf(this.tab()));
+
+  protected onMarker(action: TabMarker['action']): void {
+    if (action === 'grantAccess') {
+      void this.session.grantWriteAccess(this.tab().id);
+    } else {
+      void this.session.saveCopy(this.tab().id);
+    }
+  }
 }

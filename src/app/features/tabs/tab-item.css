@@ -48,6 +48,14 @@
   flex: none;
 }
 
+button.marker {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
 button[appIconButton] {
   flex: none;
 }

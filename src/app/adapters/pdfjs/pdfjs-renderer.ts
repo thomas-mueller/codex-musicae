@@ -16,7 +16,7 @@ export interface PdfjsPage {
   readonly view: readonly [number, number, number, number];
   readonly rotate: number;
   getViewport(options: { scale: number; offsetX?: number; offsetY?: number }): { width: number; height: number };
-  render(params: { canvasContext: unknown; canvas: null; viewport: unknown }): {
+  render(params: { canvasContext: unknown; canvas: null; viewport: unknown; annotationMode: number }): {
     promise: Promise<void>;
     cancel(): void;
   };
@@ -183,7 +183,7 @@ class PdfJsDocumentHandle implements PdfDocumentHandle {
         offsetX: -req.region.x * req.scale,
         offsetY: -req.region.y * req.scale,
       });
-      const task = page.render({ canvasContext: context, canvas: null, viewport });
+      const task = page.render({ canvasContext: context, canvas: null, viewport, annotationMode: TUNABLES.pdf.annotationModeDisable });
       onAbort = () => task.cancel();
       signal.addEventListener('abort', onAbort, { once: true });
       await task.promise;

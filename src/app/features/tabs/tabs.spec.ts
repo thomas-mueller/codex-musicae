@@ -4,6 +4,7 @@ import { provideTestPorts } from '../../../testing/provide-test-ports';
 import { provideTestTransloco, translate } from '../../../testing/transloco';
 import { FILE_ACCESS } from '../../ports/file-access';
 import type { OpenedFile } from '../../ports/file-access';
+import { fakeFileAccess } from '../../state/testing/fake-ports';
 import { SessionStore } from '../../state/session.store';
 import { UiStore } from '../../state/ui.store';
 import { TabBar } from './tab-bar';
@@ -57,6 +58,44 @@ describe('tabs', () => {
     await fixture.whenStable();
     const marker = fixture.nativeElement.querySelector('.marker');
     expect(marker?.getAttribute('aria-label')).toBe(translate('a11y.errorInvalid'));
+  });
+
+  it('FIL-016 the lock of a read-only tab is a control that offers to save a copy', async () => {
+    const session = await openTabs({ ...file('a.pdf'), writable: false });
+    const files = TestBed.inject(FILE_ACCESS) as ReturnType<typeof fakeFileAccess>;
+    const fixture = TestBed.createComponent(TabBar);
+    await fixture.whenStable();
+    const lock = fixture.nativeElement.querySelector('button.marker') as HTMLElement;
+    expect(lock.getAttribute('aria-label')).toBe(translate('a11y.readOnly'));
+    lock.click();
+    await settle();
+    expect(files.saveCopy).toHaveBeenCalledWith('a (annotated).pdf', expect.any(Uint8Array));
+    expect(session.tabs()).toHaveLength(1);
+  });
+
+  it('FIL-016 a tab that waits for the write permission shows a control that asks for it', async () => {
+    const session = await openTabs(file('a.pdf'));
+    const files = TestBed.inject(FILE_ACCESS) as ReturnType<typeof fakeFileAccess>;
+    session.activeDocument()?.needsWriteAccess.set(true);
+    const fixture = TestBed.createComponent(TabBar);
+    await fixture.whenStable();
+    const marker = fixture.nativeElement.querySelector('button.marker') as HTMLElement;
+    expect(marker.getAttribute('aria-label')).toBe(translate('a11y.grantWriteAccess'));
+    marker.click();
+    await settle();
+    expect(files.requestWriteAccess).toHaveBeenCalledTimes(1);
+    expect(session.tabs()[0]?.needsWriteAccess).toBe(false);
+  });
+
+  it('FIL-010 a failed save shows the error marker', async () => {
+    const session = await openTabs(file('a.pdf'));
+    session.activeDocument()?.saveFailed.set(true);
+    const fixture = TestBed.createComponent(TabBar);
+    await fixture.whenStable();
+    const labels = Array.from(fixture.nativeElement.querySelectorAll('.marker')).map((m) =>
+      (m as HTMLElement).getAttribute('aria-label'),
+    );
+    expect(labels).toEqual([translate('a11y.saveFailed')]);
   });
 
   it('FIL-003 the unsaved, read-only and needs-re-open markers follow the document flags', async () => {

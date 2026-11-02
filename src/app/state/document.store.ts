@@ -5,10 +5,10 @@ import type { Observable } from 'rxjs';
 import { TUNABLES } from '../../config/tunables';
 import {
   EMPTY_MARKS, EMPTY_UNDO, FIT_VIEW, addJump, clearJunction, computeBars, computePaddings, findEntryForSystem, flattenSystems, forcedBreaks,
-  applyAction, generatePlayingOrder, isComplete, isProvisional, junctionCount, markPositions, packSlides, paddedArea,
+  CURRENT_SCHEMA_VERSION, applyAction, generatePlayingOrder, isComplete, isProvisional, junctionCount, markPositions, packSlides, paddedArea,
   pushAction, redoStep, referenceWidth, removeJump, slideIndexOfEntry, systemNumbers, toggleBreak, toggleStop, undoStep, updateJump, usablePrefix,
 } from '../core';
-import type { DetectedPage, DocMarks, InkStroke, Jump, Orientation, Point, SlidePlan, SystemGeom, UndoAction, UndoState, ViewState } from '../core';
+import type { DetectedPage, DocMarks, EmbeddedMetadata, InkStroke, MetadataPage, Jump, Orientation, Point, SlidePlan, SystemGeom, UndoAction, UndoState, ViewState } from '../core';
 import type { PdfDocumentHandle, PdfOpenError, PdfPageInfo, PdfRenderer } from '../ports/pdf-renderer';
 import { DetectionRun } from './detection-run';
 import { NO_RATIO_DEFAULTS } from './ratio-defaults';
@@ -44,6 +44,10 @@ export class DocumentStore {
   /** Status markers of FIL-003; set by later milestones (saving, read-only files, lost access). */
   readonly unsaved = signal(false);
   readonly readOnly = signal(false);
+  /** FIL-016: writing needs a permission the browser can only ask for in a user gesture; the next click on the tab asks. */
+  readonly needsWriteAccess = signal(false);
+  /** FIL-010: the last save failed; shown as the error icon. */
+  readonly saveFailed = signal(false);
   readonly needsReopen = signal(false);
 
   /** Organization mode view state, kept per tab (ORG-006): zoom relative to the default fit (fit-page), scroll offset in CSS px. */
@@ -237,6 +241,13 @@ export class DocumentStore {
     this.record({ kind: 'add', stroke });
   }
 
+  /** SAV-006, ANN-005: ink that already is in the file; no undo step and no change event (it is saved, not an edit). */
+  loadSavedStrokes(strokes: readonly InkStroke[]): void {
+    if (strokes.length > 0) {
+      this.strokesSignal.update((current) => [...current, ...strokes]);
+    }
+  }
+
   /** ANN-006: one undo step for all given strokes that are present; nothing to erase, no step. */
   eraseStrokes(strokes: readonly InkStroke[]): void {
     const present = new Set(this.strokesSignal().map((s) => s.id));
@@ -309,6 +320,74 @@ export class DocumentStore {
 
   clearJunction(junction: number): void {
     this.apply(clearJunction(this.marks(), junction));
+  }
+
+  /** SAV-004: this tab as the JSON embedded in the PDF; `detection` only for the active, complete run. */
+  buildMetadata(appVersion: string): EmbeddedMetadata {
+    const marks = this.marks();
+    const override = this.ratioOverride();
+    return {
+      schemaVersion: CURRENT_SCHEMA_VERSION,
+      appVersion,
+      pageCount: this.pageInfos().length,
+      detection: this.hasCompleteDetection() ? { level: this.detection.level(), pages: this.metadataPages() } : null,
+      marks: {
+        jumps: marks.jumps.map((j) => ({ id: j.id, origin: j.origin, target: j.target, pass: j.pass })),
+        breaks: [...marks.breaks],
+        stops: [...marks.stops],
+        nextJumpId: marks.nextJumpId,
+      },
+      aspectRatio: {
+        ...(override.portrait === undefined ? {} : { portrait: override.portrait }),
+        ...(override.landscape === undefined ? {} : { landscape: override.landscape }),
+      },
+    };
+  }
+
+  /** SAV-005, DET-023: restores marks, ratios and (when stored) the finished detection; no detection run is started. True when detection was restored. */
+  hydrateFromMetadata(meta: EmbeddedMetadata): boolean {
+    this.marksSignal.set({
+      jumps: meta.marks.jumps.map((j) => ({ ...j })),
+      breaks: [...meta.marks.breaks],
+      stops: [...meta.marks.stops],
+      nextJumpId: meta.marks.nextJumpId,
+    });
+    this.ratioOverride.set({ ...meta.aspectRatio });
+    if (meta.detection !== null) {
+      this.detection.reset(meta.pageCount);
+      this.detection.level.set(meta.detection.level);
+      for (const page of meta.detection.pages) {
+        const { pageIndex, width, height, systems } = page;
+        this.detection.finish(pageIndex, page.state, page.state === 'done' ? { pageIndex, width, height, systems: [...systems] } : null);
+      }
+    }
+    return meta.detection !== null;
+  }
+
+  /** Complete means every page of the file has a final state; before detection starts the state list is still empty. */
+  private hasCompleteDetection(): boolean {
+    const count = this.pageInfos().length;
+    return count > 0 && this.detection.states().length === count && this.detectionComplete();
+  }
+
+  private metadataPages(): MetadataPage[] {
+    const states = this.detection.states();
+    const pages = this.detection.pages();
+    const infos = this.pageInfos();
+    return states.flatMap((state, i) => {
+      if (state !== 'done' && state !== 'failed') {
+        return [];
+      }
+      const page = pages[i] ?? null;
+      const info = infos[i];
+      return [{
+        pageIndex: i,
+        width: page?.width ?? info?.width ?? 0,
+        height: page?.height ?? info?.height ?? 0,
+        state,
+        systems: state === 'done' && page ? page.systems : [],
+      }];
+    });
   }
 
   /** DET-015: marks after a re-run (kept or cleared by `reconcileAfterRedetection`); not an edit, so never "rejected". */

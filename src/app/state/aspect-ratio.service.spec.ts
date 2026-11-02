@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 
 import { TUNABLES } from '../../config/tunables';
-import { provideTestDetectionPorts } from '../../testing/provide-test-ports';
+import { provideTestDetectionPorts, provideTestSavePorts } from '../../testing/provide-test-ports';
 import { FILE_ACCESS } from '../ports/file-access';
 import { PDF_RENDERER } from '../ports/pdf-renderer';
 import { PREFERENCES } from '../ports/preferences';
@@ -19,6 +19,7 @@ async function setup(stored: Record<string, unknown> = {}, viewport = { width: 1
       { provide: FILE_ACCESS, useValue: fakeFileAccess() },
       { provide: PREFERENCES, useValue: memoryPreferences(stored) },
       ...provideTestDetectionPorts(),
+      ...provideTestSavePorts(),
     ],
   });
   const preferences = TestBed.inject(PreferencesStore);
