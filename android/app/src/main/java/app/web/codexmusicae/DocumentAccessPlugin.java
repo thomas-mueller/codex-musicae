@@ -154,9 +154,10 @@ public class DocumentAccessPlugin extends Plugin {
 
     @PluginMethod
     public void readChunk(PluginCall call) {
-        Log.i("CM-DIAG", "readChunk offset=" + call.getLong("offset") + " length=" + call.getInt("length"));
         FileChannel channel = readers.get(call.getString("handle"));
-        Long offset = call.getLong("offset");
+        // PluginCall.getLong returns null for a JSON number that parsed as Integer (every offset below 2 GiB).
+        Object rawOffset = call.getData().opt("offset");
+        Long offset = rawOffset instanceof Number ? ((Number) rawOffset).longValue() : null;
         Integer length = call.getInt("length");
         if (channel == null || offset == null || length == null) {
             call.reject("bad handle", "read-failed");
