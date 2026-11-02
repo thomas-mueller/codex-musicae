@@ -20,6 +20,11 @@
 - **PIP-008** Secrets live in GitHub; nothing in the repository to test.
 - **PIP-009** Tag naming is the owner's convention (`docs/roadmap.md`); the owner tags.
 
+## Manual documents (device-only or tester-only by nature)
+
+- **TST-006** The device checklist (`docs/device-checklist.md`, release checklist) is a document the owner runs on a real tablet; its results are recorded there.
+- **TST-007** The iOS Safari tester checklist (`docs/tester-checklist-ios-safari.md`) is a document sent to testers with the hosted URL; their answers are collected by the owner.
+
 ## Configuration values without a test (cheap to add later)
 
 - **GEN-001** `T:identity.appName` is read by the web manifest and Android resources; no test asserts the generated names.
