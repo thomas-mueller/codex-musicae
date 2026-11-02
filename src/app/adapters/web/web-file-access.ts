@@ -239,12 +239,31 @@ export class WebFileAccess implements FileAccess {
       if (permission === 'prompt' && this.hasUserActivation()) {
         permission = await handle.requestPermission(descriptor);
       }
+      if (permission === 'prompt') {
+        return err('needs-user-gesture'); // a timer cannot show the prompt: the user is asked on the next click
+      }
       if (permission !== 'granted') {
         return err('denied');
       }
       return await this.writeTo(handle, bytes);
     } catch (e) {
       return err(writeError(e));
+    }
+  }
+
+  /** FIL-016: the permission prompt for a file whose autosave could not show it; the caller is inside a user gesture. */
+  async requestWriteAccess(ref: FileRef): Promise<Result<void, FileAccessError>> {
+    const handle = await this.handleOf(ref);
+    if (!handle?.createWritable) {
+      return err('unsupported');
+    }
+    try {
+      const descriptor = { mode: 'readwrite' } as const;
+      const permission =
+        (await handle.queryPermission(descriptor)) === 'granted' ? 'granted' : await handle.requestPermission(descriptor);
+      return permission === 'granted' ? ok(undefined) : err('denied');
+    } catch (e) {
+      return err(errorName(e) === 'SecurityError' || errorName(e) === 'NotAllowedError' ? 'needs-user-gesture' : writeError(e));
     }
   }
 

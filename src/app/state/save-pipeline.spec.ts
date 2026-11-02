@@ -123,6 +123,16 @@ describe('SavePipeline (M15 S3)', () => {
     }
   });
 
+  it('FIL-016 a write that needs the user to grant permission keeps everything and flags the document', async () => {
+    const { doc, files, pipeline, signal } = await setup();
+    doc.addStroke(stroke('a'));
+    files.write.mockResolvedValueOnce(err('needs-user-gesture'));
+    expect(await pipeline.run(signal)).toBe('needsAccess');
+    expect(doc.needsWriteAccess()).toBe(true);
+    expect(doc.readOnly()).toBe(false);
+    expect(pipeline.currentBytes).toBe(ORIGINAL);
+  });
+
   it('SAV-009 strokes drawn while the save runs stay unsaved and go out with the next one', async () => {
     const { doc, writer, pipeline, signal, lastEdits } = await setup();
     doc.addStroke(stroke('a'));

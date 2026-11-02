@@ -63,6 +63,8 @@ export class PageTiles {
   private readonly attempts = new Map<string, number>();
   private currentScale = 0;
   private last: Inputs | null = null;
+  /** The document and page the tiles were rendered for: tiles are keyed by scale and rectangle only. */
+  private source: { doc: DocumentStore; pageIndex: number } | null = null;
 
   constructor() {
     effect(() => {
@@ -84,6 +86,14 @@ export class PageTiles {
 
   private reconcile(inputs: Inputs): void {
     const { doc, pageIndex, pageSize, settled, live, visible, viewport } = inputs;
+    // FIL-005: the viewer is reused when another tab is selected; the tiles of the previous document must not stay.
+    if (this.source && (this.source.doc !== doc || this.source.pageIndex !== pageIndex)) {
+      for (const key of [...this.tiles.keys()]) {
+        this.release(key);
+      }
+      this.attempts.clear();
+    }
+    this.source = { doc, pageIndex };
     this.last = inputs;
     this.currentScale = settled;
     if (settled <= 0 || live <= 0) {

@@ -321,6 +321,33 @@ describe('WebFileAccess.write', () => {
     expect(await access.write(ref, new Uint8Array([1]))).toMatchObject({ error: 'denied' });
   });
 
+  it('FIL-016 a permission that needs a prompt cannot be asked for by an autosave: needs-user-gesture, nothing written', async () => {
+    const writable = fakeWritable();
+    const store = memoryStore();
+    store.data.set('id-1', { ...fakeHandle({ query: 'prompt' }), createWritable: () => Promise.resolve(writable) });
+    const { access } = makeAccess({ store, activation: false });
+    expect(await access.write(ref, new Uint8Array([1]))).toMatchObject({ ok: false, error: 'needs-user-gesture' });
+    expect(writable.chunks).toEqual([]);
+  });
+
+  it('FIL-016 requestWriteAccess asks inside the gesture: granted, refused, unsupported, without gesture', async () => {
+    const store = memoryStore();
+    const withHandle = (id: string, options: HandleOptions, gestureError?: Error) =>
+      store.data.set(id, {
+        ...fakeHandle(options),
+        createWritable: () => Promise.resolve(fakeWritable()),
+        requestPermission: () => (gestureError ? Promise.reject(gestureError) : Promise.resolve(options.request ?? 'granted')),
+      });
+    withHandle('granted', { query: 'prompt', request: 'granted' });
+    withHandle('refused', { query: 'prompt', request: 'denied' });
+    withHandle('nogesture', { query: 'prompt' }, new NamedError('SecurityError'));
+    const { access } = makeAccess({ store });
+    expect((await access.requestWriteAccess({ id: 'granted', name: 'a.pdf' })).ok).toBe(true);
+    expect(await access.requestWriteAccess({ id: 'refused', name: 'a.pdf' })).toMatchObject({ error: 'denied' });
+    expect(await access.requestWriteAccess({ id: 'nogesture', name: 'a.pdf' })).toMatchObject({ error: 'needs-user-gesture' });
+    expect(await access.requestWriteAccess({ id: 'unknown', name: 'a.pdf' })).toMatchObject({ error: 'unsupported' });
+  });
+
   it('SAV-009 the open picker asks for write access up front', async () => {
     const picker = vi.fn(() => Promise.resolve([fakeHandle()]));
     await makeAccess({ picker }).access.pickPdfs();

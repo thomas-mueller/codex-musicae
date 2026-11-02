@@ -73,6 +73,20 @@ describe('tabs', () => {
     expect(session.tabs()).toHaveLength(1);
   });
 
+  it('FIL-016 a tab that waits for the write permission shows a control that asks for it', async () => {
+    const session = await openTabs(file('a.pdf'));
+    const files = TestBed.inject(FILE_ACCESS) as ReturnType<typeof fakeFileAccess>;
+    session.activeDocument()?.needsWriteAccess.set(true);
+    const fixture = TestBed.createComponent(TabBar);
+    await fixture.whenStable();
+    const marker = fixture.nativeElement.querySelector('button.marker') as HTMLElement;
+    expect(marker.getAttribute('aria-label')).toBe(translate('a11y.grantWriteAccess'));
+    marker.click();
+    await settle();
+    expect(files.requestWriteAccess).toHaveBeenCalledTimes(1);
+    expect(session.tabs()[0]?.needsWriteAccess).toBe(false);
+  });
+
   it('FIL-010 a failed save shows the error marker', async () => {
     const session = await openTabs(file('a.pdf'));
     session.activeDocument()?.saveFailed.set(true);

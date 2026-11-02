@@ -36,6 +36,11 @@ export interface FileAccess {
   reopen(ref: FileRef): Promise<Result<OpenedFile, FileAccessError>>;
   /** Writes the complete bytes to the same file. */
   write(ref: FileRef, bytes: Uint8Array): Promise<Result<void, FileAccessError>>;
+  /**
+   * Asks the user for write access to the file of `ref`. Must run inside a user gesture; without one it answers
+   * 'needs-user-gesture'. 'denied' when the user refuses, 'unsupported' when the file has no handle.
+   */
+  requestWriteAccess(ref: FileRef): Promise<Result<void, FileAccessError>>;
   /** Saves as a new file (download or document-create). */
   saveCopy(suggestedName: string, bytes: Uint8Array): Promise<Result<void, FileAccessError>>;
   /** FIL-002: true if both refer to the same underlying file. */

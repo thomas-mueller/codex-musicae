@@ -193,6 +193,26 @@ describe('SaveService (M15 S1)', () => {
     expect(run).toHaveBeenCalledTimes(1);
   });
 
+  it('FIL-016 a save that needs the permission prompt keeps the changes without an error until access is granted', async () => {
+    const { doc, clock, run, saver } = await setup();
+    run.mockImplementationOnce(() => {
+      doc.needsWriteAccess.set(true);
+      return Promise.resolve('needsAccess' as never);
+    });
+    doc.addStroke(STROKE);
+    clock.advance(IDLE);
+    await settle();
+    expect(doc.saveFailed()).toBe(false);
+    expect(doc.unsaved()).toBe(true);
+    clock.advance(IDLE * 5);
+    await settle();
+    expect(run).toHaveBeenCalledTimes(1);
+    doc.needsWriteAccess.set(false); // the user allowed it
+    await expect(saver.force()).resolves.toBe(true);
+    expect(run).toHaveBeenCalledTimes(2);
+    expect(doc.unsaved()).toBe(false);
+  });
+
   it('SAV-009 dispose stops the timer', async () => {
     const { doc, clock, run, saver } = await setup();
     doc.addStroke(STROKE);

@@ -56,7 +56,7 @@ export class SavePipeline {
   }
 
   /** The save runner of the tab's `SaveService`. */
-  readonly run = async (signal: AbortSignal): Promise<boolean | 'readOnly'> => {
+  readonly run = async (signal: AbortSignal): Promise<boolean | 'readOnly' | 'needsAccess'> => {
     const snapshot = this.snapshot();
     const applied = await this.apply(snapshot.edits, signal);
     if (!applied.ok) {
@@ -64,6 +64,10 @@ export class SavePipeline {
     }
     const written = await this.files.write(this.ref, applied.value);
     if (!written.ok) {
+      if (written.error === 'needs-user-gesture') {
+        this.doc.needsWriteAccess.set(true);
+        return 'needsAccess';
+      }
       if (written.error === 'denied' || written.error === 'unsupported') {
         this.doc.readOnly.set(true);
         return 'readOnly';

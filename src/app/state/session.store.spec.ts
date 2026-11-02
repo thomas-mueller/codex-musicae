@@ -344,6 +344,62 @@ describe('SessionStore picker and recents', () => {
     });
   });
 
+  describe('permission to write (FIL-016)', () => {
+    async function pendingPermission() {
+      const ports = setup();
+      ports.files.write.mockResolvedValueOnce(err('needs-user-gesture'));
+      await ports.session.openFiles([file('a.pdf'), file('b.pdf')]);
+      await settle();
+      const [a, b] = ports.session.tabs();
+      ports.session.setActive(a?.id ?? '');
+      ports.session.activeDocument()?.addStroke(STROKE);
+      ports.clock.advance(TUNABLES.saving.autosaveIdleMs);
+      await settle();
+      return { ...ports, a: a?.id ?? '', b: b?.id ?? '' };
+    }
+
+    it('FIL-016 an autosave that cannot ask for the permission leaves the tab unsaved, flagged, and does not retry', async () => {
+      const { session, files, clock } = await pendingPermission();
+      expect(session.tabs()[0]).toMatchObject({ needsWriteAccess: true, unsaved: true, saveFailed: false, readOnly: false });
+      clock.advance(TUNABLES.saving.autosaveIdleMs * 5);
+      await settle();
+      expect(files.write).toHaveBeenCalledTimes(1);
+    });
+
+    it('FIL-016 selecting the tab asks for the permission inside the click and then saves', async () => {
+      const { session, files, a, b } = await pendingPermission();
+      session.setActive(b);
+      await settle();
+      session.setActive(a);
+      await settle();
+      expect(files.requestWriteAccess).toHaveBeenCalledTimes(1);
+      expect(files.write).toHaveBeenCalledTimes(2);
+      expect(session.tabs()[0]).toMatchObject({ needsWriteAccess: false, unsaved: false });
+    });
+
+    it('FIL-016 a refused permission makes the tab read-only', async () => {
+      const { session, files, a } = await pendingPermission();
+      files.requestWriteAccess.mockResolvedValueOnce(err('denied'));
+      expect(await session.grantWriteAccess(a)).toBe(false);
+      expect(session.tabs()[0]).toMatchObject({ readOnly: true, needsWriteAccess: false });
+    });
+
+    it('FIL-006 FIL-016 closing such a tab asks for the permission first and saves before it closes', async () => {
+      const { session, files, a } = await pendingPermission();
+      expect(await session.closeTab(a)).toBe(true);
+      expect(files.requestWriteAccess).toHaveBeenCalledTimes(1);
+      expect(files.write).toHaveBeenCalledTimes(2);
+      expect(session.tabs().map((t) => t.id)).not.toContain(a);
+    });
+
+    it('FIL-006 closing such a tab with a refused permission keeps it open', async () => {
+      const { session, files, a } = await pendingPermission();
+      files.requestWriteAccess.mockResolvedValueOnce(err('denied'));
+      expect(await session.closeTab(a)).toBe(false);
+      expect(session.tabs().map((t) => t.id)).toContain(a);
+    });
+  });
+
   describe('reading existing data on open (M15 S4)', () => {
     const META: EmbeddedMetadata = {
       schemaVersion: 1,

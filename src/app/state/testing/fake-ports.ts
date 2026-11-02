@@ -27,6 +27,7 @@ export type FakeFileAccess = FileAccess & {
   forget: ReturnType<typeof vi.fn<(ref: FileRef) => Promise<void>>>;
   write: ReturnType<typeof vi.fn<(ref: FileRef, bytes: Uint8Array) => Promise<Result<void, FileAccessError>>>>;
   saveCopy: ReturnType<typeof vi.fn<(name: string, bytes: Uint8Array) => Promise<Result<void, FileAccessError>>>>;
+  requestWriteAccess: ReturnType<typeof vi.fn<(ref: FileRef) => Promise<Result<void, FileAccessError>>>>;
 };
 
 /** `write` and `saveCopy` succeed by default; specs override them with `mockImplementation`. */
@@ -36,6 +37,7 @@ export function fakeFileAccess(): FakeFileAccess {
     reopen: () => Promise.resolve(err('not-found')),
     write: vi.fn(() => Promise.resolve(ok(undefined))),
     saveCopy: vi.fn(() => Promise.resolve(ok(undefined))),
+    requestWriteAccess: vi.fn(() => Promise.resolve(ok(undefined))),
     isSame: (a, b) => Promise.resolve(a.name === b.name),
     forget: vi.fn(() => Promise.resolve()),
   };

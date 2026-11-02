@@ -31,6 +31,7 @@ export interface Tab {
   readonly errorCode: DocumentErrorCode | null;
   readonly unsaved: boolean;
   readonly saveFailed: boolean;
+  readonly needsWriteAccess: boolean;
   readonly readOnly: boolean;
   readonly needsReopen: boolean;
 }
@@ -77,6 +78,7 @@ export class SessionStore {
       errorCode: e.document.errorCode(),
       unsaved: e.document.unsaved(),
       saveFailed: e.document.saveFailed(),
+      needsWriteAccess: e.document.needsWriteAccess(),
       readOnly: e.document.readOnly(),
       needsReopen: e.document.needsReopen(),
     })),
@@ -151,6 +153,15 @@ export class SessionStore {
     if (!entry) {
       return Promise.resolve(true);
     }
+    if (entry.document.needsWriteAccess()) {
+      // the click on the close icon is the gesture the browser needs for its permission prompt
+      return this.grantWriteAccess(id).then((saved) => {
+        if (saved) {
+          this.remove(entry);
+        }
+        return saved;
+      });
+    }
     if (!entry.saver.dirty() && !entry.saver.saving()) {
       this.remove(entry);
       return Promise.resolve(true);
@@ -160,6 +171,28 @@ export class SessionStore {
         this.remove(entry);
       }
       return saved;
+    });
+  }
+
+  /**
+   * FIL-016: asks the user for the write permission an autosave could not ask for, then saves. Must be called inside a user
+   * gesture (the click on the tab, its marker or its close icon). A refusal makes the tab read-only.
+   */
+  grantWriteAccess(id: string): Promise<boolean> {
+    const entry = this.entries().find((e) => e.id === id);
+    if (!entry) {
+      return Promise.resolve(false);
+    }
+    return this.files.requestWriteAccess(entry.ref).then((result) => {
+      if (result.ok) {
+        entry.document.needsWriteAccess.set(false);
+        return entry.saver.force();
+      }
+      if (result.error === 'denied' || result.error === 'unsupported') {
+        entry.document.needsWriteAccess.set(false);
+        entry.document.readOnly.set(true);
+      }
+      return false;
     });
   }
 
@@ -187,7 +220,11 @@ export class SessionStore {
   }
 
   setActive(id: string): void {
-    if (this.entries().some((e) => e.id === id)) {
+    const entry = this.entries().find((e) => e.id === id);
+    if (entry) {
+      if (entry.document.needsWriteAccess()) {
+        void this.grantWriteAccess(id); // the click that selects the tab is a user gesture
+      }
       this.forceSave(this.activeIdSignal(), id);
       this.activeIdSignal.set(id);
     }

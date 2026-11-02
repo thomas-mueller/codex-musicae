@@ -9,9 +9,10 @@ import type { DocChange, DocumentStore } from './document.store';
 
 /**
  * Writes the document; resolves to true when the file now holds the current state, to false when saving failed, and to
- * 'readOnly' when the file turned out not to be writable (the changes stay unsaved, without an error). Supplied by the save pipeline.
+ * 'readOnly' when the file turned out not to be writable and to 'needsAccess' when the browser has to ask the user first (in both
+ * cases the changes stay unsaved, without an error). Supplied by the save pipeline.
  */
-export type SaveRunner = (signal: AbortSignal) => Promise<boolean | 'readOnly'>;
+export type SaveRunner = (signal: AbortSignal) => Promise<boolean | 'readOnly' | 'needsAccess'>;
 
 /**
  * SAV-008, SAV-009, FIL-010: one per tab. Feeds the pure autosave state machine with the tab's changes, arms the idle
@@ -149,7 +150,7 @@ export class SaveService {
   private evaluate(): void {
     this.cancelTimer?.();
     this.cancelTimer = null;
-    if (this.disposed || this.doc.readOnly()) {
+    if (this.disposed || this.doc.readOnly() || this.doc.needsWriteAccess()) {
       return;
     }
     const now = this.clock.now();
@@ -171,7 +172,7 @@ export class SaveService {
     const outcome = await this.run(abort.signal).catch(() => false);
     this.abort = null;
     this.dispatch({ type: 'saveFinished', ok: outcome !== false, t: this.clock.now() });
-    if (outcome === 'readOnly') {
+    if (outcome === 'readOnly' || outcome === 'needsAccess') {
       this.dispatch({ type: 'change', t: this.clock.now() });
     }
     this.current = null;
