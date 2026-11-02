@@ -73,6 +73,9 @@
             ],
             "styles": [
               "src/styles.css"
+            ],
+            "allowedCommonJsDependencies": [
+              "pako"
             ]
           },
           "configurations": {

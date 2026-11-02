@@ -33,7 +33,9 @@ import { APP_LIFECYCLE } from './ports/app-lifecycle';
 import { DETECTION_ENGINE } from './ports/detection-engine';
 import { DEVICE_INFO } from './ports/device-info';
 import { FILE_ACCESS } from './ports/file-access';
+import { PdfLibWriter } from './adapters/pdflib/pdflib-pdf-writer';
 import { PDF_RENDERER } from './ports/pdf-renderer';
+import { PDF_WRITER } from './ports/pdf-writer';
 import { PREFERENCES } from './ports/preferences';
 import { KeyboardInput } from './input/keyboard-input';
 import { NavigationHandler } from './input/navigation-handler';
@@ -102,6 +104,7 @@ export const appConfig: ApplicationConfig = {
     provideAppIdentity(),
     { provide: PDF_RENDERER, useFactory: () => new PdfJsRenderer() },
     { provide: DETECTION_ENGINE, useFactory: () => new OpenCvDetectionEngine() },
+    { provide: PDF_WRITER, useFactory: () => new PdfLibWriter() },
     { provide: APP_LIFECYCLE, useFactory: () => new WebAppLifecycle() },
     { provide: PREFERENCES, useFactory: () => new WebPreferences() },
     { provide: DEVICE_INFO, useFactory: () => new WebDeviceInfo() },
