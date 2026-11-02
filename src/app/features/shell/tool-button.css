@@ -3,16 +3,6 @@
   display: inline-flex;
 }
 
-.affordance {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  min-width: var(--cm-tool-affordance);
-  min-height: var(--cm-tool-affordance);
-  width: var(--cm-tool-affordance);
-  height: var(--cm-tool-affordance);
-}
-
 .side-panel {
   position: absolute;
   top: 0;

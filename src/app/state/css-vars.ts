@@ -54,7 +54,6 @@ export function tunablesToCssVars(t: Tunables): Readonly<Record<string, string>>
     '--cm-dialog-radius': `${t.layout.dialogRadiusPx}px`,
     '--cm-dialog-gap': `${t.layout.dialogGapPx}px`,
     '--cm-marker-rotation': `${t.layout.markerRotationDeg}deg`,
-    '--cm-tool-affordance': `${t.layout.toolAffordancePx}px`,
     '--cm-disabled-opacity': String(t.layout.disabledOpacity),
   };
 }

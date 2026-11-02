@@ -22,9 +22,8 @@ describe('ToolButton', () => {
     await fixture.whenStable();
     const root = fixture.nativeElement as HTMLElement;
     const main = () => root.querySelector('button') as HTMLButtonElement;
-    const affordance = () => root.querySelector('.affordance');
     const settle = () => fixture.whenStable();
-    return { ui, fixture, root, main, affordance, settle };
+    return { ui, fixture, root, main, settle };
   }
 
   /** Fake timers only while holding: the zoneless stability check needs real ones. */
@@ -50,25 +49,11 @@ describe('ToolButton', () => {
     expect(main().classList.contains('toggled')).toBe(false);
   });
 
-  it('ANN-002 the settings affordance exists on the active pen only', async () => {
-    const { ui, affordance, settle } = await setup('pen');
-    expect(affordance()).toBeNull();
+  it('ANN-002 the active pen has no extra settings button; the popup comes from the long press', async () => {
+    const { ui, root, settle } = await setup('pen');
     ui.setTool('pen');
     await settle();
-    expect(affordance()).not.toBeNull();
-    ui.setTool('highlighter');
-    await settle();
-    expect(affordance()).toBeNull();
-  });
-
-  it('ANN-002 the affordance opens and closes the settings popup', async () => {
-    const { ui, affordance, settle } = await setup('highlighter');
-    ui.setTool('highlighter');
-    await settle();
-    (affordance() as HTMLButtonElement).click();
-    expect(ui.popup()?.id).toBe(POPUP_TOOL_SETTINGS);
-    (affordance() as HTMLButtonElement).click();
-    expect(ui.popup()).toBeNull();
+    expect(root.querySelectorAll('button')).toHaveLength(1);
   });
 
   it('ANN-002 a long press activates the tool and opens the settings, and the trailing click does not toggle it off', async () => {
@@ -86,11 +71,10 @@ describe('ToolButton', () => {
     expect(ui.popup()?.id).toBe(POPUP_TOOL_SETTINGS);
   });
 
-  it('ANN-002 the eraser has no popup and no affordance; it just toggles', async () => {
-    const { ui, root, main, affordance, settle } = await setup('eraser');
+  it('ANN-002 the eraser has no popup; it just toggles', async () => {
+    const { ui, root, main, settle } = await setup('eraser');
     ui.setTool('eraser');
     await settle();
-    expect(affordance()).toBeNull();
     main().dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
     main().click();
     await settle();

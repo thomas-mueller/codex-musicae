@@ -68,7 +68,6 @@ export const TUNABLES = {
     disabledOpacity: 0.38, // UIX-012
     tooltipHoverDelayMs: 600, // UIX-014
     longPressMs: 500, // UIX-014, ORG-019, ANN-002
-    toolAffordancePx: 20, // ANN-002: size of the small settings button on the active pen/highlighter button
     cursorHideMs: 2000, // UIX-019
     progressLineHeightPx: 3, // UIX-020
     minSupportedWidthPx: 320, // UIX-016

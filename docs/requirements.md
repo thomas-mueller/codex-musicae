@@ -178,7 +178,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 ## ANN — Annotation
 
 - **ANN-001** [v1·todo·M14] Tools are pen, highlighter, eraser. The active tool's button has the toggled look (UIX-011).
-- **ANN-002** [v1·todo·M14] Tapping an inactive tool activates it; tapping the active tool deactivates it; a long press, or the settings affordance on the active pen or highlighter button, opens the color/width popup.
+- **ANN-002** [v1·todo·M14] Tapping an inactive tool activates it; tapping the active tool deactivates it; a long press on the pen or highlighter button opens the color/width popup.
 - **ANN-003** [v1·todo·M14] Each tool remembers its last color and width index in the preferences store; defaults `T:annotation.defaultPen` and `defaultHighlighter`.
 - **ANN-004** [v1·todo·M14] Pen and highlighter each offer 6 color presets and 3 widths (`T:colors.penPresets`, `highlighterPresets`, `T:annotation.penWidthsPt`, `highlighterWidthsPt`); the highlighter uses opacity `T:annotation.highlighterOpacity` with multiply blending.
 - **ANN-005** [v1·todo·M15] The eraser removes whole ink annotations whose path lies within `T:annotation.eraserHitRadiusPx` of the pointer, including ink made by other apps; it has no width setting.

@@ -10,21 +10,10 @@
       (pressed)="store.toggleTool(entry().tool)"
       (longPress)="onLongPress()"
     ></button>
-    @if (active()) {
-      <button
-        appIconButton
-        data-popup-trigger
-        class="affordance"
-        icon="levelSelector"
-        labelKey="toolSettings"
-        [toggled]="settingsOpen()"
-        (pressed)="store.togglePopup(settingsId)"
-      ></button>
-      @if (panel() && settingsOpen()) {
-        <div class="side-panel" data-popup [attr.data-side]="side">
-          <app-tool-popup [tool]="styledTool" />
-        </div>
-      }
+    @if (active() && panel() && settingsOpen()) {
+      <div class="side-panel" data-popup [attr.data-side]="side">
+        <app-tool-popup [tool]="styledTool" />
+      </div>
     }
   } @else {
     <button

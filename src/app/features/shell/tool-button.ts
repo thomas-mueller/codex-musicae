@@ -31,7 +31,6 @@ export class ToolButton {
   readonly panel = input(false);
   protected readonly store = inject(UiStore);
   protected readonly side = TUNABLES.layout.toolStripSide;
-  protected readonly settingsId = POPUP_TOOL_SETTINGS;
   protected readonly noDocument = computed(() => !this.store.hasDocument());
   /** The tool when it has settings (pen, highlighter), else null. */
   protected readonly styled = computed<StyledTool | null>(() => {
