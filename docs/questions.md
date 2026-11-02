@@ -48,3 +48,9 @@ Options:
 Nothing from S1 was written. The core part (`core/gestures.ts`, fixtures, `gestures.spec.ts`) is complete and green.
 
 Resolved by the owner: option 1. `NavigationHandler` lives in `src/app/input/navigation-handler.ts`.
+
+## V1-M17 S1 — `title-then-score.pdf`: the 300×300 pt logo block is detected as a system (M17-Q1, resolved)
+
+The milestone expects `[0, 3]`. The detection returns `[1, 3]` at all three levels: a filled 300 pt wide block on an A4 page (595 pt) is 0.504 of the page width, just above `minSystemWidthRatio` 0.5 (fast, standard), and the engine does not look for staff lines. The corpus pins the actual result `[1, 3]` (`knownLimitation: "M17-Q1"` in `expected.json`) so that a change is noticed; the milestone forbids touching the algorithm and tunables other than for corpus tuning of real scores. Options for the owner: (1) accept the limit and record it as a new LIM entry; (2) make the logo slightly narrower in the generator (e.g. 280 pt, under the ratio) so the case tests what the milestone intends (a title page without staves); (3) raise `minSystemWidthRatio` (affects all scores). The same file also records LIM-002 (`scanned-frame.pdf` → `[5, 5]`: the border counts as a fifth system on each page).
+
+Resolved by the owner: option 2. The generator draws the logo at 280×280 pt (0.47 of the page width), so the case tests a title page without staves and expects `[0, 3]`. A block wider than `minSystemWidthRatio` is still taken as a system; the engine does not check for staff lines.

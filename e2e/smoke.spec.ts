@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { TUNABLES } from '../src/config/tunables';
 
-test('PLT-001 TST-004 TST-005 placeholder loads without external requests or errors', async ({ page }, testInfo) => {
+test('PLT-001 TST-004 TST-005 placeholder loads without external requests or errors', { tag: '@smoke' }, async ({ page }, testInfo) => {
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
   const foreignRequests: string[] = [];

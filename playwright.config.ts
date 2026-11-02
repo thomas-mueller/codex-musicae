@@ -15,6 +15,10 @@ const NAVIGATION_TIMEOUT_MS = 30_000;
 const WEB_SERVER_TIMEOUT_MS = 120_000;
 const CI_RETRIES = 2;
 const CI_WORKERS = 2;
+// The performance budgets (M17 S3, TST-008) are measured by their own project, opted into with PERF=1 (`npm run e2e:perf`, the CI perf job).
+const WITH_PERF = process.env['PERF'] === '1';
+const PERF_TEST_TIMEOUT_MS = 300_000;
+const PERF_GLOB = '**/e2e/perf/**';
 
 // In CI the workflow builds once (production and development) and uploads the result; the web servers only serve it.
 // Locally Playwright still builds before serving, so `npx playwright test` works from a clean checkout.
@@ -64,10 +68,26 @@ export default defineConfig({
     navigationTimeout: NAVIGATION_TIMEOUT_MS,
   },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'], browserName: 'chromium' } },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'], browserName: 'firefox' } },
-    { name: 'webkit', use: { ...devices['Desktop Safari'], browserName: 'webkit' } },
-    ...deviceProjects,
+    ...[
+      { name: 'chromium', use: { ...devices['Desktop Chrome'], browserName: 'chromium' as const } },
+      { name: 'firefox', use: { ...devices['Desktop Firefox'], browserName: 'firefox' as const } },
+      { name: 'webkit', use: { ...devices['Desktop Safari'], browserName: 'webkit' as const } },
+      ...deviceProjects,
+    ].map((project) => ({ ...project, testIgnore: PERF_GLOB })),
+    ...(WITH_PERF
+      ? [
+          {
+            // Chromium only; no retries, so a flaky measurement stays visible.
+            name: 'perf',
+            testDir: './e2e/perf',
+            fullyParallel: false,
+            retries: 0,
+            workers: 1,
+            timeout: PERF_TEST_TIMEOUT_MS,
+            use: { ...devices['Desktop Chrome'], browserName: 'chromium' as const },
+          },
+        ]
+      : []),
   ],
   webServer: [
     {

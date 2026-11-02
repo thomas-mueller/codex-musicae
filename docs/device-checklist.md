@@ -1,6 +1,6 @@
 # Device checklist
 
-Manual tests that cannot be verified by the automated tests. Each item is **manual device test required** until the owner has run it and recorded the result here. M17 completes this list.
+Manual tests that cannot be verified by the automated tests. Each item is **manual device test required** until the owner has run it and recorded the result here. The release checklist at the end (M17 S5) is the list to run on a real Android tablet before every release; the M16 tables above are the detailed items it builds on.
 
 Result column: `todo` | `ok` | `fail (note)`.
 
@@ -50,3 +50,29 @@ PLT-008 and FIL-018 stay `todo` in `docs/requirements.md` until every Android it
 | S4-6 | Let the system kill the WebView (background the app, open other heavy apps), return: tabs and positions are back. | NFR-015 | todo |
 
 NFR-015 stays `todo` in `docs/requirements.md` until S4-5 and S4-6 are `ok`.
+
+## Release checklist (M17 S5, TST-006, NFR-016)
+
+Owner, real Android tablet, before every release. Copy this section for each run, fill in the header and tick the items.
+
+```
+Device: ______  Android: ____  WebView/Chrome: ____  App version (info icon): ____  Date: ____
+```
+
+- [ ] Install from Firebase App Distribution; the app starts offline (airplane mode).
+- [ ] Open a 100+ page PDF; time to first slide (< 8 s): ____ s; scroll organization mode: smooth? _NFR-016, TST-008_
+- [ ] Detection finished; bars correct on 3 sample pages. _DET-001, DET-003_
+- [ ] Annotation mode: slide change latency feels instant (< 0.2 s). _NFR-001_
+- [ ] Draw with finger (and stylus): no visible lag; undo/redo; eraser. _NFR-002, ANN-005, ANN-006_
+- [ ] Bluetooth pedal: next / previous in annotation and presentation; holding the pedal does not skip. _NAV-001_
+- [ ] Presentation: system bars hidden, content under the cutout, screen stays on 5 min, back button leaves, back in annotation minimizes. _PLT-005, PLT-006, PLT-007_
+- [ ] Rotate the device in all three modes: layout and slide recomputed, position kept. _FIL-014_
+- [ ] In-place save: edit, close, reopen; open the file in another viewer: ink visible. _PLT-008, SAV-011_
+- [ ] "Open with" from the Files app (and read-only case: lock icon, save a copy works). _FIL-018, FIL-016_
+- [ ] Kill the app while drawing: restart restores tabs and positions; unsaved loss only since the last autosave. _FIL-011, FIL-013, NFR-015_
+- [ ] Large file (30 MB) opens < 10 s; app responsive. _PLT-008_
+- [ ] Memory: open 3 large PDFs in tabs, switch tabs: no crash. _NFR-004, NFR-016_
+
+Notes:
+
+NFR-016 and the device part of TST-006 stay `todo` in `docs/requirements.md` until a run of this list is recorded as `ok`. The automated budgets (`perf` job) measure a desktop Chromium, not this tablet.
