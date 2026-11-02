@@ -9,6 +9,7 @@
     "android:debug": "npm run cap:sync && cd android && ./gradlew assembleDebug",
     "build:icons": "node scripts/build-icons.mjs",
     "make:test-pdfs": "node scripts/make-test-pdfs.mjs",
+    "traceability": "node scripts/check-traceability.mjs",
     "make:corpus": "node scripts/make-corpus.mjs",
     "make:large-pdf": "node scripts/make-large-pdf.mjs",
     "e2e:perf": "PERF=1 playwright test --project=perf",
@@ -17,7 +18,7 @@
     "watch": "node scripts/generate-index-metadata.mjs && ng build --watch --configuration development",
     "test": "ng test",
     "e2e": "playwright test",
-    "lint": "eslint . && node scripts/check-templates.mjs && node scripts/check-static-compliance.mjs && node scripts/sync-agent-instructions.mjs --check",
+    "lint": "eslint . && node scripts/check-templates.mjs && node scripts/check-static-compliance.mjs && node scripts/sync-agent-instructions.mjs --check && node scripts/check-traceability.mjs --check",
     "lint:selftest": "node scripts/lint-selftest.mjs",
     "sync:agents": "node scripts/sync-agent-instructions.mjs"
   },

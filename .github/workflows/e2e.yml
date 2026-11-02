@@ -1,6 +1,7 @@
 name: e2e
 
-# End-to-end tests (Playwright, three engines x desktop/phone/tablet). Temporarily optional: this workflow is not
+# End-to-end tests (Playwright): the whole suite on the three desktop engines, the @smoke subset (open, navigate, draw, save a copy)
+# on every phone and tablet profile (PLT-011). Temporarily optional: this workflow is not
 # referenced by deploy-web or android, so a red run here never blocks a deployment or an APK (PIP-001, DEC-100).
 #
 # Designed for a free GitHub account: no artifacts (the storage quota is small and cannot be raised) and no uploads of
@@ -37,14 +38,14 @@ jobs:
       matrix:
         include:
           - { project: chromium, browser: chromium, dev: '1' }
-          - { project: chromium-pixel-phone, browser: chromium, dev: '0' }
-          - { project: chromium-galaxy-tablet, browser: chromium, dev: '0' }
+          - { project: chromium-pixel-phone, browser: chromium, dev: '0', grep: '@smoke' }
+          - { project: chromium-galaxy-tablet, browser: chromium, dev: '0', grep: '@smoke' }
           - { project: firefox, browser: firefox, dev: '0' }
-          - { project: firefox-pixel-phone, browser: firefox, dev: '0' }
-          - { project: firefox-galaxy-tablet, browser: firefox, dev: '0' }
+          - { project: firefox-pixel-phone, browser: firefox, dev: '0', grep: '@smoke' }
+          - { project: firefox-galaxy-tablet, browser: firefox, dev: '0', grep: '@smoke' }
           - { project: webkit, browser: webkit, dev: '0' }
-          - { project: webkit-iphone, browser: webkit, dev: '0' }
-          - { project: webkit-ipad, browser: webkit, dev: '0' }
+          - { project: webkit-iphone, browser: webkit, dev: '0', grep: '@smoke' }
+          - { project: webkit-ipad, browser: webkit, dev: '0', grep: '@smoke' }
     env:
       E2E_DEV_BUILD: ${{ matrix.dev }}
     steps:
@@ -83,7 +84,7 @@ jobs:
 
       # CI=true (set by GitHub) makes playwright.config.ts serve the builds above, retry twice and use two workers.
       - name: End-to-end tests
-        run: npx playwright test --project=${{ matrix.project }}
+        run: npx playwright test --project=${{ matrix.project }} ${{ matrix.grep && format('--grep {0}', matrix.grep) || '' }}
 
   # TST-008: the performance budgets of T:budgets on the 120-page reference PDF (Chromium only, no retries). Runs after the
   # e2e matrix (also when it failed); like the rest of this workflow a breach never blocks a deployment or an APK.

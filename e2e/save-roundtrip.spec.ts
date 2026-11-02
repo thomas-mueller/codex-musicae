@@ -87,8 +87,7 @@ desktopTest('TST-003 SAV-001 SAV-004 SAV-006 SAV-007 ANN-005 a copy with two str
   const saved = await inspect(copy.bytes);
   expect(saved.ink?.map((i) => i.points.length).sort()).toEqual([...facts.inkPoints].sort());
   expect(saved.metadata?.kind).toBe('ok');
-  if (saved.metadata?.kind !== 'ok') return;
-  const meta = saved.metadata.value;
+  const meta = (saved.metadata as Extract<NonNullable<typeof saved.metadata>, { kind: 'ok' }>).value;
   expect(meta.detection?.pages.reduce((sum, p) => sum + p.systems.length, 0)).toBe(SYNTHETIC_SYSTEMS);
   expect(meta.marks.jumps).toHaveLength(1);
   expect(meta.marks.breaks).toHaveLength(1);
