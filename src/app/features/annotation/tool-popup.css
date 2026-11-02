@@ -1,0 +1,50 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cm-dialog-gap);
+  padding: var(--cm-dialog-gap);
+  width: max-content;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, var(--cm-touch-target));
+  gap: var(--cm-dialog-gap);
+}
+
+.swatch,
+.sample {
+  box-sizing: border-box;
+  width: var(--cm-touch-target);
+  height: var(--cm-touch-target);
+  padding: 0;
+  border: 0;
+  border-radius: var(--cm-popup-radius);
+  background: transparent;
+  cursor: pointer;
+}
+
+.sample {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--cm-dialog-gap);
+}
+
+.line {
+  display: block;
+  width: 100%;
+  border-radius: 999px; /* fully round caps, like the stroke */
+}
+
+/* UIX-011: the selected one has the accent look. */
+.swatch.toggled {
+  box-shadow: 0 0 0 3px var(--cm-accent);
+}
+
+.sample.toggled {
+  background: color-mix(in srgb, var(--cm-accent) 25%, transparent);
+  box-shadow: 0 0 0 2px var(--cm-accent);
+}

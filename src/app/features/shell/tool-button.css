@@ -1,0 +1,22 @@
+.anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.side-panel {
+  position: absolute;
+  top: 0;
+  z-index: 3;
+  background: var(--cm-bar-bg);
+  color: var(--cm-icon);
+  border-radius: var(--cm-popup-radius);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.3);
+}
+
+.side-panel[data-side='left'] {
+  left: 100%;
+}
+
+.side-panel[data-side='right'] {
+  right: calc(100% + var(--cm-scrollbar-gap));
+}

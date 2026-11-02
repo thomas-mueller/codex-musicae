@@ -1,0 +1,30 @@
+<span class="anchor">
+  @if (styled(); as styledTool) {
+    <button
+      appIconButton
+      appLongPress
+      [icon]="entry().icon"
+      [labelKey]="entry().tool"
+      [toggled]="active()"
+      [style.--cm-toggled-bg]="fill()"
+      [style.--cm-toggled-fg]="onFill()"
+      [disabled]="noDocument()"
+      (pressed)="store.toggleTool(entry().tool)"
+      (longPress)="onLongPress()"
+    ></button>
+    @if (active() && panel() && settingsOpen()) {
+      <div class="side-panel" data-popup [attr.data-side]="side">
+        <app-tool-popup [tool]="styledTool" />
+      </div>
+    }
+  } @else {
+    <button
+      appIconButton
+      [icon]="entry().icon"
+      [labelKey]="entry().tool"
+      [toggled]="active()"
+      [disabled]="noDocument()"
+      (pressed)="store.toggleTool(entry().tool)"
+    ></button>
+  }
+</span>

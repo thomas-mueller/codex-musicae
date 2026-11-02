@@ -16,3 +16,7 @@ export * from './edits';
 export * from './mark-positions';
 export * from './composition';
 export * from './gestures';
+export * from './annotation';
+export * from './client-to-slide';
+export * from './ink-placement';
+export * from './color';

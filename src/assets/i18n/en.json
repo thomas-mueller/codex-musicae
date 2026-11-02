@@ -69,7 +69,9 @@
     "unsaved": "Unsaved changes",
     "needsReopen": "Open the file again",
     "recentFiles": "Recent files",
-    "tabList": "Open tabs"
+    "tabList": "Open tabs",
+    "toolColor": "Color",
+    "toolWidth": "Line width"
   },
   "tooltip": {
     "modeOrganization": "Organization mode",
@@ -138,6 +140,8 @@
     "unsaved": "Unsaved changes",
     "needsReopen": "Open the file again",
     "recentFiles": "Recent files",
-    "tabList": "Open tabs"
+    "tabList": "Open tabs",
+    "toolColor": "Color",
+    "toolWidth": "Line width"
   }
 }

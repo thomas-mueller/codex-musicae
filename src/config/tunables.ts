@@ -39,7 +39,7 @@ export const TUNABLES = {
       '#FB8C00',
       '#6D4C41',
     ], // ORG-018: colors are assigned cyclically by jump id
-    penPresets: ['#D32F2F', '#1565C0', '#2E7D32', '#EF6C00', '#6A1B9A'], // ANN-004
+    penPresets: ['#D32F2F', '#1565C0', '#2E7D32', '#EF6C00', '#6A1B9A', '#212121'], // ANN-004
     highlighterPresets: ['#FDD835', '#9CCC65', '#FFA726', '#F06292', '#4FC3F7', '#BA68C8'], // ANN-004
   },
 
@@ -239,7 +239,7 @@ export const TUNABLES = {
   },
 
   annotation: {
-    penWidthsPt: [1, 2.5, 5], // ANN-004
+    penWidthsPt: [0.5, 1, 2], // ANN-004
     highlighterWidthsPt: [8, 14, 22], // ANN-004
     defaultPen: { color: '#D32F2F', widthIndex: 1 }, // ANN-003
     defaultHighlighter: { color: '#FDD835', widthIndex: 1 }, // ANN-003

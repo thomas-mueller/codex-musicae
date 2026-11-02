@@ -3,8 +3,8 @@
   <button appIconButton appOpenFile icon="openFile" labelKey="openFile"></button>
   <app-mode-switch />
   @if (store.mode() === 'annotation') {
-    <button appIconButton icon="undo" labelKey="undo" [disabled]="!store.hasDocument()"></button>
-    <button appIconButton icon="redo" labelKey="redo" [disabled]="!store.hasDocument()"></button>
+    <button appIconButton icon="undo" labelKey="undo" [disabled]="!canUndo()" (pressed)="session.activeDocument()?.undo()"></button>
+    <button appIconButton icon="redo" labelKey="redo" [disabled]="!canRedo()" (pressed)="session.activeDocument()?.redo()"></button>
   }
 } @else {
   <button appIconButton appOpenFile icon="openFile" labelKey="openFile"></button>

@@ -100,12 +100,13 @@ test.describe('expanded', () => {
   });
 
   test('FIL-007 FIL-009 document controls follow the active tab status', async ({ page }) => {
-    const undo = page.getByRole('button', { name: label('undo'), exact: true }).first();
-    await expect(undo).toHaveAttribute('aria-disabled', 'true');
+    // The pen button depends on the document only; undo is also disabled while there is nothing to undo (ANN-006, M14).
+    const control = page.getByRole('button', { name: label('pen'), exact: true }).first();
+    await expect(control).toHaveAttribute('aria-disabled', 'true');
     await openFiles(page, SCORE);
-    await expect(undo).not.toHaveAttribute('aria-disabled', 'true', { timeout: DOCUMENT_OPEN_TIMEOUT_MS });
+    await expect(control).not.toHaveAttribute('aria-disabled', 'true', { timeout: DOCUMENT_OPEN_TIMEOUT_MS });
     await openFiles(page, DAMAGED);
-    await expect(undo).toHaveAttribute('aria-disabled', 'true', { timeout: DOCUMENT_OPEN_TIMEOUT_MS });
+    await expect(control).toHaveAttribute('aria-disabled', 'true', { timeout: DOCUMENT_OPEN_TIMEOUT_MS });
   });
 
   test('FIL-008 the recent list shows opened files, and a lost file offers the picker on a second tap', async ({ page }) => {

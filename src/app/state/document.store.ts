@@ -1,12 +1,14 @@
 import { computed, linkedSignal, signal } from '@angular/core';
+import { Subject } from 'rxjs';
+import type { Observable } from 'rxjs';
 
 import { TUNABLES } from '../../config/tunables';
 import {
-  EMPTY_MARKS, FIT_VIEW, addJump, clearJunction, computeBars, computePaddings, findEntryForSystem, flattenSystems, forcedBreaks,
-  generatePlayingOrder, isComplete, isProvisional, junctionCount, markPositions, packSlides, paddedArea,
-  referenceWidth, removeJump, slideIndexOfEntry, systemNumbers, toggleBreak, toggleStop, updateJump, usablePrefix,
+  EMPTY_MARKS, EMPTY_UNDO, FIT_VIEW, addJump, clearJunction, computeBars, computePaddings, findEntryForSystem, flattenSystems, forcedBreaks,
+  applyAction, generatePlayingOrder, isComplete, isProvisional, junctionCount, markPositions, packSlides, paddedArea,
+  pushAction, redoStep, referenceWidth, removeJump, slideIndexOfEntry, systemNumbers, toggleBreak, toggleStop, undoStep, updateJump, usablePrefix,
 } from '../core';
-import type { DetectedPage, DocMarks, Jump, Orientation, Point, SlidePlan, SystemGeom, ViewState } from '../core';
+import type { DetectedPage, DocMarks, InkStroke, Jump, Orientation, Point, SlidePlan, SystemGeom, UndoAction, UndoState, ViewState } from '../core';
 import type { PdfDocumentHandle, PdfOpenError, PdfPageInfo, PdfRenderer } from '../ports/pdf-renderer';
 import { DetectionRun } from './detection-run';
 import { NO_RATIO_DEFAULTS } from './ratio-defaults';
@@ -22,6 +24,12 @@ export interface SlidePosition {
 }
 /** SLD-015: per-PDF aspect-ratio overrides, in memory (saving comes in M15). */
 export type RatioOverride = { readonly [O in Orientation]?: number };
+/** ANN-011: what M15 (autosave) listens to; `t` is the clock time of the event. */
+export interface DocChange {
+  readonly type: 'change' | 'strokeStart' | 'strokeEnd';
+  readonly t: number;
+}
+const NO_STROKES: readonly InkStroke[] = [];
 
 /**
  * One per tab (FIL-005). Holds the pdf.js handle and lightweight page data; later milestones add position,
@@ -177,6 +185,34 @@ export class DocumentStore {
     }
   }
 
+  private readonly strokesSignal = signal<readonly InkStroke[]>(NO_STROKES);
+  private readonly undoSignal = signal<UndoState>(EMPTY_UNDO);
+  private readonly changeSubject = new Subject<DocChange>();
+
+  /**
+   * Ink of this tab, oldest first, in memory only (saving comes in M15). Strokes are stored exactly as received: PDF
+   * user space of their page, and nothing here moves a stroke to another page or changes its points. SAV-007, ANN-009
+   */
+  readonly strokes = this.strokesSignal.asReadonly();
+  /** ANN-006: add/erase history of this tab, cleared on dispose. */
+  readonly history = this.undoSignal.asReadonly();
+  readonly canUndo = computed(() => this.undoSignal().undo.length > 0);
+  readonly canRedo = computed(() => this.undoSignal().redo.length > 0);
+  readonly strokesByPage = computed(() => {
+    const byPage = new Map<number, InkStroke[]>();
+    for (const stroke of this.strokesSignal()) {
+      const list = byPage.get(stroke.pageIndex);
+      if (list) {
+        list.push(stroke);
+      } else {
+        byPage.set(stroke.pageIndex, [stroke]);
+      }
+    }
+    return byPage;
+  });
+  /** Document changes and stroke start/end, for autosave (M15). Completes when the tab is disposed. */
+  readonly changes: Observable<DocChange> = this.changeSubject.asObservable();
+
   readonly handle = this.handleSignal.asReadonly();
   readonly pageInfos = this.pageInfosSignal.asReadonly();
   readonly status = this.statusSignal.asReadonly();
@@ -186,7 +222,45 @@ export class DocumentStore {
     readonly tabId: string,
     private readonly renderer: PdfRenderer,
     private readonly ratioDefaults: RatioDefaults = NO_RATIO_DEFAULTS,
+    private readonly now: () => number = () => 0,
   ) {}
+
+  strokesOfPage(pageIndex: number): readonly InkStroke[] {
+    return this.strokesByPage().get(pageIndex) ?? NO_STROKES;
+  }
+
+  /** ANN-006: one undo step; a stroke whose id is already present is ignored. */
+  addStroke(stroke: InkStroke): void {
+    if (this.strokesSignal().some((s) => s.id === stroke.id)) {
+      return;
+    }
+    this.record({ kind: 'add', stroke });
+  }
+
+  /** ANN-006: one undo step for all given strokes that are present; nothing to erase, no step. */
+  eraseStrokes(strokes: readonly InkStroke[]): void {
+    const present = new Set(this.strokesSignal().map((s) => s.id));
+    const erased = strokes.filter((s) => present.has(s.id));
+    if (erased.length > 0) {
+      this.record({ kind: 'erase', strokes: erased });
+    }
+  }
+
+  undo(): void {
+    this.step(undoStep, 'undo');
+  }
+
+  redo(): void {
+    this.step(redoStep, 'redo');
+  }
+
+  strokeStarted(): void {
+    this.emit('strokeStart');
+  }
+
+  strokeEnded(): void {
+    this.emit('strokeEnd');
+  }
 
   /** FIL-009: never throws; failures end in status 'error' with a code. */
   async load(bytes: Uint8Array): Promise<void> {
@@ -249,7 +323,30 @@ export class DocumentStore {
   async dispose(): Promise<void> {
     const handle = this.handleSignal();
     this.handleSignal.set(null);
+    this.strokesSignal.set(NO_STROKES);
+    this.undoSignal.set(EMPTY_UNDO);
+    this.changeSubject.complete();
     await handle?.destroy();
+  }
+
+  private record(action: UndoAction): void {
+    this.strokesSignal.update((strokes) => applyAction(strokes, action, 'redo'));
+    this.undoSignal.update((state) => pushAction(state, action, TUNABLES.annotation.undoDepth));
+    this.emit('change');
+  }
+
+  private step(take: (state: UndoState) => { state: UndoState; action: UndoAction | null }, direction: 'undo' | 'redo'): void {
+    const { state, action } = take(this.undoSignal());
+    if (action === null) {
+      return;
+    }
+    this.undoSignal.set(state);
+    this.strokesSignal.update((strokes) => applyAction(strokes, action, direction));
+    this.emit('change');
+  }
+
+  private emit(type: DocChange['type']): void {
+    this.changeSubject.next({ type, t: this.now() });
   }
 
   /** A null result (invalid edit) leaves the marks unchanged and flags the rejection. */

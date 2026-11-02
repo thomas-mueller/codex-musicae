@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { translateSignal } from '@jsverse/transloco';
 
+import { LongPressDirective } from '../organization/long-press.directive';
 import { Icon, IconKey } from './icon';
 import { TooltipDirective } from './tooltip.directive';
 
@@ -29,9 +30,14 @@ export class IconButton {
   readonly toggled = input(false);
   readonly disabled = input(false);
   readonly pressed = output<void>();
+  /** Present when the host button also has `appLongPress`: the click that ends a long press is not a tap. */
+  private readonly longPress = inject(LongPressDirective, { optional: true, self: true });
   protected readonly label = translateSignal(computed(() => `a11y.${this.labelKey()}`));
 
   protected onClick(): void {
+    if (this.longPress?.consumeClick()) {
+      return;
+    }
     if (!this.disabled()) {
       this.pressed.emit();
     }

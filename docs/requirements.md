@@ -75,7 +75,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **SAV-004** [v1·todo·M15] The JSON contains: `schemaVersion`, `appVersion`, `pageCount`, detection level, system rectangles per page, jumps, breaks, stops, and optional aspect-ratio overrides per orientation.
 - **SAV-005** [v1·todo·M15] If the embedded `pageCount` differs from the PDF, the embedded data is discarded and detection runs again.
 - **SAV-006** [v1·todo·M15] Strokes are saved as standard PDF Ink annotations (`/Subtype /Ink`) with `/InkList`, color, border width, opacity (highlighter) and an appearance stream, so other viewers display them.
-- **SAV-007** [v1·todo·M14] A stroke is stored in the PDF user space of the page it belongs to, with the PDF's own transform (CropBox, `/Rotate`) applied inversely.
+- **SAV-007** [v1·done·M14] A stroke is stored in the PDF user space of the page it belongs to, with the PDF's own transform (CropBox, `/Rotate`) applied inversely.
 - **SAV-008** [v1·todo·M15] Saving triggers: `T:saving.autosaveIdleMs` after the last change, tab switch, tab close, app hidden or paused. Saving never starts while a stroke is in progress.
 - **SAV-009** [v1·todo·M15] A save builds the complete file bytes in memory first and only then writes; on failure the in-memory state is kept, the tab shows the error icon and the next trigger retries.
 - **SAV-010** [v1·todo·M15] Saving runs in a worker and does not block drawing or rendering.
@@ -177,19 +177,19 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 
 ## ANN — Annotation
 
-- **ANN-001** [v1·todo·M14] Tools are pen, highlighter, eraser. The active tool's button has the toggled look (UIX-011).
-- **ANN-002** [v1·todo·M14] Tapping an inactive tool activates it; tapping the active tool deactivates it; a long press, or the settings affordance on the active pen or highlighter button, opens the color/width popup.
-- **ANN-003** [v1·todo·M14] Each tool remembers its last color and width index in the preferences store; defaults `T:annotation.defaultPen` and `defaultHighlighter`.
-- **ANN-004** [v1·todo·M14] Pen and highlighter each offer 6 color presets and 3 widths (`T:colors.penPresets`, `highlighterPresets`, `T:annotation.penWidthsPt`, `highlighterWidthsPt`); the highlighter uses opacity `T:annotation.highlighterOpacity` with multiply blending.
+- **ANN-001** [v1·done·M14] Tools are pen, highlighter, eraser. The active tool's button has the toggled look (UIX-011).
+- **ANN-002** [v1·done·M14] Tapping an inactive tool activates it; tapping the active tool deactivates it; a long press on the pen or highlighter button opens the color/width popup.
+- **ANN-003** [v1·done·M14] Each tool remembers its last color and width index in the preferences store; defaults `T:annotation.defaultPen` and `defaultHighlighter`.
+- **ANN-004** [v1·done·M14] Pen and highlighter each offer 6 color presets and 3 widths (`T:colors.penPresets`, `highlighterPresets`, `T:annotation.penWidthsPt`, `highlighterWidthsPt`); the highlighter uses opacity `T:annotation.highlighterOpacity` with multiply blending.
 - **ANN-005** [v1·todo·M15] The eraser removes whole ink annotations whose path lies within `T:annotation.eraserHitRadiusPx` of the pointer, including ink made by other apps; it has no width setting.
-- **ANN-006** [v1·todo·M14] Undo and redo cover added and erased strokes per document, up to `T:annotation.undoDepth` steps, and are cleared when the document closes.
-- **ANN-007** [v1·todo·M14] Drawing works only in annotation mode; entering presentation or organization mode deactivates the tool, and returning does not restore it.
-- **ANN-008** [v1·todo·M14] While a tool is active, one pointer draws, two pointers zoom and pan; tap zones and swipes are off; pedals, buttons, slider and wheel still navigate.
-- **ANN-009** [v1·todo·M14] A stroke belongs to the page of the region where it started and is stored in that page's coordinates, even where it continues over other regions or beyond the page edge.
-- **ANN-010** [v1·todo·M14] A stroke started on filler belongs to the page of the filler content; a stroke started on canvas grey is ignored.
-- **ANN-011** [v1·todo·M14] The live stroke is drawn on its own canvas layer, only new segments once per animation frame using coalesced pointer events; no per-point change detection; a finished stroke is simplified (`T:annotation.simplifyEpsilonPt`) and committed once.
-- **ANN-012** [v1·todo·M14] A stroke on a region shown several times in a slide appears on all occurrences.
-- **ANN-013** [v1·todo·M14] Navigation commands that arrive while a stroke is in progress are applied after the stroke ends.
+- **ANN-006** [v1·done·M14] Undo and redo cover added and erased strokes per document, up to `T:annotation.undoDepth` steps, and are cleared when the document closes.
+- **ANN-007** [v1·done·M14] Drawing works only in annotation mode; entering presentation or organization mode deactivates the tool, and returning does not restore it.
+- **ANN-008** [v1·done·M14] While a tool is active, one pointer draws, two pointers zoom and pan; tap zones and swipes are off; pedals, buttons, slider and wheel still navigate.
+- **ANN-009** [v1·done·M14] A stroke belongs to the page of the region where it started and is stored in that page's coordinates, even where it continues over other regions or beyond the page edge.
+- **ANN-010** [v1·done·M14] A stroke started on filler belongs to the page of the filler content; a stroke started on canvas grey is ignored.
+- **ANN-011** [v1·done·M14] The live stroke is drawn on its own canvas layer, only new segments once per animation frame using coalesced pointer events; no per-point change detection; a finished stroke is simplified (`T:annotation.simplifyEpsilonPt`) and committed once.
+- **ANN-012** [v1·done·M14] A stroke on a region shown several times in a slide appears on all occurrences.
+- **ANN-013** [v1·done·M14] Navigation commands that arrive while a stroke is in progress are applied after the stroke ends.
 
 ## NAV — Navigation and input
 
@@ -226,7 +226,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **UIX-008** [v1·done·M7] Bars stay visible in annotation and organization mode; there is no auto-hide.
 - **UIX-009** [v1·done·M13] Presentation mode shows only the slide and the progress line, with no bars.
 - **UIX-010** [v1·done·M7] One icon set (Material Symbols Outlined, self-hosted) provides all icons; names are in `T:icons`.
-- **UIX-011** [v1·done·M7] A toggled control has a filled `T:colors.accent` background and `onAccent` icon; an untoggled control has a transparent background.
+- **UIX-011** [v1·done·M7] A toggled control has a filled `T:colors.accent` background and `onAccent` icon; an untoggled control has a transparent background. Exception: the active pen or highlighter button is filled with the tool's current stroke color, with a dark or light icon (`T:colors.iconDefault` / `onAccent`) by contrast.
 - **UIX-012** [v1·done·M7] Disabled controls use `T:layout.disabledOpacity` and cannot be focused.
 - **UIX-013** [v1·done·M7] Popups close on outside tap, Esc or Android back.
 - **UIX-014** [v1·done·M7] Tooltips appear after `T:layout.tooltipHoverDelayMs` hover or `longPressMs` long press.

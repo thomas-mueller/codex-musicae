@@ -36,6 +36,8 @@ export class UiStore {
   /** Set by the shell's resize observer; unmeasured (0x0) until its first callback. */
   /** Placeholder until the DocumentStore (M8): no document can be open yet. FIL-007 */
   readonly hasDocument = signal(false);
+  /** ANN-013: true between the start and the end of a stroke; mirrors the active document's `changes` (set by the shell). */
+  readonly strokeInProgress = signal(false);
   readonly viewport = signal<Viewport>({ width: 0, height: 0 });
 
   readonly sizeClass = computed(() =>

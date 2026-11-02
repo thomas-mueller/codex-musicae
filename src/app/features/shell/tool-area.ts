@@ -3,17 +3,14 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { TUNABLES } from '../../../config/tunables';
 import { MarkList, POPUP_MARK_LIST } from '../organization/mark-list';
 import { OrgViewStore } from '../../state/org-view.store';
-import { DetectionLevel, Tool, UiStore } from '../../state/ui.store';
+import { SessionStore } from '../../state/session.store';
+import { DetectionLevel, UiStore } from '../../state/ui.store';
 import { IconKey } from './icon';
 import { IconButton } from './icon-button';
+import { ToolButton, ToolEntry } from './tool-button';
 
 export const POPUP_TOOLS = 'tools';
 export const POPUP_ORG = 'org';
-
-interface ToolEntry {
-  readonly tool: Tool;
-  readonly icon: IconKey;
-}
 
 export const TOOL_ENTRIES: readonly ToolEntry[] = [
   { tool: 'pen', icon: 'pen' },
@@ -30,7 +27,7 @@ export const LEVEL_ENTRIES: readonly { readonly level: DetectionLevel; readonly 
 /** Compact: one floating button. Expanded: vertical strip on the configured side. UIX-004, 005, 006 */
 @Component({
   selector: 'app-tool-area',
-  imports: [IconButton, MarkList],
+  imports: [IconButton, MarkList, ToolButton],
   templateUrl: './tool-area.html',
   styleUrl: './tool-area.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -42,6 +39,7 @@ export const LEVEL_ENTRIES: readonly { readonly level: DetectionLevel; readonly 
 export class ToolArea {
   protected readonly store = inject(UiStore);
   protected readonly view = inject(OrgViewStore);
+  protected readonly session = inject(SessionStore);
   protected readonly markListId = POPUP_MARK_LIST;
   protected readonly side = TUNABLES.layout.toolStripSide;
   protected readonly tools = TOOL_ENTRIES;
@@ -50,6 +48,9 @@ export class ToolArea {
   protected readonly orgId = POPUP_ORG;
   protected readonly compact = computed(() => this.store.sizeClass() === 'compact');
   protected readonly annotation = computed(() => this.store.mode() === 'annotation');
+  /** ANN-006: both act on the active tab; not while a stroke is being drawn. */
+  protected readonly canUndo = computed(() => !this.store.strokeInProgress() && (this.session.activeDocument()?.canUndo() ?? false));
+  protected readonly canRedo = computed(() => !this.store.strokeInProgress() && (this.session.activeDocument()?.canRedo() ?? false));
   protected readonly noDocument = computed(() => !this.store.hasDocument());
   protected readonly fabIcon = computed<IconKey>(
     () => TOOL_ENTRIES.find((entry) => entry.tool === this.store.tool())?.icon ?? 'pen',
