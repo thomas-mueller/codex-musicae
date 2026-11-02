@@ -27,6 +27,9 @@ import { BitmapCache } from './state/bitmap-cache';
 import { SessionStore } from './state/session.store';
 import { WebAppLifecycle } from './adapters/web/web-app-lifecycle';
 import { WebDeviceInfo } from './adapters/web/web-device-info';
+import { CapBackButton } from './adapters/capacitor/cap-back-button';
+import { CapImmersiveFullscreen } from './adapters/capacitor/cap-immersive-fullscreen';
+import { CapWakeLock } from './adapters/capacitor/cap-wake-lock';
 import { WebFullscreen } from './adapters/web/web-fullscreen';
 import { WebWakeLock } from './adapters/web/web-wake-lock';
 import { WebFileAccess } from './adapters/web/web-file-access';
@@ -34,6 +37,7 @@ import { WebPreferences } from './adapters/web/web-preferences';
 import { APP_LIFECYCLE } from './ports/app-lifecycle';
 import { DETECTION_ENGINE } from './ports/detection-engine';
 import { DEVICE_INFO } from './ports/device-info';
+import { BACK_BUTTON } from './ports/back-button';
 import { FULLSCREEN } from './ports/fullscreen';
 import { WAKE_LOCK } from './ports/wake-lock';
 import { FILE_ACCESS } from './ports/file-access';
@@ -61,6 +65,11 @@ export const appConfig: ApplicationConfig = {
     provideEnvironmentInitializer(() => {
       inject(KeyboardInput);
       inject(NavigationHandler);
+    }),
+    // PLT-007: one handler at priority 0 runs the Back chain; nothing handled means the app is minimized.
+    provideEnvironmentInitializer(() => {
+      const navigation = inject(NavigationHandler);
+      inject(BACK_BUTTON, { optional: true })?.register(0, () => navigation.handleBack());
     }),
     provideEnvironmentInitializer(() => {
       void inject(PwaUpdatePolicy).checkAtStartup();
@@ -118,8 +127,10 @@ export const appConfig: ApplicationConfig = {
     { provide: PREFERENCES, useFactory: () => new WebPreferences() },
     { provide: DEVICE_INFO, useFactory: () => new WebDeviceInfo() },
     { provide: FILE_ACCESS, useFactory: () => new WebFileAccess() },
-    { provide: FULLSCREEN, useFactory: () => new WebFullscreen() },
-    { provide: WAKE_LOCK, useFactory: () => new WebWakeLock() },
+    { provide: FULLSCREEN, useFactory: () => (Capacitor.isNativePlatform() ? new CapImmersiveFullscreen() : new WebFullscreen()) },
+    { provide: WAKE_LOCK, useFactory: () => (Capacitor.isNativePlatform() ? new CapWakeLock() : new WebWakeLock()) },
+    // The web has no back button: no provider there, consumers inject it optionally.
+    ...(Capacitor.isNativePlatform() ? [{ provide: BACK_BUTTON, useFactory: () => new CapBackButton() }] : []),
     provideRouter(routes),
   ]
 };

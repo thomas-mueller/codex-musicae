@@ -60,7 +60,8 @@ export class NavigationHandler {
       case 'ExitPresentation':
         return this.exitPresentation();
       case 'Back':
-        return this.back();
+        this.handleBack();
+        return;
       case 'ZoomBy':
         return this.zoomBy(command.factor, command.anchor);
       case 'ZoomReset':
@@ -147,8 +148,8 @@ export class NavigationHandler {
     }
   }
 
-  /** NAV-018: the first applicable step wins. */
-  private back(): void {
+  /** NAV-018: the first applicable step wins. Returns whether one applied (the Android back button minimizes the app otherwise, PLT-007). */
+  handleBack(): boolean {
     if (this.ui.pendingLevel() !== null) {
       this.ui.cancelLevel();
     } else if (this.ui.popup() !== null) {
@@ -159,7 +160,10 @@ export class NavigationHandler {
       this.ui.deselect();
     } else if (this.ui.mode() === 'presentation') {
       this.ui.setMode('annotation');
+    } else {
+      return false;
     }
+    return true;
   }
 
   private enterPresentation(): void {
