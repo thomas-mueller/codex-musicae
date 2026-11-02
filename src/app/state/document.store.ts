@@ -15,7 +15,8 @@ import { NO_RATIO_DEFAULTS } from './ratio-defaults';
 import type { RatioDefaults } from './ratio-defaults';
 import type { ProvisionalBar } from './detection-run';
 
-export type DocumentStatus = 'loading' | 'ready' | 'error';
+/** `restoring`: a tab of the previous session that has no file yet (FIL-011, FIL-013). */
+export type DocumentStatus = 'restoring' | 'loading' | 'ready' | 'error';
 export type DocumentErrorCode = PdfOpenError;
 /** SLD-012: `entry` = index into the playing order of the first entry on the current slide, `system` = that entry's system. */
 export interface SlidePosition {
@@ -53,6 +54,8 @@ export class DocumentStore {
   /** Organization mode view state, kept per tab (ORG-006): zoom relative to the default fit (fit-page), scroll offset in CSS px. */
   readonly orgZoom = signal(1);
   readonly orgScroll = signal<Point>({ x: 0, y: 0 });
+  /** FIL-014: the stored organization position (page, display-space offset below its top) until the viewer has applied it. */
+  readonly orgRestore = signal<{ readonly page: number; readonly offset: number } | null>(null);
 
   /** Background detection of this document (M10); filled by `DetectionService`. */
   readonly detection = new DetectionRun();
@@ -175,6 +178,26 @@ export class DocumentStore {
   /** SLD-018: zoom and pan of the slide on display, per tab; back to fit on every slide change (NAV-015). */
   readonly slideView = signal<ViewState>(FIT_VIEW);
 
+  /** Every page has a final detection state (the state list is empty before detection starts, which does not count). */
+  readonly detectionFinished = computed(() => this.hasCompleteDetection());
+
+  /** The tab has no file yet (FIL-011, FIL-013). */
+  markRestoring(): void {
+    this.statusSignal.set('restoring');
+  }
+
+  /** FIL-014: back to the slide whose first entry shows `system`; a system that is no longer in the playing order gives the first slide. */
+  restorePosition(system: number): void {
+    const entries = this.playingOrder().entries;
+    const found = findEntryForSystem(entries, system);
+    const entry = Math.max(0, found);
+    const target = entries[entry];
+    if (target !== undefined) {
+      this.slideView.set(FIT_VIEW);
+      this.positionSignal.set({ entry, system: target });
+    }
+  }
+
   /** NAV-020: clamps to the existing slides; the position becomes the slide's first entry. */
   goToSlide(index: number): void {
     const slides = this.slides();
@@ -275,6 +298,7 @@ export class DocumentStore {
 
   /** FIL-009: never throws; failures end in status 'error' with a code. */
   async load(bytes: Uint8Array): Promise<void> {
+    this.statusSignal.set('loading');
     const opened = await this.renderer.open(bytes);
     if (!opened.ok) {
       this.fail(opened.error);

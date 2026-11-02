@@ -41,6 +41,7 @@ import { APP_LIFECYCLE } from './ports/app-lifecycle';
 import { DETECTION_ENGINE } from './ports/detection-engine';
 import { DEVICE_INFO } from './ports/device-info';
 import { OPEN_WITH } from './ports/open-with';
+import { SessionPersistence } from './state/session-persistence';
 import { IncomingFilesService } from './state/incoming-files.service';
 import { BACK_BUTTON } from './ports/back-button';
 import { FULLSCREEN } from './ports/fullscreen';
@@ -78,6 +79,11 @@ export const appConfig: ApplicationConfig = {
     }),
     provideEnvironmentInitializer(() => {
       inject(IncomingFilesService);
+    }),
+    // FIL-011: reopen the previous tabs, then start writing the session (annotation mode, FIL-012, is the default).
+    provideEnvironmentInitializer(() => {
+      inject(SessionPersistence);
+      void inject(SessionStore).restore();
     }),
     provideEnvironmentInitializer(() => {
       void inject(PwaUpdatePolicy).checkAtStartup();

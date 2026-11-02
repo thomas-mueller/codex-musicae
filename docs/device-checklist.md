@@ -37,3 +37,16 @@ PLT-006 and PLT-007 stay `todo` in `docs/requirements.md` until every item above
 | S3-11 | Web, desktop Chromium with the installed PWA: right-click a PDF, "Open with" CodexMusicae: it opens in a tab; a second file goes to the running window. | FIL-019 | todo |
 
 PLT-008 and FIL-018 stay `todo` in `docs/requirements.md` until every Android item above is `ok`.
+
+## M16 S4 — Tab and position restore (NFR-015)
+
+| # | Test | Req | Result |
+|---|---|---|---|
+| S4-1 | Open two PDFs, go to a later slide in one and scroll the other in organization mode, force-stop the app, start it again: both tabs are back, the last active tab is selected, the mode is annotation mode. | FIL-011, FIL-012 | todo |
+| S4-2 | The slide position and the organization scroll position of each tab are back (the slide shows the system it showed before). | FIL-014 | todo |
+| S4-3 | Leave the app in presentation mode, force-stop it, start it again: annotation mode, not presentation. | FIL-012 | todo |
+| S4-4 | Revoke access to a file (move or delete it), restart: its tab shows the needs-re-open icon; one tap offers the picker, the picked file keeps the stored position. | FIL-013 | todo |
+| S4-5 | Draw, then force-stop the app immediately: after the restart at most the changes since the last autosave are lost (autosave delay), the session itself is current. | NFR-015 | todo |
+| S4-6 | Let the system kill the WebView (background the app, open other heavy apps), return: tabs and positions are back. | NFR-015 | todo |
+
+NFR-015 stays `todo` in `docs/requirements.md` until S4-5 and S4-6 are `ok`.

@@ -57,10 +57,10 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **FIL-008** [v1·done·M8] A recent-files list (max `T:resources.recentFilesMax`, newest first) opens from the open-file control; selecting an entry reopens it, or asks to re-pick the file if access is lost.
 - **FIL-009** [v1·done·M8] An encrypted, damaged or zero-page PDF opens as a tab in error state (error icon, tooltip with reason); it never crashes the app.
 - **FIL-010** [v1·done·M15] While a tab has pending changes it shows the unsaved dot; it disappears after a successful save.
-- **FIL-011** [v1·todo·M16] At startup the app reopens the previous tabs, selects the last active tab and restores each tab's position.
-- **FIL-012** [v1·todo·M16] After startup the mode is annotation mode, even if the app was closed in presentation mode.
-- **FIL-013** [v1·todo·M16] A tab whose file access cannot be restored shows the needs-re-open state; one tap re-picks the file or re-grants permission.
-- **FIL-014** [v1·todo·M16] The persisted position per tab is the playing-order system index of the first entry on the current slide plus the organization-mode page and scroll offset.
+- **FIL-011** [v1·done·M16] At startup the app reopens the previous tabs, selects the last active tab and restores each tab's position.
+- **FIL-012** [v1·done·M16] After startup the mode is annotation mode, even if the app was closed in presentation mode.
+- **FIL-013** [v1·done·M16] A tab whose file access cannot be restored shows the needs-re-open state; one tap re-picks the file or re-grants permission.
+- **FIL-014** [v1·done·M16] The persisted position per tab is the playing-order system index of the first entry on the current slide plus the organization-mode page and scroll offset.
 - **FIL-015** [v1·done·M8] The preferences store (`T:persistence.keyPrefix`) holds UI state and file references only, never PDF-derived data. _P: web stores file handles in IndexedDB, other values in localStorage; Android uses Capacitor Preferences._
 - **FIL-016** [v1·done·M15] If a file cannot be written, its tab shows the read-only lock icon and offers "save a copy"; ink, jumps and breaks stay editable in memory.
 - **FIL-017** [v1·todo·M15] "Save a copy" writes the modified PDF to a new file. _P: web download or save picker; Android document-create intent._

@@ -1,13 +1,15 @@
-import { computed, effect, inject, Injectable, Injector, signal } from '@angular/core';
+import { computed, effect, inject, Injectable, Injector, signal, untracked } from '@angular/core';
+import type { WritableSignal } from '@angular/core';
 
 import { TUNABLES } from '../../config/tunables';
-import { parseMetadata, reconcileMetadata } from '../core';
+import { parseMetadata, parseSession, reconcileMetadata } from '../core';
 import { APP_LIFECYCLE } from '../ports/app-lifecycle';
 import { APP_VERSION } from '../ports/app-version';
 import { FILE_ACCESS } from '../ports/file-access';
 import type { FileAccessError, FileRef, OpenedFile } from '../ports/file-access';
 import { PDF_RENDERER } from '../ports/pdf-renderer';
 import { PDF_WRITER } from '../ports/pdf-writer';
+import { PREFERENCES } from '../ports/preferences';
 import { err } from '../ports/result';
 import type { Result } from '../ports/result';
 import { BitmapCache } from './bitmap-cache';
@@ -38,12 +40,27 @@ export interface Tab {
 
 export type OpenOutcome = 'opened' | 'cancelled' | 'failed' | 'repick';
 
+/**
+ * A tab restored from the previous session has no file until `attachFile` runs (FIL-011, FIL-013): `saver` and `pipeline`
+ * are null and its document is in status `restoring`.
+ */
 interface TabEntry {
   readonly id: string;
+  readonly ref: WritableSignal<FileRef>;
+  readonly document: DocumentStore;
+  saver: SaveService | null;
+  pipeline: SavePipeline | null;
+  /** FIL-014: the stored system, applied once the document and its detection are ready. */
+  readonly pendingSystem: WritableSignal<number | null>;
+  /** True while a (re)open of this restored tab is running. */
+  reopening: boolean;
+}
+
+/** What `SessionPersistence` needs of a tab. */
+export interface SessionEntry {
   readonly ref: FileRef;
   readonly document: DocumentStore;
-  readonly saver: SaveService;
-  readonly pipeline: SavePipeline;
+  readonly pendingSystem: number | null;
 }
 
 /** Open tabs and the active one. FIL-001, FIL-002, FIL-005, FIL-009, NFR-009, NFR-010 */
@@ -62,9 +79,11 @@ export class SessionStore {
   private readonly writer = inject(PDF_WRITER);
   private readonly scheduler = inject(Scheduler);
   private readonly appVersion = inject(APP_VERSION);
+  private readonly prefs = inject(PREFERENCES);
   private readonly entries = signal<readonly TabEntry[]>([]);
   private readonly activeIdSignal = signal<string | null>(null);
   private readonly repickSignal = signal<ReadonlySet<string>>(new Set());
+  private readonly restoredSignal = signal(false);
   private tabCounter = 0;
   private opening: Promise<void> = Promise.resolve();
 
@@ -72,8 +91,8 @@ export class SessionStore {
   readonly tabs = computed<readonly Tab[]>(() =>
     this.entries().map((e) => ({
       id: e.id,
-      ref: e.ref,
-      name: e.ref.name,
+      ref: e.ref(),
+      name: e.ref().name,
       status: e.document.status(),
       errorCode: e.document.errorCode(),
       unsaved: e.document.unsaved(),
@@ -85,6 +104,12 @@ export class SessionStore {
   );
   /** Recent entries whose access is lost: the next tap offers the picker (FIL-008). */
   readonly repickIds = this.repickSignal.asReadonly();
+  /** True once `restore()` has finished; the session snapshot is not written before (FIL-011). */
+  readonly restored = this.restoredSignal.asReadonly();
+  /** For `SessionPersistence`: every tab with its document, in tab order. */
+  readonly sessionEntries = computed<readonly SessionEntry[]>(() =>
+    this.entries().map((e) => ({ ref: e.ref(), document: e.document, pendingSystem: e.pendingSystem() })),
+  );
   readonly activeTabId = this.activeIdSignal.asReadonly();
   readonly activeTab = computed(() => this.tabs().find((t) => t.id === this.activeIdSignal()) ?? null);
   readonly activeDocument = computed(() => this.entries().find((e) => e.id === this.activeIdSignal())?.document ?? null);
@@ -93,7 +118,7 @@ export class SessionStore {
     // SAV-009: when the app is paused or hidden every dirty tab saves; nothing waits for it.
     this.lifecycle.onPause(() => {
       for (const entry of this.entries()) {
-        if (entry.saver.dirty()) {
+        if (entry.saver?.dirty()) {
           void entry.saver.force();
         }
       }
@@ -162,11 +187,12 @@ export class SessionStore {
         return saved;
       });
     }
-    if (!entry.saver.dirty() && !entry.saver.saving()) {
+    const saver = entry.saver;
+    if (!saver || (!saver.dirty() && !saver.saving())) {
       this.remove(entry);
       return Promise.resolve(true);
     }
-    return entry.saver.force().then((saved) => {
+    return saver.force().then((saved) => {
       if (saved) {
         this.remove(entry);
       }
@@ -183,10 +209,14 @@ export class SessionStore {
     if (!entry) {
       return Promise.resolve(false);
     }
-    return this.files.requestWriteAccess(entry.ref).then((result) => {
+    if (!entry.saver) {
+      return Promise.resolve(false);
+    }
+    const saver = entry.saver;
+    return this.files.requestWriteAccess(entry.ref()).then((result) => {
       if (result.ok) {
         entry.document.needsWriteAccess.set(false);
-        return entry.saver.force();
+        return saver.force();
       }
       if (result.error === 'denied' || result.error === 'unsupported') {
         entry.document.needsWriteAccess.set(false);
@@ -199,7 +229,7 @@ export class SessionStore {
   /** SAV-011, PLT-010: saves a copy of a tab (default: the active one) as "<name> (annotated).pdf". */
   saveCopy(id: string | null = this.activeIdSignal()): Promise<Result<void, FileAccessError | 'failed'>> {
     const entry = this.entries().find((e) => e.id === id);
-    return entry ? entry.pipeline.saveCopy(new AbortController().signal) : Promise.resolve(err('failed'));
+    return entry?.pipeline ? entry.pipeline.saveCopy(new AbortController().signal) : Promise.resolve(err('failed'));
   }
 
   private remove(entry: TabEntry): void {
@@ -213,7 +243,7 @@ export class SessionStore {
     if (this.activeIdSignal() === entry.id) {
       this.activeIdSignal.set(remaining[index]?.id ?? remaining[index - 1]?.id ?? null);
     }
-    entry.saver.dispose();
+    entry.saver?.dispose();
     this.bitmaps.releaseTab(entry.id);
     this.detection.stop(entry.document);
     void entry.document.dispose();
@@ -222,6 +252,9 @@ export class SessionStore {
   setActive(id: string): void {
     const entry = this.entries().find((e) => e.id === id);
     if (entry) {
+      if (entry.document.needsReopen()) {
+        void this.reopenTab(entry); // the click that selects the tab is the user gesture the reopen may need (FIL-013)
+      }
       if (entry.document.needsWriteAccess()) {
         void this.grantWriteAccess(id); // the click that selects the tab is a user gesture
       }
@@ -234,7 +267,7 @@ export class SessionStore {
   private forceSave(leftId: string | null, enteredId: string): void {
     if (leftId !== null && leftId !== enteredId) {
       const left = this.entries().find((e) => e.id === leftId);
-      if (left?.saver.dirty()) {
+      if (left?.saver?.dirty()) {
         void left.saver.force();
       }
     }
@@ -249,7 +282,7 @@ export class SessionStore {
       return picked.error === 'cancelled' ? 'cancelled' : 'failed';
     }
     if (replaced) {
-      await this.preferences.removeRecent(replaced, (refId) => this.entries().some((e) => e.ref.id === refId));
+      await this.preferences.removeRecent(replaced, (refId) => this.entries().some((e) => e.ref().id === refId));
     }
     await this.openFiles(picked.value);
     return 'opened';
@@ -274,6 +307,9 @@ export class SessionStore {
    */
   private async restoreFromFile(entry: TabEntry, bytes: Uint8Array): Promise<void> {
     const { document, pipeline, saver } = entry;
+    if (!pipeline || !saver) {
+      return;
+    }
     let detectionRestored = false;
     try {
       const [json, ink] = await Promise.all([this.writer.readEmbeddedJson(bytes), this.writer.listInk(bytes)]);
@@ -305,28 +341,146 @@ export class SessionStore {
 
   private async openOne(file: OpenedFile): Promise<void> {
     for (const entry of this.entries()) {
-      if (await this.files.isSame(entry.ref, file.ref)) {
+      if (await this.files.isSame(entry.ref(), file.ref)) {
         this.activeIdSignal.set(entry.id);
-        if (entry.ref.id !== file.ref.id) {
+        if (entry.ref().id !== file.ref.id) {
           await this.files.forget(file.ref);
         }
         return;
       }
     }
+    const entry = this.addEntry(file.ref);
+    this.forceSave(this.activeIdSignal(), entry.id);
+    this.activeIdSignal.set(entry.id);
+    this.attachFile(entry, file);
+  }
+
+  private addEntry(ref: FileRef): TabEntry {
     const id = `t${++this.tabCounter}`;
     const document = new DocumentStore(id, this.renderer, this.ratioDefaults, () => this.clock.now());
-    document.readOnly.set(!file.writable);
-    const pipeline = new SavePipeline(document, file.ref, file.bytes, this.files, this.writer, this.scheduler, this.appVersion);
-    const saver = new SaveService(document, this.clock, pipeline.run, TUNABLES.saving.autosaveIdleMs, this.injector);
-    const entry: TabEntry = { id, ref: file.ref, document, saver, pipeline };
+    const entry: TabEntry = { id, ref: signal(ref), document, saver: null, pipeline: null, pendingSystem: signal(null), reopening: false };
     this.entries.update((list) => [...list, entry]);
-    this.forceSave(this.activeIdSignal(), id);
-    this.activeIdSignal.set(id);
+    return entry;
+  }
+
+  /** Gives a tab its file: save pipeline, autosave, load, and what the file itself remembers (SAV-005, DET-023). */
+  private attachFile(entry: TabEntry, file: OpenedFile): void {
+    const { document } = entry;
+    document.readOnly.set(!file.writable);
+    entry.pipeline = new SavePipeline(document, file.ref, file.bytes, this.files, this.writer, this.scheduler, this.appVersion);
+    entry.saver = new SaveService(document, this.clock, entry.pipeline.run, TUNABLES.saving.autosaveIdleMs, this.injector);
+    this.applyPendingPosition(entry);
     void document.load(file.bytes).then(() => {
       if (document.status() === 'ready') {
         void this.restoreFromFile(entry, file.bytes);
       }
     });
-    void this.preferences.addRecent(file.ref, (refId) => this.entries().some((e) => e.ref.id === refId));
+    void this.preferences.addRecent(file.ref, (refId) => this.entries().some((e) => e.ref().id === refId));
+  }
+
+  /**
+   * FIL-011, FIL-013, NFR-015: reopens the tabs of the previous session. A tab whose file cannot be reopened without the user
+   * (no handle, permission to ask for, access lost) stays a placeholder marked `needsReopen`. Always ends in annotation mode:
+   * nothing here touches the UI mode (FIL-012).
+   */
+  async restore(): Promise<void> {
+    try {
+      const snapshot = parseSession(await this.prefs.get(TUNABLES.persistence.sessionKey));
+      if (!snapshot || snapshot.tabs.length === 0) {
+        return;
+      }
+      const restoring = snapshot.tabs.map((tab) => {
+        const entry = this.addEntry(tab.ref);
+        entry.document.markRestoring();
+        entry.pendingSystem.set(tab.system);
+        entry.document.orgRestore.set({ page: tab.orgPage, offset: tab.orgOffset });
+        return entry;
+      });
+      this.activeIdSignal.set(restoring[snapshot.activeIndex]?.id ?? restoring[0]?.id ?? null);
+      for (const entry of restoring) {
+        if (!this.entries().includes(entry)) {
+          continue;
+        }
+        entry.reopening = true;
+        const reopened = await this.files.reopen(entry.ref());
+        entry.reopening = false;
+        if (!this.entries().includes(entry)) {
+          continue;
+        }
+        if (reopened.ok) {
+          this.attachFile(entry, reopened.value);
+        } else {
+          entry.document.needsReopen.set(true);
+        }
+      }
+    } catch {
+      // an unreadable stored session counts as none
+    } finally {
+      this.restoredSignal.set(true);
+    }
+  }
+
+  /**
+   * FIL-013: one tap on a tab that needs re-opening. Runs inside the click, so the first call happens before any await.
+   * When the file is gone for good (`not-found`, or access lost) the same tap opens the picker and the picked file replaces
+   * the tab's file; the stored position is kept.
+   */
+  private async reopenTab(entry: TabEntry): Promise<void> {
+    if (entry.reopening) {
+      return;
+    }
+    entry.reopening = true;
+    try {
+      const reopened = await this.files.reopen(entry.ref());
+      if (reopened.ok) {
+        entry.document.needsReopen.set(false);
+        this.attachFile(entry, reopened.value);
+        return;
+      }
+      if (reopened.error !== 'not-found' && reopened.error !== 'denied') {
+        return;
+      }
+      const picked = await this.files.pickPdfs();
+      const first = picked.ok ? picked.value[0] : undefined;
+      if (!picked.ok || !first || !this.entries().includes(entry)) {
+        return;
+      }
+      const old = entry.ref();
+      entry.ref.set(first.ref);
+      entry.document.needsReopen.set(false);
+      await this.files.forget(old);
+      this.attachFile(entry, first);
+      if (picked.value.length > 1) {
+        await this.openFiles(picked.value.slice(1));
+      }
+    } finally {
+      entry.reopening = false;
+    }
+  }
+
+  /** FIL-014: once the document and its detection are final the stored system becomes the current slide. */
+  private applyPendingPosition(entry: TabEntry): void {
+    if (entry.pendingSystem() === null) {
+      return;
+    }
+    const watcher = effect(
+      () => {
+        const document = entry.document;
+        if (document.status() === 'error') {
+          entry.pendingSystem.set(null);
+          watcher.destroy();
+        } else if (document.status() === 'ready' && document.detectionFinished()) {
+          untracked(() => {
+            const system = entry.pendingSystem();
+            if (system !== null) {
+              document.restorePosition(system);
+              entry.pendingSystem.set(null);
+            }
+          });
+          watcher.destroy();
+        }
+      },
+      { injector: this.injector },
+    );
   }
 }

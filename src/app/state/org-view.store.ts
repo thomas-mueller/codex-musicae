@@ -1,8 +1,9 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
 
 import { TUNABLES } from '../../config/tunables';
 import { barsOfJunction, fitScale, layoutPages, orgZoomLimits, pageAtOffset, scrollAfterZoom } from '../core';
 import type { Bar, Point, Size } from '../core';
+import type { DocumentStore } from './document.store';
 import { SessionStore } from './session.store';
 import { UiStore } from './ui.store';
 
@@ -53,12 +54,7 @@ export class OrgViewStore {
   /** ORG-003: fit-width scale of the widest page times the zoom base times the zoom. */
   readonly scale = computed(() => {
     const doc = this.document();
-    const widest = this.widest();
-    const viewport = this.viewport();
-    if (!doc || widest.width <= 0 || viewport.width <= 0) {
-      return 0;
-    }
-    return fitScale(widest, viewport, 'width') * this.zoomBase() * doc.orgZoom();
+    return doc ? this.scaleOf(doc) : 0;
   });
   readonly layout = computed(() => layoutPages(this.pageSizes(), this.scale(), TUNABLES.rendering.orgPageGapPx));
   /** Extent of all pages. */
@@ -91,6 +87,58 @@ export class OrgViewStore {
   readonly canNext = computed(() => this.active() && this.currentPage() >= 0 && this.currentPage() < this.pageCount() - 1);
   readonly canZoomOut = computed(() => this.active() && (this.document()?.orgZoom() ?? 0) > this.zoomLimits().min);
   readonly canZoomIn = computed(() => this.active() && (this.document()?.orgZoom() ?? 0) < this.zoomLimits().max);
+
+  constructor() {
+    // FIL-014: the stored position is applied as soon as the viewer has measured itself and the layout exists.
+    effect(() => {
+      const doc = this.document();
+      const restore = doc?.orgRestore();
+      const layout = this.layout();
+      const scale = this.scale();
+      if (!doc || !restore || layout.length === 0 || scale <= 0) {
+        return;
+      }
+      untracked(() => {
+        const page = layout[Math.min(Math.max(0, restore.page), layout.length - 1)];
+        if (!page) {
+          return;
+        }
+        const top = page.top + restore.offset * scale;
+        doc.orgRestore.set(null);
+        doc.orgScroll.update((scroll) => ({ x: scroll.x, y: top }));
+        this.requestSignal.set({ top, animate: false, seq: this.seq++ });
+      });
+    });
+  }
+
+  /** ORG-003: the display scale of `doc` at the current viewport; 0 while the viewer is unmeasured. */
+  scaleOf(doc: DocumentStore): number {
+    const sizes = doc.pageInfos().map((info) => ({ width: info.width, height: info.height }));
+    const widest = sizes.reduce((best, size) => (size.width > best.width ? size : best), { width: 0, height: 0 });
+    const viewport = this.viewport();
+    if (widest.width <= 0 || viewport.width <= 0) {
+      return 0;
+    }
+    const base = TUNABLES.zoom.orgDefault === 'fitPage' ? orgZoomLimits(widest, viewport, TUNABLES.zoom.max).min : 1;
+    return fitScale(widest, viewport, 'width') * base * doc.orgZoom();
+  }
+
+  /**
+   * FIL-014: where `doc` is scrolled to, as the page at the top of the viewport and the display-space distance (page points)
+   * below that page's top. Null while the viewer is unmeasured.
+   */
+  anchorOf(doc: DocumentStore): { readonly page: number; readonly offset: number } | null {
+    const scale = this.scaleOf(doc);
+    const sizes = doc.pageInfos().map((info) => ({ width: info.width, height: info.height }));
+    const layout = layoutPages(sizes, scale, TUNABLES.rendering.orgPageGapPx);
+    if (scale <= 0 || layout.length === 0) {
+      return null;
+    }
+    const y = doc.orgScroll().y;
+    const index = pageAtOffset(layout, y, TUNABLES.rendering.orgPageGapPx);
+    const page = layout[Math.max(0, index)];
+    return page ? { page: Math.max(0, index), offset: Math.max(0, (y - page.top) / scale) } : null;
+  }
 
   /** ORG-005: scroll to the top of page `index` (clamped). */
   goToPage(index: number, animate: boolean): void {
