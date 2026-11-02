@@ -16,7 +16,7 @@ describe('PresentationView', () => {
   beforeEach(() => {
     vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(300);
     vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(400);
-    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ drawImage: vi.fn(), fillRect: vi.fn() } as never);
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ drawImage: vi.fn(), fillRect: vi.fn(), clearRect: vi.fn() } as never);
     TestBed.configureTestingModule({
       providers: [provideTestTransloco(), ...provideTestPorts(), { provide: CLOCK, useValue: clock }],
     });
