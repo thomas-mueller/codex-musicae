@@ -60,10 +60,17 @@ desktopTest('NAV-011 one wheel notch turns one slide; a second notch 100 ms late
   const n = await openScoreInAnnotation(page);
   const { x, y } = await center(page);
   await page.mouse.move(x, y);
-  await wheel(page, NOTCH);
-  await expect(indicator(page)).toHaveText(`2 / ${n}`);
-  await page.waitForTimeout(QUICK_MS);
-  await wheel(page, NOTCH);
+  // Both notches are dispatched inside the page: the gap must be QUICK_MS on the page clock, which separate
+  // Playwright round trips (plus an assertion between them) cannot guarantee on a slow CI browser.
+  await stage(page).evaluate(
+    async (el, { delta, gap }) => {
+      const notch = () => el.dispatchEvent(new WheelEvent('wheel', { deltaY: delta, bubbles: true, cancelable: true }));
+      notch();
+      await new Promise((resolve) => setTimeout(resolve, gap));
+      notch();
+    },
+    { delta: NOTCH, gap: QUICK_MS },
+  );
   await page.waitForTimeout(SETTLE_MS);
   await expect(indicator(page)).toHaveText(`2 / ${n}`);
   await wheel(page, -NOTCH);
