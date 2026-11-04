@@ -28,8 +28,8 @@ const runEslint = (file) => new Promise((resolve, reject) => {
   eslint.on('close', (code) => resolve({ code: code ?? 1, output }));
 });
 
-const runNode = (script, file) => new Promise((resolve, reject) => {
-  const child = spawn(process.execPath, [script, file], {
+const runNode = (script, ...args) => new Promise((resolve, reject) => {
+  const child = spawn(process.execPath, [script, ...args], {
     cwd: repositoryRoot,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -93,6 +93,21 @@ try {
     const result = await runNode('scripts/check-ios-config.mjs', relative(repositoryRoot, copy));
     if (result.code === 0) {
       throw new Error(`iOS config self-test passed unexpectedly: ${name}`);
+    }
+    console.log(`  ok  ${name} is rejected`);
+  }
+  const workflow = await readFile(join(repositoryRoot, '.github/workflows/ios-compile.yml'), 'utf8');
+  const workflowBroken = [
+    ['PIP-004 ios-workflow-secret', workflow.replace('permissions:', 'env:\n  KEY: ${{ secrets.APPLE_KEY }}\npermissions:')],
+    ['PIP-004 ios-workflow-runner', workflow.replace('macos-latest', 'ubuntu-latest')],
+    ['PIP-004 ios-workflow-signing', workflow.replace('CODE_SIGNING_ALLOWED=NO', 'CODE_SIGNING_ALLOWED=YES')],
+  ];
+  for (const [name, text] of workflowBroken) {
+    const file = join(fixtureRoot, 'ios-compile.yml');
+    await writeFile(file, text, 'utf8');
+    const result = await runNode('scripts/check-ios-config.mjs', 'ios', relative(repositoryRoot, file));
+    if (result.code === 0) {
+      throw new Error(`iOS workflow self-test passed unexpectedly: ${name}`);
     }
     console.log(`  ok  ${name} is rejected`);
   }

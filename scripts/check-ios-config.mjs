@@ -1,10 +1,11 @@
-// iOS shell configuration check (M18 S1/S2, PLT-012, PLT-013, GEN-003): the only automated proof for the Xcode project and Info.plist
+// iOS shell configuration check (M18 S1-S3, PLT-012, PLT-013, PIP-004, GEN-003): the only automated proof for the Xcode project and Info.plist
 // besides the CI compile. Reads the expected values from src/config/tunables.ts. With a directory argument it checks that
-// copy of the `ios` folder instead (used by the lint self-test); exits non-zero with one line per violation.
+// copy of the `ios` folder and, as a second argument, that copy of the workflow instead (used by the lint self-test); exits non-zero with one line per violation.
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 const iosDir = process.argv[2] ?? 'ios';
+const workflowPath = process.argv[3] ?? '.github/workflows/ios-compile.yml';
 const tunables = await readFile('src/config/tunables.ts', 'utf8');
 const capacitorConfig = await readFile('capacitor.config.ts', 'utf8');
 const value = (key) => tunables.match(new RegExp(`\\b${key}:\\s*'([^']*)'`))?.[1];
@@ -97,6 +98,21 @@ for (const name of swiftFiles) {
   const source = await readFile(join(iosDir, 'App/App', name), 'utf8');
   if (!source.includes('UNVERIFIED(ios)')) violations.push(`${name}: missing the UNVERIFIED(ios) marker`);
   if (project !== null && !project.includes(`${name} in Sources`)) violations.push(`project.pbxproj: ${name} is not in the Sources build phase`);
+}
+
+// The ios-compile workflow (PIP-004): unsigned simulator build on a macOS runner after lint-test, no secrets.
+const workflow = await readFile(workflowPath, 'utf8').catch(() => null);
+if (workflow === null) {
+  violations.push('ios-compile.yml is missing');
+} else {
+  const code = workflow.replace(/^\s*#.*$/gm, '');
+  if (!/^name:\s*ios-compile\s*$/m.test(code)) violations.push('ios-compile.yml: name must be ios-compile');
+  if (!/^\s*runs-on:\s*macos-latest\s*$/m.test(code)) violations.push('ios-compile.yml: runs-on must be macos-latest');
+  if (!/workflow_run:[\s\S]*?workflows:\s*\n\s*-\s*lint-test\b/.test(code)) violations.push('ios-compile.yml: must be triggered by workflow_run of lint-test');
+  if (/\bsecrets\./.test(code)) violations.push('ios-compile.yml: no secrets allowed');
+  for (const flag of ['xcodebuild -project ios/App/App.xcodeproj', '-scheme App', '-sdk iphonesimulator', 'CODE_SIGNING_ALLOWED=NO']) {
+    if (!code.includes(flag)) violations.push(`ios-compile.yml: the build must use ${flag}`);
+  }
 }
 
 if (/\burl\s*:/.test(capacitorConfig)) violations.push('capacitor.config.ts: no remote server.url allowed');
