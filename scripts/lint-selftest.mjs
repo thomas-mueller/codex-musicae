@@ -113,6 +113,14 @@ try {
     }
     console.log(`  ok  ${name} is rejected`);
   }
+  const handoverFile = join(fixtureRoot, 'ios-unverified.md');
+  const handover = await readFile(join(repositoryRoot, 'docs/ios-unverified.md'), 'utf8');
+  await writeFile(handoverFile, handover.replaceAll('ImmersivePlugin.swift', 'Missing.swift'), 'utf8');
+  const handoverResult = await runNode('scripts/check-ios-config.mjs', 'ios', '.github/workflows/ios.yml', relative(repositoryRoot, handoverFile));
+  if (handoverResult.code === 0) {
+    throw new Error('iOS hand-over self-test passed unexpectedly: PLT-014 ios-handover-missing-file');
+  }
+  console.log('  ok  PLT-014 ios-handover-missing-file is rejected');
   const iosOk = await runNode('scripts/check-ios-config.mjs', 'ios');
   if (iosOk.code !== 0) {
     throw new Error(`iOS config check fails on the real project\n${iosOk.output}`);

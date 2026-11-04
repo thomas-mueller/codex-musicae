@@ -1,11 +1,12 @@
-// iOS shell configuration check (M18 S1-S3, PLT-012, PLT-013, PIP-004, PIP-010, GEN-003): the only automated proof for the Xcode project and Info.plist
+// iOS shell configuration check (M18 S1-S4, PLT-012, PLT-013, PLT-014, PIP-004, PIP-010, GEN-003): the only automated proof for the Xcode project and Info.plist
 // besides the CI compile. Reads the expected values from src/config/tunables.ts. With a directory argument it checks that
-// copy of the `ios` folder and, as a second argument, that copy of the workflow instead (used by the lint self-test); exits non-zero with one line per violation.
+// copy of the `ios` folder and, as further arguments, that copy of the workflow and of the tester document (used by the lint self-test); exits non-zero with one line per violation.
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 const iosDir = process.argv[2] ?? 'ios';
 const workflowPath = process.argv[3] ?? '.github/workflows/ios.yml';
+const handoverPath = process.argv[4] ?? 'docs/ios-unverified.md';
 const tunables = await readFile('src/config/tunables.ts', 'utf8');
 const capacitorConfig = await readFile('capacitor.config.ts', 'utf8');
 const value = (key) => tunables.match(new RegExp(`\\b${key}:\\s*'([^']*)'`))?.[1];
@@ -92,11 +93,15 @@ if (project !== null) {
   }
 }
 
+const handover = await readFile(handoverPath, 'utf8').catch(() => null);
+if (handover === null) violations.push('docs/ios-unverified.md is missing');
+
 // Every Swift source of the app carries the UNVERIFIED(ios) marker and is part of the build (PLT-013).
 const swiftFiles = (await readdir(join(iosDir, 'App/App')).catch(() => [])).filter((name) => name.endsWith('.swift'));
 for (const name of swiftFiles) {
   const source = await readFile(join(iosDir, 'App/App', name), 'utf8');
   if (!source.includes('UNVERIFIED(ios)')) violations.push(`${name}: missing the UNVERIFIED(ios) marker`);
+  if (handover !== null && !handover.includes(name)) violations.push(`${handoverPath}: ${name} is not in the table of unverified code`);
   if (project !== null && !project.includes(`${name} in Sources`)) violations.push(`project.pbxproj: ${name} is not in the Sources build phase`);
 }
 
