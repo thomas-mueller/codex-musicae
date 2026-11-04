@@ -31,7 +31,7 @@ Portal → Profiles → **+** → *Ad Hoc* → that App ID → the certificate f
 
 ## 3. Firebase
 
-Firebase console → Project settings → add an **iOS app** with the bundle ID; copy its app ID (`1:…:ios:…`). Create a tester group for iOS and note its alias (variable `FIREBASE_IOS_TESTER_GROUPS`, already listed in `docs/milestones/V1-M00.md`).
+Firebase console → Project settings → add an **iOS app** with the bundle ID; copy its app ID (`1:…:ios:…`). Use two tester groups: the owners group (variable `FIREBASE_OWNERS_TESTER_GROUPS`, receives every build from any branch) and the iOS testers group (variable `FIREBASE_IOS_TESTER_GROUPS`, receives builds of `main` only). Both are listed in `docs/milestones/V1-M00.md`.
 
 ## 4. Tester devices
 
@@ -47,9 +47,10 @@ Settings → Secrets and variables → Actions (never put these into the reposit
 | `IOS_CERTIFICATE_PASSWORD` | secret | the `.p12` export password |
 | `IOS_PROVISIONING_PROFILE_BASE64` | secret | `base64 -w0 <profile>.mobileprovision` |
 | `FIREBASE_IOS_APP_ID` | variable | the Firebase iOS app ID |
-| `FIREBASE_IOS_TESTER_GROUPS` | variable | the tester group alias |
+| `FIREBASE_OWNERS_TESTER_GROUPS` | variable | the owners group alias (every build) |
+| `FIREBASE_IOS_TESTER_GROUPS` | variable | the iOS testers group alias (builds of `main` only) |
 
-`FIREBASE_SERVICE_ACCOUNT_CODEX_MUSICAE` (Android and Hosting already use it) is reused. When all five are set, the next `ios` run signs and uploads.
+`FIREBASE_SERVICE_ACCOUNT_CODEX_MUSICAE` (Android and Hosting already use it) is reused. When the three Apple secrets, the service account and `FIREBASE_IOS_APP_ID` are set, the next `ios` run signs and uploads (to the owners group; also to the iOS testers group on `main`). If neither group variable gives a group for the branch, the upload is skipped. Every member of a group needs a device UDID in the profile, the owners included.
 
 ## Notes
 

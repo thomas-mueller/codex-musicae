@@ -208,11 +208,22 @@ jobs:
         env:
           FIREBASE_IOS_APP_ID: ${{ vars.FIREBASE_IOS_APP_ID }}
           FIREBASE_IOS_TESTER_GROUPS: ${{ vars.FIREBASE_IOS_TESTER_GROUPS }}
+          FIREBASE_OWNERS_TESTER_GROUPS: ${{ vars.FIREBASE_OWNERS_TESTER_GROUPS }}
+          BRANCH: ${{ github.event.workflow_run.head_branch || github.ref_name }}
         run: |
+          # The owners group gets every build, the ios group only builds of main.
+          groups="$FIREBASE_OWNERS_TESTER_GROUPS"
+          if [ "$BRANCH" = main ] && [ -n "$FIREBASE_IOS_TESTER_GROUPS" ]; then
+            groups="${groups:+$groups,}$FIREBASE_IOS_TESTER_GROUPS"
+          fi
+          if [ -z "$groups" ]; then
+            echo 'No tester group for this branch: Firebase upload skipped.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           npm install --global firebase-tools
           firebase appdistribution:distribute "${{ steps.validate-ipa.outputs.ipa_path }}" \
             --app "$FIREBASE_IOS_APP_ID" \
-            --groups "$FIREBASE_IOS_TESTER_GROUPS" \
+            --groups "$groups" \
             --release-notes "$APP_RELEASE_NOTES"
 
       - name: Remove temporary credentials

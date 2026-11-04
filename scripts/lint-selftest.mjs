@@ -101,6 +101,7 @@ try {
     ['PIP-010 ios-workflow-unknown-secret', workflow.replace('permissions:', 'env:\n  KEY: ${{ secrets.APPLE_KEY }}\npermissions:')],
     ['PIP-010 ios-workflow-ungated-step', workflow.replace(/(- name: Build signed ad hoc IPA\n)\s+if: [^\n]*\n/, '$1')],
     ['PIP-010 ios-workflow-printed-secret', workflow.replace('security import', 'echo "$IOS_CERTIFICATE_PASSWORD"; security import')],
+    ['PIP-010 ios-workflow-groups-unconditional', workflow.replace('--groups "$groups"', '--groups "$FIREBASE_IOS_TESTER_GROUPS"')],
     ['PIP-004 ios-workflow-runner', workflow.replace('macos-latest', 'ubuntu-latest')],
     ['PIP-004 ios-workflow-no-unsigned-build', workflow.replace('CODE_SIGNING_ALLOWED=NO', 'CODE_SIGNING_ALLOWED=YES')],
   ];

@@ -136,6 +136,11 @@ if (workflow === null) {
       violations.push(`ios.yml: step "${title}" may print a secret`);
     }
   }
+  const upload = steps.find((step) => step.includes('appdistribution:distribute')) ?? '';
+  if (!upload.includes('FIREBASE_OWNERS_TESTER_GROUPS') || !upload.includes('head_branch')) {
+    violations.push('ios.yml: the Firebase upload must send to the owners group and decide the iOS group by the branch');
+  }
+  if (/--groups\s+"\$FIREBASE_IOS_TESTER_GROUPS"/.test(upload)) violations.push('ios.yml: the iOS tester group must not be passed unconditionally');
   const expectedBundleId = [...code.matchAll(/EXPECTED_BUNDLE_ID:\s*(\S+)/g)].map((m) => m[1]);
   if (expectedBundleId.length === 0 || expectedBundleId.some((id) => id !== expected.appId)) violations.push(`ios.yml: EXPECTED_BUNDLE_ID must be ${expected.appId}`);
   if (!new RegExp(`EXPECTED_MIN_OS:\\s*'${expected.deploymentTarget}'`).test(code)) violations.push(`ios.yml: EXPECTED_MIN_OS must be ${expected.deploymentTarget}`);

@@ -6,6 +6,10 @@ The `android` workflow (`.github/workflows/android.yml`) builds a signed release
 
 The workflow runs on `workflow_run` after a successful `lint-test` on any branch, like `deploy-web` (PIP-003), so every branch push produces a tester build. Tag pushes do not run `lint-test`, so a tag deploys nothing (PIP-009).
 
+## Tester groups
+
+The upload goes to the owners group (`FIREBASE_OWNERS_TESTER_GROUPS`) on every run, and additionally to the Android tester group (`FIREBASE_ANDROID_TESTER_GROUPS`) when the run is for `main`. The branch is `github.event.workflow_run.head_branch`. If no group applies (for example a feature branch while the owners variable is not set) the upload is skipped, not failed.
+
 ## Versions (PIP-006)
 
 - `versionName` = `git describe --tags --always --long` without the leading `v` (for example `0.3.0-0-g648ebe4`).
@@ -33,7 +37,8 @@ GitHub Actions configuration (names as in `docs/milestones/V1-M00.md`):
 | `ANDROID_KEY_PASSWORD` | secret | key password |
 | `ANDROID_KEY_ALIAS` | variable | key alias (`codexmusicae`) |
 | `FIREBASE_ANDROID_APP_ID` | variable | Firebase Android app ID (`1:…:android:…`) |
-| `FIREBASE_ANDROID_TESTER_GROUPS` | variable | tester group alias, comma separated |
+| `FIREBASE_OWNERS_TESTER_GROUPS` | variable | owners group alias, comma separated; gets every build |
+| `FIREBASE_ANDROID_TESTER_GROUPS` | variable | Android tester group alias, comma separated; gets builds of `main` only |
 | `FIREBASE_SERVICE_ACCOUNT_CODEX_MUSICAE` | secret | service-account JSON |
 
 The workflow decodes the keystore and the service account into the runner's temporary directory and deletes both at the end (also on failure). Without the signing variables Gradle produces an unsigned release build; local debug builds are unaffected.
