@@ -175,14 +175,23 @@ export const appConfig: ApplicationConfig = {
     },
     { provide: FULLSCREEN, useFactory: () => (Capacitor.isNativePlatform() ? new CapImmersiveFullscreen() : new WebFullscreen()) },
     { provide: WAKE_LOCK, useFactory: () => (Capacitor.isNativePlatform() ? new CapWakeLock() : new WebWakeLock()) },
-    // The web has no back button: no provider there, consumers inject it optionally.
-    ...(Capacitor.isNativePlatform() ? [{ provide: BACK_BUTTON, useFactory: () => new CapBackButton() }] : []),
+    // Only Android has a back button: no provider on the web or iOS, consumers inject it optionally.
+    ...(hasBackButton(Capacitor) ? [{ provide: BACK_BUTTON, useFactory: () => new CapBackButton() }] : []),
     provideRouter(routes),
   ]
 };
 
 export interface CapacitorPlatform {
   isNativePlatform(): boolean;
+}
+
+export interface CapacitorPlatformName {
+  getPlatform(): string;
+}
+
+/** PLT-007, PLT-013: Android has a system back button; iOS has none (leaving presentation mode is by center tap or Esc). */
+export function hasBackButton(capacitor: CapacitorPlatformName): boolean {
+  return capacitor.getPlatform() === TUNABLES.platforms.android;
 }
 
 export function shouldRegisterServiceWorker(

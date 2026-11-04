@@ -306,6 +306,10 @@ export const TUNABLES = {
     writeChunkBytes: 4 * 1024 * 1024, // NFR-013: large writes go out in chunks
   },
 
+  platforms: {
+    android: 'android', // PLT-007, PLT-013: the only Capacitor platform with a system back button
+  },
+
   ios: {
     deploymentTarget: '16.4', // PLT-012: the one iOS version the project targets (pbxproj, all four build configurations)
     pdfContentType: 'com.adobe.pdf', // PLT-012: Info.plist document type

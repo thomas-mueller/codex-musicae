@@ -10,7 +10,7 @@ export interface NativeFile {
 }
 
 /**
- * The native `DocumentAccessPlugin` (android/app/src/main/java/app/web/codexmusicae/DocumentAccessPlugin.java).
+ * The native `DocumentAccessPlugin` (android/app/src/main/java/app/web/codexmusicae/DocumentAccessPlugin.java, ios/App/App/DocumentAccessPlugin.swift).
  * Rejections carry a `code` equal to a `FileAccessError` value.
  */
 export interface DocumentAccessApi {

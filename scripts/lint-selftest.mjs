@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { spawn } from 'node:child_process';
 
@@ -77,9 +77,12 @@ try {
     ['PLT-012 ios-deployment-target', 'App/App.xcodeproj/project.pbxproj', (text) => text.replace('= 16.4;', '= 15.0;')],
     ['PLT-012 ios-document-type', 'App/App/Info.plist', (text) => text.replaceAll('com.adobe.pdf', 'public.data')],
     ['PLT-012 ios-open-in-place', 'App/App/Info.plist', (text) => text.replace('LSSupportsOpeningDocumentsInPlace', 'LSSomethingElse')],
+    ['PLT-013 ios-marker', 'App/App/DocumentAccessPlugin.swift', (text) => text.replaceAll('UNVERIFIED(ios)', 'checked')],
+    ['PLT-013 ios-unregistered-source', 'App/App.xcodeproj/project.pbxproj', (text) => text.replaceAll('ImmersivePlugin.swift in Sources', 'ImmersivePlugin.swift in Elsewhere')],
     ['GEN-003 ios-bundle-id', 'App/App.xcodeproj/project.pbxproj', (text) => text.replace('= app.web.codexmusicae;', '= com.getcapacitor.App;')],
   ];
-  const iosFiles = ['App/App/Info.plist', 'App/App.xcodeproj/project.pbxproj'];
+  const swiftSources = (await readdir(join(repositoryRoot, 'ios/App/App'))).filter((name) => name.endsWith('.swift'));
+  const iosFiles = ['App/App/Info.plist', 'App/App.xcodeproj/project.pbxproj', ...swiftSources.map((name) => `App/App/${name}`)];
   for (const [name, broken, change] of iosBroken) {
     const copy = join(fixtureRoot, 'ios-copy');
     for (const file of iosFiles) {

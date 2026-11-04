@@ -1,7 +1,7 @@
-// iOS shell configuration check (M18 S1, PLT-012, GEN-003): the only automated proof for the Xcode project and Info.plist
+// iOS shell configuration check (M18 S1/S2, PLT-012, PLT-013, GEN-003): the only automated proof for the Xcode project and Info.plist
 // besides the CI compile. Reads the expected values from src/config/tunables.ts. With a directory argument it checks that
 // copy of the `ios` folder instead (used by the lint self-test); exits non-zero with one line per violation.
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 const iosDir = process.argv[2] ?? 'ios';
@@ -89,6 +89,14 @@ if (project !== null) {
   for (const id of new Set(ids)) {
     if (id !== expected.appId) violations.push(`project.pbxproj: PRODUCT_BUNDLE_IDENTIFIER ${id} must be ${expected.appId}`);
   }
+}
+
+// Every Swift source of the app carries the UNVERIFIED(ios) marker and is part of the build (PLT-013).
+const swiftFiles = (await readdir(join(iosDir, 'App/App')).catch(() => [])).filter((name) => name.endsWith('.swift'));
+for (const name of swiftFiles) {
+  const source = await readFile(join(iosDir, 'App/App', name), 'utf8');
+  if (!source.includes('UNVERIFIED(ios)')) violations.push(`${name}: missing the UNVERIFIED(ios) marker`);
+  if (project !== null && !project.includes(`${name} in Sources`)) violations.push(`project.pbxproj: ${name} is not in the Sources build phase`);
 }
 
 if (/\burl\s*:/.test(capacitorConfig)) violations.push('capacitor.config.ts: no remote server.url allowed');
