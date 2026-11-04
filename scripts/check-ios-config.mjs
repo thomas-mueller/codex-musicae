@@ -1,11 +1,11 @@
-// iOS shell configuration check (M18 S1-S3, PLT-012, PLT-013, PIP-004, GEN-003): the only automated proof for the Xcode project and Info.plist
+// iOS shell configuration check (M18 S1-S3, PLT-012, PLT-013, PIP-004, PIP-010, GEN-003): the only automated proof for the Xcode project and Info.plist
 // besides the CI compile. Reads the expected values from src/config/tunables.ts. With a directory argument it checks that
 // copy of the `ios` folder and, as a second argument, that copy of the workflow instead (used by the lint self-test); exits non-zero with one line per violation.
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 const iosDir = process.argv[2] ?? 'ios';
-const workflowPath = process.argv[3] ?? '.github/workflows/ios-compile.yml';
+const workflowPath = process.argv[3] ?? '.github/workflows/ios.yml';
 const tunables = await readFile('src/config/tunables.ts', 'utf8');
 const capacitorConfig = await readFile('capacitor.config.ts', 'utf8');
 const value = (key) => tunables.match(new RegExp(`\\b${key}:\\s*'([^']*)'`))?.[1];
@@ -100,19 +100,40 @@ for (const name of swiftFiles) {
   if (project !== null && !project.includes(`${name} in Sources`)) violations.push(`project.pbxproj: ${name} is not in the Sources build phase`);
 }
 
-// The ios-compile workflow (PIP-004): unsigned simulator build on a macOS runner after lint-test, no secrets.
+// The ios workflow (PIP-004, PIP-010): unsigned simulator build on a macOS runner after lint-test, then signed steps that only run
+// when the Apple secrets exist and never leak them.
+const SECRETS = ['IOS_CERTIFICATE_BASE64', 'IOS_CERTIFICATE_PASSWORD', 'IOS_PROVISIONING_PROFILE_BASE64', 'FIREBASE_SERVICE_ACCOUNT_CODEX_MUSICAE'];
+const GATE = "steps.gate.outputs.available == 'true'";
+const SIGNED = /security import|xcodebuild archive|-exportArchive|appdistribution|PlistBuddy/;
 const workflow = await readFile(workflowPath, 'utf8').catch(() => null);
 if (workflow === null) {
-  violations.push('ios-compile.yml is missing');
+  violations.push('ios.yml is missing');
 } else {
   const code = workflow.replace(/^\s*#.*$/gm, '');
-  if (!/^name:\s*ios-compile\s*$/m.test(code)) violations.push('ios-compile.yml: name must be ios-compile');
-  if (!/^\s*runs-on:\s*macos-latest\s*$/m.test(code)) violations.push('ios-compile.yml: runs-on must be macos-latest');
-  if (!/workflow_run:[\s\S]*?workflows:\s*\n\s*-\s*lint-test\b/.test(code)) violations.push('ios-compile.yml: must be triggered by workflow_run of lint-test');
-  if (/\bsecrets\./.test(code)) violations.push('ios-compile.yml: no secrets allowed');
-  for (const flag of ['xcodebuild -project ios/App/App.xcodeproj', '-scheme App', '-sdk iphonesimulator', 'CODE_SIGNING_ALLOWED=NO']) {
-    if (!code.includes(flag)) violations.push(`ios-compile.yml: the build must use ${flag}`);
+  if (!/^name:\s*ios\s*$/m.test(code)) violations.push('ios.yml: name must be ios');
+  if (!/^\s*runs-on:\s*macos-latest\s*$/m.test(code)) violations.push('ios.yml: runs-on must be macos-latest');
+  if (!/workflow_run:[\s\S]*?workflows:\s*\n\s*-\s*lint-test\b/.test(code)) violations.push('ios.yml: must be triggered by workflow_run of lint-test');
+  if (!code.includes('xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build')) {
+    violations.push('ios.yml: the unsigned simulator build is missing');
   }
+  for (const name of new Set([...code.matchAll(/secrets\.([A-Za-z0-9_]+)/g)].map((m) => m[1]))) {
+    if (!SECRETS.includes(name)) violations.push(`ios.yml: secret ${name} is not on the list`);
+  }
+  const steps = code.split(/^ {6}- name:/m).slice(1);
+  const isGate = (step) => /\n\s+id:\s*gate\s*\n/.test(step);
+  if (!steps.some(isGate)) violations.push('ios.yml: the signing gate step (id: gate) is missing');
+  for (const step of steps) {
+    const title = step.split('\n')[0].trim();
+    if (!isGate(step) && (SIGNED.test(step) || /secrets\./.test(step)) && !step.includes(GATE)) {
+      violations.push(`ios.yml: step "${title}" uses signing or secrets without the gate (${GATE})`);
+    }
+    if (/\bset -x\b|xtrace|\b(echo|cat|printenv)\b[^\n]*(CERTIFICATE|PASSWORD|PROFILE_BASE64|SERVICE_ACCOUNT)/.test(step)) {
+      violations.push(`ios.yml: step "${title}" may print a secret`);
+    }
+  }
+  const expectedBundleId = [...code.matchAll(/EXPECTED_BUNDLE_ID:\s*(\S+)/g)].map((m) => m[1]);
+  if (expectedBundleId.length === 0 || expectedBundleId.some((id) => id !== expected.appId)) violations.push(`ios.yml: EXPECTED_BUNDLE_ID must be ${expected.appId}`);
+  if (!new RegExp(`EXPECTED_MIN_OS:\\s*'${expected.deploymentTarget}'`).test(code)) violations.push(`ios.yml: EXPECTED_MIN_OS must be ${expected.deploymentTarget}`);
 }
 
 if (/\burl\s*:/.test(capacitorConfig)) violations.push('capacitor.config.ts: no remote server.url allowed');

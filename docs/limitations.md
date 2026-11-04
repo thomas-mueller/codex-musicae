@@ -36,7 +36,7 @@ Accepted on purpose. They are not bugs; do not "fix" them in a v1 milestone.
 
 Ideas not yet refined into requirements. To promote an item: create a requirement in `requirements.md` with a new ID and target `v2` (or `v1-optional`), mark the entry here `promoted → ID`, and log it in `changelog.md`.
 
-- **BKL-001** Native iOS builds with the Apple Developer account, signed distribution (TestFlight or Firebase), App Store release (builds on M18).
+- **BKL-001** TestFlight and App Store release of the iOS app (builds on M18; ad hoc distribution through Firebase is PIP-010 in M18, needs a paid Apple Developer account).
 - **BKL-002** Stylus pressure sensitivity (builds on M19).
 - **BKL-003** Cross-PDF setlists (a setlist file referencing systems by PDF fingerprint and system ID).
 - **BKL-004** ML-based system detection as a new `DetectionEngine`.

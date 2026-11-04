@@ -287,12 +287,13 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **PIP-001** [v1·changed·M1] Pipeline `lint-test` runs on every push to every branch (not on tag pushes): lint, lint self-test, unit tests and the production build. E2E on three engines runs in the separate workflow `e2e` on every push, one job per Playwright project (nine in parallel), each building for itself; it is temporarily optional: `deploy-web` and `android` do not wait for it (DEC-100). No artifacts are used (free-account storage quota).
 - **PIP-002** [v1·done·M1] Pipeline `deploy-web` builds and deploys to Firebase Hosting, triggered by `workflow_run` after a successful `lint-test` on any branch (each branch push deploys to the live channel).
 - **PIP-003** [v1·done·M3] Pipeline `android` builds a signed APK and uploads it to Firebase App Distribution, triggered like PIP-002.
-- **PIP-004** [v1-optional·todo·M18] Pipeline `ios-compile` runs an unsigned simulator build on a macOS runner, triggered like PIP-002.
+- **PIP-004** [v1-optional·todo·M18] Pipeline `ios` runs an unsigned simulator build on a macOS runner, triggered like PIP-002.
 - **PIP-005** [v1·done·M2] The version string is `git describe --tags --always --long` (checkout with full history), injected at build time and shown in the app (UIX-015).
 - **PIP-006** [v1·done·M3] Android `versionName` is the version string and `versionCode` is the commit count.
 - **PIP-007** [v1·done·M1] Pipelines 2–4 share a composite action that builds the web app.
 - **PIP-008** [v1·done·M0] Signing keys and Firebase credentials exist only as GitHub secrets; their names are listed in `docs/milestones/V1-M00.md`.
 - **PIP-009** [v1·done·M2] Milestone `V1-M<m>` is tagged `v0.<m>.0` and fixes `v0.<m>.<p>`; the release of v1 additionally tags the commit of the last included milestone `v1.0.0`; a tag deploys nothing by itself.
+- **PIP-010** [v1-optional·todo·M18] Pipeline `ios` also builds a signed ad hoc IPA and uploads it to Firebase App Distribution (iOS tester groups) when the Apple signing secrets exist; without them these steps are skipped and the pipeline stays green.
 
 ## TST — Testing
 
