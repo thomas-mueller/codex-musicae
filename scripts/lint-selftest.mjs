@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { spawn } from 'node:child_process';
 
@@ -73,7 +73,31 @@ try {
   if (rawResult.code === 0 || translatedResult.code !== 0) {
     throw new Error('template translation self-test did not enforce raw text and allow Transloco text');
   }
-  console.log(`lint self-test passed (${fixtures.length} deliberate violations plus template checks)`);
+  const iosBroken = [
+    ['PLT-012 ios-deployment-target', 'App/App.xcodeproj/project.pbxproj', (text) => text.replace('= 16.4;', '= 15.0;')],
+    ['PLT-012 ios-document-type', 'App/App/Info.plist', (text) => text.replaceAll('com.adobe.pdf', 'public.data')],
+    ['PLT-012 ios-open-in-place', 'App/App/Info.plist', (text) => text.replace('LSSupportsOpeningDocumentsInPlace', 'LSSomethingElse')],
+    ['GEN-003 ios-bundle-id', 'App/App.xcodeproj/project.pbxproj', (text) => text.replace('= app.web.codexmusicae;', '= com.getcapacitor.App;')],
+  ];
+  const iosFiles = ['App/App/Info.plist', 'App/App.xcodeproj/project.pbxproj'];
+  for (const [name, broken, change] of iosBroken) {
+    const copy = join(fixtureRoot, 'ios-copy');
+    for (const file of iosFiles) {
+      await mkdir(join(copy, file, '..'), { recursive: true });
+      const text = await readFile(join(repositoryRoot, 'ios', file), 'utf8');
+      await writeFile(join(copy, file), file === broken ? change(text) : text, 'utf8');
+    }
+    const result = await runNode('scripts/check-ios-config.mjs', relative(repositoryRoot, copy));
+    if (result.code === 0) {
+      throw new Error(`iOS config self-test passed unexpectedly: ${name}`);
+    }
+    console.log(`  ok  ${name} is rejected`);
+  }
+  const iosOk = await runNode('scripts/check-ios-config.mjs', 'ios');
+  if (iosOk.code !== 0) {
+    throw new Error(`iOS config check fails on the real project\n${iosOk.output}`);
+  }
+  console.log(`lint self-test passed (${fixtures.length} deliberate violations plus template and iOS config checks)`);
 } finally {
   await rm(fixtureRoot, { recursive: true, force: true });
 }
