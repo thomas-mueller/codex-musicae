@@ -1,9 +1,10 @@
 import { computed, DestroyRef, Directive, ElementRef, inject } from '@angular/core';
 
 import { TUNABLES } from '../../config/tunables';
-import { classifyTrack, isDoubleTap, pointerPolicy, tapZoneOf } from '../core';
-import type { PointerPolicy, PointerSample } from '../core';
+import { classifyTrack, isDoubleTap, pointerPolicy, shouldIgnoreTouch, tapZoneOf } from '../core';
+import type { PenEvent, PointerPolicy, PointerSample } from '../core';
 import { SlideNavStore } from '../state/slide-nav.store';
+import { StylusStore } from '../state/stylus.store';
 import { UiStore } from '../state/ui.store';
 import { CommandBus } from './command-bus';
 import { InkInput } from './ink-input';
@@ -40,15 +41,24 @@ export class PointerStage {
   private readonly nav = inject(SlideNavStore);
   private readonly bus = inject(CommandBus);
   private readonly ink = inject(InkInput);
+  private readonly stylus = inject(StylusStore);
   private readonly wheel = new WheelInput();
   /** Active pointers; only those with a single-pointer gesture role carry a track. */
   private readonly pointers = new Map<number, Track | null>();
   /** Latest stage position of every active pointer (pinch). */
   private readonly positions = new Map<number, Point>();
+  /** Where each touch began (stage position); tells a resting palm from a deliberate gesture when the pen arrives. */
+  private readonly touchStarts = new Map<number, Point>();
+  /** Touches rejected as palms (STY-004): ignored until they lift. */
+  private readonly ignored = new Set<number>();
   private pinchDistance: number | null = null;
   private lastTap: PointerSample | null = null;
   /** The pointer that draws a stroke (role 'draw'), if any. ANN-008 */
   private drawPointerId: number | null = null;
+  /** Client position where the stroke began, and whether it has moved beyond the tap threshold since (STY-004). */
+  private drawStartX = 0;
+  private drawStartY = 0;
+  private drawMoved = false;
 
   /** Organization mode scrolls natively (one finger, both axes) but never zooms the page itself. */
   protected readonly touchAction = computed(() => (this.ui.mode() === 'organization' ? 'pan-x pan-y' : 'none'));
@@ -56,15 +66,25 @@ export class PointerStage {
   constructor() {
     // Native listener: a host binding would schedule change detection for every move, which a stroke must not cause (ANN-011).
     const onMove = (event: PointerEvent): void => this.onMove(event);
+    const onLeave = (event: PointerEvent): void => this.trackPen(event, 'pen-leave');
     this.element.addEventListener('pointermove', onMove, { passive: true });
+    this.element.addEventListener('pointerleave', onLeave, { passive: true });
+    this.element.addEventListener('pointerout', onLeave, { passive: true });
     inject(DestroyRef).onDestroy(() => {
       this.element.removeEventListener('pointermove', onMove);
+      this.element.removeEventListener('pointerleave', onLeave);
+      this.element.removeEventListener('pointerout', onLeave);
       this.cancelDrawing();
     });
   }
 
   protected onDown(event: PointerEvent): void {
+    this.trackPen(event, 'pen-down');
     if (event.button !== 0 || this.ui.popup() !== null) {
+      return;
+    }
+    if (this.isPalm(event)) {
+      this.ignored.add(event.pointerId);
       return;
     }
     // A further pointer ends the single-pointer gestures in progress (pinch, S3) and discards a stroke being drawn.
@@ -78,17 +98,23 @@ export class PointerStage {
       toolActive: this.ui.tool() !== null,
       pointerCount: this.pointers.size,
       zoomed: this.ui.mode() === 'annotation' && this.isZoomed(),
-      stylusSeen: false,
-      allowFingerDrawing: false,
+      stylusSeen: this.stylus.stylusSeen(),
+      allowFingerDrawing: this.stylus.allowFingerDrawing(),
       pointerType: pointerTypeOf(event),
     });
     const first = this.sample(event);
     this.positions.set(event.pointerId, { x: first.x, y: first.y });
+    if (event.pointerType === 'touch') {
+      this.touchStarts.set(event.pointerId, { x: first.x, y: first.y });
+    }
     if (policy.role === 'pinch') {
       this.pinchDistance = this.distance();
     } else if (policy.role === 'draw') {
       if (this.ink.begin({ x: event.clientX, y: event.clientY }, this.element.getBoundingClientRect())) {
         this.drawPointerId = event.pointerId;
+        this.drawStartX = event.clientX;
+        this.drawStartY = event.clientY;
+        this.drawMoved = false;
         this.element.setPointerCapture(event.pointerId); // the stroke continues beyond the stage
       }
     } else if (policy.role === 'gestures' || policy.role === 'org-select') {
@@ -101,7 +127,12 @@ export class PointerStage {
   }
 
   private onMove(event: PointerEvent): void {
+    this.trackPen(event, event.buttons !== 0 ? 'pen-move' : 'pen-hover');
+    if (this.ignored.has(event.pointerId)) {
+      return;
+    }
     if (event.pointerId === this.drawPointerId) {
+      this.drawMoved ||= Math.hypot(event.clientX - this.drawStartX, event.clientY - this.drawStartY) > TUNABLES.gestures.tapMaxMovePx;
       this.ink.move(clientPoints(event));
       return;
     }
@@ -138,6 +169,10 @@ export class PointerStage {
   }
 
   protected onUp(event: PointerEvent): void {
+    this.trackPen(event, 'pen-up');
+    if (this.ignored.delete(event.pointerId)) {
+      return;
+    }
     if (event.pointerId === this.drawPointerId) {
       this.drawPointerId = null;
       this.ink.end();
@@ -155,10 +190,52 @@ export class PointerStage {
   }
 
   protected onCancel(event: PointerEvent): void {
+    this.trackPen(event, 'pen-cancel');
+    if (this.ignored.delete(event.pointerId)) {
+      return;
+    }
     if (event.pointerId === this.drawPointerId) {
       this.cancelDrawing();
     }
     this.forget(event.pointerId);
+  }
+
+  /** STY-001: any pen event marks the stylus as seen and feeds the pen state for palm rejection. */
+  private trackPen(event: PointerEvent, type: PenEvent['type']): void {
+    if (event.pointerType !== 'pen') {
+      return;
+    }
+    void this.stylus.markSeen();
+    const wasActive = this.stylus.penNow().active;
+    this.stylus.feedPen({ type, t: event.timeStamp });
+    if (!wasActive && this.stylus.penNow().active) {
+      this.dropRestingTouches();
+    }
+  }
+
+  /** STY-004: a touch (pen not yet near) that has hardly moved was a palm; touches that moved are deliberate and stay. */
+  private isPalm(event: PointerEvent): boolean {
+    return (
+      event.pointerType === 'touch' &&
+      this.stylus.stylusSeen() &&
+      shouldIgnoreTouch(this.stylus.penNow(), event.timeStamp, TUNABLES.stylus.palmRejectionGraceMs)
+    );
+  }
+
+  /** The pen has just come near: touches in progress that have not moved more than the tap threshold are cancelled. */
+  private dropRestingTouches(): void {
+    for (const [id, start] of [...this.touchStarts]) {
+      const now = this.positions.get(id) ?? start;
+      const moved = id === this.drawPointerId ? this.drawMoved : Math.hypot(now.x - start.x, now.y - start.y) > TUNABLES.gestures.tapMaxMovePx;
+      if (moved) {
+        continue;
+      }
+      if (id === this.drawPointerId) {
+        this.cancelDrawing();
+      }
+      this.forget(id);
+      this.ignored.add(id);
+    }
   }
 
   private cancelDrawing(): void {
@@ -171,6 +248,7 @@ export class PointerStage {
   private forget(pointerId: number): void {
     this.pointers.delete(pointerId);
     this.positions.delete(pointerId);
+    this.touchStarts.delete(pointerId);
     if (this.positions.size < 2) {
       this.pinchDistance = null;
     }

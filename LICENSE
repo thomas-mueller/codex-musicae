@@ -1,0 +1,25 @@
+Copyright (c) 2026 Thomas Müller. All rights reserved.
+
+This software and its source code ("CodexMusicae") are proprietary.
+
+You may view the source code for personal, non-commercial evaluation only.
+
+Without prior written permission from the copyright holder you may not:
+- copy, modify, merge, translate or create derivative works of the software,
+- distribute, publish, sublicense, sell, rent or lease the software or any
+  part of it, in source or binary form,
+- use the software or any part of it in another project or product,
+- use the software for any commercial purpose.
+
+No license or other right is granted by implication or otherwise, except as
+stated above.
+
+Third-party components included in or used by this software (for example
+Angular, pdf.js, pdf-lib, OpenCV.js, Capacitor) are licensed under their own
+terms, which are not changed by this notice.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR ITS USE.

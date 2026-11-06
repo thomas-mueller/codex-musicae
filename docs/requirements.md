@@ -308,7 +308,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 
 ## STY — Stylus support (v1-optional)
 
-- **STY-001** [v1-optional·todo·M19] The first pointer event with `pointerType` `pen` sets a persisted flag `stylusSeen`.
-- **STY-002** [v1-optional·todo·M19] With `stylusSeen`, the pen draws and fingers zoom, pan, tap and swipe but never draw; tap zones and swipes work with a tool active.
-- **STY-003** [v1-optional·todo·M19] A setting "allow finger drawing" in the pen popup (default `T:stylus.allowFingerDrawingDefault`) lets fingers draw even with `stylusSeen`.
-- **STY-004** [v1-optional·todo·M19] Touches are ignored while the pen is in contact or hovering and for `T:stylus.palmRejectionGraceMs` afterwards.
+- **STY-001** [v1-optional·done·M19] The first pointer event with `pointerType` `pen` sets a persisted flag `stylusSeen`.
+- **STY-002** [v1-optional·done·M19] With `stylusSeen`, the pen draws and fingers zoom, pan, tap and swipe but never draw; tap zones and swipes work with a tool active.
+- **STY-003** [v1-optional·done·M19] A setting "allow finger drawing" in the pen popup (default `T:stylus.allowFingerDrawingDefault`) lets fingers draw even with `stylusSeen`.
+- **STY-004** [v1-optional·done·M19] Touches are ignored while the pen is in contact or hovering and for `T:stylus.palmRejectionGraceMs` afterwards.

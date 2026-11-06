@@ -1,6 +1,7 @@
 {
   "name": "codex-musicae",
   "version": "0.0.0",
+  "license": "SEE LICENSE IN LICENSE",
   "scripts": {
     "ng": "ng",
     "start": "node scripts/generate-version.mjs && node scripts/generate-index-metadata.mjs && ng serve",

@@ -72,6 +72,7 @@ Device: ______  Android: ____  WebView/Chrome: ____  App version (info icon): __
 - [ ] Kill the app while drawing: restart restores tabs and positions; unsaved loss only since the last autosave. _FIL-011, FIL-013, NFR-015_
 - [ ] Large file (30 MB) opens < 10 s; app responsive. _PLT-008_
 - [ ] Memory: open 3 large PDFs in tabs, switch tabs: no crash. _NFR-004, NFR-016_
+- [ ] Stylus (tablet with a stylus): the pen draws with hover and the palm resting on the screen, no stray marks; finger swipes and taps turn slides while the pen tool is active; "allow finger drawing" in the pen popup makes fingers draw again. Note device and stylus: ____ _STY-001, STY-002, STY-003, STY-004_
 
 Notes:
 
