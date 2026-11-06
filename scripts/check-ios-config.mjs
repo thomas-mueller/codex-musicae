@@ -117,7 +117,9 @@ if (workflow === null) {
   const code = workflow.replace(/^\s*#.*$/gm, '');
   if (!/^name:\s*ios\s*$/m.test(code)) violations.push('ios.yml: name must be ios');
   if (!/^\s*runs-on:\s*macos-latest\s*$/m.test(code)) violations.push('ios.yml: runs-on must be macos-latest');
-  if (!/workflow_run:[\s\S]*?workflows:\s*\n\s*-\s*lint-test\b/.test(code)) violations.push('ios.yml: must be triggered by workflow_run of lint-test');
+  // DEC-124: while the pipeline is deactivated the job is guarded by `if: ${{ false }}` and the trigger is commented out.
+  const deactivated = /^\s*if:\s*\$\{\{\s*false\s*\}\}\s*$/m.test(code);
+  if (!deactivated && !/workflow_run:[\s\S]*?workflows:\s*\n\s*-\s*lint-test\b/.test(code)) violations.push('ios.yml: must be triggered by workflow_run of lint-test');
   if (!code.includes('xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build')) {
     violations.push('ios.yml: the unsigned simulator build is missing');
   }

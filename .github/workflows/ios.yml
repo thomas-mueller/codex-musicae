@@ -7,15 +7,18 @@ name: ios
 # build only the main branch (macOS minutes count 10x on a private repository). A workflow_run workflow only fires once this file
 # is on the default branch.
 
+# DEACTIVATED (owner's decision, DEC-124): there is no macOS runner or iOS hardware to use this pipeline for now, so it no longer
+# fires after lint-test. To reactivate, restore the `workflow_run` trigger below; the job and the signing steps are unchanged.
+#
+#   workflow_run:
+#     workflows:
+#       - lint-test
+#     types:
+#       - completed
+#     branches:
+#       # - main
+#       - '**'
 on:
-  workflow_run:
-    workflows:
-      - lint-test
-    types:
-      - completed
-    branches:
-      # - main
-      - '**'
   workflow_dispatch:
 
 permissions:
@@ -23,7 +26,8 @@ permissions:
 
 jobs:
   ios:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    # Deactivated: not even a manual dispatch runs the job. Remove this line together with the comment on `on:` to reactivate.
+    if: ${{ false }}
     runs-on: macos-latest
     timeout-minutes: 45
     steps:
