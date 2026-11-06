@@ -25,3 +25,11 @@
     </button>
   }
 </div>
+<button
+  appIconButton
+  class="finger"
+  icon="fingerDrawing"
+  labelKey="fingerDrawing"
+  [toggled]="stylus.allowFingerDrawing()"
+  (pressed)="toggleFinger()"
+></button>

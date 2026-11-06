@@ -1,10 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 
+import en from '../../../assets/i18n/en.json';
 import { TUNABLES } from '../../../config/tunables';
 import { provideTestPorts } from '../../../testing/provide-test-ports';
 import { provideTestTransloco } from '../../../testing/transloco';
 import { PREFERENCES } from '../../ports/preferences';
 import { memoryPreferences } from '../../state/testing/fake-ports';
+import { StylusStore } from '../../state/stylus.store';
 import { ToolSettingsStore } from '../../state/tool-settings.store';
 import { ToolPopup } from './tool-popup';
 
@@ -59,5 +61,30 @@ describe('ToolPopup', () => {
     const { root } = await setup('pen');
     const heights = [...root.querySelectorAll<HTMLElement>('.line')].map((e) => e.style.height);
     expect(heights).toEqual(TUNABLES.annotation.penWidthsPt.map((w) => `${w}px`));
+  });
+
+  it('STY-003 pen and highlighter popups show the finger-drawing toggle, off by default, also before a stylus was seen', async () => {
+    for (const tool of ['pen', 'highlighter'] as const) {
+      TestBed.resetTestingModule();
+      const { root } = await setup(tool);
+      const button = root.querySelector<HTMLButtonElement>('.finger');
+      expect(button).not.toBeNull();
+      expect(button?.getAttribute('aria-label')).toBe(en.a11y.fingerDrawing);
+      expect(button?.classList.contains('toggled')).toBe(false);
+    }
+  });
+
+  it('STY-003 clicking the toggle flips allowFingerDrawing, marks it toggled and persists it', async () => {
+    const { fixture, root, preferences } = await setup('pen');
+    const stylus = TestBed.inject(StylusStore);
+    root.querySelector<HTMLButtonElement>('.finger')?.click();
+    await fixture.whenStable();
+    await stylus.ready;
+    expect(stylus.allowFingerDrawing()).toBe(true);
+    expect(root.querySelector('.finger')?.classList.contains('toggled')).toBe(true);
+    expect(preferences.data.get('stylus.allowFinger')).toBe(true);
+    root.querySelector<HTMLButtonElement>('.finger')?.click();
+    await fixture.whenStable();
+    expect(stylus.allowFingerDrawing()).toBe(false);
   });
 });

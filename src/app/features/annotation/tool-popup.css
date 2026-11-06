@@ -48,3 +48,7 @@
   background: color-mix(in srgb, var(--cm-accent) 25%, transparent);
   box-shadow: 0 0 0 2px var(--cm-accent);
 }
+
+.finger {
+  align-self: flex-start;
+}
