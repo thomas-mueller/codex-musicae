@@ -2,8 +2,9 @@ import { computed, DestroyRef, Directive, ElementRef, inject } from '@angular/co
 
 import { TUNABLES } from '../../config/tunables';
 import { classifyTrack, isDoubleTap, pointerPolicy, tapZoneOf } from '../core';
-import type { PointerPolicy, PointerSample } from '../core';
+import type { PenEvent, PointerPolicy, PointerSample } from '../core';
 import { SlideNavStore } from '../state/slide-nav.store';
+import { StylusStore } from '../state/stylus.store';
 import { UiStore } from '../state/ui.store';
 import { CommandBus } from './command-bus';
 import { InkInput } from './ink-input';
@@ -40,6 +41,7 @@ export class PointerStage {
   private readonly nav = inject(SlideNavStore);
   private readonly bus = inject(CommandBus);
   private readonly ink = inject(InkInput);
+  private readonly stylus = inject(StylusStore);
   private readonly wheel = new WheelInput();
   /** Active pointers; only those with a single-pointer gesture role carry a track. */
   private readonly pointers = new Map<number, Track | null>();
@@ -56,14 +58,20 @@ export class PointerStage {
   constructor() {
     // Native listener: a host binding would schedule change detection for every move, which a stroke must not cause (ANN-011).
     const onMove = (event: PointerEvent): void => this.onMove(event);
+    const onLeave = (event: PointerEvent): void => this.trackPen(event, 'pen-leave');
     this.element.addEventListener('pointermove', onMove, { passive: true });
+    this.element.addEventListener('pointerleave', onLeave, { passive: true });
+    this.element.addEventListener('pointerout', onLeave, { passive: true });
     inject(DestroyRef).onDestroy(() => {
       this.element.removeEventListener('pointermove', onMove);
+      this.element.removeEventListener('pointerleave', onLeave);
+      this.element.removeEventListener('pointerout', onLeave);
       this.cancelDrawing();
     });
   }
 
   protected onDown(event: PointerEvent): void {
+    this.trackPen(event, 'pen-down');
     if (event.button !== 0 || this.ui.popup() !== null) {
       return;
     }
@@ -101,6 +109,7 @@ export class PointerStage {
   }
 
   private onMove(event: PointerEvent): void {
+    this.trackPen(event, event.buttons !== 0 ? 'pen-move' : 'pen-hover');
     if (event.pointerId === this.drawPointerId) {
       this.ink.move(clientPoints(event));
       return;
@@ -138,6 +147,7 @@ export class PointerStage {
   }
 
   protected onUp(event: PointerEvent): void {
+    this.trackPen(event, 'pen-up');
     if (event.pointerId === this.drawPointerId) {
       this.drawPointerId = null;
       this.ink.end();
@@ -155,10 +165,20 @@ export class PointerStage {
   }
 
   protected onCancel(event: PointerEvent): void {
+    this.trackPen(event, 'pen-cancel');
     if (event.pointerId === this.drawPointerId) {
       this.cancelDrawing();
     }
     this.forget(event.pointerId);
+  }
+
+  /** STY-001: any pen event marks the stylus as seen and feeds the pen state for palm rejection. */
+  private trackPen(event: PointerEvent, type: PenEvent['type']): void {
+    if (event.pointerType !== 'pen') {
+      return;
+    }
+    void this.stylus.markSeen();
+    this.stylus.feedPen({ type, t: event.timeStamp });
   }
 
   private cancelDrawing(): void {

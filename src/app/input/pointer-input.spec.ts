@@ -8,6 +8,7 @@ import { CommandBus } from './command-bus';
 import { InkInput } from './ink-input';
 import type { Command } from './command-bus';
 import { PointerStage } from './pointer-input';
+import { StylusStore } from '../state/stylus.store';
 import { SlideNavStore } from '../state/slide-nav.store';
 import { UiStore } from '../state/ui.store';
 import type { Mode } from '../state/ui.store';
@@ -325,5 +326,53 @@ describe('PointerStage drawing (M14 S3)', () => {
     expect(ink.move).not.toHaveBeenCalled();
     expect(ink.end).not.toHaveBeenCalled();
     expect(commands).toEqual([]);
+  });
+
+  describe('pen tracking', () => {
+    let stylus: StylusStore;
+
+    function firePen(type: string, t: number, extra: object = {}, pointerType = 'pen'): void {
+      const event = new Event(type, { bubbles: true, cancelable: true });
+      Object.defineProperty(event, 'timeStamp', { value: t });
+      Object.assign(event, { pointerId: 7, pointerType, button: 0, buttons: 0, clientX: 100, clientY: 200 }, extra);
+      stage.dispatchEvent(event);
+    }
+
+    beforeEach(() => {
+      vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
+      setup();
+      stylus = TestBed.inject(StylusStore);
+    });
+    afterEach(() => vi.unstubAllGlobals());
+
+    it('STY-001 the first pen event sets stylusSeen; touch and mouse events do not', () => {
+      firePen('pointerdown', 1, {}, 'touch');
+      firePen('pointermove', 2, {}, 'mouse');
+      expect(stylus.stylusSeen()).toBe(false);
+      firePen('pointermove', 3);
+      expect(stylus.stylusSeen()).toBe(true);
+    });
+
+    it('STY-004 pen events produce the expected pen state', () => {
+      firePen('pointermove', 10);
+      expect(stylus.penNow()).toEqual({ active: true, lastT: 10 });
+      firePen('pointerleave', 20);
+      expect(stylus.penNow()).toEqual({ active: false, lastT: 20 });
+      firePen('pointerdown', 30, { buttons: 1 });
+      firePen('pointermove', 40, { buttons: 1 });
+      expect(stylus.penNow()).toEqual({ active: true, lastT: 40 });
+      firePen('pointerup', 50);
+      expect(stylus.penNow()).toEqual({ active: false, lastT: 50 });
+      firePen('pointerdown', 60, { buttons: 1 });
+      firePen('pointercancel', 70);
+      expect(stylus.penNow()).toEqual({ active: false, lastT: 70 });
+      firePen('pointerout', 80);
+      expect(stylus.penNow()).toEqual({ active: false, lastT: 80 });
+    });
+
+    it('STY-004 touch events do not change the pen state', () => {
+      firePen('pointerdown', 5, {}, 'touch');
+      expect(stylus.penNow()).toEqual({ active: false, lastT: -1e12 });
+    });
   });
 });
