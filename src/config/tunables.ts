@@ -306,6 +306,20 @@ export const TUNABLES = {
     writeChunkBytes: 4 * 1024 * 1024, // NFR-013: large writes go out in chunks
   },
 
+  platforms: {
+    android: 'android', // PLT-007, PLT-013: the only Capacitor platform with a system back button
+  },
+
+  ios: {
+    deploymentTarget: '16.4', // PLT-012: the one iOS version the project targets (pbxproj, all four build configurations)
+    pdfContentType: 'com.adobe.pdf', // PLT-012: Info.plist document type
+    pdfTypeRole: 'Editor', // PLT-012: the app saves back into the file
+    pdfHandlerRank: 'Alternate', // PLT-012: offered next to other PDF apps, never the default
+    iconPixels: 1024, // PLT-012: placeholder app icon edge
+    splashPixels: 2732, // PLT-012: placeholder launch image edge
+    splashIconRatio: 0.25, // PLT-012: icon edge relative to the launch image edge
+  },
+
   pdf: {
     workerSrc: 'assets/pdfjs/pdf.worker.min.mjs', // GEN-005: pdf.js worker from our own origin, no CDN
     cMapUrl: 'assets/pdfjs/cmaps/', // GEN-005

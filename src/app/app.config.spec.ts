@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { shouldRegisterServiceWorker } from './app.config';
+import { hasBackButton, shouldRegisterServiceWorker } from './app.config';
 
 describe('composition-root service-worker guard', () => {
   it('PLT-009 skips registration for a native Capacitor platform', () => {
@@ -19,5 +19,22 @@ describe('composition-root service-worker guard', () => {
     const webCapacitor = { isNativePlatform: () => false };
 
     expect(shouldRegisterServiceWorker(true, webCapacitor)).toBe(false);
+  });
+});
+
+describe('composition-root back-button guard', () => {
+  it('PLT-007 registers the back button on Android', () => {
+    expect(hasBackButton({ getPlatform: () => 'android' })).toBe(true);
+  });
+
+  it('PLT-013 iOS keeps the native Capacitor adapters but registers no back button', () => {
+    const ios = { getPlatform: () => 'ios', isNativePlatform: () => true };
+
+    expect(ios.isNativePlatform()).toBe(true);
+    expect(hasBackButton(ios)).toBe(false);
+  });
+
+  it('PLT-007 registers no back button on the web', () => {
+    expect(hasBackButton({ getPlatform: () => 'web' })).toBe(false);
   });
 });

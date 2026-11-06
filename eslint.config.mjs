@@ -23,6 +23,7 @@ export default tseslint.config(
       '**/coverage/**',
       '**/out-tsc/**',
       'android/**',
+      'ios/**',
       'docs/contracts/**',
       'docs/reference/**',
     ],

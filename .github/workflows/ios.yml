@@ -1,0 +1,249 @@
+name: ios
+
+# iOS pipeline (PIP-004, PIP-010), one job like android: an unsigned simulator build of the iOS shell on a macOS runner (the only
+# check of the Swift code, which nobody can build locally), then, when the Apple signing secrets exist, a signed ad hoc IPA that is
+# uploaded to Firebase App Distribution. Without the secrets the signed steps are skipped and the job stays green (docs/ios-distribution.md).
+# Triggered like android and deploy-web: after a successful lint-test, on every branch for now; remove '**' and enable `- main` to
+# build only the main branch (macOS minutes count 10x on a private repository). A workflow_run workflow only fires once this file
+# is on the default branch.
+
+# DEACTIVATED (owner's decision, DEC-124): there is no macOS runner or iOS hardware to use this pipeline for now, so it no longer
+# fires after lint-test. To reactivate, restore the `workflow_run` trigger below; the job and the signing steps are unchanged.
+#
+#   workflow_run:
+#     workflows:
+#       - lint-test
+#     types:
+#       - completed
+#     branches:
+#       # - main
+#       - '**'
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ios:
+    # Deactivated: not even a manual dispatch runs the job. Remove this line together with the comment on `on:` to reactivate.
+    if: ${{ false }}
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout validated commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
+          lfs: true
+
+      - name: Build web app
+        uses: ./.github/actions/build-web
+
+      - name: Sync Capacitor iOS project
+        run: npx cap sync ios
+
+      - name: Show tool versions
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Build for the simulator (unsigned)
+        run: |
+          set -o pipefail
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build 2>&1 | tee ios-build.log
+
+      - name: Check whether signing is configured
+        id: gate
+        shell: bash
+        env:
+          IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_CODEX_MUSICAE }}
+          FIREBASE_IOS_APP_ID: ${{ vars.FIREBASE_IOS_APP_ID }}
+        run: |
+          if [ -n "$IOS_CERTIFICATE_BASE64" ] && [ -n "$IOS_CERTIFICATE_PASSWORD" ] && [ -n "$IOS_PROVISIONING_PROFILE_BASE64" ] \
+            && [ -n "$FIREBASE_SERVICE_ACCOUNT" ] && [ -n "$FIREBASE_IOS_APP_ID" ]; then
+            echo 'available=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'available=false' >> "$GITHUB_OUTPUT"
+            echo 'Signed build and Firebase upload skipped: the Apple signing secrets are not set (docs/ios-distribution.md).' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Compute iOS version
+        if: ${{ steps.gate.outputs.available == 'true' }}
+        shell: bash
+        run: |
+          version_string="$(git describe --tags --always --long)"
+          # CFBundleShortVersionString allows only digits and dots: the leading N.N.N of the tag, 0.0.0 without a tag.
+          version_name="$(printf '%s' "$version_string" | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1 || true)"
+          version_name="${version_name:-0.0.0}"
+          version_code="$(git rev-list --count HEAD)"
+          commit_subject="$(git log -1 --pretty=%s)"
+
+          {
+            printf 'IOS_VERSION_NAME=%s\n' "$version_name"
+            printf 'IOS_VERSION_CODE=%s\n' "$version_code"
+            printf 'APP_RELEASE_NOTES=%s — %s\n' "$version_string" "$commit_subject"
+          } >> "$GITHUB_ENV"
+
+      - name: Prepare signing credentials
+        if: ${{ steps.gate.outputs.available == 'true' }}
+        shell: bash
+        env:
+          IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_CODEX_MUSICAE }}
+        run: |
+          set -euo pipefail
+          certificate_path="$RUNNER_TEMP/ios-distribution.p12"
+          profile_path="$RUNNER_TEMP/ios.mobileprovision"
+          profile_plist="$RUNNER_TEMP/ios-profile.plist"
+          service_account_path="$RUNNER_TEMP/codexmusicae-firebase-service-account.json"
+          keychain_path="$RUNNER_TEMP/ios-signing.keychain-db"
+          keychain_password="$(openssl rand -hex 16)"
+
+          printf '%s' "$IOS_CERTIFICATE_BASE64" | base64 --decode > "$certificate_path"
+          printf '%s' "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$profile_path"
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$service_account_path"
+          chmod 600 "$certificate_path" "$profile_path" "$service_account_path"
+
+          # A throw-away keychain that only lives on this runner.
+          security create-keychain -p "$keychain_password" "$keychain_path"
+          security set-keychain-settings -lut 21600 "$keychain_path"
+          security unlock-keychain -p "$keychain_password" "$keychain_path"
+          security import "$certificate_path" -P "$IOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$keychain_path"
+          security set-key-partition-list -S apple-tool:,apple: -k "$keychain_password" "$keychain_path" > /dev/null
+          existing_keychains="$(security list-keychains -d user | tr -d '"')"
+          # shellcheck disable=SC2086
+          security list-keychains -d user -s "$keychain_path" $existing_keychains
+
+          signing_identity="$(security find-identity -v -p codesigning "$keychain_path" | sed -n 's/^ *1) [0-9A-F]* "\(.*\)".*/\1/p')"
+          if [ -z "$signing_identity" ]; then
+            echo 'No signing identity found in the imported certificate' >&2
+            exit 1
+          fi
+
+          security cms -D -i "$profile_path" > "$profile_plist"
+          profile_uuid="$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$profile_plist")"
+          profile_name="$(/usr/libexec/PlistBuddy -c 'Print :Name' "$profile_plist")"
+          team_id="$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' "$profile_plist")"
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$profile_path" "$HOME/Library/MobileDevice/Provisioning Profiles/$profile_uuid.mobileprovision"
+
+          {
+            printf 'IOS_SIGNING_KEYCHAIN=%s\n' "$keychain_path"
+            printf 'IOS_SIGNING_IDENTITY=%s\n' "$signing_identity"
+            printf 'IOS_PROFILE_NAME=%s\n' "$profile_name"
+            printf 'IOS_PROFILE_UUID=%s\n' "$profile_uuid"
+            printf 'IOS_TEAM_ID=%s\n' "$team_id"
+            printf 'GOOGLE_APPLICATION_CREDENTIALS=%s\n' "$service_account_path"
+          } >> "$GITHUB_ENV"
+
+      - name: Build signed ad hoc IPA
+        if: ${{ steps.gate.outputs.available == 'true' }}
+        shell: bash
+        env:
+          EXPECTED_BUNDLE_ID: app.web.codexmusicae
+        run: |
+          set -euo pipefail
+          archive_path="$RUNNER_TEMP/App.xcarchive"
+          export_path="$RUNNER_TEMP/ios-export"
+          export_options="$RUNNER_TEMP/ExportOptions.plist"
+
+          cat > "$export_options" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>ad-hoc</string>
+            <key>teamID</key><string>$IOS_TEAM_ID</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>signingCertificate</key><string>$IOS_SIGNING_IDENTITY</string>
+            <key>provisioningProfiles</key>
+            <dict><key>$EXPECTED_BUNDLE_ID</key><string>$IOS_PROFILE_NAME</string></dict>
+          </dict>
+          </plist>
+          PLIST
+
+          xcodebuild archive -project ios/App/App.xcodeproj -scheme App -configuration Release -sdk iphoneos \
+            -archivePath "$archive_path" \
+            CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM="$IOS_TEAM_ID" CODE_SIGN_IDENTITY="$IOS_SIGNING_IDENTITY" \
+            PROVISIONING_PROFILE_SPECIFIER="$IOS_PROFILE_NAME" OTHER_CODE_SIGN_FLAGS="--keychain $IOS_SIGNING_KEYCHAIN" \
+            MARKETING_VERSION="$IOS_VERSION_NAME" CURRENT_PROJECT_VERSION="$IOS_VERSION_CODE" 2>&1 | tee ios-archive.log
+          xcodebuild -exportArchive -archivePath "$archive_path" -exportPath "$export_path" -exportOptionsPlist "$export_options" 2>&1 | tee -a ios-archive.log
+
+      - name: Validate IPA
+        id: validate-ipa
+        if: ${{ steps.gate.outputs.available == 'true' }}
+        shell: bash
+        env:
+          EXPECTED_BUNDLE_ID: app.web.codexmusicae
+          EXPECTED_MIN_OS: '16.4'
+        run: |
+          set -euo pipefail
+          ipa_path="$(find "$RUNNER_TEMP/ios-export" -maxdepth 1 -type f -name '*.ipa' -print -quit)"
+          if [ -z "$ipa_path" ]; then
+            echo 'IPA was not produced' >&2
+            exit 1
+          fi
+
+          check_dir="$RUNNER_TEMP/ipa-check"
+          rm -rf "$check_dir"
+          unzip -q "$ipa_path" 'Payload/*.app/Info.plist' -d "$check_dir"
+          info_plist="$(find "$check_dir/Payload" -maxdepth 2 -type f -name Info.plist -print -quit)"
+          plist_value() { /usr/libexec/PlistBuddy -c "Print :$1" "$info_plist"; }
+
+          actual="$(plist_value CFBundleIdentifier) $(plist_value CFBundleShortVersionString) $(plist_value CFBundleVersion) $(plist_value MinimumOSVersion)"
+          expected="$EXPECTED_BUNDLE_ID $IOS_VERSION_NAME $IOS_VERSION_CODE $EXPECTED_MIN_OS"
+          if [ "$actual" != "$expected" ]; then
+            echo "Unexpected IPA identity: $actual" >&2
+            echo "Expected IPA identity: $expected" >&2
+            exit 1
+          fi
+
+          printf 'ipa_path=%s\n' "$ipa_path" >> "$GITHUB_OUTPUT"
+
+      - name: Upload IPA to Firebase App Distribution
+        if: ${{ steps.gate.outputs.available == 'true' }}
+        env:
+          FIREBASE_IOS_APP_ID: ${{ vars.FIREBASE_IOS_APP_ID }}
+          FIREBASE_IOS_TESTER_GROUPS: ${{ vars.FIREBASE_IOS_TESTER_GROUPS }}
+          FIREBASE_OWNERS_TESTER_GROUPS: ${{ vars.FIREBASE_OWNERS_TESTER_GROUPS }}
+          BRANCH: ${{ github.event.workflow_run.head_branch || github.ref_name }}
+        run: |
+          # The owners group gets every build, the ios group only builds of main.
+          groups="$FIREBASE_OWNERS_TESTER_GROUPS"
+          if [ "$BRANCH" = main ] && [ -n "$FIREBASE_IOS_TESTER_GROUPS" ]; then
+            groups="${groups:+$groups,}$FIREBASE_IOS_TESTER_GROUPS"
+          fi
+          if [ -z "$groups" ]; then
+            echo 'No tester group for this branch: Firebase upload skipped.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          npm install --global firebase-tools
+          firebase appdistribution:distribute "${{ steps.validate-ipa.outputs.ipa_path }}" \
+            --app "$FIREBASE_IOS_APP_ID" \
+            --groups "$groups" \
+            --release-notes "$APP_RELEASE_NOTES"
+
+      - name: Remove temporary credentials
+        if: ${{ always() && steps.gate.outputs.available == 'true' }}
+        shell: bash
+        run: |
+          security delete-keychain "$RUNNER_TEMP/ios-signing.keychain-db" || true
+          rm -f -- "$RUNNER_TEMP/ios-distribution.p12" "$RUNNER_TEMP/ios.mobileprovision" "$RUNNER_TEMP/ios-profile.plist" \
+            "$RUNNER_TEMP/codexmusicae-firebase-service-account.json"
+          rm -f -- "$HOME"/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision
+
+      - name: Upload build logs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-log
+          path: ios-*.log
+          retention-days: 7
+          if-no-files-found: ignore
