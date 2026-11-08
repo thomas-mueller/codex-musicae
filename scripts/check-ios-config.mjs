@@ -109,6 +109,8 @@ for (const name of swiftFiles) {
 // when the Apple secrets exist and never leak them.
 const SECRETS = ['IOS_CERTIFICATE_BASE64', 'IOS_CERTIFICATE_PASSWORD', 'IOS_PROVISIONING_PROFILE_BASE64', 'FIREBASE_SERVICE_ACCOUNT_CODEX_MUSICAE'];
 const GATE = "steps.gate.outputs.available == 'true'";
+// DEC-127: the experimental unsigned upload has its own gate (service account, app ID, owners group; never the signing secrets).
+const UNSIGNED_GATE = "steps.unsigned-gate.outputs.available == 'true'";
 const SIGNED = /security import|xcodebuild archive|-exportArchive|appdistribution|PlistBuddy/;
 const workflow = await readFile(workflowPath, 'utf8').catch(() => null);
 if (workflow === null) {
@@ -125,18 +127,29 @@ if (workflow === null) {
     if (!SECRETS.includes(name)) violations.push(`ios.yml: secret ${name} is not on the list`);
   }
   const steps = code.split(/^ {6}- name:/m).slice(1);
-  const isGate = (step) => /\n\s+id:\s*gate\s*\n/.test(step);
-  if (!steps.some(isGate)) violations.push('ios.yml: the signing gate step (id: gate) is missing');
+  const isSigningGate = (step) => /\n\s+id:\s*gate\s*\n/.test(step);
+  const isUnsignedGate = (step) => /\n\s+id:\s*unsigned-gate\s*\n/.test(step);
+  const isExperiment = (step) => step.split('\n')[0].includes('(experiment)') || step.includes(UNSIGNED_GATE);
+  if (!steps.some(isSigningGate)) violations.push('ios.yml: the signing gate step (id: gate) is missing');
   for (const step of steps) {
     const title = step.split('\n')[0].trim();
-    if (!isGate(step) && (SIGNED.test(step) || /secrets\./.test(step)) && !step.includes(GATE)) {
+    if (isExperiment(step)) {
+      if (!step.includes(UNSIGNED_GATE)) violations.push(`ios.yml: experiment step "${title}" lacks its gate (${UNSIGNED_GATE})`);
+      if (/IOS_CERTIFICATE|IOS_PROVISIONING|security import|-exportArchive/.test(step)) {
+        violations.push(`ios.yml: experiment step "${title}" must not use the signing secrets`);
+      }
+    } else if (!isSigningGate(step) && !isUnsignedGate(step) && (SIGNED.test(step) || /secrets\./.test(step)) && !step.includes(GATE)) {
       violations.push(`ios.yml: step "${title}" uses signing or secrets without the gate (${GATE})`);
     }
     if (/\bset -x\b|xtrace|\b(echo|cat|printenv)\b[^\n]*(CERTIFICATE|PASSWORD|PROFILE_BASE64|SERVICE_ACCOUNT)/.test(step)) {
       violations.push(`ios.yml: step "${title}" may print a secret`);
     }
   }
-  const upload = steps.find((step) => step.includes('appdistribution:distribute')) ?? '';
+  const upload = steps.find((step) => !isExperiment(step) && step.includes('appdistribution:distribute')) ?? '';
+  const experimentUpload = steps.find((step) => isExperiment(step) && step.includes('appdistribution:distribute')) ?? '';
+  if (experimentUpload !== '' && (/FIREBASE_IOS_TESTER_GROUPS/.test(experimentUpload) || !experimentUpload.includes('--groups "$FIREBASE_OWNERS_TESTER_GROUPS"'))) {
+    violations.push('ios.yml: the experimental unsigned upload must go to the owners group only');
+  }
   if (!upload.includes('FIREBASE_OWNERS_TESTER_GROUPS') || !upload.includes('head_branch')) {
     violations.push('ios.yml: the Firebase upload must send to the owners group and decide the iOS group by the branch');
   }
