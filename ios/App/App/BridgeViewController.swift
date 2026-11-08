@@ -12,8 +12,12 @@ class BridgeViewController: CAPBridgeViewController {
         return super.prefersStatusBarHidden || BridgeViewController.presenting
     }
 
-    override var prefersHomeIndicatorAutoHidden: Bool {
-        return BridgeViewController.presenting
+    /// Capacitor's SystemBars extension declares `prefersHomeIndicatorAutoHidden` public (not open), so it cannot be overridden
+    /// here; UIKit asks this child instead.
+    private let homeIndicatorChild = HomeIndicatorChild()
+
+    override var childForHomeIndicatorAutoHidden: UIViewController? {
+        return homeIndicatorChild
     }
 
     override func capacitorDidLoad() {
@@ -26,5 +30,12 @@ class BridgeViewController: CAPBridgeViewController {
     func refreshPresentation() {
         setNeedsStatusBarAppearanceUpdate()
         setNeedsUpdateOfHomeIndicatorAutoHidden()
+    }
+}
+
+/// Answers the home-indicator question for `BridgeViewController` (see `childForHomeIndicatorAutoHidden`).
+private final class HomeIndicatorChild: UIViewController {
+    override var prefersHomeIndicatorAutoHidden: Bool {
+        return BridgeViewController.presenting
     }
 }
