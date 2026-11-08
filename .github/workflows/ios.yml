@@ -11,7 +11,6 @@ name: ios
 # fires after lint-test. To reactivate, restore the `workflow_run` trigger below; the job and the signing steps are unchanged.
 #
 on:
-  workflow_dispatch:
   workflow_run:
     workflows:
       - lint-test
