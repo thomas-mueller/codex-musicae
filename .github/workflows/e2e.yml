@@ -11,6 +11,7 @@ name: e2e
 # per workflow, so a separate workflow can never gate another one.
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - '**'
