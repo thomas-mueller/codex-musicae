@@ -1,7 +1,5 @@
 # iOS distribution through Firebase App Distribution (owner how-to, no Mac needed)
 
-> **Deactivated since 2026-11-06 (DEC-124):** the `ios` workflow does not run at all for now (no macOS runner or iOS hardware). Everything below describes what it does once it is reactivated; the file marks the two places to restore.
-
 The `ios` workflow (`.github/workflows/ios.yml`) always builds the unsigned simulator app. It additionally builds a **signed ad hoc IPA** and uploads it to Firebase App Distribution **only when all the secrets below exist**; until then those steps are skipped and the run stays green (decisions DEC-120, DEC-121). Requirement PIP-010.
 
 ## What you need
