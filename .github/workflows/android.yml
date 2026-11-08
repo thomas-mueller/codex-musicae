@@ -1,6 +1,7 @@
 name: android
 
 on:
+  workflow_dispatch:
   workflow_run:
     workflows:
       - lint-test
