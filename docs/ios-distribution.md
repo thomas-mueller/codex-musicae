@@ -58,12 +58,13 @@ Settings → Secrets and variables → Actions (never put these into the reposit
 - The first signed run is unverified (command-line signing overrides with the Swift package project); if `xcodebuild archive` fails, the artifact `ios-build-log` has the log.
 - The unsigned build costs macOS minutes at 10x on a private repository (about 200 free minutes a month); the signed archive adds a few more minutes per run. Narrow the trigger to `main` in `ios.yml` (see the comment there) to save them.
 
-## Experiment: unsigned build without a developer account (DEC-127)
+## Unsigned build without a developer account (DEC-127)
 
-Open question: does Firebase App Distribution accept an **unsigned** device IPA, and can a tester then download it and re-sign it on their own computer (Sideloadly or AltStore with a free Apple ID; Xcode on a Mac also works)? Android works this way because its installer accepts any APK; on iOS Firebase normally installs over the air and needs a signed ad hoc IPA, so the expected result is a rejection. The `ios` workflow tries it anyway.
+Firebase App Distribution **cannot** take an unsigned iOS build: an experiment upload was rejected with "error parsing your app's provisioning profile. Ensure you are uploading a validly signed IPA". Android works with Firebase because its installer accepts any APK; iOS installs over the air and needs a signed ad hoc IPA, so the Firebase route needs the paid membership above.
 
-- **When it runs:** only when the signed route is **not** configured and the variables `FIREBASE_IOS_APP_ID` and `FIREBASE_OWNERS_TESTER_GROUPS` and the service account secret exist. It builds `codexmusicae-unsigned.ipa` (Release, `iphoneos`, no signing) and uploads it to the **owners group only**, on every branch; the release notes start with "UNSIGNED EXPERIMENT".
-- **It never fails the job:** the upload step has `continue-on-error`. The run summary says whether Firebase accepted or rejected the file and shows the last lines of the CLI output.
-- **Run it by hand:** GitHub → Actions → `ios` → *Run workflow*.
-- **Reading the verdict:** rejected → the idea is dead, remove the three experiment steps in `ios.yml` and `check-ios-config.mjs` rules. Accepted → open the release as an owners-group tester and check whether the IPA can be downloaded (not only installed). If it can, testers follow route C in `docs/ios-unverified.md`.
-- **Tester limits if it works:** the iPhone is connected to the computer while signing; a free Apple ID allows 3 sideloaded apps and the app expires after 7 days; Developer Mode must be on (iOS 16 or newer); the tool rewrites the bundle ID.
+Without the signing secrets the `ios` workflow therefore builds `codexmusicae-unsigned.ipa` (Release, `iphoneos`, no signing) and keeps it as a **GitHub Actions artifact** named `codexmusicae-unsigned-ipa` (14 days). No secret or variable is needed for this.
+
+- **Get the file:** GitHub → Actions → the `ios` run → Artifacts → `codexmusicae-unsigned-ipa` (needs read access to the repository; otherwise the owner downloads it and passes the file on). Unzip the download to get the `.ipa`.
+- **Re-sign and install:** Sideloadly or AltStore on Mac or Windows, free Apple ID, iPhone or iPad connected to the computer (cable or Wi-Fi sync), Developer Mode on (iOS 16 or newer), then trust the developer profile (*Settings → General → VPN & Device Management*). The tool rewrites the bundle ID.
+- **Limits:** the app stops working after 7 days (re-sign it); a free Apple ID allows 3 sideloaded apps at a time and a limited number of new app IDs per week.
+- **Manual run:** a `workflow_run` workflow runs from the file on `main`; to try a branch use Actions → `ios` → Run workflow and pick the branch.

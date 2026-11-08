@@ -3,7 +3,7 @@ name: ios
 # iOS pipeline (PIP-004, PIP-010), one job like android: an unsigned simulator build of the iOS shell on a macOS runner (the only
 # check of the Swift code, which nobody can build locally), then, when the Apple signing secrets exist, a signed ad hoc IPA that is
 # uploaded to Firebase App Distribution. Without the secrets the signed steps are skipped and the job stays green (docs/ios-distribution.md).
-# Experiment (DEC-127): without the signing secrets, an UNSIGNED device IPA is also offered to Firebase (owners group, never fails the job).
+# Without the signing secrets an UNSIGNED device IPA is kept as a GitHub artifact for local re-signing (DEC-127; Firebase rejects unsigned builds).
 # Triggered like android and deploy-web: after a successful lint-test, on every branch for now; remove '**' and enable `- main` to
 # build only the main branch (macOS minutes count 10x on a private repository). A workflow_run workflow only fires once this file
 # is on the default branch.
@@ -227,28 +227,11 @@ jobs:
             --groups "$groups" \
             --release-notes "$APP_RELEASE_NOTES"
 
-      # EXPERIMENT (DEC-127): does Firebase App Distribution accept and serve an UNSIGNED device IPA that a tester could re-sign locally
-      # (Sideloadly, AltStore, free Apple ID, 7 days)? Runs only when the signed route is not configured. Remove these steps
-      # (unsigned-gate, build, upload, cleanup) once the verdict is in.
-      - name: Check whether the experimental unsigned upload is configured
-        id: unsigned-gate
-        shell: bash
-        env:
-          SIGNED_AVAILABLE: ${{ steps.gate.outputs.available }}
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_CODEX_MUSICAE }}
-          FIREBASE_IOS_APP_ID: ${{ vars.FIREBASE_IOS_APP_ID }}
-          FIREBASE_OWNERS_TESTER_GROUPS: ${{ vars.FIREBASE_OWNERS_TESTER_GROUPS }}
-        run: |
-          if [ "$SIGNED_AVAILABLE" != 'true' ] && [ -n "$FIREBASE_SERVICE_ACCOUNT" ] && [ -n "$FIREBASE_IOS_APP_ID" ] && [ -n "$FIREBASE_OWNERS_TESTER_GROUPS" ]; then
-            echo 'available=true' >> "$GITHUB_OUTPUT"
-          else
-            echo 'available=false' >> "$GITHUB_OUTPUT"
-            echo 'Unsigned IPA experiment skipped: signed route configured, or the Firebase iOS app ID, owners group or service account is missing (docs/ios-distribution.md).' >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-      - name: Build unsigned device IPA (experiment)
+      # DEC-127: Firebase App Distribution rejects an unsigned IPA, so without the signing secrets the unsigned device IPA is kept as a
+      # GitHub artifact. A tester re-signs it on their own computer (Sideloadly, AltStore, free Apple ID, valid for 7 days).
+      - name: Build unsigned device IPA
         id: unsigned-ipa
-        if: ${{ steps.unsigned-gate.outputs.available == 'true' }}
+        if: ${{ steps.gate.outputs.available != 'true' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -256,7 +239,6 @@ jobs:
           version_name="$(printf '%s' "$version_string" | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1 || true)"
           version_name="${version_name:-0.0.0}"
           version_code="$(git rev-list --count HEAD)"
-          commit_subject="$(git log -1 --pretty=%s)"
           archive_path="$RUNNER_TEMP/Unsigned.xcarchive"
           ipa_dir="$RUNNER_TEMP/unsigned-ipa"
 
@@ -272,51 +254,28 @@ jobs:
 
           {
             printf 'ipa_path=%s\n' "$ipa_dir/codexmusicae-unsigned.ipa"
-            printf 'release_notes=%s\n' "UNSIGNED EXPERIMENT — $version_string — $commit_subject"
+            printf 'version=%s\n' "$version_string"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Upload unsigned IPA to Firebase (experiment)
-        if: ${{ steps.unsigned-gate.outputs.available == 'true' }}
-        continue-on-error: true
+      - name: Upload unsigned IPA as artifact
+        if: ${{ steps.gate.outputs.available != 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: codexmusicae-unsigned-ipa
+          path: ${{ steps.unsigned-ipa.outputs.ipa_path }}
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Explain the unsigned IPA
+        if: ${{ steps.gate.outputs.available != 'true' }}
         shell: bash
         env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_CODEX_MUSICAE }}
-          FIREBASE_IOS_APP_ID: ${{ vars.FIREBASE_IOS_APP_ID }}
-          FIREBASE_OWNERS_TESTER_GROUPS: ${{ vars.FIREBASE_OWNERS_TESTER_GROUPS }}
-          IPA_PATH: ${{ steps.unsigned-ipa.outputs.ipa_path }}
-          RELEASE_NOTES: ${{ steps.unsigned-ipa.outputs.release_notes }}
+          VERSION: ${{ steps.unsigned-ipa.outputs.version }}
         run: |
-          # Owners group only, on every branch: the wider tester group never receives an unsigned experiment.
-          service_account_path="$RUNNER_TEMP/codexmusicae-firebase-service-account.json"
-          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$service_account_path"
-          chmod 600 "$service_account_path"
-          export GOOGLE_APPLICATION_CREDENTIALS="$service_account_path"
-          log_path="$RUNNER_TEMP/unsigned-upload.log"
-          set +e
-          npm install --global firebase-tools
-          firebase appdistribution:distribute "$IPA_PATH" \
-            --app "$FIREBASE_IOS_APP_ID" \
-            --groups "$FIREBASE_OWNERS_TESTER_GROUPS" \
-            --release-notes "$RELEASE_NOTES" 2>&1 | tee "$log_path"
-          status="${PIPESTATUS[0]}"
           {
-            echo '### Unsigned IPA experiment (DEC-127)'
-            if [ "$status" -eq 0 ]; then
-              echo 'Firebase **accepted** the unsigned IPA. Open the release as a tester and check whether the file can be downloaded.'
-            else
-              echo 'Firebase **rejected** the unsigned IPA (exit code '"$status"'). Last lines of the CLI output:'
-            fi
-            echo '```'
-            tail -n 30 "$log_path"
-            echo '```'
+            echo '### Unsigned iOS build'
+            echo "Version $VERSION, artifact codexmusicae-unsigned-ipa (kept 14 days). It cannot be installed as it is: re-sign it with Sideloadly or AltStore and a free Apple ID (the app then runs for 7 days). Firebase App Distribution does not accept unsigned builds (docs/ios-distribution.md)."
           } >> "$GITHUB_STEP_SUMMARY"
-          exit "$status"
-
-      - name: Remove experiment credentials
-        if: ${{ always() && steps.unsigned-gate.outputs.available == 'true' }}
-        shell: bash
-        run: |
-          rm -f -- "$RUNNER_TEMP/codexmusicae-firebase-service-account.json"
 
       - name: Remove temporary credentials
         if: ${{ always() && steps.gate.outputs.available == 'true' }}
