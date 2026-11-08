@@ -10,16 +10,16 @@ name: ios
 # DEACTIVATED (owner's decision, DEC-124): there is no macOS runner or iOS hardware to use this pipeline for now, so it no longer
 # fires after lint-test. To reactivate, restore the `workflow_run` trigger below; the job and the signing steps are unchanged.
 #
+#   workflow_run:
+#     workflows:
+#       - lint-test
+#     types:
+#       - completed
+#     branches:
+#       # - main
+#       - '**'
 on:
   workflow_dispatch:
-  workflow_run:
-    workflows:
-      - lint-test
-    types:
-      - completed
-    branches:
-      # - main
-      - '**'
 
 permissions:
   contents: read
