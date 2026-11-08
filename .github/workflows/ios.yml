@@ -3,6 +3,7 @@ name: ios
 # iOS pipeline (PIP-004, PIP-010), one job like android: an unsigned simulator build of the iOS shell on a macOS runner (the only
 # check of the Swift code, which nobody can build locally), then, when the Apple signing secrets exist, a signed ad hoc IPA that is
 # uploaded to Firebase App Distribution. Without the secrets the signed steps are skipped and the job stays green (docs/ios-distribution.md).
+# Without the signing secrets an UNSIGNED device IPA is kept as a GitHub artifact for local re-signing (DEC-127; Firebase rejects unsigned builds).
 # Triggered like android and deploy-web: after a successful lint-test, on every branch for now; remove '**' and enable `- main` to
 # build only the main branch (macOS minutes count 10x on a private repository). A workflow_run workflow only fires once this file
 # is on the default branch.
@@ -225,6 +226,56 @@ jobs:
             --app "$FIREBASE_IOS_APP_ID" \
             --groups "$groups" \
             --release-notes "$APP_RELEASE_NOTES"
+
+      # DEC-127: Firebase App Distribution rejects an unsigned IPA, so without the signing secrets the unsigned device IPA is kept as a
+      # GitHub artifact. A tester re-signs it on their own computer (Sideloadly, AltStore, free Apple ID, valid for 7 days).
+      - name: Build unsigned device IPA
+        id: unsigned-ipa
+        if: ${{ steps.gate.outputs.available != 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version_string="$(git describe --tags --always --long)"
+          version_name="$(printf '%s' "$version_string" | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1 || true)"
+          version_name="${version_name:-0.0.0}"
+          version_code="$(git rev-list --count HEAD)"
+          archive_path="$RUNNER_TEMP/Unsigned.xcarchive"
+          ipa_dir="$RUNNER_TEMP/unsigned-ipa"
+
+          xcodebuild archive -project ios/App/App.xcodeproj -scheme App -configuration Release -sdk iphoneos \
+            -archivePath "$archive_path" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            MARKETING_VERSION="$version_name" CURRENT_PROJECT_VERSION="$version_code" 2>&1 | tee ios-unsigned-archive.log
+
+          rm -rf "$ipa_dir"
+          mkdir -p "$ipa_dir/Payload"
+          cp -R "$archive_path/Products/Applications/App.app" "$ipa_dir/Payload/"
+          (cd "$ipa_dir" && zip -qry codexmusicae-unsigned.ipa Payload)
+
+          {
+            printf 'ipa_path=%s\n' "$ipa_dir/codexmusicae-unsigned.ipa"
+            printf 'version=%s\n' "$version_string"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload unsigned IPA as artifact
+        if: ${{ steps.gate.outputs.available != 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: codexmusicae-unsigned-ipa
+          path: ${{ steps.unsigned-ipa.outputs.ipa_path }}
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Explain the unsigned IPA
+        if: ${{ steps.gate.outputs.available != 'true' }}
+        shell: bash
+        env:
+          VERSION: ${{ steps.unsigned-ipa.outputs.version }}
+        run: |
+          {
+            echo '### Unsigned iOS build'
+            echo "Version $VERSION, artifact codexmusicae-unsigned-ipa (kept 14 days). It cannot be installed as it is: re-sign it with Sideloadly or AltStore and a free Apple ID (the app then runs for 7 days). Firebase App Distribution does not accept unsigned builds (docs/ios-distribution.md)."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Remove temporary credentials
         if: ${{ always() && steps.gate.outputs.available == 'true' }}

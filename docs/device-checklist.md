@@ -77,3 +77,18 @@ Device: ______  Android: ____  WebView/Chrome: ____  App version (info icon): __
 Notes:
 
 NFR-016 and the device part of TST-006 stay `todo` in `docs/requirements.md` until a run of this list is recorded as `ok`. The automated budgets (`perf` job) measure a desktop Chromium, not this tablet.
+
+## Desktop browsers — fullscreen in presentation mode (PLT-004, PLT-016)
+
+**Manual device test required** (Windows Edge cannot be run in CI). With DevTools open on the console.
+
+| # | Test | Req | Result |
+|---|---|---|---|
+| FS-1 | Edge on Windows: the mode button enters presentation mode and true fullscreen; no `fullscreen denied` warning. | PLT-004 | todo |
+| FS-2 | Edge on Windows: the center tap enters fullscreen. | PLT-004 | todo |
+| FS-3 | Esc and the center tap leave fullscreen and return to annotation mode. | PLT-004 | todo |
+| FS-4 | Press F11 first, then enter presentation mode, then leave: the window ends up as before. | PLT-004 | todo |
+| FS-5 | Installed PWA window (Edge and Chrome): enter and leave behave as in FS-1 to FS-3. | PLT-004 | todo |
+| FS-6 | Chrome and Firefox on Windows: FS-1 to FS-3. | PLT-004 | todo |
+| FS-7 | If fullscreen is refused, the warning names the reason and the next arrow key or tap retries once. | PLT-016 | todo |
+

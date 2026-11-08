@@ -4,7 +4,7 @@ The `ios` workflow (`.github/workflows/ios.yml`) always builds the unsigned simu
 
 ## What you need
 
-- A paid **Apple Developer Program** membership (a free Personal Team cannot create ad hoc profiles). Ad hoc builds run only on devices whose UDID is in the provisioning profile.
+- For the **signed** route: a paid **Apple Developer Program** membership (a free Personal Team cannot create ad hoc profiles). Ad hoc builds run only on devices whose UDID is in the provisioning profile. Without a membership see "Experiment: unsigned build" at the end.
 - An iOS app in your Firebase project (same project as Android and Hosting) with the bundle ID `app.web.codexmusicae`.
 - Testers' devices, registered (step 4).
 
@@ -57,3 +57,14 @@ Settings → Secrets and variables → Actions (never put these into the reposit
 - The profile expires after a year and the certificate after a year; renew both and update the secrets.
 - The first signed run is unverified (command-line signing overrides with the Swift package project); if `xcodebuild archive` fails, the artifact `ios-build-log` has the log.
 - The unsigned build costs macOS minutes at 10x on a private repository (about 200 free minutes a month); the signed archive adds a few more minutes per run. Narrow the trigger to `main` in `ios.yml` (see the comment there) to save them.
+
+## Unsigned build without a developer account (DEC-127)
+
+Firebase App Distribution **cannot** take an unsigned iOS build: an experiment upload was rejected with "error parsing your app's provisioning profile. Ensure you are uploading a validly signed IPA". Android works with Firebase because its installer accepts any APK; iOS installs over the air and needs a signed ad hoc IPA, so the Firebase route needs the paid membership above.
+
+Without the signing secrets the `ios` workflow therefore builds `codexmusicae-unsigned.ipa` (Release, `iphoneos`, no signing) and keeps it as a **GitHub Actions artifact** named `codexmusicae-unsigned-ipa` (14 days). No secret or variable is needed for this.
+
+- **Get the file:** GitHub → Actions → the `ios` run → Artifacts → `codexmusicae-unsigned-ipa` (needs read access to the repository; otherwise the owner downloads it and passes the file on). Unzip the download to get the `.ipa`.
+- **Re-sign and install:** Sideloadly or AltStore on Mac or Windows, free Apple ID, iPhone or iPad connected to the computer (cable or Wi-Fi sync), Developer Mode on (iOS 16 or newer), then trust the developer profile (*Settings → General → VPN & Device Management*). The tool rewrites the bundle ID.
+- **Limits:** the app stops working after 7 days (re-sign it); a free Apple ID allows 3 sideloaded apps at a time and a limited number of new app IDs per week.
+- **Manual run:** a `workflow_run` workflow runs from the file on `main`; to try a branch use Actions → `ios` → Run workflow and pick the branch.

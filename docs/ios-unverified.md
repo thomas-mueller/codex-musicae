@@ -1,6 +1,6 @@
 # iOS app — what is unverified and how to check it (PLT-013, PLT-014)
 
-_Owner note (delete this block before sending): send this file (and, for route A, an invitation to the Firebase tester group, see `docs/ios-distribution.md`) to anyone with a Mac, an iPad or an iPhone who offers to help. Collect the filled-in checklist (section 5) in a message or a shared note. Results: items 1–8 all OK → PLT-013 `done`; everything on the checklist tried on a device → PLT-014 `done` and the `UNVERIFIED(ios)` markers of the verified files may go; problems → bug reports (or `docs/questions.md`). The statuses stay `todo` until then._
+_Owner note (delete this block before sending): send this file (and, for route A, an invitation to the Firebase tester group, see `docs/ios-distribution.md`; route C needs only the unsigned IPA file from the GitHub artifact, see there) to anyone with a Mac, an iPad or an iPhone who offers to help. Collect the filled-in checklist (section 5) in a message or a shared note. Results: items 1–8 all OK → PLT-013 `done`; everything on the checklist tried on a device → PLT-014 `done` and the `UNVERIFIED(ios)` markers of the verified files may go; problems → bug reports (or `docs/questions.md`). The statuses stay `todo` until then._
 
 ---
 
@@ -11,6 +11,8 @@ CodexMusicae also exists as an iOS app (Capacitor shell with Swift plugins). Nob
 ## 2. Get the app
 
 **Route A — a build from the owner (easiest).** If the owner has set up ad hoc distribution (`docs/ios-distribution.md`), you get an invitation from Firebase App Distribution; opening it on your device registers your device (the owner then sends you a new build that contains your device). Install it from the Firebase page.
+
+**Route C — unsigned build, signed on your own computer (works without a developer account).** The owner sends you `codexmusicae-unsigned.ipa` (taken from the GitHub artifact of the `ios` run; Firebase cannot distribute it). It carries no signature, so it cannot be installed as it is. Re-sign it with your free Apple ID using Sideloadly or AltStore (Mac or Windows; iPhone or iPad connected to the computer; Developer Mode on under *Settings → Privacy & Security*), then trust your developer profile (*Settings → General → VPN & Device Management*). The app stops working after 7 days and a free Apple ID allows three apps at a time; re-sign to continue. Background: `docs/ios-distribution.md`, section "Unsigned build without a developer account".
 
 **Route B — build it yourself with Xcode and a free Personal Team.**
 

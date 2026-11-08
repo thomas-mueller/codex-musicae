@@ -2,10 +2,11 @@ import { TestBed } from '@angular/core/testing';
 
 import { provideTestPorts } from '../../testing/provide-test-ports';
 import { FULLSCREEN } from '../ports/fullscreen';
-import { err } from '../ports/result';
+import { err, ok } from '../ports/result';
 import { WAKE_LOCK } from '../ports/wake-lock';
 import { fakeFullscreen, fakeWakeLock } from './testing/fake-ports';
 import { UiStore } from './ui.store';
+import { PresentationPlatform } from './presentation-platform';
 
 function setup(fullscreen = fakeFullscreen(), wakeLock = fakeWakeLock()) {
   TestBed.configureTestingModule({
@@ -47,5 +48,35 @@ describe('presentation platform wiring', () => {
     ui.hasDocument.set(false);
     ui.setMode('presentation');
     expect(fullscreen.enterCalls).toBe(0);
+  });
+
+  it('PLT-016 a denied entry is retried exactly once on the next gesture in presentation mode', async () => {
+    const { ui, fullscreen } = setup(fakeFullscreen([err('denied'), ok(undefined)]));
+    const platform = TestBed.inject(PresentationPlatform);
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    ui.setMode('presentation');
+    await Promise.resolve();
+    platform.retryEnter();
+    platform.retryEnter();
+    expect(fullscreen.enterCalls).toBe(2);
+  });
+
+  it('PLT-016 no retry after a successful entry, an unsupported one, or after leaving', async () => {
+    for (const result of [ok(undefined), err('unsupported')]) {
+      TestBed.resetTestingModule();
+      const { ui, fullscreen } = setup(fakeFullscreen(result));
+      ui.setMode('presentation');
+      await Promise.resolve();
+      TestBed.inject(PresentationPlatform).retryEnter();
+      expect(fullscreen.enterCalls).toBe(1);
+    }
+    TestBed.resetTestingModule();
+    const { ui, fullscreen } = setup(fakeFullscreen(err('denied')));
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    ui.setMode('presentation');
+    await Promise.resolve();
+    ui.setMode('annotation');
+    TestBed.inject(PresentationPlatform).retryEnter();
+    expect(fullscreen.enterCalls).toBe(1);
   });
 });

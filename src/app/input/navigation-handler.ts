@@ -24,13 +24,14 @@ export class NavigationHandler {
   private readonly slideNav = inject(SlideNavStore);
   private readonly aspect = inject(AspectRatioService);
   private readonly gate = inject(StrokeGate);
+  private readonly platform = inject(PresentationPlatform);
   private previousMode = this.ui.mode();
 
   constructor() {
     const bus = inject(CommandBus);
     bus.commands$.pipe(takeUntilDestroyed()).subscribe((command) => this.handle(command));
     // PLT-004: Esc or a system gesture left fullscreen; presentation mode ends with it.
-    const stopExternalExit = inject(PresentationPlatform).onExternalExit(() => bus.dispatch({ type: 'ExitPresentation' }));
+    const stopExternalExit = this.platform.onExternalExit(() => bus.dispatch({ type: 'ExitPresentation' }));
     inject(DestroyRef).onDestroy(stopExternalExit);
     // UIX-018: entering presentation, however it happens (command or mode button).
     effect(() => {
@@ -45,6 +46,10 @@ export class NavigationHandler {
   }
 
   private handle(command: Command): void {
+    // PLT-016: a denied fullscreen request is retried inside the next gesture of presentation mode.
+    if (this.ui.mode() === 'presentation' && command.type !== 'ToggleMode' && command.type !== 'ExitPresentation') {
+      this.platform.retryEnter();
+    }
     switch (command.type) {
       // ANN-013: while a stroke is in progress these wait until it has ended.
       case 'Next':
