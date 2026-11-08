@@ -45,6 +45,26 @@ export async function removeFullscreenAndWakeLock(page: Page): Promise<void> {
 }
 
 /**
+ * Wraps `Element.prototype.requestFullscreen`: the first `rejectCalls` calls (either method) reject (NotAllowedError), or, with
+ * `onlyWithOptions`, every call that passes an options object rejects (an Edge-like refusal of the dictionary form).
+ */
+export async function rejectFullscreenRequests(page: Page, mode: { rejectCalls: number } | { onlyWithOptions: true }): Promise<void> {
+  await page.addInitScript((config) => {
+    const proto = (globalThis as unknown as { Element: { prototype: Record<string, (...args: unknown[]) => Promise<void>> } }).Element.prototype;
+    let calls = 0;
+    // Chromium aliases the prefixed method, so both are wrapped and share the counter.
+    for (const name of ['requestFullscreen', 'webkitRequestFullscreen']) {
+      const original = proto[name]!;
+      proto[name] = function (this: unknown, ...args: unknown[]) {
+        calls++;
+        const reject = 'rejectCalls' in config ? calls <= config.rejectCalls : args.length > 0;
+        return reject ? Promise.reject(new TypeError('refused by the test')) : original.apply(this, args);
+      };
+    }
+  }, mode);
+}
+
+/**
  * Presses Escape until presentation mode has ended. WebKit drops keys while its fullscreen transition runs, and the
  * transition outlasts `fullscreenElement` becoming set, so a single press right after entering can be lost.
  */

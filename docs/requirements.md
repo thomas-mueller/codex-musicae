@@ -253,6 +253,7 @@ Read only the IDs your milestone file lists (use `grep -n "DET-005" docs/require
 - **PLT-012** [v1-optional·todo·M18] The `ios` Capacitor shell is committed; deployment target iOS 16.4; Info.plist declares PDF as a supported document type with open-in-place.
 - **PLT-013** [v1-optional·todo·M18] iOS adapters provide: status bar and home indicator hidden in presentation, keep-awake, document picker with write access, "open with" via the URL-open event, safe-area insets.
 - **PLT-014** [v1-optional·todo·M18] All iOS code is marked `// UNVERIFIED(ios)` until a tester has run it on a device.
+- **PLT-016** [v1·done·M16] The browser fullscreen request is robust (found on Edge for Windows, where presentation mode stayed windowed): `WebFullscreen.enter()` tries `requestFullscreen({ navigationUI: 'hide' })`, then the plain call, then the `webkit` method; `exit()` and `active` follow `document.fullscreenElement`, not only the change event; a denied entry is retried once on the next gesture (navigation command) in presentation mode, never after Esc; the failure name goes to the developer console only.
 
 ## NFR — Non-functional
 

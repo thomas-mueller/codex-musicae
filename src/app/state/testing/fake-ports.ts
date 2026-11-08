@@ -68,7 +68,9 @@ export type FakeFullscreen = Fullscreen & {
   externalExit(): void;
 };
 
-export function fakeFullscreen(result: Result<void, FullscreenError> = ok(undefined)): FakeFullscreen {
+/** `results`: one result for every call, or a list answered in order (the last one repeats). */
+export function fakeFullscreen(results: Result<void, FullscreenError> | Result<void, FullscreenError>[] = ok(undefined)): FakeFullscreen {
+  const queue = Array.isArray(results) ? [...results] : [results];
   const active = signal(false);
   const callbacks = new Set<() => void>();
   const fake: FakeFullscreen = {
@@ -77,6 +79,7 @@ export function fakeFullscreen(result: Result<void, FullscreenError> = ok(undefi
     exitCalls: 0,
     enter: () => {
       fake.enterCalls++;
+      const result = queue.length > 1 ? queue.shift()! : queue[0]!;
       active.set(result.ok);
       return Promise.resolve(result);
     },

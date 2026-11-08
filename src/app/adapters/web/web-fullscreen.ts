@@ -29,7 +29,10 @@ export class WebFullscreen implements Fullscreen {
   private readonly callbacks = new Set<() => void>();
   private ownExit = false;
 
+  private readonly lastErrorSignal = signal<string | null>(null);
+
   readonly active = this.activeSignal.asReadonly();
+  readonly lastError = this.lastErrorSignal.asReadonly();
 
   constructor(private readonly doc: FullscreenDocumentLike = document) {
     for (const name of CHANGE_EVENTS) {
@@ -37,23 +40,42 @@ export class WebFullscreen implements Fullscreen {
     }
   }
 
-  enter(): Promise<Result<void, FullscreenError>> {
+  /**
+   * Fallback chain (PLT-016): standard request with `navigationUI: 'hide'`, the same without options (some Chromium/Edge
+   * builds and policies reject the dictionary), then the `webkit`-prefixed method. Every step starts inside the original
+   * gesture's transient activation (a rejection settles within a microtask). The last failure name goes into `lastError`.
+   */
+  async enter(): Promise<Result<void, FullscreenError>> {
     const element = this.doc.documentElement;
-    try {
-      if (element.requestFullscreen) {
-        return element.requestFullscreen({ navigationUI: 'hide' }).then(() => ok(undefined), () => err('denied'));
-      }
-      if (element.webkitRequestFullscreen) {
-        return Promise.resolve(element.webkitRequestFullscreen()).then(() => ok(undefined), () => err('denied'));
-      }
-    } catch {
-      return Promise.resolve(err('denied'));
+    const attempts: (() => Promise<void> | void)[] = [];
+    if (element.requestFullscreen) {
+      attempts.push(() => element.requestFullscreen?.({ navigationUI: 'hide' }));
+      attempts.push(() => (element.requestFullscreen as () => Promise<void>)());
     }
-    return Promise.resolve(err('unsupported'));
+    if (element.webkitRequestFullscreen) {
+      attempts.push(() => element.webkitRequestFullscreen?.());
+    }
+    if (attempts.length === 0) {
+      return err('unsupported');
+    }
+    let detail = '';
+    this.lastErrorSignal.set(null);
+    for (const attempt of attempts) {
+      try {
+        await attempt();
+        this.sync();
+        return ok(undefined);
+      } catch (error) {
+        detail = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+      }
+    }
+    this.lastErrorSignal.set(detail);
+    return err('denied');
   }
 
   async exit(): Promise<void> {
-    if (!this.activeSignal()) {
+    // The event may lag behind the request, so the document itself decides, not the signal.
+    if (!this.isFullscreen()) {
       return;
     }
     this.ownExit = true;
@@ -62,6 +84,11 @@ export class WebFullscreen implements Fullscreen {
     } catch {
       // Already left: nothing to do.
     }
+    if (!this.isFullscreen() && this.activeSignal()) {
+      this.sync();
+    }
+    // A late or missing event must not turn the next Esc into an "own" exit.
+    this.ownExit = false;
   }
 
   onExternalExit(callback: () => void): () => void {
@@ -69,9 +96,18 @@ export class WebFullscreen implements Fullscreen {
     return () => this.callbacks.delete(callback);
   }
 
+  private isFullscreen(): boolean {
+    return (this.doc.fullscreenElement ?? this.doc.webkitFullscreenElement ?? null) !== null;
+  }
+
+  /** Brings `active` in line with the document without waiting for the change event. */
+  private sync(): void {
+    this.activeSignal.set(this.isFullscreen());
+  }
+
   private onChange(): void {
     const was = this.activeSignal();
-    const now = (this.doc.fullscreenElement ?? this.doc.webkitFullscreenElement ?? null) !== null;
+    const now = this.isFullscreen();
     this.activeSignal.set(now);
     if (was && !now) {
       const own = this.ownExit;
