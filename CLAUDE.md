@@ -9,7 +9,7 @@ These instructions are tool-neutral. If your tool expects `AGENTS.md`, copy this
 ## Read in this order
 
 1. This file.
-2. The milestone file you were given (`docs/milestones/V1-Mnn.md` or `docs/milestones/V2-Mnn.md`). It is self-contained.
+2. The milestone file you were given (`docs/milestones/V1-Mnn.md`). It is self-contained.
 3. Only the requirement IDs it lists: `grep -n "ID" docs/requirements.md`. Never read the whole file.
 4. `docs/decisions.md` only if you need a reason. Do not reopen settled decisions.
 
@@ -31,7 +31,6 @@ Angular (standalone, signals, zoneless, OnPush, strict TypeScript), Capacitor, p
 
 - No hard-coded user-visible strings: use the translation layer. UI is icon-first.
 - No magic numbers, colors, icon names or key bindings: they live in `src/config/tunables.ts`.
-- New features carry a feature switch in the feature-configuration files and a test per configuration (`docs/roadmap-v2.md`, "Rules that hold in every V2 milestone").
 - Tests contain the requirement ID in their name (`it('PLY-008 …')`). Mark a requirement `done` only when its tests pass.
 - Do not edit existing tests to make code pass unless the milestone says so; report a suspected wrong test instead.
 - Code that exists only for Safari/WebKit needs a Playwright WebKit test. Unverifiable platform code (iOS) is marked `// UNVERIFIED(ios)`.
@@ -56,7 +55,7 @@ Angular (standalone, signals, zoneless, OnPush, strict TypeScript), Capacitor, p
 
 ## Workflow
 
-- One fresh session per milestone (V1 and V2); plan first, wait for approval.
+- One fresh session per milestone; plan first, wait for approval.
 - Work on the branch the owner has checked out; run lint and tests yourself and fix failures. The owner alone creates branches and chooses their names: never create, rename, switch or delete a branch.
 - At the end of each step, stop editing and give the owner a summary of the changed files and a suggested commit message (with test counts where the milestone asks for them). The owner commits.
 - Do not touch layers or files outside the milestone's scope; follow its "do not" list.
@@ -68,20 +67,18 @@ Angular (standalone, signals, zoneless, OnPush, strict TypeScript), Capacitor, p
 The repository owner commits and pushes all code personally. The agent never does this: not when a milestone file says "commit", not "just once", not on any branch.
 
 - Never run `git branch`, `git checkout -b`, `git switch -c`, `git worktree add` or any other command that creates, renames, switches or deletes a branch. If a milestone file names a branch, treat the name as a suggestion for the owner.
-- Never run `git commit` (including `--amend`), `git push` (any remote, branch or tag), `git tag`, `git merge`, `git rebase`, `git reset`, `git cherry-pick`, `git stash`, or `git add`. Never open, update or merge pull requests or create releases (see the GitHub bullet below).
+- Never run `git commit` (including `--amend`), `git push` (any remote, branch or tag), `git tag`, `git merge`, `git rebase`, `git reset`, `git cherry-pick`, `git stash`, or `git add`. Never open, update or merge pull requests (`gh pr …`) or create releases.
 - Read-only git is fine: `status`, `diff`, `log`, `show`, `describe`, `blame`.
-- Never use the GitHub CLI (`gh`) or any GitHub API, not even read-only (PRs, issues, CI status, releases). The owner does all GitHub work. This replaces the narrower `gh pr …` ban.
 - Wherever a document says "commit" in an instruction to you, read it as "leave the change in the working tree and propose a commit message". If any instruction conflicts with this section, this section wins.
 - Never change git configuration or remotes.
 
 ## Naming and versions
 
 - Milestone `V1-M<n>` → tag `v0.<n>.0`; fixes `v0.<n>.<p>`; the release of v1 additionally tags the last milestone's commit `v1.0.0` (annotated). The owner tags; you never do. Tags deploy nothing by themselves. Details: `docs/roadmap.md`.
-- Milestone `V2-M<n>` → tag `v1.<n>.0`; fixes `v1.<n>.<p>`; the release of V2 additionally tags the last milestone's commit `v2.0.0` (annotated). Until `v2.0.0` exists, fixes to the released V1 are patch-only (`v1.0.<p>`); collision rule in `docs/roadmap-v2.md`. The owner tags; you never do. Tags deploy nothing by themselves.
 - Version string: `git describe --tags --always --long`.
 - The build runs `scripts/generate-version.mjs`; read the generated raw value through the `APP_VERSION` injection token (the generated file is ignored and must not be edited).
 - Requirement IDs `TOPIC-nnn`, never reused; `target` v1 | v1-optional | v2 | backlog; `status` todo | done | changed | dropped.
 
 ## Layout of the documents
 
-`docs/requirements.md` (what), `docs/roadmap.md` (order and tags), `docs/roadmap-v2.md` (V2 order and tags), `docs/milestones/` (per-milestone tasks, contracts, test tables: `V1-Mnn.md` are history, `V2-Mnn.md` are the V2 tasks), `docs/decisions.md` (why), `docs/limitations.md` (accepted limits and backlog), `docs/changelog.md` (changes after v1), `src/config/tunables.ts` (all numbers).
+`docs/requirements.md` (what), `docs/roadmap.md` (order and tags), `docs/milestones/` (per-milestone tasks, contracts, test tables), `docs/decisions.md` (why), `docs/limitations.md` (accepted limits and backlog), `docs/changelog.md` (changes after v1), `src/config/tunables.ts` (all numbers).
