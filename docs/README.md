@@ -17,7 +17,10 @@ A PDF score viewer for instrumentalists: slide-by-slide navigation by music syst
 |---|---|
 | `requirements.md` | atomic requirements: ID, target, status, milestone |
 | `roadmap.md` | milestone index (M0–M19), tags `v0.<n>.0` and the release tag `v1.0.0`, cost guidance |
+| `roadmap-v2.md` | V2 milestone index (M0–M19), tags `v1.<n>.0` and the release tag `v2.0.0`, collision rule, sequencing rationale |
+| `v2-requirements.md` | final V2 requirements and decisions D-1…D-32 (input for `roadmap-v2.md`) |
 | `milestones/V1-Mnn.md` | self-contained task per milestone (steps, tests, do-not list, acceptance) |
+| `milestones/V2-Mnn.md` | the same for V2 (M18 is a placeholder for improvements before publishing) |
 | `architecture.md` | layers, import matrix, ports, state, rendering, resources |
 | `contracts/` | compile-checked TypeScript stubs (`core/`, `ports/`) and verified test fixtures |
 | `reference/` | plain-JavaScript reference implementations that produced the fixtures (informational) |
