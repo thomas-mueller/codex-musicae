@@ -18,7 +18,7 @@ Follow what `ng new` generated for naming. Layers live under `src/app/`; the tun
 src/
   config/tunables.ts            all numbers, colors, icon names, key bindings
   config/features.web.ts        V2: feature switches of the web build (free set); see "Version 2"
-  config/features.native.ts     V2: feature switches of the native free build; the paid build switches everything on
+  config/features.native.ts     V2: feature switches of the native free build; the paid build forces them all on
   app/
     app.config.ts               composition root: wires ports to adapters (only place that imports adapters)
     core/                       pure TypeScript, one file per topic (subfolders only when a topic grows)
@@ -82,9 +82,9 @@ Signatures are fixed in the milestone files (M4); this table fixes responsibilit
 | `OpenWith` | stream of incoming file references from the OS; V2: also Android `SEND` and the iOS share sheet (share-in, V2-M6) | Android intent, web file handler | M16 |
 | `BackButton` | register back handlers with priority | Capacitor (Android) | M16 |
 | `FeatureFlags` (V2) | read-only feature switches of the build (EDN-006…EDN-008) | provided by the composition root from `config/features.*.ts` | V2-M3 |
-| `SendFile` (V2) | hand an exported PDF to the system share sheet or save it as a local copy (EXP-003) | Capacitor share (Android, iOS), local copy; the web adapter is never selected | V2-M15 |
+| `SendFile` (V2) | hand an exported PDF to the system share sheet or save it as a local copy (EXP-003) | Capacitor share (Android, iOS), local copy; no web adapter (the web build does not provide the token; features inject it as optional) | V2-M15 |
 
-V2 adds no port for the persistence switch: the composition root chooses persistence-off implementations of `Preferences` and of the file-reference storage of `FileAccess` when the flags switch persistence off (V2-M3).
+V2 adds no port for the persistence switch: the composition root wraps `Preferences` and the persisted file-reference part of `FileAccess` in switch-aware wrappers; each persistence switch (settings, recent files, session restore, per-file choices, zoom) decides what its wrapper drops (V2-M3).
 
 iOS (M18) and older-platform fallbacks add implementations only.
 
@@ -150,10 +150,10 @@ Overview of the structural changes of V2 (`docs/roadmap-v2.md`); the milestone f
 
 ### Edition configuration (DEC-130, V2-M3)
 
-- Two feature files in `src/config/`: `features.web.ts` (web, free set) and `features.native.ts` (native free set). Each holds one commented boolean per feature; separate from `tunables.ts`.
-- Build configurations `web`, `native-free` and `native-paid` select the file through `fileReplacements`; `native-paid` switches every feature on. Each build bundles only its own file.
-- The composition root provides the content through the `FeatureFlags` token in `ports/`; features and stores read the token, never the files (import rule above). A check fails the build when a switch is missing in any configuration (EDN-013).
-- Persistence is switched by choosing persistence-off implementations of the persistence ports in the composition root; no feature branches on the edition.
+- Two feature files in `src/config/`: `features.web.ts` (web, free set) and `features.native.ts` (native free set). Each holds one commented boolean per feature; separate from `tunables.ts`. Switches of web-only features exist in `features.web.ts` only.
+- Build configurations `web`, `native-free` and `native-paid` select the file through `fileReplacements` (`native-free` and `native-paid` the same one); `native-paid` also sets the build constant `edition`, and the composition root then provides all switches as `true`. Each build bundles only its own file.
+- The composition root provides the content through the `FeatureFlags` token in `ports/`; features and stores read the token, never the files (import rule above). A check fails the build when a shared switch is missing in either file or a web-only switch appears in the native file (EDN-013); an ESLint rule keeps the files out of every module but the composition root (V2-M3 S1).
+- Persistence is switched by the wrappers described under the port catalogue; no feature branches on the edition.
 
 ### Cross-file references (DEC-128, V2-M4, V2-M6)
 

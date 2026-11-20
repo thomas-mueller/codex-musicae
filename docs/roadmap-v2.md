@@ -8,7 +8,7 @@ Input: `docs/v2-requirements.md` (final, decisions D-1…D-32). Milestone files 
 - **Release of v2:** tag the last milestone's commit (M19) additionally **`v2.0.0`** — annotated (`git tag -a v2.0.0 -m "v2"`), created last — and publish a GitHub release note. Example: `v1.19.0` and `v2.0.0` point to the same commit. Only the `v2.0.0` commit is built for the stores.
 - **Collision rule.** The minor numbers `v1.1.0…v1.19.0` belong to V2 milestones. Until `v2.0.0` exists, fixes to the released V1 are **patch-only** (`v1.0.1`, `v1.0.2`, …). After `v2.0.0`: fixes `v2.0.1`, additions `v2.1.0`.
 - Users see only `vX.Y.Z` (R-16). The version script (M1) turns `git describe` output of this scheme into that form; internal places may show the full describe string.
-- `AGENTS.md` ("Naming and versions") still names `V1-M<n>` and `v0.<n>.0`. M0 (S3) is authorized to update `AGENTS.md` for V2 (limited changes listed there, the "Git" section untouched) and to run `npm run sync:agents` for the three copies. No other milestone edits `AGENTS.md`.
+- `AGENTS.md` ("Naming and versions") still names `V1-M<n>` and `v0.<n>.0`. M0 (S3) is authorized to update `AGENTS.md` for V2 (limited changes listed there, the "Git" section gets only the no-GitHub-CLI bullet) and to run `npm run sync:agents` for the three copies. No other milestone edits `AGENTS.md`.
 - Tags deploy nothing by themselves.
 
 ## Sizing rule

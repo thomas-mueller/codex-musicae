@@ -211,9 +211,9 @@ V2 terms (target `v2` entries):
 - **ORG-016** [v1·changed·M11] After creation a stepper opens to set the pass number (integer ≥ 1). A new jump starts at the number of the existing jumps with the same origin plus one (first jump of a bar 1, second 2, …). *(Changed after review: the default was always 1.)* *(Changed in V2 → MRK-023, V2-M10.)*
 - **ORG-017** [v1·changed·M11] Several jumps may sit on one junction; two jumps with the same origin and pass are allowed (PLY-006). There are no plausibility checks. *(Changed in V2 → MRK-002, V2-M4.)*
 - **ORG-018** [v1·changed·M11] Jump markers sit on the music systems. The start is at the right edge of the source system (system `origin`), vertically centered, with the jump icon rotated by `T:layout.markerRotationDeg` (the split points toward the end of the PDF); the end is at the left edge of the system after the target junction, vertically centered, with a merge icon (arrows coming from the beginning of the PDF). Both carry the label "<previous> → <next> ×<pass>": the playing-order numbers of the system played just before the jump and the one played right after it (the numbers shown on the systems, ORG-012); a number that does not exist (start or end of the playing order) or a jump that is never reached shows `T:layout.unknownNumber`. Both ends have one color from `T:colors.jumpPalette`; several markers on a system stack from the edge. At junction 0 (no source system) the start and at junction N (no next system) the end sit on the bar of that junction. *(Changed after review: formerly badges on the bars with page·bar labels, then print numbers.)* *(Changed in V2 → MRK-009, V2-M4.)*
-- **ORG-019** [v1·changed·M11] A long press (`T:layout.longPressMs`) on a jump marker scrolls to the other end of the jump. *(Changed in V2 → MRK-032, V2-M10.)*
-- **ORG-020** [v1·changed·M11] Tapping a jump marker selects the jump; the chip then offers pass, change target and delete. *(Changed in V2 → MRK-044, V2-M10.)*
-- **ORG-021** [v1·changed·M11] A marks-list button opens the list of jumps, slide breaks and stops in the order of the final playing order: an item is placed where the playing position first meets it (a jump where it fires, a stop where it ends the order). Items that are never reached follow at the end, dimmed: jumps in creation order, then breaks, then stops. Labels use playing-order numbers: jump "<previous> → <next> ×<pass>" with its color, slide break scissors icon and "<previous> | <next>", stop the stop icon and "<previous>". Compact layouts show a sheet; expanded layouts show a panel beside the button on the side of the tool strip, which never covers the viewer's scroll bar. Tapping an entry navigates to it and selects it; a swipe to the left or a trash icon deletes it. *(Changed after review.)* *(Changed in V2 → MRK-040, V2-M10.)*
+- **ORG-019** [v1·changed·M11] A long press (`T:layout.longPressMs`) on a jump marker scrolls to the other end of the jump. *(Changed in V2 → MRK-050, V2-M10.)*
+- **ORG-020** [v1·changed·M11] Tapping a jump marker selects the jump; the chip then offers pass, change target and delete. *(Changed in V2 → MRK-044, MRK-045, V2-M10.)*
+- **ORG-021** [v1·changed·M11] A marks-list button opens the list of jumps, slide breaks and stops in the order of the final playing order: an item is placed where the playing position first meets it (a jump where it fires, a stop where it ends the order). Items that are never reached follow at the end, dimmed: jumps in creation order, then breaks, then stops. Labels use playing-order numbers: jump "<previous> → <next> ×<pass>" with its color, slide break scissors icon and "<previous> | <next>", stop the stop icon and "<previous>". Compact layouts show a sheet; expanded layouts show a panel beside the button on the side of the tool strip, which never covers the viewer's scroll bar. Tapping an entry navigates to it and selects it; a swipe to the left or a trash icon deletes it. *(Changed after review.)* *(Changed in V2 → MRK-040, MRK-046, MRK-048, MRK-049, V2-M10.)*
 - **ORG-022** [v1·changed·M11] The break icon toggles a slide break on the selected junction; a break shows as a solid line in `T:colors.breakLine` with a scissors icon at the left edge. *(Changed in V2 → MRK-003, V2-M4.)*
 - **ORG-023** [v1·changed·M11] The stop icon toggles a stop on the selected junction; it shows the stop icon on the bar. *(Changed in V2 → MRK-003, V2-M4.)*
 - **ORG-024** [v1·changed·M11] Deleting a jump, break or stop is immediate and has no undo. *(Changed in V2 → ANN-014, V2-M7.)*
@@ -507,14 +507,14 @@ V2 terms (target `v2` entries):
 - **EDN-003** [v2·todo·M3] Actions switched off by the edition stay visible and disabled.
 - **EDN-004** [v2·todo·M3] The web app has exactly the feature set of the free edition.
 - **EDN-005** [v2·todo·M3] The free edition persists no app state: no settings, zoom, recent files, session restore or per-file choices.
-- **EDN-006** [v2·todo·M3] The free feature set is defined per platform in two feature-configuration files in `src/config/` (web, native), separate from tunables; every feature has an on/off switch with a comment; the paid native build switches every feature on.
+- **EDN-006** [v2·todo·M3] The free feature set is defined per platform in two feature-configuration files in `src/config/` (`features.web.ts`, `features.native.ts`; the native file holds the free native set), separate from tunables; every feature has an on/off switch with a comment; the paid native build switches every switch of the native file on.
 - **EDN-007** [v2·todo·M3] Each build bundles only its own feature configuration; features read their switch through an injection token, never the files.
 - **EDN-008** [v2·todo·M3] Every feature stays in the code base, including persistence, saving, recent files and session restore; free and web only switch it off.
-- **EDN-009** [v2·todo·M3] Web-only organizational features have switches in the web configuration file only.
+- **EDN-009** [v2·todo·M3] Switches of web-only organizational features exist in `features.web.ts` only; the native file does not contain them.
 - **EDN-010** [v2·todo·M3] One code base builds a free and a paid app for Android and for iOS; the feature set is chosen at build time.
 - **EDN-011** [v2·todo·M3] Tests prove that in the free configuration every paid feature is unreachable: no save control is enabled and no file write call is made.
 - **EDN-012** [v2·todo·M3] Tests prove that the paid configuration enables every feature.
-- **EDN-013** [v2·todo·M3] A feature switch missing in any configuration file fails the build.
+- **EDN-013** [v2·todo·M3] A shared feature switch (every switch except the web-only ones of EDN-009) missing in either configuration file, or a web-only switch present in the native file, fails the build.
 - **EDN-014** [v2·todo·M3] The web build with its default configuration stores no cookies, localStorage, sessionStorage or IndexedDB data; a test on the production web build checks this in Chromium, Firefox and WebKit.
 - **EDN-015** [v2·todo·M3] The PWA service worker may cache the app's own files.
 - **EDN-016** [v2·todo·M3] The web app starts empty on every start: session restore, recent files and permission re-grant are off.
@@ -552,7 +552,7 @@ V2 terms (target `v2` entries):
 - **MRK-029** [v2·todo·M10] Creating a mark never scrolls the view, except for the user-triggered file switch of a cross-file mark.
 - **MRK-030** [v2·todo·M10] Labels have no length limit; a marker grows or wraps and never overlaps another marker or leaves the screen.
 - **MRK-031** [v2·todo·M10] Labels are shown inside the colored marker in organization mode and in the marks list.
-- **MRK-032** [v2·todo·M10] A long press on a marker opens a text field to edit the mark's user text.
+- **MRK-032** [v2·todo·M10] A selected mark offers a text field to edit its user text.
 - **MRK-033** [v2·todo·M10] Bookmarks take their colors cyclically from their own palette in tunables; jumps keep `T:colors.jumpPalette`.
 - **MRK-034** [v2·todo·M10] Start marks are green and stop marks red (tunables).
 - **MRK-035** [v2·todo·M10] Several marks on one system sit side by side.
@@ -565,8 +565,12 @@ V2 terms (target `v2` entries):
 - **MRK-042** [v2·todo·M10] Tapping a list item navigates to it and selects it; deleting from the list works as in V1 (swipe or trash icon).
 - **MRK-043** [v2·todo·M10] Marks cannot be edited from the list, and the list has no filter.
 - **MRK-044** [v2·todo·M10] With no organization tool active, a tap on a marker selects its mark.
-- **MRK-045** [v2·todo·M10] A selected jump offers pass number, change target and delete; a selected start mark, bookmark, stop or slide break offers delete.
-- **MRK-046** [v2·todo·M10] In the marks list the start mark comes first; a bookmark is placed where the playing position first reaches its system side; bookmarks that are never reached are in the dimmed end group after the jumps and before breaks and stops.
+- **MRK-045** [v2·todo·M10] A selected jump offers pass number, change target and delete.
+- **MRK-047** [v2·todo·M10] A selected start mark, bookmark, stop or slide break offers delete.
+- **MRK-046** [v2·todo·M10] In the marks list the start mark comes first.
+- **MRK-048** [v2·todo·M10] In the marks list a bookmark is placed where the playing position first reaches its system side.
+- **MRK-049** [v2·todo·M10] Bookmarks that are never reached are in the dimmed end group after the jumps and before breaks and stops.
+- **MRK-050** [v2·todo·M10] A long press (`T:layout.longPressMs`) on a jump marker scrolls to the other end of the jump; if that end is in another open file, the app switches to that file.
 
 ## EXP — Export
 
