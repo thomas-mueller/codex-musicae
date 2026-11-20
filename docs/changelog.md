@@ -30,3 +30,320 @@ To implement changes, tell the agent: "Implement the requirement changes listed 
 | 2026-11-02 | FIL-016 | `FileAccess` gains `requestWriteAccess(ref)`; a write that finds the permission in the `prompt` state without a user gesture answers `needs-user-gesture` instead of `denied`; the tab shows an "Allow saving" control (also triggered by selecting or closing the tab) instead of becoming read-only | Owner test in Chrome: files without a granted permission were never saved because an autosave cannot show the permission prompt | M15 S3, `WebFileAccess`, `SessionStore`, `tab-item` |
 | 2026-11-04 | PIP-003, PIP-010 | Firebase uploads go to the owners group (`FIREBASE_OWNERS_TESTER_GROUPS`) on every run and to the Android / iOS tester group only for builds of `main` | Owner wants every branch build for themself but fewer builds for the wider tester groups | workflows `android`, `ios`, docs |
 | 2026-11-08 | PLT-004, PLT-016 | New PLT-016: fullscreen request fallback chain, exit by document state, one retry on the next gesture, failure reason on the console | Owner test: presentation mode did not enter fullscreen in Edge on Windows | `WebFullscreen`, `PresentationPlatform`, `NavigationHandler`, DEC-126, E2E |
+| 2026-11-20 | 263 new `v2` IDs; 54 V1 IDs `changed`, 2 `dropped` | V2 requirements entered as atomic entries; V1 entries that V2 changes keep their text with a pointer to the successor | V2 (`docs/v2-requirements.md`, `docs/roadmap-v2.md`), V2-M0 S1 | V2-M1…M19; tables below |
+
+## V2 changes to V1 requirements
+
+Recorded by V2-M0 S1 (2026-11-20). The V1 text stays in `requirements.md` with status `changed` or `dropped` and a pointer to its V2 successor; it is copied here verbatim as the frozen V1 wording.
+
+| ID | V1 status | V1 text | V2 status | Successor | Milestone |
+|---|---|---|---|---|---|
+| GEN-002 | v1·done | The Android applicationId and Capacitor appId are `T:identity.appId`. | changed | GEN-011 | V2-M3 |
+| GEN-003 | v1-optional·todo | The iOS bundle ID is `T:identity.appId`. | changed | GEN-011 | V2-M3 |
+| GEN-009 | v1·done | Every control is an icon from the icon set; visible text is limited to numbers, the version string and error codes. | changed | GEN-013 | V2-M5 |
+| I18-002 | v1·done | A second language can be added by adding one translation file, without code changes. v1 ships English only. | changed | I18-003 | V2-M5 |
+| FIL-003 | v1·done | Each tab shows the file name, a close icon and a status marker (unsaved dot, error icon, read-only lock icon, needs-re-open icon). | changed | FIL-021 | V2-M6 |
+| FIL-004 | v1·done | In expanded layout the tabs are a tab bar; in compact layout one button shows the current tab name and opens the list of all tabs. | changed | FIL-023 | V2-M6 |
+| FIL-008 | v1·done | A recent-files list (max `T:resources.recentFilesMax`, newest first) opens from the open-file control; selecting an entry reopens it, or asks to re-pick the file if access is lost. | changed | FIL-026 | V2-M6 |
+| FIL-012 | v1·done | After startup the mode is annotation mode, even if the app was closed in presentation mode. | changed | FIL-048 | V2-M16 |
+| FIL-016 | v1·done | If a file cannot be written, its tab shows the read-only lock icon and offers "save a copy"; ink, jumps and breaks stay editable in memory. | changed | FIL-039 | V2-M6 |
+| SAV-004 | v1·done | The JSON contains: `schemaVersion`, `appVersion`, `pageCount`, detection level, system rectangles per page, jumps, breaks, stops, and optional aspect-ratio overrides per orientation. | changed | SAV-015 | V2-M4 |
+| DET-003 | v1·done | A page is rendered to a bitmap at the level's `renderScale`; if width×height exceeds `T:resources.maxCanvasPixels` the scale is reduced to fit. | changed | DET-030 | V2-M8 |
+| DET-004 | v1·done | The bitmap is converted to gray and binarized with the adaptive mean threshold (`THRESH_BINARY_INV`, ink = foreground; block size and constant per level, `T:detection.levels`); the bounding rectangle and the pixel area of every 4-connected component are collected. The background component (label 0) is not collected. | changed | DET-033 | V2-M8 |
+| DET-013 | v1·done | Three levels `fast`, `standard`, `fine` each define `minSystemWidthRatio`, `fullWidthSystemRatio`, `renderScale`, `adaptiveBlockSize` and `adaptiveC` (`T:detection.levels`); the default is `T:detection.defaultLevel`. `renderScale` is bitmap pixels per PDF point, written as dpi / 72: `fast` 100 dpi, `standard` 150 dpi, `fine` 200 dpi (ASM-09). | changed | DET-030 | V2-M8 |
+| DET-014 | v1·done | Organization mode offers a level selector (three icon steps); choosing a level asks for confirmation and then re-runs detection. | changed | DET-030 | V2-M8 |
+| DET-016 | v1·done | Organization mode shows detection progress (processing icon, processed/total pages); slide modes show the slide count as "n+" until detection is complete. | changed | ORG-032 | V2-M8 |
+| DET-017 | v1·done | Detection pauses while the user interacts (resumes after `T:detection.idleBeforeResumeMs` without input), while the app is hidden, and under battery saver where detectable. | changed | DET-027 | V2-M8 |
+| PLY-002 | v1·done | The playing order is generated by this replay: set position = 0 and all arrival counts = 0; repeat: increment the arrival count at the position; if a jump exists with origin = position and pass = arrival count, set position = its target and repeat; otherwise, if position = N stop; otherwise append system position+1 to the order and set position = position+1. | changed | PLY-015 | V2-M4 |
+| PLY-003 | v1·done | Pass n of a jump means the n-th arrival at its origin junction, counting the start at junction 0, forward steps and jump arrivals. | changed | PLY-015 | V2-M4 |
+| PLY-007 | v1·done | A jump has an integer pass ≥ 1; its origin and its target may be any junction 0..N, and the target differs from the origin. A jump from junction N fires when the end is reached on that pass (D.C. at the end of a piece). | changed | PLY-016 | V2-M4 |
+| PLY-012 | v1·done | With no jumps, breaks or stops, the playing order is systems 1..N in print order. | changed | PLY-015 | V2-M4 |
+| ORG-003 | v1·done | Zoom: default on open is fit-page; the minimum is fit-page; the maximum is `T:zoom.max` × the fit-width scale; the reset button returns to fit-page; content smaller than the viewport is centered; zoom buttons step by `T:zoom.buttonStep`. | changed | ORG-047 | V2-M13 |
+| ORG-010 | v1·done | Bars use `T:colors.orgBar.tint` at `opacity`; a selected junction uses `selectedOpacity`, on both bars of a page change. | changed | ORG-025 | V2-M8 |
+| ORG-011 | v1·changed | Each bar shows one compact row with the stop symbol and the break scissors line. The playing-order numbers are not on the bars but on the music systems (ORG-012); jump markers sit on the systems too (ORG-018). There is no numbering toggle. *(Changed after review: the numbers and jump badges moved from the bars to the systems.)* | changed | MRK-001 | V2-M4 |
+| ORG-012 | v1·changed | Every music system shows its playing-order numbers (PLY-010), ascending and comma separated ("3, 9"), as a label at the height of the system and horizontally centered on the page. The digits cover `T:layout.systemLabelHeightRatio` of the system height, in the light weight `T:layout.systemLabelFontWeight`, with the color and transparency of the bars (`T:colors.orgBar`). A system that is never played has no label. The bars show no numbers. System numbers in the original PDF order are not shown anywhere. *(Changed after review: formerly the numbers of the system above each bar.)* | changed | ORG-028 | V2-M8 |
+| ORG-013 | v1·done | Tapping a bar selects its junction; tapping empty space, Esc or back deselects. Taps in organization mode never navigate. | changed | ORG-025 | V2-M8 |
+| ORG-014 | v1·done | A selected junction shows a chip with icons: jump, slide break, stop, delete (delete only if the junction holds an item). | changed | ORG-042 | V2-M10 |
+| ORG-015 | v1·done | Jump creation: select the origin, tap the jump icon, all other bars become tappable targets with a hint bar and a cancel icon; page navigation and zoom stay active; tapping a bar creates the jump; Esc or back cancels. | changed | MRK-022 | V2-M10 |
+| ORG-016 | v1·changed | After creation a stepper opens to set the pass number (integer ≥ 1). A new jump starts at the number of the existing jumps with the same origin plus one (first jump of a bar 1, second 2, …). *(Changed after review: the default was always 1.)* | changed | MRK-023 | V2-M10 |
+| ORG-017 | v1·done | Several jumps may sit on one junction; two jumps with the same origin and pass are allowed (PLY-006). There are no plausibility checks. | changed | MRK-002 | V2-M4 |
+| ORG-018 | v1·changed | Jump markers sit on the music systems. The start is at the right edge of the source system (system `origin`), vertically centered, with the jump icon rotated by `T:layout.markerRotationDeg` (the split points toward the end of the PDF); the end is at the left edge of the system after the target junction, vertically centered, with a merge icon (arrows coming from the beginning of the PDF). Both carry the label "<previous> → <next> ×<pass>": the playing-order numbers of the system played just before the jump and the one played right after it (the numbers shown on the systems, ORG-012); a number that does not exist (start or end of the playing order) or a jump that is never reached shows `T:layout.unknownNumber`. Both ends have one color from `T:colors.jumpPalette`; several markers on a system stack from the edge. At junction 0 (no source system) the start and at junction N (no next system) the end sit on the bar of that junction. *(Changed after review: formerly badges on the bars with page·bar labels, then print numbers.)* | changed | MRK-009 | V2-M4 |
+| ORG-019 | v1·changed | A long press (`T:layout.longPressMs`) on a jump marker scrolls to the other end of the jump. | changed | MRK-032 | V2-M10 |
+| ORG-020 | v1·changed | Tapping a jump marker selects the jump; the chip then offers pass, change target and delete. | changed | MRK-042 | V2-M10 |
+| ORG-021 | v1·changed | A marks-list button opens the list of jumps, slide breaks and stops in the order of the final playing order: an item is placed where the playing position first meets it (a jump where it fires, a stop where it ends the order). Items that are never reached follow at the end, dimmed: jumps in creation order, then breaks, then stops. Labels use playing-order numbers: jump "<previous> → <next> ×<pass>" with its color, slide break scissors icon and "<previous> \| <next>", stop the stop icon and "<previous>". Compact layouts show a sheet; expanded layouts show a panel beside the button on the side of the tool strip, which never covers the viewer's scroll bar. Tapping an entry navigates to it and selects it; a swipe to the left or a trash icon deletes it. *(Changed after review.)* | changed | MRK-040 | V2-M10 |
+| ORG-022 | v1·done | The break icon toggles a slide break on the selected junction; a break shows as a solid line in `T:colors.breakLine` with a scissors icon at the left edge. | changed | MRK-003 | V2-M4 |
+| ORG-023 | v1·done | The stop icon toggles a stop on the selected junction; it shows the stop icon on the bar. | changed | MRK-003 | V2-M4 |
+| ORG-024 | v1·done | Deleting a jump, break or stop is immediate and has no undo. | changed | ANN-014 | V2-M7 |
+| SLD-009 | v1·done | Filler that overlaps the padded area of a system not on this slide is covered, over the full slide width and the vertical extent of that area, by `T:colors.canvasGrey` at `T:colors.overlayOpacity`. | changed | SLD-029 | V2-M13 |
+| SLD-014 | v1·done | The global default ratio is stored per orientation; its first value is the presentation-mode viewport ratio captured at the first presentation entry in that orientation, before that the device screen ratio; rounded to `T:aspectRatio.roundDecimals` and clamped. | changed | SLD-020 | V2-M13 |
+| SLD-017 | v1·done | "Show more" and "show less" buttons are in the bottom bar (expanded) or the overflow menu (compact), in annotation mode. | changed | SLD-019 | V2-M13 |
+| ANN-001 | v1·done | Tools are pen, highlighter, eraser. The active tool's button has the toggled look (UIX-011). | changed | ANN-031 | V2-M12 |
+| ANN-003 | v1·done | Each tool remembers its last color and width index in the preferences store; defaults `T:annotation.defaultPen` and `defaultHighlighter`. | changed | ANN-024 | V2-M11 |
+| ANN-004 | v1·done | Pen and highlighter each offer 6 color presets and 3 widths (`T:colors.penPresets`, `highlighterPresets`, `T:annotation.penWidthsPt`, `highlighterWidthsPt`); the highlighter uses opacity `T:annotation.highlighterOpacity` with multiply blending. | changed | ANN-022 | V2-M11 |
+| ANN-006 | v1·done | Undo and redo cover added and erased strokes per document, up to `T:annotation.undoDepth` steps, and are cleared when the document closes. | changed | ANN-014 | V2-M7 |
+| NAV-002 | v1·done | Keys (`T:keymap`): next = PageDown, ArrowRight, ArrowDown, Space; previous = PageUp, ArrowLeft, ArrowUp, Shift+Space; first = Home; last = End. Keys with Ctrl, Alt or Meta are ignored. | changed | NAV-021 | V2-M7 |
+| UIX-001 | v1·done | The modes are organization, annotation and presentation; the current mode is global state. | changed | UIX-025 | V2-M5 |
+| UIX-004 | v1·done | Compact annotation layout: top bar with tab switcher, open-file, mode switch, undo, redo; bottom bar with previous, "slide x of n", next, zoom −, zoom +, zoom reset; one floating button expands to pen, highlighter, eraser; aspect-ratio buttons and the version info sit in the overflow menu. | changed | FIL-021 | V2-M6 |
+| UIX-005 | v1·done | Expanded annotation layout: tab bar on top; vertical tool strip on `T:layout.toolStripSide` with pen, highlighter, eraser, undo, redo; popup next to it; the same bottom bar plus the aspect-ratio buttons. | changed | FIL-021 | V2-M6 |
+| UIX-006 | v1·done | Organization layout uses the same frame; the tool strip is replaced by level selector, marks-list button and overflow; the bottom bar shows "page x of n", previous, next and zoom buttons. In compact layout the organization controls sit behind one overflow button that opens a sheet. | changed | ORG-042 | V2-M10 |
+| PLT-011 | v1·todo | On every push the E2E suite runs on Chromium, Firefox and WebKit, including Android and iPad/iPhone device profiles. | changed | TST-018 | V2-M17 |
+| NFR-009 | v1·done | Inactive tabs release their bitmaps and keep only lightweight document data. | changed | NFR-020 | V2-M6 |
+| PIP-001 | v1·changed | Pipeline `lint-test` runs on every push to every branch (not on tag pushes): lint, lint self-test, unit tests and the production build. E2E on three engines runs in the separate workflow `e2e` on every push, one job per Playwright project (nine in parallel), each building for itself; it is temporarily optional: `deploy-web` and `android` do not wait for it (DEC-100). No artifacts are used (free-account storage quota). | changed | PIP-012 | V2-M1 |
+| PIP-005 | v1·done | The version string is `git describe --tags --always --long` (checkout with full history), injected at build time and shown in the app (UIX-015). | changed | PIP-018 | V2-M1 |
+| PIP-006 | v1·done | Android `versionName` is the version string and `versionCode` is the commit count. | changed | PIP-019 | V2-M1 |
+| STY-001 | v1-optional·done | The first pointer event with `pointerType` `pen` sets a persisted flag `stylusSeen`. | dropped | ANN-019 | V2-M11 |
+| STY-002 | v1-optional·done | With `stylusSeen`, the pen draws and fingers zoom, pan, tap and swipe but never draw; tap zones and swipes work with a tool active. | changed | ANN-018 | V2-M11 |
+| STY-003 | v1-optional·done | A setting "allow finger drawing" in the pen popup (default `T:stylus.allowFingerDrawingDefault`) lets fingers draw even with `stylusSeen`. | dropped | ANN-019 | V2-M11 |
+
+## V2 requirement map
+
+From the identifiers of `docs/v2-requirements.md` (`R-xxx`, `D-n`, idea `#n`) to the entries of `requirements.md` (V2-M0 S1). An ID may serve several sources; each entry belongs to one V2 milestone (in brackets). V1 IDs marked "unchanged" already state the V2 behavior. "DEC (M0 S2)" = a decision without its own requirement, recorded in `docs/decisions.md`.
+
+| V2 source | Requirement IDs (V2 milestone) |
+|---|---|
+| R-UX1 | DET-033 (V2-M8), UIX-021 (V2-M5) |
+| R-1a | FIL-020 (V2-M6) |
+| R-1b | FIL-025 (V2-M6) |
+| R-1c | FIL-021 (V2-M6), FIL-022 (V2-M6) |
+| R-1d | FIL-022 (V2-M6) |
+| R-1e | FIL-023 (V2-M6) |
+| R-1f | FIL-024 (V2-M6) |
+| R-1g | FIL-025 (V2-M6), FIL-026 (V2-M6) |
+| R-1h | FIL-027 (V2-M6) |
+| R-1i | FIL-028 (V2-M6) |
+| R-1j | FIL-029 (V2-M6), FIL-030 (V2-M6), FIL-001 (V1, unchanged) |
+| R-1k | FIL-031 (V2-M6) |
+| R-1l | NFR-020 (V2-M6) |
+| R-1m | FIL-032 (V2-M6) |
+| R-1n | TST-021 (V2-M17) |
+| R-2a | STO-008 (V2-M19) |
+| R-2b | STO-009 (V2-M19) |
+| R-4b | SLD-019 (V2-M13) |
+| R-4c | SLD-020 (V2-M13), SLD-021 (V2-M13), SLD-022 (V2-M13) |
+| R-5a-d | UIX-029 (V2-M5), UIX-030 (V2-M5) |
+| R-6a | ANN-002 (V1, unchanged) |
+| R-6b | ANN-020 (V2-M11) |
+| R-6c | ARC-004 (V1, unchanged) |
+| R-6d | ANN-019 (V2-M11), UIX-023 (V2-M5), UIX-024 (V2-M5) |
+| R-6e | UIX-022 (V2-M5) |
+| R-7a | ANN-022 (V2-M11) |
+| R-7b | ANN-023 (V2-M11) |
+| R-7c | ANN-024 (V2-M11) |
+| R-7d | ANN-025 (V2-M11) |
+| R-7e | ANN-026 (V2-M11) |
+| R-7f | ANN-026 (V2-M11) |
+| R-7g | ANN-027 (V2-M11) |
+| R-8a | GEN-012 (V2-M3), GEN-006 (V1, unchanged) |
+| R-8b | EDN-014 (V2-M3), EDN-015 (V2-M3), EDN-016 (V2-M3) |
+| R-8c | STO-006 (V2-M19), GEN-005 (V1, unchanged) |
+| R-8d | NFR-017 (V2-M1), NFR-018 (V2-M1) |
+| R-10a-h | ORG-030 (V2-M8), ORG-031 (V2-M8) |
+| R-11a | TST-009 (V2-M1), TST-018 (V2-M17), BKL-022 (device farms: later) |
+| R-11b | TST-019 (V2-M17) |
+| R-12a | GEN-013 (V2-M5), UIX-025 (V2-M5), BKL-009 (pedal remapping: V3) |
+| R-12b | UIX-026 (V2-M5) |
+| R-12c | ARC-008 (V2-M1) |
+| R-12d | ARC-009 (V2-M3) |
+| R-13a | TST-010 (V2-M2) |
+| R-13b | TST-011 (V2-M2) |
+| R-13c | TST-012 (V2-M2) |
+| R-13d | TST-013 (V2-M2), TST-014 (V2-M2) |
+| R-13e | TST-015 (V2-M2) |
+| R-13f | TST-015 (V2-M2) |
+| R-13g | DET-032 (V2-M8), TST-002 (V1, unchanged) |
+| R-14a | TST-016 (V2-M2) |
+| R-14b | ARC-007 (V2-M1) |
+| R-14c | PIP-013 (V2-M1), PIP-014 (V2-M1), PIP-015 (V2-M1) |
+| R-15a | PIP-016 (V2-M1) |
+| R-15b | PIP-017 (V2-M1) |
+| R-16a | PIP-018 (V2-M1) |
+| R-16b | PIP-020 (V2-M1) |
+| R-16c | PIP-020 (V2-M1) |
+| R-16d | PIP-021 (V2-M19), PIP-005 (V1 source of the version, unchanged) |
+| R-16e | PIP-020 (V2-M1) |
+| R-16f | PIP-019 (V2-M1) |
+| R-17a | NAV-025 (V2-M13) |
+| R-17b | NAV-025 (V2-M13) |
+| R-17c | NAV-026 (V2-M13) |
+| R-17d | NAV-027 (V2-M13) |
+| R-18a | DET-001 (V1, unchanged) |
+| R-18b | DET-023, SAV-005 (V1, unchanged) |
+| R-18c | DET-025 (V2-M8), DET-026 (V2-M8) |
+| R-18e | DET-027 (V2-M8), DET-028 (V2-M8) |
+| R-18f | DET-029 (V2-M8) |
+| R-18g | DET-002, DET-019, DET-021, NFR-003 (V1, unchanged) |
+| R-19a | DET-030 (V2-M8) |
+| R-19b | ORG-042 (V2-M10) |
+| R-19c | DET-030 (V2-M8), DET-031 (V2-M8), DET-032 (V2-M8), DET-033 (V2-M8) |
+| R-19d | ORG-026 (V2-M8), ORG-027 (V2-M8) |
+| R-19f | ORG-042 (V2-M10) |
+| R-19g | ORG-025 (V2-M8) |
+| R-19i | ORG-028 (V2-M8) |
+| R-19j | ORG-029 (V2-M8) |
+| R-19m-t | GEN-013 (V2-M5), HNT-001 (V2-M16), HNT-002 (V2-M16), HNT-003 (V2-M16), HNT-004 (V2-M16), HNT-005 (V2-M16), HNT-006 (V2-M16), HNT-007 (V2-M16), HNT-008 (V2-M16) |
+| R-20a | SAV-018 (V2-M12), ANN-031 (V2-M12), ANN-045 (V2-M12) |
+| R-20b | ANN-032 (V2-M12) |
+| R-20c | ANN-033 (V2-M12) |
+| R-20g | ANN-043 (V2-M12) |
+| R-20h | ANN-044 (V2-M12) |
+| R-20i | ANN-021 (V2-M11) |
+| R-20j | GEN-013 (V2-M5), ANN-039 (V2-M12), ANN-040 (V2-M12) |
+| R-20m | ANN-041 (V2-M12) |
+| R-20n | ANN-042 (V2-M12) |
+| R-20p | ANN-034 (V2-M12), ANN-035 (V2-M12), ANN-036 (V2-M12) |
+| R-21a | EXP-001 (V2-M15), EXP-002 (V2-M15) |
+| R-21b | EXP-003 (V2-M15) |
+| R-21c | EXP-004 (V2-M15) |
+| R-21d | EXP-006 (V2-M15) |
+| R-21e | EXP-005 (V2-M15) |
+| R-21f | EXP-001 (V2-M15) |
+| R-21g | EXP-007 (V2-M15) |
+| R-22a | EDN-001 (V2-M3), EDN-002 (V2-M3) |
+| R-22b | EDN-003 (V2-M3) |
+| R-22c | EDN-004 (V2-M3) |
+| R-22d | ORG-048 (V2-M13), EDN-005 (V2-M3) |
+| R-22e | EDN-006 (V2-M3), EDN-007 (V2-M3), EDN-008 (V2-M3) |
+| R-22g | EDN-010 (V2-M3), STO-001 (V2-M19) |
+| R-22h | STO-002 (V2-M19) |
+| R-22i | GEN-011 (V2-M3), STO-003 (V2-M19) |
+| R-22j | TST-020 (V2-M17), EDN-011 (V2-M3), EDN-012 (V2-M3) |
+| R-22k | TST-020 (V2-M17), EDN-013 (V2-M3) |
+| R-22l | EDN-009 (V2-M3) |
+| R-23a-f | SLD-029 (V2-M13), SLD-008, UIX-009 (V1, unchanged) |
+| R-26a | ORG-047 (V2-M13) |
+| R-26b | NAV-023 (V2-M13) |
+| R-26c | NAV-023 (V2-M13) |
+| R-26d | NAV-024 (V2-M13), NAV-017 (V1, unchanged) |
+| R-27a | NFR-021 (V2-M14) |
+| R-27b | NFR-021 (V2-M14) |
+| R-28a | MRK-018 (V2-M10) |
+| R-28b | MRK-019 (V2-M10) |
+| R-28c | MRK-020 (V2-M10), MRK-021 (V2-M10) |
+| R-28d | MRK-022 (V2-M10) |
+| R-28e | GEN-013 (V2-M5), MRK-009 (V2-M4), MRK-031 (V2-M10) |
+| R-28f | MRK-009 (V2-M4) |
+| R-28g | MRK-024 (V2-M10) |
+| R-28h | MRK-024 (V2-M10) |
+| R-28i | MRK-025 (V2-M10) |
+| R-28j | MRK-026 (V2-M10) |
+| R-28k | MRK-002 (V2-M4), MRK-003 (V2-M4), MRK-004 (V2-M4), MRK-005 (V2-M4), MRK-006 (V2-M4), MRK-007 (V2-M4) |
+| R-28l | MRK-010 (V2-M4), MRK-011 (V2-M4), MRK-032 (V2-M10) |
+| R-28m | MRK-027 (V2-M10), MRK-028 (V2-M10) |
+| R-28n | ORG-043 (V2-M10), ORG-044 (V2-M10), ORG-045 (V2-M10) |
+| R-28o | MRK-019 (V2-M10) |
+| R-28p | MRK-029 (V2-M10) |
+| R-28q | MRK-029 (V2-M10) |
+| R-28r | MRK-030 (V2-M10) |
+| R-29 | MRK-007 (V2-M4) |
+| R-29a-f | MRK-033 (V2-M10), MRK-034 (V2-M10), MRK-035 (V2-M10) |
+| R-30a | MRK-009 (V2-M4) |
+| R-30b | MRK-037 (V2-M10) |
+| R-30c | MRK-038 (V2-M10) |
+| R-30d | MRK-039 (V2-M10) |
+| R-30e | MRK-009 (V2-M4) |
+| R-30f | FIL-042 (V2-M6) |
+| R-30g | FIL-043 (V2-M6) |
+| R-30h | MRK-016 (V2-M6), MRK-017 (V2-M6) |
+| R-30i | FIL-044 (V2-M6) |
+| R-30j | FIL-045 (V2-M6) |
+| R-30k | FIL-002 (V1, unchanged) |
+| R-32a | STO-004 (V2-M19), STO-005 (V2-M19) |
+| R-34a | STO-010 (V2-M19) |
+| R-34b | STO-011 (V2-M19) |
+| R-34c | STO-012 (V2-M19) |
+| R-34d | no requirement (branding decided later by the owner) |
+| R-35a | STO-013 (V2-M19) |
+| R-36a | ORG-034 (V2-M9), ORG-041 (V2-M9) |
+| R-36b | ORG-035 (V2-M9), ORG-036 (V2-M9) |
+| R-36c | ORG-037 (V2-M9) |
+| R-36d | DET-034 (V2-M8), ORG-039 (V2-M9) |
+| R-36h | ORG-038 (V2-M9) |
+| R-36i | ORG-040 (V2-M9) |
+| R-37a | ORG-032 (V2-M8) |
+| R-37b | ORG-032 (V2-M8) |
+| R-37c | ORG-033 (V2-M8) |
+| R-38a | UIX-031 (V2-M14) |
+| R-38b | UIX-031 (V2-M14) |
+| R-39b | ORG-047 (V2-M13) |
+| R-39c | ORG-048 (V2-M13) |
+| R-40a | MRK-040 (V2-M10) |
+| R-40b | MRK-041 (V2-M10) |
+| R-40c | MRK-042 (V2-M10), MRK-043 (V2-M10) |
+| R-44a | PIP-011 (V2-M1), PIP-012 (V2-M1) |
+| R-46a | UIX-014 (V1, unchanged) |
+| R-46b | UIX-027 (V2-M5) |
+| R-46c | UIX-028 (V2-M5) |
+| R-46d | UIX-032 (V2-M14) |
+| R-47b | I18-003 (V2-M5) |
+| R-47g | I18-004 (V2-M5) |
+| R-47i | I18-005 (V2-M16), I18-006 (V2-M16), I18-007 (V2-M19) |
+| R-52a-c | ANN-028 (V2-M11) |
+| R-53a | ANN-029 (V2-M11), ANN-030 (V2-M11) |
+| R-53b | ANN-010 (V1, unchanged) |
+| R-54a | FIL-033 (V2-M6), FIL-035 (V2-M6) |
+| R-54b | FIL-036 (V2-M6), FIL-037 (V2-M6) |
+| R-54c | FIL-038 (V2-M6) |
+| R-54d | FIL-034 (V2-M6) |
+| R-54e | PLT-017 (V2-M17) |
+| R-54f | FIL-039 (V2-M6), FIL-040 (V2-M6) |
+| R-54h-k | FIL-041 (V2-M6) |
+| R-55a | NAV-021 (V2-M7), NAV-022 (V2-M7), ANN-014 (V2-M7), ANN-015 (V2-M7), ANN-016 (V2-M7), ANN-017 (V2-M7) |
+| R-57a | PLT-004, PLT-016 (V1, unchanged) |
+| R-57b | PLT-004, PLT-016 (V1, unchanged) |
+| R-58a | NFR-022 (V2-M14) |
+| R-58b | NFR-023 (V2-M14) |
+| R-58c | NFR-023 (V2-M14) |
+| R-58d | TST-017 (V2-M14) |
+| R-58e | NFR-024 (V2-M14) |
+| R-59a | MRK-036 (V2-M10) |
+| R-60a | SLD-023 (V2-M13) |
+| R-60b | SLD-024 (V2-M13), SLD-025 (V2-M13) |
+| R-60c | SLD-026 (V2-M13) |
+| R-60d | SLD-027 (V2-M13), SLD-028 (V2-M13) |
+| R-60e | SLD-023 (V2-M13) |
+| R-61 | ORG-046 (V2-M12) |
+| D-1 | FIL-041 (V2-M6), MRK-012 (V2-M4), FIL-002 (V1, unchanged); DEC (M0 S2) |
+| D-2 | DEC (M0 S2); values set in the implementing milestone |
+| D-3 | I18-007 (V2-M19), DEC (M0 S2) |
+| D-4 | STO-002 (V2-M19), STO-005 (V2-M19), DEC (M0 S2) |
+| D-5 | FIL-035 (V2-M6) |
+| D-6 | FIL-046 (V2-M6), FIL-047 (V2-M6), FIL-006 (V1, unchanged) |
+| D-7 | EDN-008 (V2-M3), EDN-014 (V2-M3), DEC (M0 S2) |
+| D-8 | MRK-017 (V2-M6) |
+| D-9 | EDN-015 (V2-M3) |
+| D-10 | MRK-008 (V2-M4), MRK-010 (V2-M4), MRK-023 (V2-M10) |
+| D-11 | ORG-042 (V2-M10) |
+| D-12 | ORG-028 (V2-M8), MRK-009 (V2-M4), MRK-010 (V2-M4) |
+| D-13 | PLY-015 (V2-M4), MRK-006 (V2-M4) |
+| D-14 | MRK-040 (V2-M10) |
+| D-15 | DET-030 (V2-M8), DET-031 (V2-M8) |
+| D-16 | DET-027 (V2-M8), DET-028 (V2-M8) |
+| D-17 | ANN-018 (V2-M11), ANN-019 (V2-M11), STY-004 (V1, unchanged) |
+| D-18 | SLD-020 (V2-M13), SLD-013, SLD-015 (V1, unchanged) |
+| D-19 | UIX-031 (V2-M14) |
+| D-20 | FIL-026 (V2-M6) |
+| D-21 | ANN-037 (V2-M12), ANN-038 (V2-M12), DEC (M0 S2, Bravura dependency) |
+| D-22 | TST-016 (V2-M2) |
+| D-23 | TST-009 (V2-M1), TST-019 (V2-M17) |
+| D-24 | ANN-017 (V2-M7), MRK-013 (V2-M4), MRK-014 (V2-M4), MRK-015 (V2-M4) |
+| D-25 | FIL-048 (V2-M16) |
+| D-26 | MRK-011 (V2-M4), MRK-032 (V2-M10) |
+| D-27 | ORG-046 (V2-M12) |
+| D-28 | DEC (M0 S2); BKL-025 |
+| D-29 | DEC (M0 S2); BKL-008 |
+| D-30 | DEC (M0 S2); BKL-013 |
+| D-31 | SAV-015 (V2-M4), SAV-016 (V2-M4), SAV-017 (V2-M4), PLY-014 (V2-M4), PLY-016 (V2-M4), MRK-001 (V2-M4), MRK-012 (V2-M4), DEC (M0 S2) |
+| D-32 | EDN-008 (V2-M3), EDN-011 (V2-M3) |
+| #24 | dropped (no requirement) |
+| #42 | NFR-019 (V2-M1), STO-007 (V2-M19) |
+| #48 | NFR-019 (V2-M1) |
+| #49 | PIP-015 (V2-M1) |
+| #50 | MRK-036 (V2-M10) |
+| #51 | merged into R-58a…e (see those rows) |
+| #55 | BKL-025 (V3) |
+| #56 | ANN-018 (V2-M11) |
+| #57 | PLT-004, PLT-016 (V1, unchanged) |
+| #59 | MRK-036 (V2-M10) |
+| BKL-008 | V3 (limitations.md) |
+| BKL-013 | V3 (limitations.md) |
+| BKL-023 | dropped (limitations.md); see D-27 |
