@@ -6,7 +6,7 @@ Milestone files live in `docs/milestones/V1-Mnn.md` (one per milestone, self-con
 
 - Milestones of version 1 are named `V1-M<n>` and tagged **`v0.<n>.0`** (e.g. `V1-M5` → `v0.5.0`; the baseline M0 → `v0.0.0`). Fixes between milestones: `v0.5.1`. The minor number is always the milestone number; unplanned work becomes a new milestone with the next free number.
 - **Release of v1:** when the last milestone you include in v1 is finished (M17 at the earliest; M18 and M19 are optional), tag the **same commit** additionally **`v1.0.0`** — an annotated tag (`git tag -a v1.0.0 -m "v1"`), created last, so `git describe --tags` shows it for that commit — and publish a GitHub release note. Example: `v0.17.0` and `v1.0.0` point to the same commit.
-- After the release: fixes `v1.0.1`, small additions `v1.1.0`, and so on. For the next major version V2 the recommended pattern is semver pre-release tags `v2.0.0-m.<n>` for its milestones and `v2.0.0` for the release (decided when V2 is planned; the `v1.<n>.0` range would collide with maintenance releases of v1).
+- After the release: fixes `v1.0.1`, small additions `v1.1.0`, and so on. *(Superseded for V2 by DEC-131 and `roadmap-v2.md`: V2 milestones are tagged `v1.<n>.0`, release `v2.0.0`; until `v2.0.0` exists V1 fixes are patch-only `v1.0.<p>`, so "small additions `v1.1.0`" no longer applies.)*
 - M0c is a review, not a build: no tag. Tags deploy nothing by themselves.
 - Versions below 1.0.0 are pre-release milestones: they show progress, not stability.
 
