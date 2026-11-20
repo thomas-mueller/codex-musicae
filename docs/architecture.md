@@ -17,6 +17,8 @@ Follow what `ng new` generated for naming. Layers live under `src/app/`; the tun
 ```
 src/
   config/tunables.ts            all numbers, colors, icon names, key bindings
+  config/features.web.ts        V2: feature switches of the web build (free set); see "Version 2"
+  config/features.native.ts     V2: feature switches of the native free build; the paid build forces them all on
   app/
     app.config.ts               composition root: wires ports to adapters (only place that imports adapters)
     core/                       pure TypeScript, one file per topic (subfolders only when a topic grows)
@@ -32,6 +34,7 @@ src/
       aspect-ratio.ts           ratio steps, orientation
       fixtures/                 verified test data (see docs/contracts)
       (later)                   annotation, metadata, scheduling, version
+      (V2, planned)             marks.ts, labels.ts, migrate-v1.ts (V2-M4), history.ts (V2-M7), boxes.ts (V2-M9), gestures.ts (V2-M13)
     ports/                      interfaces + InjectionTokens (+ Result and error types)
     adapters/
       web/                      browser implementations
@@ -58,6 +61,8 @@ src/
 | `config/` | nothing |
 | `app.config.ts`, `main.ts` | everything (composition root) |
 
+**V2 change (DEC-130):** the feature-configuration files `config/features.*.ts` may be imported only by the composition root, which provides their content through the `FeatureFlags` token; every other layer reads the token. The rest of the matrix is unchanged.
+
 Platform APIs (`navigator.wakeLock`, the Fullscreen API, `showOpenFilePicker`, `localStorage`, `IndexedDB`, Capacitor plugins) are banned by lint outside `adapters/` and the composition root.
 
 ## Port catalogue
@@ -67,15 +72,19 @@ Signatures are fixed in the milestone files (M4); this table fixes responsibilit
 | Port | Responsibility | Implementations | First used |
 |---|---|---|---|
 | `PdfRenderer` | open a document from bytes; page count; page geometry in display space; render a region or tile to an `ImageBitmap` with cancellation | pdf.js | M8 |
-| `PdfWriter` | read embedded metadata and existing ink; produce new file bytes with ink annotations and metadata (runs in a worker) | pdf-lib | M15 |
-| `DetectionEngine` | binarize one page's bitmap (rendered at a level's scale) with the level's adaptive threshold and return its connected components (rectangle and pixel area) | OpenCV.js worker | M10 |
+| `PdfWriter` | read embedded metadata and existing ink; produce new file bytes with ink annotations and metadata (runs in a worker); V2: text and stamp annotations with appearance streams (V2-M12), flattened export copy (V2-M15) | pdf-lib | M15 |
+| `DetectionEngine` | binarize one page's bitmap (rendered at a level's scale) with the level's adaptive threshold and return its connected components (rectangle and pixel area); V2: a parameter set (width and height limits, dpi) replaces the levels, and the component boxes are returned for refinement (V2-M8) | OpenCV.js worker | M10 |
 | `FileAccess` | pick files; read bytes; check writability; write in place; save a copy; persist and restore file references | web (File System Access / download), Android (SAF plugin) | M8, M15, M16 |
 | `Preferences` | small JSON key-value store for UI state and file references | localStorage + IndexedDB, Capacitor Preferences | M8 |
 | `AppLifecycle` | signals for hidden/visible, pause/resume, battery saver where detectable | web, Capacitor | M10, M15 |
 | `Fullscreen` | enter/exit true fullscreen, report exits | Fullscreen API, Android immersive | M16 |
 | `WakeLock` | acquire/release keep-awake | Screen Wake Lock, Android keep-awake | M16 |
-| `OpenWith` | stream of incoming file references from the OS | Android intent, web file handler | M16 |
+| `OpenWith` | stream of incoming file references from the OS; V2: also Android `SEND` and the iOS share sheet (share-in, V2-M6) | Android intent, web file handler | M16 |
 | `BackButton` | register back handlers with priority | Capacitor (Android) | M16 |
+| `FeatureFlags` (V2) | read-only feature switches of the build (EDN-006…EDN-008) | provided by the composition root from `config/features.*.ts` | V2-M3 |
+| `SendFile` (V2) | hand an exported PDF to the system share sheet or save it as a local copy (EXP-003) | Capacitor share (Android, iOS), local copy; no web adapter (the web build does not provide the token; features inject it as optional) | V2-M15 |
+
+V2 adds no port for the persistence switch: the composition root wraps `Preferences` and the persisted file-reference part of `FileAccess` in switch-aware wrappers; each persistence switch (settings, recent files, session restore, per-file choices, zoom) decides what its wrapper drops (V2-M3).
 
 iOS (M18) and older-platform fallbacks add implementations only.
 
@@ -87,6 +96,8 @@ All stores use signals; components never mutate them directly.
 - **`DocumentStore` (one per tab):** document handle, page geometries, detection results per page and progress, jumps, breaks, stops, aspect-ratio override, ink annotations per page, undo/redo, save status, read-only flag, current position (system index and organization page). Derived with `computed()` from `core/`: junctions and bars, playing order, numbers, slides, slide count.
 - **`UiStore`:** global mode, active tool, popups, selection (junction/jump), jump-target picking, presentation flag.
 - **`PreferencesStore`:** persisted settings (tool colors and widths, ratio defaults per orientation, recent files, stylus flag) through the `Preferences` port.
+
+**V2 changes:** `SessionStore` holds the open files in opening order behind one file entry (no tabs); `DocumentStore` holds marks on system sides (instead of jumps, breaks and stops on junctions), user-edited systems and the per-page component boxes; an `EditHistoryStore` keeps one undo history per document and mode (V2-M7); a `SettingsRegistry` declares every setting with its default, group, feature switch and reset handler (V2-M5); a `HintService` drives the first-run hints (V2-M16).
 
 ## Input layer
 
@@ -125,6 +136,30 @@ Port methods return `Result<T, E>` with a closed set of error codes per port; ad
 - **Golden detection corpus** and **PDF round trip** (M17); **performance budgets** against a large reference PDF (M17).
 - Tests carry requirement IDs in their names.
 
+## Version 2
+
+Overview of the structural changes of V2 (`docs/roadmap-v2.md`); the milestone files hold the details.
+
+### Marks on systems (DEC-129, V2-M4)
+
+- **Data model (`core/marks`):** a mark is `{ system, side, kind, userText? }` with `side` left (`start`, `jumpTarget`, `bookmark`) or right (`jumpStart`, `stop`, `slideBreak`). A jump pairs a `jumpStart` with a `jumpTarget` and has a pass number ≥ 1; its target may be a cross-file reference. Rules (one stop per system, none on the last system, one start mark per file) live in `core/` (MRK-001…MRK-008).
+- **Junction derivation:** `core/` maps sides to the V1 junctions (right side of system k → junction k, left side of system k → junction k−1; the start mark gives the start junction) and runs the unchanged V1 replay (PLY-014…PLY-016). Slides, numbers and the marks list stay `computed()` over `core/`.
+- **Labels (`core/labels`):** `<file>:<page>:<system on page>`, file omitted within the same file; jumps `start -> target ×n` (MRK-009…MRK-011).
+- **Storage:** a new `schemaVersion` in the embedded JSON; `core/migrate-v1` converts the V1 junction form on read; saving writes the new schema only (SAV-015…SAV-017).
+- **Deletion rules:** deleting a system deletes the marks on it; a page rerun keeps that page's marks only with an unchanged system count (MRK-013, MRK-014).
+
+### Edition configuration (DEC-130, V2-M3)
+
+- Two feature files in `src/config/`: `features.web.ts` (web, free set) and `features.native.ts` (native free set). Each holds one commented boolean per feature; separate from `tunables.ts`. Switches of web-only features exist in `features.web.ts` only.
+- Build configurations `web`, `native-free` and `native-paid` select the file through `fileReplacements` (`native-free` and `native-paid` the same one); `native-paid` also sets the build constant `edition`, and the composition root then provides all switches as `true`. Each build bundles only its own file.
+- The composition root provides the content through the `FeatureFlags` token in `ports/`; features and stores read the token, never the files (import rule above). A check fails the build when a shared switch is missing in either file or a web-only switch appears in the native file (EDN-013); an ESLint rule keeps the files out of every module but the composition root (V2-M3 S1).
+- Persistence is switched by the wrappers described under the port catalogue; no feature branches on the edition.
+
+### Cross-file references (DEC-128, V2-M4, V2-M6)
+
+- A reference is `{ fileName, page, systemOnPage }` and is stored only in the embedded metadata of the file where the mark was created (MRK-012).
+- Resolution runs in `state/`: the file is looked up by name among the open files and the files with persisted access through `FileAccess`; none or several matches leave the reference unresolved (FIL-042, FIL-043). An unresolved reference stays stored, and slide mode stops at it (MRK-016).
+
 ## Angular guideline conformance
 
 Standalone components, signals, OnPush, zoneless, `inject()` and injection tokens, strict TypeScript, `angular-eslint`, CLI-generated naming. Deliberate additions: top-level layer folders (to keep `core/` framework-free); within `features/` the structure is by feature, as the style guide recommends.
@@ -134,9 +169,9 @@ Standalone components, signals, OnPush, zoneless, `inject()` and injection token
 | Future change | Where it lands |
 |---|---|
 | ML detection | new `DetectionEngine` adapter |
-| Cross-PDF setlists | new `core/` model + new store |
+| Cross-PDF setlists (BKL-003, V3) | new `core/` model + new store; builds on cross-file references |
 | iOS | new adapters (M18) |
 | Older platforms | one more adapter per port, no feature changes |
 | New language | one translation file |
 | New metadata fields | new `schemaVersion` + migration in `core/metadata` |
-| Key remapping | the keymap is already data; add a UI and a persisted override |
+| Key remapping and further shortcuts (BKL-009, BKL-025, V3) | the keymap is already data; add a UI and a persisted override |

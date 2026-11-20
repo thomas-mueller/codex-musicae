@@ -15,7 +15,6 @@
 - **GEN-006** No account, backend, analytics or crash reporting: a design property, partly guarded by `scripts/check-static-compliance.mjs` (no network requests or CDN) which runs in `npm run lint`; it has no test that names the ID.
 - **PIP-002** `deploy-web` is a GitHub workflow; its behaviour is seen when it runs.
 - **PIP-003** `android` is a GitHub workflow (signed APK, Firebase App Distribution); seen when it runs.
-- **PIP-006** `versionName` and `versionCode` are computed in the Gradle build from git; seen in the built APK.
 - **PIP-007** The composite action `.github/actions/build-web` is used by the workflows; seen when they run.
 - **PIP-008** Secrets live in GitHub; nothing in the repository to test.
 - **PIP-009** Tag naming is the owner's convention (`docs/roadmap.md`); the owner tags.
@@ -28,7 +27,6 @@
 ## Configuration values without a test (cheap to add later)
 
 - **GEN-001** `T:identity.appName` is read by the web manifest and Android resources; no test asserts the generated names.
-- **GEN-002** `T:identity.appId` is used for the Android `applicationId` and the Capacitor `appId`; no test compares them.
 - **PLT-002** `minSdkVersion = 29` sits in `android/variables.gradle`; no test reads it.
 
 ## Covered, title lacks the ID
