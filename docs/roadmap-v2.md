@@ -23,7 +23,7 @@ As V1: a **step** is one agent session — one layer or feature area, about 15 r
 - Every new number, color, icon name or key binding goes into `src/config/tunables.ts` with a unit comment (R-12c).
 - Where a milestone has to change V1 behavior, it names the existing tests it may edit. No other existing test is edited (`AGENTS.md`).
 - Anything ambiguous goes to `docs/questions.md`; the agent stops.
-- Requirement IDs: M0 converts the `R-xxx` identifiers of the V2 requirements into `TOPIC-nnn` entries in `docs/requirements.md` and records the map in `docs/changelog.md`. The tables below use the V2 identifiers (`R-xxx`, `D-n`); the milestone files say which `TOPIC-nnn` they cover once M0 is done.
+- Requirement IDs: M0 (S1) entered the V2 requirements as `TOPIC-nnn` entries in `docs/requirements.md`; the map from `R-xxx` / `D-n` to these IDs is the section "V2 requirement map" in `docs/changelog.md`. The tables below keep the V2 identifiers as sources; each milestone file lists its `TOPIC-nnn` IDs in the line "Requirement IDs" under its header.
 
 ## Milestones
 

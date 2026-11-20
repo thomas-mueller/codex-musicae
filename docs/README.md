@@ -29,6 +29,7 @@ A PDF score viewer for instrumentalists: slide-by-slide navigation by music syst
 | `baseline.md` | facts of the M0 baseline (historical snapshot at `v0.0.0`) |
 | `android-ci.md` | Android build, signing and distribution pipeline (M3) |
 | `changelog.md` | every change to requirements after the first review |
+| `review-report.md` | independent document review (V1-M0c; for V2 run again by V2-M0 S2.3): findings and "needs decision" items |
 | `questions.md` | created by agents when a statement is ambiguous (stop and ask) |
 | `device-checklist.md` | manual tests on a real Android tablet: per-milestone items and the release checklist (M17) |
 | `tester-checklist-ios-safari.md` | text for asynchronous iOS Safari testers, sent with the hosted URL (M17) |
@@ -46,6 +47,7 @@ A PDF score viewer for instrumentalists: slide-by-slide navigation by music syst
 3. Then one fresh agent session per milestone in order: M1 … M17 (M18 iOS shell and M19 stylus are optional). Plan mode first; review the diff; commit and push it yourself (agents never do); tag `v0.<n>.0`; merge.
 4. Use the strongest model for M0c and M4, a mid-tier model for the rest, escalating only after two failed attempts. See `roadmap.md`.
 5. After M17 decide where v1 ends and tag that commit additionally `v1.0.0` (annotated): the v1 release.
+6. **Version 2:** do **V2-M0** (`milestones/V2-M00.md`: requirements, decisions, review, `AGENTS.md` update, owner tasks), then one fresh session per V2 milestone in order (`roadmap-v2.md`); tags `v1.<n>.0`, the release adds `v2.0.0`.
 
 ## Change workflow (after the first release)
 
