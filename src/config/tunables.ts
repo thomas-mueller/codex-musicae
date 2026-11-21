@@ -337,7 +337,7 @@ export const TUNABLES = {
 
   budgets: {
     slideChangeP95Ms: 200, // NFR-001
-    drawingMaxLongTaskMs: 50, // NFR-002
+    drawingMaxLongTaskMs: 400, // NFR-002 (ms): longest main-thread task; measured 189 ms (21 pages) and 305 ms (281 pages) on real scans while detection runs, V2-M2 owner decision
     drawingMaxAddedLatencyMs: 16, // NFR-002
     initialBundleKbGzip: 600, // NFR-014
     ciToleranceFactor: 2, // TST-008: performance tests allow this factor on CI machines
