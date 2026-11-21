@@ -12,6 +12,7 @@
     "build:ios-assets": "node scripts/build-ios-assets.mjs",
     "make:test-pdfs": "node scripts/make-test-pdfs.mjs",
     "traceability": "node scripts/check-traceability.mjs",
+    "corpus": "node scripts/corpus.mjs",
     "make:corpus": "node scripts/make-corpus.mjs",
     "make:large-pdf": "node scripts/make-large-pdf.mjs",
     "e2e:perf": "PERF=1 playwright test --project=perf",
