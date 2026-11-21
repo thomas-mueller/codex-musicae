@@ -1,7 +1,9 @@
 // Real-PDF corpus (V2-M2 S1, TST-010, TST-011): `npm run corpus [-- --offline] [--root <dir>]`.
 // Reads e2e/corpus/urls.txt (one URL per line), downloads each PDF into e2e/corpus/cache/ (git-ignored), records the checksum of the first
 // download in e2e/corpus/urls.lock.json and verifies it afterwards. Problems with a download are warnings, never a failed run.
+// Then the expectation helper (scripts/make-expected.mjs) proposes entries for new PDFs; `--no-expected` skips it, `--force` is passed on.
 // Tests and CI only; the shipped app makes no such request (R-8d).
+import { spawnSync } from 'node:child_process';
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fetchCorpus, httpDownload, parseUrlList, serializeLock } from './lib/corpus.mjs';
@@ -32,6 +34,10 @@ try {
   const inFolder = await countPdfs(join(root, 'real'));
   const { downloaded, cached, skipped } = result.summary;
   console.log(`corpus: ${inFolder} in folder, ${downloaded} downloaded, ${cached} cached, ${skipped} skipped (${urls.length} URLs)`);
+  if (!args.includes('--no-expected')) {
+    const helper = spawnSync(process.execPath, ['scripts/make-expected.mjs', '--root', root, ...(args.includes('--force') ? ['--force'] : [])], { stdio: 'inherit' });
+    if (helper.status !== 0) process.exit(helper.status ?? 1);
+  }
 } catch (error) {
   console.error(`corpus: cannot read the local input: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);

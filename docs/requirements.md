@@ -485,8 +485,8 @@ V2 terms (target `v2` entries):
 - **TST-010** [v2·done·M2] The real-PDF corpus consists of a repository folder and a plain list of URLs; either may be empty. The owner provides nothing but the PDF files or their URLs.
 - **TST-011** [v2·done·M2] URL-list PDFs are downloaded and cached by a script (run by tests and CI only); the script records each checksum on first download and verifies it afterwards; a failed download or a checksum mismatch skips the entry with a warning.
 - **TST-012** [v2·dropped·M2] Every corpus PDF has a license note (source, license, date). Dropped: licenses are not tracked for the test corpus (owner decision).
-- **TST-013** [v2·todo·M2] An expectation file extending `e2e/corpus/expected.json` gives the number of systems per page for every corpus PDF.
-- **TST-014** [v2·todo·M2] One easy-to-use script (`npm run corpus`) does all corpus bookkeeping: it downloads the listed URLs, records checksums, and proposes expectation entries; it never overwrites an entry marked as reviewed unless called with `--force`.
+- **TST-013** [v2·done·M2] An expectation file extending `e2e/corpus/expected.json` gives the number of systems per page for every corpus PDF.
+- **TST-014** [v2·done·M2] One easy-to-use script (`npm run corpus`) does all corpus bookkeeping: it downloads the listed URLs, records checksums, and proposes expectation entries; it never overwrites an entry marked as reviewed unless called with `--force`.
 - **TST-015** [v2·todo·M2] The corpus runs as detection regression test, and the largest real PDFs replace the generated reference PDF in the performance test.
 - **TST-016** [v2·todo·M2] Generated synthetic scores and the generated large reference PDF are removed; only the failure-case fixtures damaged, zero pages, blank page and encrypted stay.
 - **TST-017** [v2·todo·M14] Seeded random stress tests (page jumps, scrolling, zoom sequences, mode switches, rendering during detection) assert that no visible tile stays blank; the seed is printed on failure and budgets are in `T:budgets`.
