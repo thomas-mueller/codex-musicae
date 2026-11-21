@@ -3,17 +3,18 @@ import { expect, test } from '@playwright/test';
 import { desktopTest } from './support/desktop';
 import { inkedPixelsNear } from './support/pixels';
 import { DETECTION_TIMEOUT_MS } from './support/timing';
-import { openScore, scoreBytes, SYNTHETIC_BARS, SYNTHETIC_SYSTEMS, waitForBars, waitForFinalSlideCount } from './support/score';
+import { openScore, scoreBytes, SCORE_BARS, SCORE_SYSTEMS, waitForBars, waitForFinalSlideCount } from './support/score';
 import {
   addJumpToStart, COLOR_TOLERANCE, drag, enterAnnotation, enterOrganization, forceFilePaths, inspect, openPdf, qpdfCheck, RED,
-  redPixelsOnSlide, saveCopyDownload, shorterPdfWithMetadata, strokeLine, tool,
+  redPixelsOnSlide, saveCopyDownload, shorterPdfWithMetadata, slideBox, strokeLine, tool,
 } from './support/saving';
 
 test.use({ viewport: { width: 1600, height: 700 } });
 
 const DEV_URL = 'http://127.0.0.1:4174';
-const PAGES_OF_SHORTER_PDF = 2;
-const BARS_PER_PAGE = SYNTHETIC_BARS / 3; // 4 systems + 1
+const SLIDE_PLACEHOLDER_WIDTH_PX = 300; // width of the canvas before its slide is drawn
+const PAGES_OF_SHORTER_PDF = 4;
+const SHORTER_PDF_BARS = 16; // pages 1 to 4 of the standard score: page 1 has 2 bars, pages 3 and 4 have 7 each
 const penInk = (page: import('@playwright/test').Page) => page.getByTestId('ink-canvas');
 
 async function drawStroke(page: import('@playwright/test').Page) {
@@ -48,7 +49,7 @@ desktopTest('SAV-001 SAV-004 SAV-006 SAV-011 PLT-010 ANN-005 a saved copy holds 
   }
   expect(saved.metadata.value.marks.jumps).toHaveLength(1);
   const systems = saved.metadata.value.detection?.pages.reduce((sum, p) => sum + p.systems.length, 0);
-  expect(systems).toBe(SYNTHETIC_SYSTEMS);
+  expect(systems).toBe(SCORE_SYSTEMS);
 
   // DET-023: the copy opens with its detection, jump and stroke; nothing is detected again.
   await page.goto('/');
@@ -57,7 +58,7 @@ desktopTest('SAV-001 SAV-004 SAV-006 SAV-011 PLT-010 ANN-005 a saved copy holds 
   await expect(page.getByTestId('detection-progress')).toHaveCount(0);
   await expect.poll(() => inkedPixelsNear(penInk(page), RED, COLOR_TOLERANCE)).toBeGreaterThan(0);
   await enterOrganization(page);
-  await expect(page.getByTestId('org-bar')).toHaveCount(SYNTHETIC_BARS, { timeout: DETECTION_TIMEOUT_MS });
+  await expect(page.getByTestId('org-bar')).toHaveCount(SCORE_BARS, { timeout: DETECTION_TIMEOUT_MS });
   await expect(page.getByTestId('jump-marker')).toHaveCount(2);
 
   // ANN-005: the loaded stroke is erasable, and nothing of it stays: pdf.js no longer draws annotations (no doubled ink).
@@ -86,7 +87,7 @@ desktopTest('SAV-005 metadata of another page count is ignored: no marks, detect
   await page.goto('/');
   await openPdf(page, shorter, 'shorter.pdf');
   await enterOrganization(page);
-  await waitForBars(page, BARS_PER_PAGE * PAGES_OF_SHORTER_PDF);
+  await waitForBars(page, SHORTER_PDF_BARS);
   await expect(page.getByTestId('jump-marker')).toHaveCount(0);
 });
 
@@ -110,6 +111,8 @@ test('SAV-006 ANN-005 DET-023 SAV-012 erasing a loaded stroke removes it from th
   const state = await hook((cm) => cm.detectionState());
   expect(state).toEqual({ complete: true, startedOrder: [] });
 
+  // The slide canvas keeps a 300 x 150 placeholder until the page of the 1000 dpi scan is drawn: aim at the final slide.
+  await expect.poll(async () => (await slideBox(page)).width).toBeGreaterThan(SLIDE_PLACEHOLDER_WIDTH_PX);
   await tool(page, 'eraser').click();
   const line = await strokeLine(page);
   const middle = (line.from.x + line.to.x) / 2;

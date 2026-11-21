@@ -4,15 +4,17 @@ import { TUNABLES } from '../src/config/tunables';
 import { EMPTY_MARKS } from '../src/app/core/edits';
 import { markPositions } from '../src/app/core/mark-positions';
 import { generatePlayingOrder, systemNumbers } from '../src/app/core/playing-order';
-import { label, openScoreInOrganization, SYNTHETIC_BARS, SYNTHETIC_SYSTEMS } from './support/score';
+import { label, openScoreInOrganization, SCORE_BARS, SCORE_SYSTEMS } from './support/score';
 import { RERUN_TIMEOUT_MS, SCROLL_TIMEOUT_MS } from './support/timing';
 
-const SYSTEMS = SYNTHETIC_SYSTEMS;
-const FIRST_BAR_INDEX = 0; // junction 0, label 1·1
-const PAGE1_BOTTOM_BAR_INDEX = 4; // junction 4, label 1·5
-const LAST_BAR_INDEX = SYNTHETIC_BARS - 1; // junction 12
+const SYSTEMS = SCORE_SYSTEMS;
+// Bars of the standard score: page 1 has bars 0 and 1, page 3 bars 2 to 8, page 4 bars 9 to 15, page 5 bars 16 to 22 (see e2e/support/score.ts).
+const FIRST_BAR_INDEX = 0; // junction 0
+const PAGE_BOTTOM_BAR_INDEX = 8; // the bottom bar of page 3: junction 7, which has a second bar (index 9) on page 4
+const PAGE_BOTTOM_JUNCTION = 7;
+const LAST_BAR_INDEX = SCORE_BARS - 1; // junction 19
 const LONG_PRESS_MARGIN_MS = 200;
-const MIDDLE_BAR_INDEX = 1; // the second bar of page 1: junction 1
+const MIDDLE_BAR_INDEX = 3; // a bar inside page 3: junction 2
 const EMPTY_SPACE = { x: 5, y: 300 }; // the grey canvas left of the centered page
 
 test.use({ viewport: { width: 1280, height: 800 } });
@@ -73,7 +75,7 @@ test('ORG-015 ORG-016 ORG-018 ORG-020 create a jump, set the pass, see the marke
   await openScoreInOrganization(page);
   const bars = page.getByTestId('org-bar');
   const chip = page.getByTestId('selection-chip');
-  await bars.nth(PAGE1_BOTTOM_BAR_INDEX).click();
+  await bars.nth(PAGE_BOTTOM_BAR_INDEX).click();
   await chip.getByTestId('chip-jump').click();
   await expect(page.getByTestId('org-hint-bar')).toBeVisible();
 
@@ -81,23 +83,23 @@ test('ORG-015 ORG-016 ORG-018 ORG-020 create a jump, set the pass, see the marke
   await expect(page.getByTestId('org-hint-bar')).toHaveCount(0);
   await expect(page.getByTestId('jump-marker')).toHaveCount(0);
 
-  await bars.nth(PAGE1_BOTTOM_BAR_INDEX).click();
+  await bars.nth(PAGE_BOTTOM_BAR_INDEX).click();
   await chip.getByTestId('chip-jump').click();
   await bars.nth(FIRST_BAR_INDEX).click();
   await expect(page.getByTestId('stepper-value')).toHaveText('1');
 
-  // Pass 1: the jump is met after the 4th played system and the 5th one follows; both ends carry that label.
-  const jump = { origin: PAGE1_BOTTOM_BAR_INDEX, target: 0, pass: 1, id: 1 };
+  // Pass 1: the jump is met after the 7th played system and the 8th one follows; both ends carry that label.
+  const jump = { origin: PAGE_BOTTOM_JUNCTION, target: 0, pass: 1, id: 1 };
   const at = (pass: number) => markPositions({ ...EMPTY_MARKS, jumps: [{ ...jump, pass }], nextJumpId: 2 }, SYSTEMS, MAX_LENGTH).jumps.get(1);
-  await expect(page.getByTestId('jump-marker')).toHaveCount(2); // one start, one end, although junction 4 has two bars
+  await expect(page.getByTestId('jump-marker')).toHaveCount(2); // one start, one end, although junction 7 has two bars
   const reached = at(1)!;
   await expect(marker(page, 'origin').getByTestId('jump-marker-label')).toHaveText(jumpText(reached.previous, reached.next, 1));
   await expect(marker(page, 'target').getByTestId('jump-marker-label')).toHaveText(jumpText(reached.previous, reached.next, 1));
   const order = generatePlayingOrder({ systemCount: SYSTEMS, jumps: [jump], stops: [], maxLength: MAX_LENGTH });
-  const numbers = systemNumbers(order, SYSTEMS)[PAGE1_BOTTOM_BAR_INDEX - 1]!.join(TUNABLES.layout.numberSeparator);
-  await expect(systemLabel(page, PAGE1_BOTTOM_BAR_INDEX)).toHaveText(numbers);
+  const numbers = systemNumbers(order, SYSTEMS)[PAGE_BOTTOM_JUNCTION - 1]!.join(TUNABLES.layout.numberSeparator);
+  await expect(systemLabel(page, PAGE_BOTTOM_JUNCTION)).toHaveText(numbers);
 
-  // Pass 2 is never reached (junction 4 is arrived at once): no numbers.
+  // Pass 2 is never reached (junction 7 is arrived at once): no numbers.
   await page.getByTestId('stepper-plus').click();
   await expect(page.getByTestId('stepper-value')).toHaveText('2');
   await expect(marker(page, 'origin').getByTestId('jump-marker-label')).toHaveText(jumpText(at(2)?.previous ?? null, at(2)?.next ?? null, 2));
@@ -106,7 +108,7 @@ test('ORG-015 ORG-016 ORG-018 ORG-020 create a jump, set the pass, see the marke
   await expect(chip.getByTestId('chip-pass')).toBeVisible();
   await expect(chip.getByTestId('chip-change-target')).toBeVisible();
   await chip.getByTestId('chip-change-target').click();
-  await bars.nth(1).click();
+  await bars.nth(MIDDLE_BAR_INDEX).click();
   await expect(marker(page, 'origin')).toBeVisible(); // retargeted; the label depends on the playing order only
 
   await marker(page, 'origin').click();
@@ -119,7 +121,7 @@ test('ORG-016 a second jump from the same bar starts at occurrence 2', async ({ 
   const bars = page.getByTestId('org-bar');
   const chip = page.getByTestId('selection-chip');
   for (const [target, pass] of [[FIRST_BAR_INDEX, '1'], [MIDDLE_BAR_INDEX, '2']] as const) {
-    await bars.nth(PAGE1_BOTTOM_BAR_INDEX).click();
+    await bars.nth(PAGE_BOTTOM_BAR_INDEX).click();
     await chip.getByTestId('chip-jump').click();
     await bars.nth(target).click();
     await expect(page.getByTestId('stepper-value')).toHaveText(pass);
@@ -163,32 +165,33 @@ test('ORG-021 the marks list shows jumps, slide breaks and stops in playing orde
   await openScoreInOrganization(page);
   const bars = page.getByTestId('org-bar');
   const chip = page.getByTestId('selection-chip');
-  const JUNCTION_1_BAR = 1;
-  const JUNCTION_2_BAR = 2;
-  const JUNCTION_3_BAR = 3;
-  const JUNCTION_6_BAR = 7; // page 2: bars 5..9 are junctions 4, 5, 6, 7, 8 (index 5 is the second bar of junction 4)
-  // B: 1 -> 2 is created second but is met first in the playing order; A: 4 -> 0 follows; break at 3; stop at 6.
-  for (const [from, to] of [[PAGE1_BOTTOM_BAR_INDEX, FIRST_BAR_INDEX], [JUNCTION_1_BAR, JUNCTION_2_BAR]] as const) {
+  // Page 3 holds bars 2..8 (junctions 1..7), page 4 bars 9..15 (junctions 7..13): bar n + 1 is junction n for the bars 3..8 and 10..15.
+  const JUNCTION_2_BAR = 3;
+  const JUNCTION_3_BAR = 4;
+  const JUNCTION_4_BAR = 5;
+  const JUNCTION_9_BAR = 11;
+  // B: 2 -> 3 is created second but is met first in the playing order; A: 7 -> 0 follows; break at 4; stop at 9.
+  for (const [from, to] of [[PAGE_BOTTOM_BAR_INDEX, FIRST_BAR_INDEX], [JUNCTION_2_BAR, JUNCTION_3_BAR]] as const) {
     await bars.nth(from).click();
     await chip.getByTestId('chip-jump').click();
     await bars.nth(to).click();
     await expect(page.getByTestId('stepper-value')).toBeVisible();
   }
-  await bars.nth(JUNCTION_3_BAR).click();
+  await bars.nth(JUNCTION_4_BAR).click();
   await chip.getByTestId('chip-break').click();
-  await bars.nth(JUNCTION_6_BAR).click();
+  await bars.nth(JUNCTION_9_BAR).click();
   await chip.getByTestId('chip-stop').click();
 
   await openOrganizationTool(page, 'markList');
   const entries = page.getByTestId('mark-list-entry');
   await expect(entries).toHaveCount(4);
   await expect(entries.evaluateAll((items) => items.map((item) => (item as HTMLElement).dataset['kind']))).resolves.toEqual(['jump', 'break', 'jump', 'stop']);
-  const jumps = [{ origin: PAGE1_BOTTOM_BAR_INDEX, target: 0, pass: 1, id: 1 }, { origin: 1, target: 2, pass: 1, id: 2 }];
-  const positions = markPositions({ ...EMPTY_MARKS, jumps, breaks: [3], stops: [6], nextJumpId: 3 }, SYSTEMS, MAX_LENGTH);
+  const jumps = [{ origin: PAGE_BOTTOM_JUNCTION, target: 0, pass: 1, id: 1 }, { origin: 2, target: 3, pass: 1, id: 2 }];
+  const positions = markPositions({ ...EMPTY_MARKS, jumps, breaks: [4], stops: [9], nextJumpId: 3 }, SYSTEMS, MAX_LENGTH);
   const jumpB = positions.jumps.get(2)!;
   const jumpA = positions.jumps.get(1)!;
-  const cut = positions.breaks.get(3)!;
-  const stop = positions.stops.get(6)!;
+  const cut = positions.breaks.get(4)!;
+  const stop = positions.stops.get(9)!;
   const label = (index: number) => entries.nth(index).getByTestId('mark-list-label');
   await expect(label(0)).toHaveText(jumpText(jumpB.previous, jumpB.next, 1));
   await expect(label(1)).toHaveText(`${cut.previous} ${breakSeparator} ${cut.next}`);
@@ -206,7 +209,7 @@ test('DET-014 DET-015 a confirmed level change keeps the marks and the bars', as
   await openScoreInOrganization(page);
   const bars = page.getByTestId('org-bar');
   const chip = page.getByTestId('selection-chip');
-  await bars.nth(PAGE1_BOTTOM_BAR_INDEX).click();
+  await bars.nth(PAGE_BOTTOM_BAR_INDEX).click();
   await chip.getByTestId('chip-jump').click();
   await bars.nth(FIRST_BAR_INDEX).click();
   await expect(page.getByTestId('stepper-value')).toHaveText('1');
@@ -218,10 +221,10 @@ test('DET-014 DET-015 a confirmed level change keeps the marks and the bars', as
   await page.getByTestId('level-confirm').click();
   await expect(page.getByTestId('level-dialog')).toHaveCount(0);
   await expect(page.getByTestId('detection-progress')).toBeVisible(); // the re-run shows its progress
-  await expect(bars).toHaveCount(SYNTHETIC_BARS); // the old bars stay while it runs
+  await expect(bars).toHaveCount(SCORE_BARS); // the old bars stay while it runs
   await expect(page.getByTestId('detection-progress')).toHaveCount(0, { timeout: RERUN_TIMEOUT_MS });
-  await expect(bars).toHaveCount(SYNTHETIC_BARS);
-  await expect(page.getByTestId('jump-marker')).toHaveCount(MARKERS_OF_ONE_JUMP); // 12 systems at both levels: the marks are kept
+  await expect(bars).toHaveCount(SCORE_BARS);
+  await expect(page.getByTestId('jump-marker')).toHaveCount(MARKERS_OF_ONE_JUMP); // 19 systems at both levels: the marks are kept
 });
 
 test('ORG-021 on a wide screen the marks list opens beside its button and stays clear of the scroll bar', async ({ page }) => {

@@ -1,7 +1,7 @@
 // Which corpus files the tests use (V2-M2 S3, TST-015). Pure: the callers hand in what exists on disk.
 
-/** Folders searched for an entry's file, in this order (the legacy folder holds the V1 synthetic files until V2-M2 S4). */
-export const CORPUS_FOLDERS = ['e2e/corpus/real', 'e2e/corpus/cache', 'e2e/corpus'];
+/** Folders searched for an entry's file, in this order. */
+export const CORPUS_FOLDERS = ['e2e/corpus/real', 'e2e/corpus/cache'];
 /** Entries run by the Firefox and WebKit smoke projects. */
 export const SMOKE_ENTRY_COUNT = 3;
 /** A PDF with more pages than this is a stress file: it gets no detection regression run, only the responsiveness tests (V2-M2, owner decision). */
@@ -24,8 +24,7 @@ export function smokeEntries(entries, count = SMOKE_ENTRY_COUNT) {
 }
 
 /**
- * The real PDFs the performance tests use. `files` are `{ file, path, source, bytes, pages, stress? }`; files without a source (the V1 synthetic
- * ones) are not considered. Ties go to the name that sorts first.
+ * The real PDFs the performance tests use. `files` are `{ file, path, source, bytes, pages, stress? }`; files without a source are not considered. Ties go to the name that sorts first.
  * - `largest`: the largest file (any kind), opened to measure the time to the first slide.
  * - `regular`: the regular PDF (not a stress file) with the most pages: slide changes and detection in the background, which need a finished detection.
  * - `heavy`: the stress file with the most pages, or `regular` when there is none: scrolling, zooming and jumps while detection is still running.

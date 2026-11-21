@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import { inspect, forceFilePaths, openPdf, qpdfCheck, saveCopyDownload } from './support/saving';
-import { openScore, waitForFinalSlideCount } from './support/score';
+import { openScore, SCORE_PAGES, waitForFinalSlideCount } from './support/score';
 import { TUNABLES } from '../src/config/tunables';
 
 import type { InkStroke } from '../src/app/core/annotation';
@@ -15,9 +15,9 @@ const OPS_MIN = 8;
 const OPS_SPAN = 8;
 const POINTS_MIN = 2;
 const POINTS_SPAN = 5;
-const PAGE_COUNT = 3; // synthetic-score.pdf
-const PAGE_WIDTH = 595;
-const PAGE_HEIGHT = 842;
+const PAGE_COUNT = SCORE_PAGES; // the standard score
+const PAGE_WIDTH = 685; // pt, the page size of the standard score
+const PAGE_HEIGHT = 898;
 const WIDTH_MAX_PT = 10;
 const POINT_TOLERANCE = 1e-3;
 const OPACITIES = [1, TUNABLES.annotation.highlighterOpacity];

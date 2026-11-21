@@ -1,16 +1,16 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { TUNABLES } from '../src/config/tunables';
+import { scoreBytes } from './support/score';
 import { scaled } from './support/timing';
 
 const en = JSON.parse(readFileSync('src/assets/i18n/en.json', 'utf8')) as { a11y: Record<string, string> };
-const scoreBytes = readFileSync('e2e/fixtures/synthetic-score.pdf');
 const DEV_URL = 'http://127.0.0.1:4174';
 const SMALLEST_BUCKET_GB = 1;
 const OPEN_COUNT = 12;
 const CYCLES = 25;
 const FILE_CHOOSER_TIMEOUT_MS = 15_000; // fail fast with a clear error instead of hanging until the test timeout
-const RESOURCE_TEST_TIMEOUT_MS = scaled(90_000); // 12 renders on a slow CI runner with the unoptimized dev build
+const RESOURCE_TEST_TIMEOUT_MS = scaled(240_000); // 12 renders of a 1000 dpi scan on a slow CI runner with the unoptimized dev build
 
 test.use({ viewport: { width: 1280, height: 800 } });
 // Desktop Chromium only: the Chromium device projects (phone, tablet) emulate touch and a high pixel ratio,

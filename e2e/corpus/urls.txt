@@ -2,6 +2,5 @@
 # Then run `npm run corpus`: it downloads the files into e2e/corpus/cache/ and records their checksums in urls.lock.json.
 # PDFs you have as files go into e2e/corpus/real/ instead.
 https://imslp.eu/files/imglnks/euimg/4/46/IMSLP621557-PMLP863228-beethoven--sonatas-vol1.pdf
-https://ks15.imslp.org/files/imglnks/usimg/b/b9/IMSLP799145-PMLP14377-tiff2pdf_(2).pdf
 https://s9.imslp.org/files/imglnks/usimg/a/ae/IMSLP914565-PMLP5176-mozart_serenade_k.525_wpv.pdf
 https://s9.imslp.org/files/imglnks/usimg/9/94/IMSLP01777-Mozart_EineKleineNachtmusik_ViolinI.pdf

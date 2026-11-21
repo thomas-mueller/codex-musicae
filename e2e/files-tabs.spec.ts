@@ -1,15 +1,15 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 
+import { SCORE_NAME, SCORE_PATH as SCORE, scoreBytes } from './support/score';
 import { DOCUMENT_OPEN_TIMEOUT_MS, NEGATIVE_SETTLE_MS } from './support/timing';
 
 const en = JSON.parse(readFileSync('src/assets/i18n/en.json', 'utf8')) as { a11y: Record<string, string> };
 const label = (key: string) => en.a11y[key] as string;
 
 const RETRY_TIMEOUT_MS = 1000; // one attempt of the repeated mode click
-const SCORE = 'e2e/fixtures/synthetic-score.pdf';
 const DAMAGED = 'e2e/fixtures/damaged.pdf';
-const scoreBytes = readFileSync(SCORE);
+const SCORE_V2_NAME = `v2-${SCORE_NAME}`;
 const named = (name: string) => ({ name, mimeType: 'application/pdf', buffer: scoreBytes });
 
 type Upload = string | { name: string; mimeType: string; buffer: Buffer };
@@ -59,7 +59,7 @@ test.describe('expanded', () => {
 
   test('FIL-001 FIL-003 FIL-004 opening a PDF adds a named tab and renders page 1', async ({ page }) => {
     await openFiles(page, SCORE);
-    await expect.poll(() => tabNames(page)).toEqual(['synthetic-score.pdf']);
+    await expect.poll(() => tabNames(page)).toEqual([SCORE_NAME]);
     expect(await previewHasInk(page)).toBe(true);
   });
 
@@ -72,9 +72,9 @@ test.describe('expanded', () => {
   });
 
   test('FIL-001 FIL-005 two files open in two tabs and switching keeps both', async ({ page }) => {
-    await openFiles(page, [named('synthetic-score.pdf'), named('second.pdf')]);
-    await expect.poll(() => tabNames(page)).toEqual(['synthetic-score.pdf', 'second.pdf']);
-    await page.locator('app-tab-bar .name', { hasText: 'synthetic-score.pdf' }).click();
+    await openFiles(page, [named(SCORE_NAME), named('second.pdf')]);
+    await expect.poll(() => tabNames(page)).toEqual([SCORE_NAME, 'second.pdf']);
+    await page.locator('app-tab-bar .name', { hasText: SCORE_NAME }).click();
     expect(await previewHasInk(page)).toBe(true);
     await expect(page.locator('app-tab-bar .name')).toHaveCount(2);
   });
@@ -90,11 +90,21 @@ test.describe('expanded', () => {
     expect(await previewHasInk(page)).toBe(true);
   });
 
+  for (const fixture of ['zero-pages.pdf', 'blank-page.pdf', 'encrypted.pdf']) {
+    test(`FIL-009 TST-016 the failure-case fixture ${fixture} opens as a tab and the app stays usable`, async ({ page }) => {
+      await openFiles(page, `e2e/fixtures/${fixture}`);
+      await expect(page.locator('app-tab-bar .name')).toHaveText([fixture]);
+      await openFiles(page, SCORE);
+      await expect(page.locator('app-tab-bar .name')).toHaveCount(2);
+      expect(await previewHasInk(page)).toBe(true);
+    });
+  }
+
   test('FIL-003 closing tabs removes them and activates a neighbor', async ({ page }) => {
-    await openFiles(page, [named('synthetic-score.pdf'), named('second.pdf')]);
+    await openFiles(page, [named(SCORE_NAME), named('second.pdf')]);
     await expect(page.locator('app-tab-bar .name')).toHaveCount(2);
     await page.locator('app-tab-bar app-tab-item').last().getByRole('button', { name: label('closeTab') }).click();
-    await expect.poll(() => tabNames(page)).toEqual(['synthetic-score.pdf']);
+    await expect.poll(() => tabNames(page)).toEqual([SCORE_NAME]);
     await page.getByRole('button', { name: label('closeTab') }).click();
     await expect(page.locator('app-tab-bar .name')).toHaveCount(0);
   });
@@ -115,17 +125,17 @@ test.describe('expanded', () => {
     const openButton = page.getByRole('button', { name: label('openFile'), exact: true });
     await openButton.click({ button: 'right' });
     const rows = page.locator('[data-popup] .row');
-    await expect(rows).toHaveText(['damaged.pdf', 'synthetic-score.pdf']);
+    await expect(rows).toHaveText(['damaged.pdf', SCORE_NAME]);
     // The <input> path stores no handle: the first tap cannot reopen, so the entry is marked ...
-    await rows.filter({ hasText: 'synthetic-score.pdf' }).click();
-    await expect(rows.filter({ hasText: 'synthetic-score.pdf' }).locator('app-icon')).toBeVisible();
+    await rows.filter({ hasText: SCORE_NAME }).click();
+    await expect(rows.filter({ hasText: SCORE_NAME }).locator('app-icon')).toBeVisible();
     // ... and the second tap offers the picker.
     const chooser = page.waitForEvent('filechooser', { timeout: FILE_CHOOSER_TIMEOUT_MS });
-    await rows.filter({ hasText: 'synthetic-score.pdf' }).click();
-    await (await chooser).setFiles(named('synthetic-score-v2.pdf'));
-    await expect.poll(() => tabNames(page)).toContain('synthetic-score-v2.pdf');
+    await rows.filter({ hasText: SCORE_NAME }).click();
+    await (await chooser).setFiles(named(SCORE_V2_NAME));
+    await expect.poll(() => tabNames(page)).toContain(SCORE_V2_NAME);
     await openButton.click({ button: 'right' });
-    await expect(page.locator('[data-popup] .row')).toHaveText(['synthetic-score-v2.pdf', 'damaged.pdf']);
+    await expect(page.locator('[data-popup] .row')).toHaveText([SCORE_V2_NAME, 'damaged.pdf']);
   });
 });
 
@@ -181,12 +191,12 @@ test.describe('compact', () => {
   test.use({ viewport: { width: 360, height: 800 } });
 
   test('FIL-004 the tab switcher shows the current tab and lists all tabs', async ({ page }) => {
-    await openFiles(page, [named('synthetic-score.pdf'), named('second.pdf')]);
+    await openFiles(page, [named(SCORE_NAME), named('second.pdf')]);
     const current = page.locator('app-tab-switcher button.current');
     await expect(current).toHaveText('second.pdf');
     await current.click();
-    await expect(page.locator('[data-popup] app-tab-item .name')).toHaveText(['synthetic-score.pdf', 'second.pdf']);
-    await page.locator('[data-popup] app-tab-item .name', { hasText: 'synthetic-score.pdf' }).click();
-    await expect(current).toHaveText('synthetic-score.pdf');
+    await expect(page.locator('[data-popup] app-tab-item .name')).toHaveText([SCORE_NAME, 'second.pdf']);
+    await page.locator('[data-popup] app-tab-item .name', { hasText: SCORE_NAME }).click();
+    await expect(current).toHaveText(SCORE_NAME);
   });
 });

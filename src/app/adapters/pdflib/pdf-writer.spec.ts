@@ -3,12 +3,15 @@ import { PDFArray, PDFDict, PDFDocument, PDFName, PDFNumber, PDFRawStream, PDFRe
 import { vi } from 'vitest';
 
 import { TUNABLES } from '../../../config/tunables';
-import { HAS_QPDF, encrypted, fixture, qpdfCheck } from '../../../testing/pdf-fixtures';
+import { HAS_QPDF, fixture, qpdfCheck } from '../../../testing/pdf-fixtures';
 import type { InkToAdd, PdfEdits } from '../../ports/pdf-writer';
 import { err, ok } from '../../ports/result';
 import { createPdfWriterApi } from './pdf-writer-api';
 import type { PdfWriterWorkerApi } from './pdf-writer-worker-api';
 import { PdfLibWriter } from './pdflib-pdf-writer';
+
+/** The standard test score: a real scan of the corpus (V2-M2 S4). */
+const SCORE_FILE = 'IMSLP799145-PMLP14377-tiff2pdf_-2.pdf';
 
 const KEY = TUNABLES.saving.metadataFileName;
 
@@ -108,7 +111,7 @@ async function leavesOf(bytes: Uint8Array): Promise<string[][]> {
 
 describe('PdfWriter: ink (M15 S2)', () => {
   it('SAV-006 adds two strokes as /Ink annotations with an appearance stream', async () => {
-    const out = await apply(fixture('synthetic-score.pdf'), { addInk: [ink('a'), ink('b', { color: '#00FF00', widthPt: 4 })] });
+    const out = await apply(fixture(SCORE_FILE), { addInk: [ink('a'), ink('b', { color: '#00FF00', widthPt: 4 })] });
     const annots = await annotsOf(out);
     expect(annots).toHaveLength(2);
     const first = annots[0] as PDFDict;
@@ -125,7 +128,7 @@ describe('PdfWriter: ink (M15 S2)', () => {
   });
 
   it('SAV-006 a single point is a zero-length line; highlighter strokes get a multiply graphics state', async () => {
-    const out = await apply(fixture('synthetic-score.pdf'), {
+    const out = await apply(fixture(SCORE_FILE), {
       addInk: [ink('dot', { points: [{ x: 10, y: 20 }] }), ink('hl', { opacity: 0.35, multiply: true })],
     });
     const [dot, highlighter] = await annotsOf(out);
@@ -142,7 +145,7 @@ describe('PdfWriter: ink (M15 S2)', () => {
   });
 
   it('ANN-005 listInk returns the strokes written by apply, with nm: references', async () => {
-    const out = await apply(fixture('synthetic-score.pdf'), { addInk: [ink('a'), ink('b', { color: '#00FF00', widthPt: 4, opacity: 0.5 })] });
+    const out = await apply(fixture(SCORE_FILE), { addInk: [ink('a'), ink('b', { color: '#00FF00', widthPt: 4, opacity: 0.5 })] });
     const listed = await api.listInk(out);
     expect(listed).toEqual(
       ok([
@@ -153,7 +156,7 @@ describe('PdfWriter: ink (M15 S2)', () => {
   });
 
   it('SAV-006 removes a stroke by nm: reference and deletes its objects', async () => {
-    const withTwo = await apply(fixture('synthetic-score.pdf'), { addInk: [ink('a'), ink('b')] });
+    const withTwo = await apply(fixture(SCORE_FILE), { addInk: [ink('a'), ink('b')] });
     const out = await apply(withTwo, { removeInk: [{ pageIndex: 0, annotationRef: 'nm:a' }] });
     const listed = await api.listInk(out);
     expect(listed.ok && listed.value.map((i) => i.strokeId)).toEqual(['b']);
@@ -206,7 +209,7 @@ describe('PdfWriter: everything else is preserved (SAV-013)', () => {
   });
 
   it('SAV-013 does not modify the input bytes', async () => {
-    const bytes = fixture('synthetic-score.pdf');
+    const bytes = fixture(SCORE_FILE);
     const copy = bytes.slice();
     await apply(bytes, { addInk: [ink('a')], embeddedJson: '{}' });
     expect(bytes).toEqual(copy);
@@ -216,7 +219,7 @@ describe('PdfWriter: everything else is preserved (SAV-013)', () => {
 describe('PdfWriter: embedded JSON (M15 S2)', () => {
   it('SAV-001 writes the text, reads it back identically, and writing again keeps exactly one entry', async () => {
     const text = '{"schemaVersion":1,"name":"Fuge in g — ♭"}';
-    const first = await apply(fixture('synthetic-score.pdf'), { embeddedJson: text });
+    const first = await apply(fixture(SCORE_FILE), { embeddedJson: text });
     expect(await api.readEmbeddedJson(first, KEY)).toEqual(ok(text));
     const second = await apply(first, { embeddedJson: '{"v":2}' });
     expect(await api.readEmbeddedJson(second, KEY)).toEqual(ok('{"v":2}'));
@@ -226,14 +229,14 @@ describe('PdfWriter: embedded JSON (M15 S2)', () => {
   });
 
   it('SAV-001 a file without the attachment reads as null, and null edits leave an existing attachment alone', async () => {
-    expect(await api.readEmbeddedJson(fixture('synthetic-score.pdf'), KEY)).toEqual(ok(null));
-    const withJson = await apply(fixture('synthetic-score.pdf'), { embeddedJson: '{"keep":true}' });
+    expect(await api.readEmbeddedJson(fixture(SCORE_FILE), KEY)).toEqual(ok(null));
+    const withJson = await apply(fixture(SCORE_FILE), { embeddedJson: '{"keep":true}' });
     const out = await apply(withJson, { addInk: [ink('a')] });
     expect(await api.readEmbeddedJson(out, KEY)).toEqual(ok('{"keep":true}'));
   });
 
   it('SAV-010 the entry is stored with the embedded-file stream and filespec fields', async () => {
-    const out = await apply(fixture('synthetic-score.pdf'), { embeddedJson: '{"a":1}' });
+    const out = await apply(fixture(SCORE_FILE), { embeddedJson: '{"a":1}' });
     const doc = await PDFDocument.load(out);
     const tree = doc.catalog.lookup(n('Names'), PDFDict).lookup(n('EmbeddedFiles'), PDFDict).lookup(n('Names'), PDFArray);
     const spec = tree.lookup(1, PDFDict);
@@ -279,16 +282,16 @@ describe('PdfWriter: errors and cancellation (M15 S2)', () => {
     expect(await api.apply(bytes, noEdits, KEY, 0)).toEqual(err('invalid-pdf'));
   });
 
-  it.skipIf(!HAS_QPDF)('SAV-006 an encrypted file gives invalid-pdf', async () => {
-    const bytes = encrypted(fixture('synthetic-score.pdf'));
+  it('SAV-006 an encrypted file gives invalid-pdf', async () => {
+    const bytes = fixture('encrypted.pdf');
     expect(await api.listInk(bytes)).toEqual(err('invalid-pdf'));
     expect(await api.apply(bytes, noEdits, KEY, 0)).toEqual(err('invalid-pdf'));
   });
 
   it('SAV-006 a cancelled task stops with cancelled', async () => {
     await api.cancel(7);
-    expect(await api.apply(fixture('synthetic-score.pdf'), { ...noEdits, addInk: [ink('a')] }, KEY, 7)).toEqual(err('cancelled'));
-    expect((await api.apply(fixture('synthetic-score.pdf'), noEdits, KEY, 7)).ok).toBe(true);
+    expect(await api.apply(fixture(SCORE_FILE), { ...noEdits, addInk: [ink('a')] }, KEY, 7)).toEqual(err('cancelled'));
+    expect((await api.apply(fixture(SCORE_FILE), noEdits, KEY, 7)).ok).toBe(true);
   });
 
   it.skipIf(HAS_QPDF)('SAV-006 qpdf is not installed: structural checks of produced files were skipped', () => {
@@ -329,7 +332,7 @@ describe('PdfLibWriter proxy (M15 S2)', () => {
 
   it('SAV-006 writes through the real api end to end', async () => {
     const writer = new PdfLibWriter(() => createPdfWriterApi());
-    const result = await writer.apply(fixture('synthetic-score.pdf'), { ...noEdits, addInk: [ink('a')], embeddedJson: '{}' }, new AbortController().signal);
+    const result = await writer.apply(fixture(SCORE_FILE), { ...noEdits, addInk: [ink('a')], embeddedJson: '{}' }, new AbortController().signal);
     expect(result.ok).toBe(true);
     if (result.ok) {
       qpdfCheck(result.value);

@@ -12,11 +12,11 @@ const pdf = (file: string, bytes: number, pages: number, source: 'folder' | 'url
 const text = (path: string): string => readFileSync(path, 'utf8').replace(/^\s*#.*$/gm, '');
 
 describe('corpus file selection', () => {
-  it('TST-015 an entry file is searched in real/, then cache/, then the legacy folder', () => {
+  it('TST-015 an entry file is searched in real/, then cache/', () => {
     const entry = { file: 'a.pdf' };
     expect(resolveCorpusEntry({ entry, exists: () => true }).path).toBe('e2e/corpus/real/a.pdf');
     expect(resolveCorpusEntry({ entry, exists: (p) => p !== 'e2e/corpus/real/a.pdf' }).path).toBe('e2e/corpus/cache/a.pdf');
-    expect(resolveCorpusEntry({ entry, exists: (p) => p === 'e2e/corpus/a.pdf' }).path).toBe('e2e/corpus/a.pdf');
+    expect(resolveCorpusEntry({ entry, exists: (p) => p === 'e2e/corpus/a.pdf' }).path).toBeNull();
   });
 
   it('TST-015 an absent entry file gives a reason that names npm run corpus', () => {

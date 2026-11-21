@@ -1,14 +1,6 @@
 [
-  { "file": "engraved-clean.pdf", "level": "standard", "systemsPerPage": [4, 4, 4], "note": "the M8 synthetic score", "knownLimitation": null },
-  { "file": "engraved-single.pdf", "level": "standard", "systemsPerPage": [1], "note": "one system, no frame", "knownLimitation": null },
-  { "file": "engraved-mixed-sizes.pdf", "level": "standard", "systemsPerPage": [3, 3, 3], "note": "A4 portrait, Letter, A3 landscape", "knownLimitation": null },
-  { "file": "flat-staves.pdf", "level": "standard", "systemsPerPage": [8], "note": "single staves without a joining barline, full width", "knownLimitation": null },
-  { "file": "title-then-score.pdf", "level": "standard", "systemsPerPage": [0, 3], "note": "page 1 is a filled 280x280 pt logo block (under minSystemWidthRatio of the page width)", "knownLimitation": null },
-  { "file": "blank.pdf", "level": "standard", "systemsPerPage": [0, 0], "note": "two empty pages", "knownLimitation": null },
-  { "file": "scanned-noise.pdf", "level": "standard", "systemsPerPage": [4, 4], "note": "200 dpi raster with speckle noise", "knownLimitation": null },
-  { "file": "scanned-frame.pdf", "level": "standard", "systemsPerPage": [5, 5], "note": "the page border is taken as a fifth system on each page", "knownLimitation": "LIM-002" },
   { "file": "IMSLP01777-Mozart_EineKleineNachtmusik_ViolinI.pdf", "source": "url", "level": "standard", "systemsPerPage": [10, 13, 12, 12, 12, 12], "note": "", "knownLimitation": null, "reviewed": false },
   { "file": "IMSLP621557-PMLP863228-beethoven--sonatas-vol1.pdf", "source": "url", "level": "standard", "systemsPerPage": [], "pages": 281, "stress": true, "note": "stress file: only the responsiveness tests use it", "knownLimitation": null, "reviewed": true },
-  { "file": "IMSLP799145-PMLP14377-tiff2pdf_-2.pdf", "source": "url", "level": "standard", "systemsPerPage": [1, 0, 6, 6, 6], "note": "", "knownLimitation": null, "reviewed": false },
+  { "file": "IMSLP799145-PMLP14377-tiff2pdf_-2.pdf", "source": "folder", "level": "standard", "systemsPerPage": [1, 0, 6, 6, 6], "note": "", "knownLimitation": null, "reviewed": false },
   { "file": "IMSLP914565-PMLP5176-mozart_serenade_k.525_wpv.pdf", "source": "url", "level": "standard", "systemsPerPage": [0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4], "note": "", "knownLimitation": null, "reviewed": false }
 ]
