@@ -23,7 +23,7 @@ interface Entry {
 const entries = (JSON.parse(readFileSync('e2e/corpus/expected.json', 'utf8')) as Entry[]).filter((entry) => entry.stress !== true);
 
 for (const entry of entries) {
-  test(`DET-013 NFR-025 TST-015 ${entry.file} gives the same systems per page in every browser`, async ({ page }, testInfo) => {
+  test(`DET-013 DET-035 NFR-025 TST-015 ${entry.file} gives the same systems per page in every browser`, async ({ page }, testInfo) => {
     test.skip(!DESKTOP_PROJECTS.includes(testInfo.project.name), 'the three desktop engines');
     const found = resolveCorpusEntry({ entry, exists: existsSync });
     test.skip(found.path === null, `file missing: ${found.reason}`);
