@@ -35,13 +35,13 @@ export interface PdfjsModule {
 }
 
 /** Canvas surface the adapter draws on: `OffscreenCanvas` or a detached `<canvas>`. */
-export interface RenderCanvas {
+interface RenderCanvas {
   width: number;
   height: number;
   getContext(kind: '2d'): unknown;
 }
 
-export interface PdfJsRendererOptions {
+interface PdfJsRendererOptions {
   readonly loadModule?: () => Promise<PdfjsModule>;
   readonly createCanvas?: (width: number, height: number) => RenderCanvas;
   readonly createBitmap?: (canvas: RenderCanvas) => Promise<ImageBitmap>;

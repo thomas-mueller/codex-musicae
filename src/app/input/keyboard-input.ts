@@ -41,7 +41,7 @@ export function commandForKey(event: KeyEventLike): Command | null {
 }
 
 /** Text fields keep every key; a focused slider keeps its arrow keys. */
-export function isTypingTarget(target: EventTarget | null, code: string): boolean {
+function isTypingTarget(target: EventTarget | null, code: string): boolean {
   if (!(target instanceof HTMLElement)) {
     return false;
   }

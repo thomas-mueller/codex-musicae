@@ -20,7 +20,7 @@
     "watch": "node scripts/generate-index-metadata.mjs && ng build --watch --configuration development",
     "test": "ng test",
     "e2e": "playwright test",
-    "lint": "eslint . && node scripts/check-templates.mjs && node scripts/check-static-compliance.mjs && node scripts/check-ios-config.mjs && node scripts/check-workflows.mjs && node scripts/sync-agent-instructions.mjs --check && node scripts/check-traceability.mjs --check",
+    "lint": "eslint . && node scripts/check-templates.mjs && node scripts/check-static-compliance.mjs && node scripts/check-ios-config.mjs && node scripts/check-workflows.mjs && node scripts/check-unused-code.mjs && node scripts/check-unused-dependencies.mjs && node scripts/check-licenses.mjs && node scripts/sync-agent-instructions.mjs --check && node scripts/check-traceability.mjs --check",
     "lint:selftest": "node scripts/lint-selftest.mjs",
     "sync:agents": "node scripts/sync-agent-instructions.mjs"
   },

@@ -1,6 +1,6 @@
 import type { Point, Rect } from '../../core';
 
-export interface Size {
+interface Size {
   readonly width: number;
   readonly height: number;
 }

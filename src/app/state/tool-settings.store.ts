@@ -6,7 +6,7 @@ import type { Tool } from './ui.store';
 
 export type StyledTool = Exclude<Tool, 'eraser'>;
 
-export interface ToolSetting {
+interface ToolSetting {
   readonly color: string;
   readonly widthIndex: number;
 }

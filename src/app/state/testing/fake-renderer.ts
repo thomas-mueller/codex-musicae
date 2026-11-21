@@ -13,7 +13,7 @@ export interface FakeHandle extends PdfDocumentHandle {
   destroy: ReturnType<typeof vi.fn<() => Promise<void>>>;
 }
 
-export function fakeHandle(pageCount = 2): FakeHandle {
+function fakeHandle(pageCount = 2): FakeHandle {
   return {
     pageCount,
     getPageInfo: (pageIndex) =>

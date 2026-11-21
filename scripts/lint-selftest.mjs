@@ -1,8 +1,10 @@
 import { mkdtemp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { spawn } from 'node:child_process';
+import { tmpdir } from 'node:os';
 
 const repositoryRoot = new URL('..', import.meta.url).pathname;
+const staticRoots = [];
 const fixtureRoot = await mkdtemp(join(repositoryRoot, 'src/app/lint-selftest-'));
 
 const fixtures = [
@@ -162,7 +164,68 @@ try {
   if (workflowsOk.code !== 0) {
     throw new Error(`workflow trigger check fails on the real workflows\n${workflowsOk.output}`);
   }
-  console.log(`lint self-test passed (${fixtures.length} deliberate violations plus template, iOS config and workflow trigger checks)`);
+  // Static checks (PIP-013, PIP-014, PIP-015): a seeded defect must be rejected, the real repository must pass.
+  const staticRoot = await mkdtemp(join(tmpdir(), 'cm-static-'));
+  staticRoots.push(staticRoot);
+  const staticApp = join(staticRoot, 'app');
+  await mkdir(staticApp, { recursive: true });
+  const noExceptions = join(staticRoot, 'none.md');
+  await writeFile(noExceptions, '', 'utf8');
+  await writeFile(join(staticApp, 'main.ts'), "import { used } from './used';\nconsole.log(used);\n", 'utf8');
+  await writeFile(join(staticApp, 'used.ts'), 'export const used = 1;\n', 'utf8');
+  const relativeApp = relative(repositoryRoot, staticApp);
+  const cleanResult = await runNode('scripts/check-unused-code.mjs', relativeApp, relative(repositoryRoot, noExceptions));
+  if (cleanResult.code !== 0) {
+    throw new Error(`unused code check fails on a clean fixture\n${cleanResult.output}`);
+  }
+  const seeded = [
+    ['PIP-013 unused-file', 'orphan.ts', 'export const orphan = 1;\n'],
+    ['PIP-013 unused-export', 'used.ts', 'export const used = 1;\nexport const unusedExport = 2;\n'],
+  ];
+  for (const [name, file, source] of seeded) {
+    const original = await readFile(join(staticApp, file), 'utf8').catch(() => null);
+    await writeFile(join(staticApp, file), source, 'utf8');
+    const result = await runNode('scripts/check-unused-code.mjs', relativeApp, relative(repositoryRoot, noExceptions));
+    if (result.code === 0) {
+      throw new Error(`static check self-test passed unexpectedly: ${name}`);
+    }
+    console.log(`  ok  ${name} is rejected`);
+    if (original === null) await rm(join(staticApp, file));
+    else await writeFile(join(staticApp, file), original, 'utf8');
+  }
+  const manifest = JSON.parse(await readFile(join(repositoryRoot, 'package.json'), 'utf8'));
+  const manifestCopy = join(staticRoot, 'package.json');
+  await writeFile(manifestCopy, JSON.stringify({ ...manifest, dependencies: { ...manifest.dependencies, 'left-pad': '1.3.0' } }), 'utf8');
+  const dependencyResult = await runNode('scripts/check-unused-dependencies.mjs', relative(repositoryRoot, manifestCopy));
+  if (dependencyResult.code === 0) {
+    throw new Error('static check self-test passed unexpectedly: PIP-014 unused-dependency');
+  }
+  console.log('  ok  PIP-014 unused-dependency is rejected');
+  const lock = JSON.parse(await readFile(join(repositoryRoot, 'package-lock.json'), 'utf8'));
+  const licenseBroken = [
+    ['PIP-015 license-gpl', { license: 'GPL-3.0-only' }],
+    ['PIP-015 license-unknown', { license: undefined }],
+    ['PIP-015 license-not-listed', { license: 'SSPL-1.0' }],
+  ];
+  for (const [name, change] of licenseBroken) {
+    const lockCopy = join(staticRoot, 'package-lock.json');
+    const packages = { ...lock.packages, 'node_modules/seeded-package': { version: '1.0.0', ...change } };
+    await writeFile(lockCopy, JSON.stringify({ ...lock, packages }), 'utf8');
+    const result = await runNode('scripts/check-licenses.mjs', relative(repositoryRoot, lockCopy));
+    if (result.code === 0) {
+      throw new Error(`license self-test passed unexpectedly: ${name}`);
+    }
+    console.log(`  ok  ${name} is rejected`);
+  }
+  console.log(`lint self-test passed (${fixtures.length} deliberate violations plus template, iOS config, workflow trigger and static checks)`);
 } finally {
   await rm(fixtureRoot, { recursive: true, force: true });
+  for (const staticRoot of staticRoots) await rm(staticRoot, { recursive: true, force: true });
+}
+// The real repository passes the static checks (run after the fixtures are gone, since they live in src/).
+for (const script of ['check-unused-code', 'check-unused-dependencies', 'check-licenses']) {
+  const result = await runNode(`scripts/${script}.mjs`);
+  if (result.code !== 0) {
+    throw new Error(`${script} fails on the real repository\n${result.output}`);
+  }
 }

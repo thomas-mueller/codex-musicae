@@ -1,4 +1,4 @@
-export interface ParsedVersion {
+interface ParsedVersion {
   raw: string;
   tag: string | null;
   commitsSinceTag: number | null;

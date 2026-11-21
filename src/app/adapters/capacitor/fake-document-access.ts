@@ -2,7 +2,7 @@ import type { DocumentAccessApi, NativeFile } from './document-access-plugin';
 import { encodeBase64 } from './base64';
 
 /** In-memory stand-in for the native plugin, shared by the adapter specs. */
-export interface FakeDocumentAccess extends DocumentAccessApi {
+interface FakeDocumentAccess extends DocumentAccessApi {
   readonly files: Map<string, { bytes: Uint8Array; writable: boolean }>;
   readonly calls: string[];
   picked: NativeFile[];

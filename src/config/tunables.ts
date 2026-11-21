@@ -358,6 +358,4 @@ export const TUNABLES = {
   },
 } as const;
 
-export type Tunables = typeof TUNABLES;
 export type DetectionLevelName = keyof typeof TUNABLES.detection.levels;
-export type CommandName = keyof typeof TUNABLES.keymap;

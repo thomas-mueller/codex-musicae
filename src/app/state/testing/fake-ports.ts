@@ -26,7 +26,7 @@ export function memoryPreferences(initial: Record<string, unknown> = {}): Prefer
 }
 
 /** Files with the same name count as the same file. */
-export type FakeFileAccess = FileAccess & {
+type FakeFileAccess = FileAccess & {
   forget: ReturnType<typeof vi.fn<(ref: FileRef) => Promise<void>>>;
   write: ReturnType<typeof vi.fn<(ref: FileRef, bytes: Uint8Array) => Promise<Result<void, FileAccessError>>>>;
   saveCopy: ReturnType<typeof vi.fn<(name: string, bytes: Uint8Array) => Promise<Result<void, FileAccessError>>>>;
@@ -61,7 +61,7 @@ export function fakePdfWriter(): FakePdfWriter {
   };
 }
 
-export type FakeFullscreen = Fullscreen & {
+type FakeFullscreen = Fullscreen & {
   enterCalls: number;
   exitCalls: number;
   /** Simulates Esc or a system gesture. */
@@ -100,7 +100,7 @@ export function fakeFullscreen(results: Result<void, FullscreenError> | Result<v
   return fake;
 }
 
-export type FakeWakeLock = WakeLock & { acquireCalls: number; releaseCalls: number };
+type FakeWakeLock = WakeLock & { acquireCalls: number; releaseCalls: number };
 
 export function fakeWakeLock(result: Result<void, WakeLockError> = ok(undefined)): FakeWakeLock {
   const fake: FakeWakeLock = {

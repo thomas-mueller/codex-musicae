@@ -38,7 +38,7 @@ export interface Tab {
   readonly needsReopen: boolean;
 }
 
-export type OpenOutcome = 'opened' | 'cancelled' | 'failed' | 'repick';
+type OpenOutcome = 'opened' | 'cancelled' | 'failed' | 'repick';
 
 /**
  * A tab restored from the previous session has no file until `attachFile` runs (FIL-011, FIL-013): `saver` and `pipeline`
@@ -57,7 +57,7 @@ interface TabEntry {
 }
 
 /** What `SessionPersistence` needs of a tab. */
-export interface SessionEntry {
+interface SessionEntry {
   readonly ref: FileRef;
   readonly document: DocumentStore;
   readonly pendingSystem: number | null;

@@ -21,7 +21,7 @@ function roundDecimals(v: number): number {
   return Math.round(v * DECIMAL_FACTOR) / DECIMAL_FACTOR;
 }
 
-export type DetectionLevelId = 'fast' | 'standard' | 'fine';
+type DetectionLevelId = 'fast' | 'standard' | 'fine';
 
 export interface MetadataPage {
   readonly pageIndex: number;
@@ -32,7 +32,7 @@ export interface MetadataPage {
   readonly systems: readonly Rect[];
 }
 
-export interface MetadataJump {
+interface MetadataJump {
   readonly id: number;
   readonly origin: number;
   readonly target: number;

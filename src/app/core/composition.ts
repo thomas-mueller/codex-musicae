@@ -7,7 +7,7 @@
 import type { Rect, Size } from './geometry';
 import type { SlidePlan, SystemGeom } from './slides';
 
-export type ContentKind = 'region' | 'filler-top' | 'filler-bottom';
+type ContentKind = 'region' | 'filler-top' | 'filler-bottom';
 
 export interface SlideContent {
   readonly kind: ContentKind;

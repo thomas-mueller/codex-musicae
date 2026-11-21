@@ -40,7 +40,7 @@ export interface HandleStore {
   delete(id: string): Promise<void>;
 }
 
-export interface WebFileAccessOptions {
+interface WebFileAccessOptions {
   readonly handleStore?: HandleStore;
   readonly newId?: () => string;
   /** Resolved at call time; undefined = no File System Access API (use the input fallback). */
@@ -54,7 +54,7 @@ export interface WebFileAccessOptions {
   readonly download?: (name: string, bytes: Uint8Array) => void;
 }
 
-export class IndexedDbHandleStore implements HandleStore {
+class IndexedDbHandleStore implements HandleStore {
   private db: Promise<IDBDatabase> | null = null;
 
   get(id: string): Promise<FsFileHandle | undefined> {

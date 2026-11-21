@@ -16,7 +16,7 @@ void r;
  * page 0 systems 1..3 at y = 100, 400, 700; page 1 systems 4..6 at the same y; padding 20 (padded height 240,
  * padded width 940 => W_ref = 940). Adjacent same-page systems merge: 2 systems = 540 high, 3 systems = 840 high.
  */
-export const packingSystems: SystemGeom[] = [
+const packingSystems: SystemGeom[] = [
   { index: 1, pageIndex: 0, box: r(50, 100, 900, 200), padded: r(30, 80, 940, 240) },
   { index: 2, pageIndex: 0, box: r(50, 400, 900, 200), padded: r(30, 380, 940, 240) },
   { index: 3, pageIndex: 0, box: r(50, 700, 900, 200), padded: r(30, 680, 940, 240) },

@@ -8,7 +8,7 @@ import type { DocumentStore } from './document.store';
 import type { Scheduler } from './scheduler';
 
 /** A stroke that exists in the file as of the pipeline's current bytes. */
-export interface SavedInk {
+interface SavedInk {
   readonly pageIndex: number;
   readonly annotationRef: string;
 }

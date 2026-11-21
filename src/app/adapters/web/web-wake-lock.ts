@@ -2,7 +2,7 @@ import { err, ok } from '../../ports/result';
 import type { Result } from '../../ports/result';
 import type { WakeLock, WakeLockError } from '../../ports/wake-lock';
 
-export interface WakeLockSentinelLike {
+interface WakeLockSentinelLike {
   readonly released: boolean;
   release(): Promise<void>;
 }

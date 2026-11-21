@@ -9,7 +9,7 @@ import type { PenEvent, PenState } from '../palm';
 
 /** graceMs = 300. Apply the steps in order from PEN_INITIAL: an `event` step goes through reducePen; a `touch` step calls
  *  shouldIgnoreTouch(state, now, 300) and compares with the same position in `expected.checks`. Final state must equal expected.finalState. */
-export type PalmStep = { event: PenEvent } | { touch: number };
+type PalmStep = { event: PenEvent } | { touch: number };
 
 export const palmCases: ReadonlyArray<{
   id: string; req: string; name: string; graceMs: number; steps: PalmStep[];

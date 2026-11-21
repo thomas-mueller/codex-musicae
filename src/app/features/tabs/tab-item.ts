@@ -8,7 +8,7 @@ import type { IconKey } from '../shell/icon';
 import { IconButton } from '../shell/icon-button';
 import { TooltipDirective } from '../shell/tooltip.directive';
 
-export interface TabMarker {
+interface TabMarker {
   readonly icon: IconKey;
   /** Translation key under `a11y.` and `tooltip.`. */
   readonly labelKey: string;
@@ -24,7 +24,7 @@ const ERROR_KEYS: Readonly<Record<string, string>> = {
 };
 
 /** Markers of a tab in display order: error (with the reason), unsaved dot, read-only lock, needs-re-open. FIL-003, FIL-009 */
-export function markersOf(tab: Tab): TabMarker[] {
+function markersOf(tab: Tab): TabMarker[] {
   const markers: TabMarker[] = [];
   if (tab.status === 'error') {
     markers.push({ icon: 'error', labelKey: ERROR_KEYS[tab.errorCode ?? 'unknown'] ?? 'errorUnknown' });

@@ -461,9 +461,9 @@ V2 terms (target `v2` entries):
 - **PIP-010** [v1-optional·todo·M18] Pipeline `ios` also builds a signed ad hoc IPA and uploads it to Firebase App Distribution (owners group on every run, iOS tester group on `main` only) when the Apple signing secrets exist; without them these steps are skipped and the pipeline stays green.
 - **PIP-011** [v2·done·M1] Every workflow can be started manually (`workflow_dispatch`).
 - **PIP-012** [v2·done·M1] `lint-test` (lint, unit tests, build) runs on every push; the `e2e` workflow runs on pull requests to `main`, on tags and manually, not on every push.
-- **PIP-013** [v2·todo·M1] A check in `lint-test` fails on unused exports or files.
-- **PIP-014** [v2·todo·M1] A check in `lint-test` fails on unused dependencies in `package.json`.
-- **PIP-015** [v2·todo·M1] A license check in `lint-test` fails when a production dependency has a license outside an allow-list; GPL and AGPL are never allowed.
+- **PIP-013** [v2·done·M1] A check in `lint-test` fails on unused exports or files.
+- **PIP-014** [v2·done·M1] A check in `lint-test` fails on unused dependencies in `package.json`.
+- **PIP-015** [v2·done·M1] A license check in `lint-test` fails when a production dependency has a license outside an allow-list; GPL and AGPL are never allowed.
 - **PIP-016** [v2·todo·M1] Coverage is reported per kind of test (unit, integration, E2E and emulator, real-PDF detection, performance) in the CI job summary; a kind without coverage numbers reports its test count.
 - **PIP-017** [v2·todo·M1] No coverage threshold fails a build.
 - **PIP-018** [v2·todo·M1] Users see only the version `vX.Y.Z` taken from the nearest tag; the full `git describe` string appears only in internal places.

@@ -7,7 +7,7 @@ import { mapDetectionError } from './map-error';
 import type { DetectionWorkerApi } from './detection-worker-api';
 
 /** Creates the one dedicated detection worker (DET-002) and its Comlink proxy. */
-export function createDetectionWorkerApi(): DetectionWorkerApi {
+function createDetectionWorkerApi(): DetectionWorkerApi {
   const worker = new Worker(new URL('../workers/detection.worker', import.meta.url), { type: 'module' });
   return Comlink.wrap<DetectionWorkerApi>(worker);
 }

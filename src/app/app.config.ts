@@ -181,11 +181,11 @@ export const appConfig: ApplicationConfig = {
   ]
 };
 
-export interface CapacitorPlatform {
+interface CapacitorPlatform {
   isNativePlatform(): boolean;
 }
 
-export interface CapacitorPlatformName {
+interface CapacitorPlatformName {
   getPlatform(): string;
 }
 
@@ -201,7 +201,7 @@ export function shouldRegisterServiceWorker(
   return !developmentBuild && !capacitor.isNativePlatform();
 }
 
-export function applyTunablesToCss(root: HTMLElement): void {
+function applyTunablesToCss(root: HTMLElement): void {
   for (const [name, value] of Object.entries(tunablesToCssVars(TUNABLES))) {
     root.style.setProperty(name, value);
   }

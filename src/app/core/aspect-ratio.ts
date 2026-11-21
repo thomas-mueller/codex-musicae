@@ -11,13 +11,13 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-export interface AspectRatioLimits {
+interface AspectRatioLimits {
   readonly min: number;
   readonly max: number;
   readonly step: number;
 }
 
-export interface InitialRatioConfig {
+interface InitialRatioConfig {
   readonly min: number;
   readonly max: number;
   readonly roundDecimals: number;

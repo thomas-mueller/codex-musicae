@@ -3,7 +3,7 @@
  * The owner of the values (for example ImageBitmaps) frees them in `onRemove`.
  */
 
-export type RemoveReason = 'evicted' | 'replaced' | 'deleted' | 'cleared' | 'rejected';
+type RemoveReason = 'evicted' | 'replaced' | 'deleted' | 'cleared' | 'rejected';
 
 interface Entry<V> {
   readonly value: V;

@@ -5,7 +5,7 @@
 
 const HALF_TURN_DEG = 180;
 
-export type Mode = 'organization' | 'annotation' | 'presentation';
+type Mode = 'organization' | 'annotation' | 'presentation';
 
 export interface PointerSample {
   readonly x: number;
@@ -95,7 +95,7 @@ export function isDoubleTap(
 
 // ---------------------------------------------------------------- wheel
 
-export interface WheelConfig {
+interface WheelConfig {
   readonly stepThresholdPx: number;
   readonly idleResetMs: number;
   readonly cooldownMs: number;
@@ -168,7 +168,7 @@ export interface PointerContext {
   readonly pointerType: 'touch' | 'mouse' | 'pen';
 }
 
-export type PointerRole = 'draw' | 'gestures' | 'pinch' | 'org-select' | 'none';
+type PointerRole = 'draw' | 'gestures' | 'pinch' | 'org-select' | 'none';
 
 export interface PointerPolicy {
   readonly role: PointerRole;

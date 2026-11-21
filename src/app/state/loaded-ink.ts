@@ -2,7 +2,7 @@ import type { InkStroke } from '../core';
 import type { ExistingInk } from '../ports/pdf-writer';
 
 /** A stroke that is part of the file, with the reference needed to erase it from there. */
-export interface LoadedInk {
+interface LoadedInk {
   readonly strokeId: string;
   readonly pageIndex: number;
   readonly annotationRef: string;

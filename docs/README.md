@@ -29,6 +29,7 @@ A PDF score viewer for instrumentalists: slide-by-slide navigation by music syst
 | `baseline.md` | facts of the M0 baseline (historical snapshot at `v0.0.0`) |
 | `android-ci.md` | Android build, signing and distribution pipeline (M3) |
 | `ci.md` | workflow trigger table: push, pull request, tag, `workflow_run`, manual (V2-M1) |
+| `unused-exceptions.md` | intentional findings of the unused-code and unused-dependency checks, each with a reason (V2-M1) |
 | `changelog.md` | every change to requirements after the first review |
 | `review-report.md` | independent document review (V1-M0c; for V2 run again by V2-M0 S2.3): findings and "needs decision" items |
 | `questions.md` | created by agents when a statement is ambiguous (stop and ask) |
