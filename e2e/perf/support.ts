@@ -1,12 +1,13 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { expect, type Page, type TestInfo } from '@playwright/test';
 
+import { pickPerfPdfs, resolveCorpusEntry, type PerfPdf } from '../../scripts/lib/corpus-files.mjs';
 import { TUNABLES } from '../../src/config/tunables';
-import { FILE_CHOOSER_TIMEOUT_MS } from '../support/timing';
+import { detectionRunTimeoutMs, FILE_CHOOSER_TIMEOUT_MS } from '../support/timing';
 import { forceFileInput, label } from '../support/score';
 
 export const DEV_URL = 'http://127.0.0.1:4174';
-const REFERENCE_PATH = 'e2e/perf/reference-120.pdf';
+const EXPECTED_PATH = 'e2e/corpus/expected.json';
 const CI_FACTOR = process.env['CI'] ? TUNABLES.budgets.ciToleranceFactor : 1;
 const P95 = 0.95;
 const MEDIAN = 0.5;
@@ -14,10 +15,8 @@ const DECIMALS = 1;
 const DARK_MAX = 128;
 const RGBA = 4;
 const PIXEL_POLL_MS = 100;
-/** Detection of 120 pages (one scanned) on a small CI runner. */
-const DETECTION_120_BASE_MS = 180_000;
-const CI_TIMEOUT_FACTOR = 2;
-export const DETECTION_120_TIMEOUT_MS = DETECTION_120_BASE_MS * (process.env['CI'] ? CI_TIMEOUT_FACTOR : 1);
+/** Detection of the regular real PDF with the most pages (one run, scaled by its page count). */
+export const detectionTimeoutMs = (): number => detectionRunTimeoutMs(realPdfs().regular?.pages ?? 1);
 export const PERF_WAIT_MS = 30_000;
 
 /** A `T:budgets` number, widened by `T:budgets.ciToleranceFactor` on CI (TST-008). */
@@ -49,22 +48,41 @@ export const summary = (values: readonly number[]): Record<string, number> => ({
   max: Math.max(...values),
 });
 
-/** Opens the reference PDF through the file chooser; returns the time when the file was handed over. */
-export async function openReference(page: Page, url: string): Promise<number> {
-  const bytes = (() => {
-    try {
-      return readFileSync(REFERENCE_PATH);
-    } catch {
-      throw new Error(`${REFERENCE_PATH} is missing: run "npm run make:large-pdf" first`);
+const NO_REAL_PDF_REASON = 'no real PDF in the corpus: put PDFs in e2e/corpus/real/ or URLs in e2e/corpus/urls.txt and run npm run corpus';
+
+/** The real PDFs of the corpus (entries with a source) that exist, and from them the ones the tests use (TST-015, see `pickPerfPdfs`). */
+export function realPdfs(): { largest: PerfPdf | null; regular: PerfPdf | null; heavy: PerfPdf | null } {
+  const entries = JSON.parse(readFileSync(EXPECTED_PATH, 'utf8')) as {
+    file: string;
+    source?: 'folder' | 'url';
+    systemsPerPage: unknown[];
+    pages?: number;
+    stress?: boolean;
+  }[];
+  const files: PerfPdf[] = [];
+  for (const entry of entries) {
+    const { path } = resolveCorpusEntry({ entry, exists: existsSync });
+    if (path !== null && entry.source !== undefined) {
+      files.push({ file: entry.file, path, source: entry.source, bytes: statSync(path).size, pages: entry.pages ?? entry.systemsPerPage.length, stress: entry.stress === true });
     }
-  })();
+  }
+  return pickPerfPdfs(files);
+}
+
+/** Opens a real corpus PDF through the file chooser: the largest one, the regular one with the most pages or the heavy (stress) one. Returns the time when the file was handed over. */
+export async function openReference(page: Page, url: string, kind: 'largest' | 'regular' | 'heavy'): Promise<number> {
+  const pdf = realPdfs()[kind];
+  if (pdf === null) {
+    throw new Error(NO_REAL_PDF_REASON);
+  }
+  const bytes = readFileSync(pdf.path);
   await forceFileInput(page);
   await page.goto(url);
   const chooser = page.waitForEvent('filechooser', { timeout: FILE_CHOOSER_TIMEOUT_MS });
   await page.getByRole('button', { name: label('openFile'), exact: true }).click();
   const chosen = await chooser;
   const started = Date.now();
-  await chosen.setFiles({ name: 'reference-120.pdf', mimeType: 'application/pdf', buffer: bytes });
+  await chosen.setFiles({ name: pdf.file, mimeType: 'application/pdf', buffer: bytes });
   return started;
 }
 
@@ -97,7 +115,7 @@ export async function waitForFirstSlideDrawn(page: Page): Promise<void> {
 
 /** Detection is complete when the indicator no longer shows the trailing "+". */
 export async function waitForDetectionComplete(page: Page): Promise<void> {
-  await expect(page.locator('app-bottom-bar .indicator')).toHaveText(/^\d+ \/ \d+$/, { timeout: DETECTION_120_TIMEOUT_MS });
+  await expect(page.locator('app-bottom-bar .indicator')).toHaveText(/^\d+ \/ \d+$/, { timeout: detectionTimeoutMs() });
 }
 
 type Timings = { __frameMs?: number[]; __pending?: number | null };

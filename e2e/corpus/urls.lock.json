@@ -1,1 +1,22 @@
-[]
+[
+  {
+    "url": "https://imslp.eu/files/imglnks/euimg/4/46/IMSLP621557-PMLP863228-beethoven--sonatas-vol1.pdf",
+    "file": "IMSLP621557-PMLP863228-beethoven--sonatas-vol1.pdf",
+    "sha256": "6b67ef9d26649ece3a994fd26b098d8c4c625c6155649ddc3d401df1e190572c"
+  },
+  {
+    "url": "https://ks15.imslp.org/files/imglnks/usimg/b/b9/IMSLP799145-PMLP14377-tiff2pdf_(2).pdf",
+    "file": "IMSLP799145-PMLP14377-tiff2pdf_-2.pdf",
+    "sha256": "db56a8331e1c8e9ebf4491a706e6b0bd9cdd5fa62fa8c3792d4aeba6ed7751d6"
+  },
+  {
+    "url": "https://s9.imslp.org/files/imglnks/usimg/9/94/IMSLP01777-Mozart_EineKleineNachtmusik_ViolinI.pdf",
+    "file": "IMSLP01777-Mozart_EineKleineNachtmusik_ViolinI.pdf",
+    "sha256": "dc4c32ddc50e2b573a663728f429db5b417a6b67169e0f814e8f8a7ebcb72805"
+  },
+  {
+    "url": "https://s9.imslp.org/files/imglnks/usimg/a/ae/IMSLP914565-PMLP5176-mozart_serenade_k.525_wpv.pdf",
+    "file": "IMSLP914565-PMLP5176-mozart_serenade_k.525_wpv.pdf",
+    "sha256": "162578051770afcceef33063c2c2c7b70312b3740096912f2522483273072f0d"
+  }
+]

@@ -15,7 +15,6 @@
     "corpus": "node scripts/corpus.mjs",
     "corpus:expected": "node scripts/make-expected.mjs",
     "make:corpus": "node scripts/make-corpus.mjs",
-    "make:large-pdf": "node scripts/make-large-pdf.mjs",
     "e2e:perf": "PERF=1 playwright test --project=perf",
     "prebuild": "node scripts/generate-version.mjs && node scripts/generate-index-metadata.mjs",
     "pretest": "node scripts/generate-version.mjs",

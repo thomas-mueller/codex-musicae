@@ -33,7 +33,8 @@ export function selectToMeasure({ pdfs, entries, force = false }) {
 }
 
 /**
- * Merges measured counts (`measured[file]` = system count per page, `null` for a page that failed) into the entries.
+ * Merges measured counts (`measured[file]` = system count per page, `null` for a page that failed; or `{ stress: true, pages }` for a stress file,
+ * which is not run through detection) into the entries.
  * A new PDF gets an unreviewed entry; an unreviewed entry is refreshed and keeps note and known limitation; a reviewed entry stays as it is
  * unless `force`, which replaces its counts, keeps note and limitation and marks it unreviewed again. Entries of other files stay.
  */
@@ -42,18 +43,39 @@ export function mergeProposals({ entries, pdfs, measured, force = false }) {
   const report = { added: [], refreshed: [], kept: [], warnings: [] };
   const added = [];
   for (const { file, source } of pdfs) {
-    const counts = measured[file];
-    if (counts === undefined) continue;
+    const measurement = measured[file];
+    if (measurement === undefined) continue;
+    const stress = !Array.isArray(measurement);
+    const counts = stress ? [] : measurement;
+    const extra = stress ? { pages: measurement.pages, stress: true } : {};
     if (counts.some((count) => count === null)) report.warnings.push(`${file}: detection did not finish for every page (null in the proposal)`);
     const index = result.findIndex((entry) => entry.file === file);
     if (index < 0) {
-      added.push({ file, source, level: PROPOSAL_LEVEL, systemsPerPage: counts, note: '', knownLimitation: null, reviewed: false });
+      added.push({
+        file,
+        source,
+        level: PROPOSAL_LEVEL,
+        systemsPerPage: counts,
+        ...extra,
+        note: stress ? 'stress file: only the responsiveness tests use it' : '',
+        knownLimitation: null,
+        reviewed: stress, // a stress file has no expectation to review
+      });
       report.added.push(file);
     } else if (isReviewed(result[index]) && !force) {
       report.kept.push(file);
     } else {
       const { note, knownLimitation } = result[index];
-      result[index] = { file, source, level: PROPOSAL_LEVEL, systemsPerPage: counts, note, knownLimitation, reviewed: false };
+      result[index] = {
+        file,
+        source,
+        level: PROPOSAL_LEVEL,
+        systemsPerPage: counts,
+        ...extra,
+        note: stress && note === '' ? 'stress file: only the responsiveness tests use it' : note,
+        knownLimitation,
+        reviewed: stress,
+      };
       report.refreshed.push(file);
     }
   }

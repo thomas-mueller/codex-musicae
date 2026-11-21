@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 
-import { FILE_CHOOSER_TIMEOUT_MS, RERUN_TIMEOUT_MS } from './timing';
+import { DOCUMENT_OPEN_TIMEOUT_MS, FILE_CHOOSER_TIMEOUT_MS, RERUN_TIMEOUT_MS } from './timing';
 import { label } from './score';
 
 export type CorpusLevel = 'fast' | 'standard' | 'fine';
@@ -19,11 +19,20 @@ export async function openPdfBytes(page: Page, name: string, bytes: Buffer): Pro
   await (await chooser).setFiles({ name, mimeType: 'application/pdf', buffer: bytes });
 }
 
+/** Waits until the document is open (its pages are known) and returns the page count. */
+export async function pageCountOf(page: Page): Promise<number> {
+  await expect
+    .poll(() => page.evaluate(() => (globalThis as unknown as { __cm: CorpusHook }).__cm.systemCounts().counts.length), { timeout: DOCUMENT_OPEN_TIMEOUT_MS })
+    .toBeGreaterThan(0);
+  return page.evaluate(() => (globalThis as unknown as { __cm: CorpusHook }).__cm.systemCounts().counts.length);
+}
+
 /** Waits until detection of the active document is complete at `level` and returns the system count per page. */
 export async function systemCountsAt(
   page: Page,
   level: CorpusLevel,
   rerun: boolean,
+  timeoutMs: number = RERUN_TIMEOUT_MS,
 ): Promise<(number | null)[]> {
   if (rerun) {
     await page.evaluate(
@@ -40,7 +49,7 @@ export async function systemCountsAt(
           // A document that is still opening has no pages yet and counts as complete; a failed page stays null.
           return { level, complete: hook.detectionState().complete && counts.length > 0 && counts.every((c) => c !== null) };
         }),
-      { timeout: RERUN_TIMEOUT_MS },
+      { timeout: timeoutMs },
     )
     .toEqual({ level, complete: true });
   return page.evaluate(

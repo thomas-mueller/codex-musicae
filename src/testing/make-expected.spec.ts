@@ -76,6 +76,31 @@ describe('expectation helper merge', () => {
   });
 });
 
+describe('stress files', () => {
+  it('TST-013 a stress file gets an entry with its page count, no counts and nothing to review', () => {
+    const result = mergeProposals({ entries: [], pdfs: [pdf('big.pdf', 'url')], measured: { 'big.pdf': { stress: true, pages: 281 } } });
+    expect(result.entries).toEqual([
+      {
+        file: 'big.pdf',
+        source: 'url',
+        level: 'standard',
+        systemsPerPage: [],
+        pages: 281,
+        stress: true,
+        note: 'stress file: only the responsiveness tests use it',
+        knownLimitation: null,
+        reviewed: true,
+      },
+    ]);
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('TST-014 an unreviewed measured entry becomes a stress entry when the PDF is a stress file, keeping the owner note', () => {
+    const result = mergeProposals({ entries: [DRAFT], pdfs: [pdf('draft.pdf', 'url')], measured: { 'draft.pdf': { stress: true, pages: 200 } } });
+    expect(result.entries[0]).toMatchObject({ file: 'draft.pdf', systemsPerPage: [], pages: 200, stress: true, note: 'draft note', reviewed: true });
+  });
+});
+
 describe('expected.json', () => {
   it('TST-013 the expectation text has one entry per line, ends with a newline and parses back to the same entries', () => {
     const entries = [V1, REVIEWED, DRAFT];

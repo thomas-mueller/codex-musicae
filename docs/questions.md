@@ -70,3 +70,13 @@ Points found while writing the V2 entries. S1 recorded the interpretation given 
 9. **Limitations left to their milestones.** The background-detection platform limit (R-18e, D-16) and the D-17 consequence (no finger swipe with a tool active) are written by V2-M8 and V2-M11 as their files say; S1 added only LIM-032 (file identity by name, D-1).
 10. **Version entries across milestones.** R-16 is split: display, `versionName` and the consistency check in V2-M1 (PIP-018…PIP-020); CI build numbers in V2-M19 (PIP-021). The V2 tag scheme (`v1.<n>.0`, `v2.0.0`) is left to a decision in S2, not a requirement.
 11. **ORG-019 "scroll to the other end of the jump" has no V2 successor.** The long press on a marker now edits the user text (MRK-032), MRK-044/MRK-045 define selection, pass, change target and delete only. Needs decision: drop the function (record it in `docs/limitations.md`) or add a requirement (for example a selected jump also offers "go to the other end"). *(S2 review, finding 6.)* *Resolved by the owner: the long press goes to the other end (MRK-050); the user text is edited on the selected mark (MRK-032).*
+
+## V2-M2 S3 — responsiveness on real PDFs breaches the V1 long-task budget
+
+Measured on 2026-11-21 with the real corpus (`npm run e2e:perf`, Chromium, local machine, no CI factor). Detection code and `T:budgets` are untouched, as the milestone requires; two perf tests therefore fail and are kept failing on purpose until the owner decides.
+
+1. `NFR-002 DET-017 … detection in the background adds no long task` (regular PDF with the most pages, 21 pages): longest long task 189 ms against 50 ms (`T:budgets.drawingMaxLongTaskMs`). The stroke latency added by detection is within budget (0 ms of 16 ms).
+2. New `NFR-002 NFR-016 … the heaviest real PDF stays responsive` (Beethoven, 281 pages, detection still running): longest long task 305 ms against the same 50 ms while scrolling, zooming and jumping. Pages were displayed every time; a large jump took 1.4 s at the median and 2.8 s at most until the visible area was drawn.
+3. Open to first slide of the largest file (17 MB): 7.4 s against 8 s, little room.
+
+Decision needed (owner): raise the budgets for real scores, investigate the long tasks in M8 or later (detection and tile rendering on the main thread), or use a separate, looser budget for the responsiveness test. Slide change (p95 48 ms of 200 ms) and heap (13 MiB of 400 MiB) are fine.

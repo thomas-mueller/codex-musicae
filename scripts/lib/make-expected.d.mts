@@ -7,6 +7,8 @@ export interface ExpectedEntry {
   source?: 'folder' | 'url';
   level: string;
   systemsPerPage: (number | null)[];
+  pages?: number;
+  stress?: boolean;
   note: string;
   knownLimitation: string | null;
   reviewed?: boolean;
@@ -18,7 +20,7 @@ export function selectToMeasure(options: { pdfs: CorpusPdf[]; entries: ExpectedE
 export function mergeProposals(options: {
   entries: ExpectedEntry[];
   pdfs: CorpusPdf[];
-  measured: Record<string, (number | null)[]>;
+  measured: Record<string, (number | null)[] | { stress: true; pages: number }>;
   force?: boolean;
 }): { entries: ExpectedEntry[]; added: string[]; refreshed: string[]; kept: string[]; warnings: string[] };
 export function serializeExpected(entries: readonly ExpectedEntry[]): string;

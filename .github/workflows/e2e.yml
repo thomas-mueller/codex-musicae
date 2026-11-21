@@ -33,10 +33,11 @@ jobs:
   e2e:
     name: e2e (${{ matrix.project }})
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 90
     strategy:
       # One Playwright project per job, all in parallel. `dev` is set only where the specs need the development build
-      # (window.__cm debug hook: e2e/resource.spec.ts and the dev section of e2e/detection-bars.spec.ts, desktop Chromium).
+      # (window.__cm debug hook: e2e/resource.spec.ts, the dev section of e2e/detection-bars.spec.ts and the corpus run e2e/detection-corpus.spec.ts,
+      # which runs all entries on Chromium and the first three on Firefox and WebKit).
       fail-fast: false
       matrix:
         include:
@@ -44,11 +45,11 @@ jobs:
           - { project: chromium-pixel-phone, browser: chromium, dev: '0', grep: '@smoke' }
           - { project: chromium-small-phone, browser: chromium, dev: '0', grep: '@smoke' }
           - { project: chromium-galaxy-tablet, browser: chromium, dev: '0', grep: '@smoke' }
-          - { project: firefox, browser: firefox, dev: '0' }
+          - { project: firefox, browser: firefox, dev: '1' }
           - { project: firefox-pixel-phone, browser: firefox, dev: '0', grep: '@smoke' }
           - { project: firefox-small-phone, browser: firefox, dev: '0', grep: '@smoke' }
           - { project: firefox-galaxy-tablet, browser: firefox, dev: '0', grep: '@smoke' }
-          - { project: webkit, browser: webkit, dev: '0' }
+          - { project: webkit, browser: webkit, dev: '1' }
           - { project: webkit-iphone, browser: webkit, dev: '0', grep: '@smoke' }
           - { project: webkit-ipad, browser: webkit, dev: '0', grep: '@smoke' }
     env:
@@ -87,17 +88,21 @@ jobs:
         if: ${{ matrix.dev == '1' }}
         run: npm run build -- --configuration development --output-path dist/codexmusicae-dev
 
+      # TST-011: the PDFs of e2e/corpus/urls.txt; a failed download or a changed checksum is a warning, the entry is skipped.
+      - name: Fetch the corpus PDFs
+        run: node scripts/corpus.mjs --no-expected
+
       # CI=true (set by GitHub) makes playwright.config.ts serve the builds above, retry twice and use two workers.
       - name: End-to-end tests
         run: npx playwright test --project=${{ matrix.project }} ${{ matrix.grep && format('--grep {0}', matrix.grep) || '' }}
 
-  # TST-008: the performance budgets of T:budgets on the 120-page reference PDF (Chromium only, no retries). Runs after the
+  # TST-008: the performance budgets of T:budgets on the largest real PDFs of the corpus (Chromium only, no retries). Runs after the
   # e2e matrix (also when it failed); like the rest of this workflow a breach never blocks a deployment or an APK.
   perf:
     runs-on: ubuntu-latest
     needs: e2e
     if: ${{ !cancelled() }}
-    timeout-minutes: 30
+    timeout-minutes: 90
     env:
       PERF: '1'
       E2E_DEV_BUILD: '1'
@@ -125,8 +130,9 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
-      - name: Generate the reference PDF
-        run: npm run make:large-pdf
+      # TST-011, TST-015: the performance tests use the largest real PDF and the one with the most pages.
+      - name: Fetch the corpus PDFs
+        run: node scripts/corpus.mjs --no-expected
 
       - name: Production build
         run: npm run build

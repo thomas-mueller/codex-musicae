@@ -55,4 +55,3 @@ Thumbs.db
 
 # Downloaded corpus PDFs (V2-M2 S1, npm run corpus); the PDFs in e2e/corpus/real/ are committed
 e2e/corpus/cache/
-e2e/perf/reference-120.pdf
