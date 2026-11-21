@@ -12,7 +12,7 @@ import type { DocChange, DocumentStore } from './document.store';
  * 'readOnly' when the file turned out not to be writable and to 'needsAccess' when the browser has to ask the user first (in both
  * cases the changes stay unsaved, without an error). Supplied by the save pipeline.
  */
-export type SaveRunner = (signal: AbortSignal) => Promise<boolean | 'readOnly' | 'needsAccess'>;
+type SaveRunner = (signal: AbortSignal) => Promise<boolean | 'readOnly' | 'needsAccess'>;
 
 /**
  * SAV-008, SAV-009, FIL-010: one per tab. Feeds the pure autosave state machine with the tab's changes, arms the idle

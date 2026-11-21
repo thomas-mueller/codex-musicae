@@ -3,7 +3,7 @@
  * Pure validation of what comes back from the preferences store (anything may be stored there).
  */
 
-export interface FileRefData {
+interface FileRefData {
   readonly id: string;
   readonly name: string;
   readonly size?: number;

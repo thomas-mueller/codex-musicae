@@ -4,6 +4,8 @@ name: e2e
 # on every phone and tablet profile (PLT-011). Temporarily optional: this workflow is not
 # referenced by deploy-web or android, so a red run here never blocks a deployment or an APK (PIP-001, DEC-100).
 #
+# Triggers (PIP-012): pull requests to `main`, tags `v*` and manual runs; not every branch push (lint-test covers those).
+#
 # Designed for a free GitHub account: no artifacts (the storage quota is small and cannot be raised) and no uploads of
 # reports; every matrix job builds for itself, which takes seconds, and failures are read from the job log.
 #
@@ -11,11 +13,12 @@ name: e2e
 # per workflow, so a separate workflow can never gate another one.
 
 on:
-  push:
+  pull_request:
     branches:
-      - '**'
-    tags-ignore:
-      - '**'
+      - main
+  push:
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 permissions:
@@ -39,9 +42,11 @@ jobs:
         include:
           - { project: chromium, browser: chromium, dev: '1' }
           - { project: chromium-pixel-phone, browser: chromium, dev: '0', grep: '@smoke' }
+          - { project: chromium-small-phone, browser: chromium, dev: '0', grep: '@smoke' }
           - { project: chromium-galaxy-tablet, browser: chromium, dev: '0', grep: '@smoke' }
           - { project: firefox, browser: firefox, dev: '0' }
           - { project: firefox-pixel-phone, browser: firefox, dev: '0', grep: '@smoke' }
+          - { project: firefox-small-phone, browser: firefox, dev: '0', grep: '@smoke' }
           - { project: firefox-galaxy-tablet, browser: firefox, dev: '0', grep: '@smoke' }
           - { project: webkit, browser: webkit, dev: '0' }
           - { project: webkit-iphone, browser: webkit, dev: '0', grep: '@smoke' }

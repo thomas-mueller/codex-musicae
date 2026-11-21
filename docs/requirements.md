@@ -357,8 +357,8 @@ V2 terms (target `v2` entries):
 - **UIX-001** [v1·changed·M7] The modes are organization, annotation and presentation; the current mode is global state. *(Changed in V2 → UIX-025, V2-M5.)*
 - **UIX-002** [v1·done·M7] A segmented three-icon control switches modes, in the same place in both layouts; the active mode is filled, the others outlined; it is hidden in presentation mode.
 - **UIX-003** [v1·done·M7] The layout is compact if viewport width < `T:layout.compactMaxWidthPx` or height < `compactMaxHeightPx`, else expanded.
-- **UIX-004** [v1·changed·M7] Compact annotation layout: top bar with tab switcher, open-file, mode switch, undo, redo; bottom bar with previous, "slide x of n", next, zoom −, zoom +, zoom reset; one floating button expands to pen, highlighter, eraser; aspect-ratio buttons and the version info sit in the overflow menu. *(Changed in V2 → FIL-021, V2-M6.)*
-- **UIX-005** [v1·changed·M7] Expanded annotation layout: tab bar on top; vertical tool strip on `T:layout.toolStripSide` with pen, highlighter, eraser, undo, redo; popup next to it; the same bottom bar plus the aspect-ratio buttons. *(Changed in V2 → FIL-021, V2-M6.)*
+- **UIX-004** [v1·changed·M7] Compact annotation layout: top bar with tab switcher, open-file, mode switch, undo, redo; bottom bar with previous, "slide x of n", next, zoom −, zoom +, zoom reset; one floating button expands to pen, highlighter, eraser; aspect-ratio buttons and the version info sit in the overflow menu. *(Changed in V2 → FIL-021, V2-M6; undo and redo → UIX-033/034, V2-M7.)*
+- **UIX-005** [v1·changed·M7] Expanded annotation layout: tab bar on top; vertical tool strip on `T:layout.toolStripSide` with pen, highlighter, eraser, undo, redo; popup next to it; the same bottom bar plus the aspect-ratio buttons. *(Changed in V2 → FIL-021, V2-M6; undo and redo → UIX-033, V2-M7.)*
 - **UIX-006** [v1·changed·M7] Organization layout uses the same frame; the tool strip is replaced by level selector, marks-list button and overflow; the bottom bar shows "page x of n", previous, next and zoom buttons. In compact layout the organization controls sit behind one overflow button that opens a sheet. *(Changed in V2 → ORG-042, V2-M10.)*
 - **UIX-007** [v1·done·M7] Bars are `T:layout.barHeightPx` high, touch targets are at least `minTouchTargetPx`, icons are monochrome, bars never grow; additional controls go into overflow menus.
 - **UIX-008** [v1·done·M7] Bars stay visible in annotation and organization mode; there is no auto-hide.
@@ -386,6 +386,8 @@ V2 terms (target `v2` entries):
 - **UIX-030** [v2·todo·M5] `docs/icons.md` describes where icons live, how to replace one and which test covers it.
 - **UIX-031** [v2·todo·M14] Desktop browsers show no page-level scroll bar at the right edge; scroll bars inside the PDF area stay.
 - **UIX-032** [v2·todo·M14] A test places tooltips at all four screen edges in organization, annotation and settings mode and asserts they stay inside the screen.
+- **UIX-033** [v2·todo·M7] Undo and redo buttons belong to the tool area in annotation and organization mode: in the tool strip in expanded layout, in the expanded tool popup (FAB group) next to the tools in compact layout. They are disabled when their history is empty (ANN-016).
+- **UIX-034** [v2·todo·M7] The top bar contains no undo or redo button in any layout.
 
 ## PLT — Platforms
 
@@ -424,9 +426,9 @@ V2 terms (target `v2` entries):
 - **NFR-014** [v1·done·M1] The initial bundle stays within `T:budgets.initialBundleKbGzip` (Angular build budget).
 - **NFR-015** [v1·todo·M16] After the OS kills the WebView, the next start restores tabs and positions; unsaved loss is limited to the autosave delay.
 - **NFR-016** [v1·todo·M17] A reference PDF with 100+ pages (one scanned) runs within the budgets on a mid-range small tablet.
-- **NFR-017** [v2·todo·M1] No library, font or other resource is loaded from a third-party host at runtime.
-- **NFR-018** [v2·todo·M1] An E2E test on the production build fails when the app requests anything whose origin is not its own (except `data:` and `blob:`), in Chromium, Firefox and WebKit.
-- **NFR-019** [v2·todo·M1] Production builds are minified and contain no source maps.
+- **NFR-017** [v2·done·M1] No library, font or other resource is loaded from a third-party host at runtime.
+- **NFR-018** [v2·done·M1] An E2E test on the production build fails when the app requests anything whose origin is not its own (except `data:` and `blob:`), in Chromium, Firefox and WebKit.
+- **NFR-019** [v2·done·M1] Production builds are minified and contain no source maps.
 - **NFR-020** [v2·todo·M6] When a file becomes inactive its rendered bitmaps are released at once, not only under memory pressure; a memory test with 30 real PDFs checks it.
 - **NFR-021** [v2·todo·M14] After every zoom, tiles are re-rendered and placed correctly in all three modes.
 - **NFR-022** [v2·todo·M14] Visible pages and tiles are never left blank after scrolling, zooming, page jumps or mode changes.
@@ -441,8 +443,8 @@ V2 terms (target `v2` entries):
 - **ARC-004** [v1·done·M1] All numbers, colors, icon names and key bindings come from `src/config/tunables.ts`.
 - **ARC-005** [v1·done·M4] Errors cross port boundaries as typed results; the UI shows icons, not messages.
 - **ARC-006** [v1·done·M13] A single place in the input layer decides whether a pointer draws or navigates.
-- **ARC-007** [v2·todo·M1] V2 keeps the V1 layers, ports and import matrix; a change to them needs a decision entry in `docs/decisions.md` first.
-- **ARC-008** [v2·todo·M1] Every value in `src/config/tunables.ts` has a comment with unit and meaning; a check fails on a numeric value without one.
+- **ARC-007** [v2·done·M1] V2 keeps the V1 layers, ports and import matrix; a change to them needs a decision entry in `docs/decisions.md` first.
+- **ARC-008** [v2·done·M1] Every value in `src/config/tunables.ts` has a comment with unit and meaning; a check fails on a numeric value without one.
 - **ARC-009** [v2·todo·M3] Tunables and the feature configuration are bundled at build time; nothing of them is loaded at runtime.
 
 ## PIP — Pipelines and versioning
@@ -457,16 +459,16 @@ V2 terms (target `v2` entries):
 - **PIP-008** [v1·done·M0] Signing keys and Firebase credentials exist only as GitHub secrets; their names are listed in `docs/milestones/V1-M00.md`.
 - **PIP-009** [v1·done·M2] Milestone `V1-M<m>` is tagged `v0.<m>.0` and fixes `v0.<m>.<p>`; the release of v1 additionally tags the commit of the last included milestone `v1.0.0`; a tag deploys nothing by itself.
 - **PIP-010** [v1-optional·todo·M18] Pipeline `ios` also builds a signed ad hoc IPA and uploads it to Firebase App Distribution (owners group on every run, iOS tester group on `main` only) when the Apple signing secrets exist; without them these steps are skipped and the pipeline stays green.
-- **PIP-011** [v2·todo·M1] Every workflow can be started manually (`workflow_dispatch`).
-- **PIP-012** [v2·todo·M1] `lint-test` (lint, unit tests, build) runs on every push; the `e2e` workflow runs on pull requests to `main`, on tags and manually, not on every push.
-- **PIP-013** [v2·todo·M1] A check in `lint-test` fails on unused exports or files.
-- **PIP-014** [v2·todo·M1] A check in `lint-test` fails on unused dependencies in `package.json`.
-- **PIP-015** [v2·todo·M1] A license check in `lint-test` fails when a production dependency has a license outside an allow-list; GPL and AGPL are never allowed.
-- **PIP-016** [v2·todo·M1] Coverage is reported per kind of test (unit, integration, E2E and emulator, real-PDF detection, performance) in the CI job summary; a kind without coverage numbers reports its test count.
-- **PIP-017** [v2·todo·M1] No coverage threshold fails a build.
-- **PIP-018** [v2·todo·M1] Users see only the version `vX.Y.Z` taken from the nearest tag; the full `git describe` string appears only in internal places.
-- **PIP-019** [v2·todo·M1] Android `versionName` is `X.Y.Z` (no `v`, no describe suffix).
-- **PIP-020** [v2·todo·M1] A build check fails when the web, Android and iOS versions differ; free and paid builds have the same version.
+- **PIP-011** [v2·done·M1] Every workflow can be started manually (`workflow_dispatch`).
+- **PIP-012** [v2·done·M1] `lint-test` (lint, unit tests, build) runs on every push; the `e2e` workflow runs on pull requests to `main`, on tags and manually, not on every push.
+- **PIP-013** [v2·done·M1] A check in `lint-test` fails on unused exports or files.
+- **PIP-014** [v2·done·M1] A check in `lint-test` fails on unused dependencies in `package.json`.
+- **PIP-015** [v2·done·M1] A license check in `lint-test` fails when a production dependency has a license outside an allow-list; GPL and AGPL are never allowed.
+- **PIP-016** [v2·done·M1] Coverage is reported per kind of test (unit, integration, E2E and emulator, real-PDF detection, performance) in the CI job summary; a kind without coverage numbers reports its test count.
+- **PIP-017** [v2·done·M1] No coverage threshold fails a build.
+- **PIP-018** [v2·done·M1] Users see only the version `vX.Y.Z` taken from the nearest tag; the full `git describe` string appears only in internal places.
+- **PIP-019** [v2·done·M1] Android `versionName` is `X.Y.Z` (no `v`, no describe suffix).
+- **PIP-020** [v2·done·M1] A build check fails when the web, Android and iOS versions differ; free and paid builds have the same version.
 - **PIP-021** [v2·todo·M19] Store build numbers (Android `versionCode`, iOS build number) are the commit count, set by CI.
 
 ## TST — Testing
@@ -479,7 +481,7 @@ V2 terms (target `v2` entries):
 - **TST-006** [v1·done·M17] A manual device checklist covers pedals, full screen, wake lock, "open with", in-place save and performance on a real Android tablet.
 - **TST-007** [v1·done·M17] A tester checklist for iOS Safari (open, scroll, draw, save a copy, presentation mode, pedal) is delivered with the hosted URL.
 - **TST-008** [v1·done·M17] A performance test on the reference PDF fails the pipeline when a budget in `T:budgets` is exceeded.
-- **TST-009** [v2·todo·M1] Playwright projects cover desktop Chrome, Firefox and Safari, a small Android phone (about 360 × 640), a large Android phone, an Android tablet, iPhone and iPad.
+- **TST-009** [v2·done·M1] Playwright projects cover desktop Chrome, Firefox and Safari, a small Android phone (about 360 × 640), a large Android phone, an Android tablet, iPhone and iPad.
 - **TST-010** [v2·todo·M2] The real-PDF corpus consists of a repository folder and a URL list; either may be empty.
 - **TST-011** [v2·todo·M2] URL-list PDFs are downloaded and cached by tests only and checksum-verified; a failed download or a checksum mismatch skips the entry with a warning.
 - **TST-012** [v2·todo·M2] Every corpus PDF has a license note (source, license, date).

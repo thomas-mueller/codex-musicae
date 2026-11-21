@@ -14,7 +14,7 @@ function hexByte(unit: number): string {
 }
 
 /** `/C` with 1 (gray), 3 (RGB) or 4 (CMYK) components to '#RRGGBB'; anything else is the default ink color. */
-export function colorOf(components: readonly number[]): string {
+function colorOf(components: readonly number[]): string {
   const [a = 0, b = 0, c = 0, k = 0] = components;
   switch (components.length) {
     case PDF.grayComponents:
@@ -54,7 +54,7 @@ function widthOf(annotation: PDFDict): number {
 }
 
 /** The ink annotations of one page that are indirect objects (the others cannot be addressed for removal). */
-export function inkOfPage(doc: PDFDocument, pageIndex: number, annots: PDFArray): ExistingInk[] {
+function inkOfPage(doc: PDFDocument, pageIndex: number, annots: PDFArray): ExistingInk[] {
   const out: ExistingInk[] = [];
   for (let i = 0; i < annots.size(); i++) {
     const entry = annots.get(i);

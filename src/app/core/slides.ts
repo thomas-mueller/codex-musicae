@@ -29,7 +29,7 @@ export interface PackInput {
 }
 
 /** A vertical piece of a slide: one system, or several consecutive entries adjacent in print order on one page. */
-export interface Region {
+interface Region {
   readonly pageIndex: number;
   readonly firstSystem: number;
   readonly lastSystem: number;

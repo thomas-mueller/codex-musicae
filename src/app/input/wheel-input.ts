@@ -21,7 +21,7 @@ export interface WheelContext {
   readonly anchor: Point;
 }
 
-export interface WheelResult {
+interface WheelResult {
   readonly command: Command | null;
   readonly preventDefault: boolean;
 }

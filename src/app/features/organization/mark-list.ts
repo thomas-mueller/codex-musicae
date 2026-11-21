@@ -23,7 +23,7 @@ interface Around {
   readonly reached: boolean;
 }
 
-export type MarkListEntry =
+type MarkListEntry =
   | ({ readonly kind: 'jump'; readonly id: number; readonly junction: number; readonly pass: number; readonly colorIndex: number } & Around)
   | ({ readonly kind: 'break'; readonly junction: number } & Around)
   | ({ readonly kind: 'stop'; readonly junction: number } & Around);

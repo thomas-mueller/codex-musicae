@@ -24,8 +24,8 @@ export const TUNABLES = {
     breakLine: '#D32F2F', // ORG-022
     orgBar: {
       tint: '#00897B', // ORG-010
-      opacity: 0.3,
-      selectedOpacity: 0.55,
+      opacity: 0.3, // 0..1 alpha of an unselected bar
+      selectedOpacity: 0.55, // 0..1 alpha of a selected bar
       provisionalOpacity: 0.12, // DET-021
       minHeightPx: 1, // ORG-008: a zero-height bar is drawn as a line this thick
     },
@@ -218,9 +218,9 @@ export const TUNABLES = {
      * `fast`: 100 dpi, ratios 0.5 / 0.75, block 31, C 15; the other levels scale resolution and block size up.
      */
     levels: {
-      fast: { minSystemWidthRatio: 0.5, fullWidthSystemRatio: 0.75, renderScale: 100 / 72, adaptiveBlockSize: 31, adaptiveC: 15 },
-      standard: { minSystemWidthRatio: 0.5, fullWidthSystemRatio: 0.75, renderScale: 150 / 72, adaptiveBlockSize: 47, adaptiveC: 15 },
-      fine: { minSystemWidthRatio: 0.4, fullWidthSystemRatio: 0.7, renderScale: 200 / 72, adaptiveBlockSize: 63, adaptiveC: 15 },
+      fast: { minSystemWidthRatio: 0.5, fullWidthSystemRatio: 0.75, renderScale: 100 / 72, adaptiveBlockSize: 31, adaptiveC: 15 }, // ratios 0..1 of the page width; scale in bitmap px per pt (100 dpi); block in bitmap px; C in gray levels
+      standard: { minSystemWidthRatio: 0.5, fullWidthSystemRatio: 0.75, renderScale: 150 / 72, adaptiveBlockSize: 47, adaptiveC: 15 }, // same units as `fast`, 150 dpi
+      fine: { minSystemWidthRatio: 0.4, fullWidthSystemRatio: 0.7, renderScale: 200 / 72, adaptiveBlockSize: 63, adaptiveC: 15 }, // same units as `fast`, 200 dpi
     },
     fallbackPaddingPageHeightRatio: 0.02, // DET-010: used when no spacing exists in the whole document
     retryScaleFactor: 0.6, // DET-018
@@ -263,12 +263,12 @@ export const TUNABLES = {
     defaultInkColor: '#000000', // annotations without /C
     defaultInkWidthPt: 1, // annotations without /BS and /Border
     numberDecimals: 4, // fixed-point digits in content streams and arrays
-    colorByteMax: 255,
-    hexRadix: 16,
-    hexDigitsPerChannel: 2,
+    colorByteMax: 255, // largest value of one 8-bit color channel
+    hexRadix: 16, // base of a hex color digit
+    hexDigitsPerChannel: 2, // hex digits per color channel in #RRGGBB
     grayComponents: 1,
-    rgbComponents: 3,
-    cmykComponents: 4,
+    rgbComponents: 3, // numbers in an RGB color array
+    cmykComponents: 4, // numbers in a CMYK color array
     borderWidthIndex: 2, // /Border [h v width]
     embeddedFileDescription: 'CodexMusicae metadata', // SAV-001
     embeddedFileMime: 'application/json',
@@ -277,10 +277,10 @@ export const TUNABLES = {
   resources: {
     cacheBudgetDefaultBytes: 96 * 1024 * 1024, // NFR-004
     cacheBudgetByDeviceMemoryGb: {
-      1: 48 * 1024 * 1024,
-      2: 96 * 1024 * 1024,
-      4: 192 * 1024 * 1024,
-      8: 320 * 1024 * 1024,
+      1: 48 * 1024 * 1024, // bytes of cache on a device with 1 GB
+      2: 96 * 1024 * 1024, // bytes on 2 GB
+      4: 192 * 1024 * 1024, // bytes on 4 GB
+      8: 320 * 1024 * 1024, // bytes on 8 GB or more
     }, // NFR-004 (navigator.deviceMemory buckets)
     devicePixelRatioCap: 2, // NFR-005
     maxCanvasPixels: 12_000_000, // NFR-006 (also protects iOS/WebKit canvas limits)
@@ -358,6 +358,4 @@ export const TUNABLES = {
   },
 } as const;
 
-export type Tunables = typeof TUNABLES;
 export type DetectionLevelName = keyof typeof TUNABLES.detection.levels;
-export type CommandName = keyof typeof TUNABLES.keymap;

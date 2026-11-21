@@ -12,7 +12,7 @@ import { UiStore } from '../state/ui.store';
 import type { ViewState } from '../core';
 
 /** Where the stroke is shown while it is drawn; slide-space points. Implemented by the slide view. */
-export interface LiveStroke {
+interface LiveStroke {
   begin(style: StrokeStyle): void;
   add(points: readonly Point[]): void;
   clear(): void;

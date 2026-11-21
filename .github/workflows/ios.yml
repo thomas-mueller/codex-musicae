@@ -73,11 +73,10 @@ jobs:
         if: ${{ steps.gate.outputs.available == 'true' }}
         shell: bash
         run: |
-          version_string="$(git describe --tags --always --long)"
-          # CFBundleShortVersionString allows only digits and dots: the leading N.N.N of the tag, 0.0.0 without a tag.
-          version_name="$(printf '%s' "$version_string" | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1 || true)"
-          version_name="${version_name:-0.0.0}"
-          version_code="$(git rev-list --count HEAD)"
+          version_string="$(node scripts/version-info.mjs full)"
+          # CFBundleShortVersionString allows only digits and dots: X.Y.Z of the nearest tag, the same value as the Android versionName.
+          version_name="$(node scripts/version-info.mjs name)"
+          version_code="$(node scripts/version-info.mjs code)"
           commit_subject="$(git log -1 --pretty=%s)"
 
           {
@@ -235,10 +234,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          version_string="$(git describe --tags --always --long)"
-          version_name="$(printf '%s' "$version_string" | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1 || true)"
-          version_name="${version_name:-0.0.0}"
-          version_code="$(git rev-list --count HEAD)"
+          version_string="$(node scripts/version-info.mjs full)"
+          # CFBundleShortVersionString allows only digits and dots: X.Y.Z of the nearest tag, the same value as the Android versionName.
+          version_name="$(node scripts/version-info.mjs name)"
+          version_code="$(node scripts/version-info.mjs code)"
           archive_path="$RUNNER_TEMP/Unsigned.xcarchive"
           ipa_dir="$RUNNER_TEMP/unsigned-ipa"
 

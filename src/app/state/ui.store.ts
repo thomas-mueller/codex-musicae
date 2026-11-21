@@ -7,19 +7,19 @@ import { PresentationPlatform } from './presentation-platform';
 export type Mode = 'organization' | 'annotation' | 'presentation';
 export type DetectionLevel = keyof typeof TUNABLES.detection.levels;
 export type Tool = 'pen' | 'highlighter' | 'eraser';
-export interface Popup {
+interface Popup {
   readonly id: string;
 }
 /** What organization mode has selected: a junction (both bars of a page change) or a jump (its markers). ORG-013, ORG-020 */
-export type Selection =
+type Selection =
   | { readonly kind: 'junction'; readonly junction: number }
   | { readonly kind: 'jump'; readonly id: number };
 /** ORG-015: the user is choosing the target bar of a new jump, or of `editJumpId` (change target). */
-export interface PickingTarget {
+interface PickingTarget {
   readonly originJunction: number;
   readonly editJumpId?: number;
 }
-export interface Viewport {
+interface Viewport {
   readonly width: number;
   readonly height: number;
 }

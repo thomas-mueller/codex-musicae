@@ -7,13 +7,13 @@
  */
 import type { DocMarks } from './edits';
 
-export interface Arrival {
+interface Arrival {
   readonly junction: number;
   /** Number of systems played before this arrival. */
   readonly entriesSoFar: number;
 }
 
-export interface Replay {
+interface Replay {
   readonly arrivals: readonly Arrival[];
   /** Index into `arrivals` at which each jump fired, by jump id. */
   readonly firedAt: ReadonlyMap<number, number>;

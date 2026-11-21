@@ -22,7 +22,7 @@ import { LEVEL_ENTRIES, POPUP_ORG } from './tool-area';
 import { POPUP_TOOL_SETTINGS } from './tool-button';
 import { POPUP_OVERFLOW_TOP } from './top-bar';
 
-export const POPUP_INFO = 'info';
+const POPUP_INFO = 'info';
 const POPUP_SELECTOR = '[data-popup], [data-popup-trigger]';
 
 /** Renders at most one popup: a sheet (compact) or a side panel (expanded). UIX-013, 015 */

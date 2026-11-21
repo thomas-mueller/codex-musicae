@@ -8,7 +8,7 @@ import type { PdfWriterWorkerApi } from './pdf-writer-worker-api';
 import { mapWriteError } from './write-error';
 
 /** Creates the dedicated pdf-writer worker and its Comlink proxy. */
-export function createPdfWriterWorkerApi(): PdfWriterWorkerApi {
+function createPdfWriterWorkerApi(): PdfWriterWorkerApi {
   const worker = new Worker(new URL('../workers/pdf-writer.worker', import.meta.url), { type: 'module' });
   return Comlink.wrap<PdfWriterWorkerApi>(worker);
 }

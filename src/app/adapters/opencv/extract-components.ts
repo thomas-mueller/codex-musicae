@@ -2,7 +2,7 @@ import { TUNABLES } from '../../../config/tunables';
 import type { ComponentSet, ExtractionParams } from '../../ports/detection-engine';
 
 /** A deletable OpenCV object. */
-export interface CvDeletable {
+interface CvDeletable {
   delete(): void;
 }
 

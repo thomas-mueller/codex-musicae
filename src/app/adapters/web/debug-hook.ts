@@ -3,15 +3,15 @@ import type { InkStroke } from '../../core/annotation';
 import type { Rect } from '../../core/geometry';
 
 /** Development-only inspection point for the E2E resource check (NFR-004). Never installed in production builds. */
-export interface CacheProbe {
+interface CacheProbe {
   readonly totalBytes: number;
   readonly budgetBytes: number;
 }
 
 /** One edit of the active document's ink, applied through its store (TST-003 property test). */
-export type DebugStrokeOp = { readonly op: 'add'; readonly stroke: InkStroke } | { readonly op: 'erase'; readonly id: string } | { readonly op: 'undo' } | { readonly op: 'redo' };
+type DebugStrokeOp = { readonly op: 'add'; readonly stroke: InkStroke } | { readonly op: 'erase'; readonly id: string } | { readonly op: 'undo' } | { readonly op: 'redo' };
 
-export interface DebugHook {
+interface DebugHook {
   readonly cache: { readonly totalBytes: number; readonly budgetBytes: number };
   /** Renders page `pageIndex` of `pdf` at `scale` and returns the detection engine's rectangles (DET-004 E2E). */
   readonly detect?: (pdf: Uint8Array, pageIndex: number, scale: number) => Promise<readonly Rect[]>;

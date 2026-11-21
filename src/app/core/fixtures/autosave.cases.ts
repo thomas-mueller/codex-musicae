@@ -10,7 +10,7 @@ import type { SaveDecision, SaveEvent, SaveState } from '../autosave';
 /** idleMs = 3000. Apply the steps in order from SAVE_INITIAL: an `event` step goes through reduceSave; a `check` step calls
  *  saveDecision(state, now, 3000) and compares with the expected decision of the same position in `expected.checks`.
  *  After all steps the state must equal expected.finalState. */
-export type AutosaveStep = { event: SaveEvent } | { check: number };
+type AutosaveStep = { event: SaveEvent } | { check: number };
 
 export const autosaveCases: ReadonlyArray<{
   id: string; req: string; name: string; steps: AutosaveStep[];

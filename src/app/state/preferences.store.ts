@@ -9,7 +9,7 @@ import type { Orientation } from '../core';
 const KEY_RECENT = 'recent';
 const KEY_RATIO = { portrait: 'ratio.portrait', landscape: 'ratio.landscape' } as const;
 
-export type GlobalRatios = { readonly [O in Orientation]?: number };
+type GlobalRatios = { readonly [O in Orientation]?: number };
 
 /** Persisted settings. FIL-008, FIL-015: only `FileRef`s are stored, never bytes or PDF-derived data. */
 @Injectable({ providedIn: 'root' })

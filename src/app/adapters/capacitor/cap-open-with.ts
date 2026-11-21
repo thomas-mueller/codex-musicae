@@ -4,7 +4,7 @@ import { DocumentAccess } from './document-access-plugin';
 import type { DocumentAccessApi, NativeFile } from './document-access-plugin';
 
 /** Reads one incoming file into an `OpenedFile`; null when it cannot be read. */
-export type IncomingReader = (file: NativeFile) => Promise<OpenedFile | null>;
+type IncomingReader = (file: NativeFile) => Promise<OpenedFile | null>;
 
 /**
  * FIL-018: files handed over by an Android VIEW intent. The native side queues them; this adapter drains the queue when a

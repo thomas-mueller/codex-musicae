@@ -9,7 +9,7 @@ const LIMITS = 'Limits';
 const EMBEDDED_FILES = 'EmbeddedFiles';
 const PAIR = 2;
 
-export interface TreeEntry {
+interface TreeEntry {
   readonly names: PDFArray;
   /** Index of the key in `names`; the value follows at index + 1. */
   readonly index: number;
@@ -51,7 +51,7 @@ export function embeddedFilesRoot(doc: PDFDocument, create: boolean): PDFDict | 
 }
 
 /** Deletes a file specification and its embedded stream. */
-export function deleteFileSpec(doc: PDFDocument, value: PDFObject | undefined): void {
+function deleteFileSpec(doc: PDFDocument, value: PDFObject | undefined): void {
   if (!(value instanceof PDFRef)) {
     return;
   }

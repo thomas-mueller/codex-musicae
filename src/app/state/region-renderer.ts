@@ -11,7 +11,7 @@ import { BitmapCache } from './bitmap-cache';
 import type { DocumentStore } from './document.store';
 import { ResourceGovernor } from './resource-governor';
 
-export interface CachedRenderRequest {
+interface CachedRenderRequest {
   readonly pageIndex: number;
   /** Region of the page in display space. */
   readonly region: Rect;

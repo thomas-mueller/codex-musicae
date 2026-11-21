@@ -14,7 +14,7 @@ interface Task {
   readonly resolve: (result: Result<unknown, 'cancelled'>) => void;
 }
 
-export interface SubmitOptions {
+interface SubmitOptions {
   /** Render tasks carry the view they were made for; `setViewKey` cancels the others (NFR-008). */
   readonly viewKey?: string;
 }

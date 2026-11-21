@@ -9,7 +9,7 @@
 /** Op: ['set', key, bytes] (value = the key string), ['get', key], ['peek', key], ['delete', key], ['clear'], ['budget', bytes].
  *  `results` collects the return values of get/peek/delete in order (get/peek: the key string, or null if missing).
  *  `removed` lists [key, reason] in the order the onRemove callback was called. */
-export type LruOp = ['set', string, number] | ['get', string] | ['peek', string] | ['delete', string] | ['clear'] | ['budget', number];
+type LruOp = ['set', string, number] | ['get', string] | ['peek', string] | ['delete', string] | ['clear'] | ['budget', number];
 
 export const lruCases: ReadonlyArray<{
   id: string; req: string; name: string; budget: number; ops: LruOp[];

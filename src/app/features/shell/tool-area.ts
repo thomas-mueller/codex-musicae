@@ -9,7 +9,7 @@ import { IconKey } from './icon';
 import { IconButton } from './icon-button';
 import { ToolButton, ToolEntry } from './tool-button';
 
-export const POPUP_TOOLS = 'tools';
+const POPUP_TOOLS = 'tools';
 export const POPUP_ORG = 'org';
 
 export const TOOL_ENTRIES: readonly ToolEntry[] = [

@@ -1,8 +1,10 @@
 import { mkdtemp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { spawn } from 'node:child_process';
+import { tmpdir } from 'node:os';
 
 const repositoryRoot = new URL('..', import.meta.url).pathname;
+const staticRoots = [];
 const fixtureRoot = await mkdtemp(join(repositoryRoot, 'src/app/lint-selftest-'));
 
 const fixtures = [
@@ -126,7 +128,198 @@ try {
   if (iosOk.code !== 0) {
     throw new Error(`iOS config check fails on the real project\n${iosOk.output}`);
   }
-  console.log(`lint self-test passed (${fixtures.length} deliberate violations plus template and iOS config checks)`);
+  // Workflow triggers (PIP-011, PIP-012): each defect in a copy of the workflows must be rejected.
+  const workflowFiles = ['lint-test', 'e2e', 'deploy-web', 'android', 'ios'];
+  const workflowTexts = {};
+  for (const name of workflowFiles) {
+    workflowTexts[name] = await readFile(join(repositoryRoot, `.github/workflows/${name}.yml`), 'utf8');
+  }
+  const triggerBroken = [
+    ['PIP-011 workflow-no-dispatch-android', 'android', (text) => text.replace(/^ {2}workflow_dispatch:\n/m, '')],
+    ['PIP-011 workflow-no-dispatch-lint-test', 'lint-test', (text) => text.replace(/^ {2}workflow_dispatch:\n/m, '')],
+    ['PIP-011 android-dispatch-ungated', 'android', (text) => text.replace("github.event_name == 'workflow_dispatch' || ", '')],
+    ['PIP-011 deploy-web-ref-without-fallback', 'deploy-web', (text) => text.replace(' || github.sha', '')],
+    ['PIP-012 e2e-on-every-push', 'e2e', (text) => text.replace(/^ {2}push:\n/m, "  push:\n    branches:\n      - '**'\n")],
+    ['PIP-012 e2e-no-pull-request', 'e2e', (text) => text.replace(/^ {2}pull_request:\n(?: {4}.*\n)+/m, '')],
+    ['PIP-012 e2e-no-tag-trigger', 'e2e', (text) => text.replace("      - 'v*'", "      - 'x*'")],
+    ['PIP-012 lint-test-not-every-push', 'lint-test', (text) => text.replace("      - '**'\n    tags-ignore", "      - main\n    tags-ignore")],
+  ];
+  for (const [name, workflowName, change] of triggerBroken) {
+    const copy = join(fixtureRoot, 'workflows-copy');
+    await mkdir(copy, { recursive: true });
+    for (const other of workflowFiles) {
+      const text = other === workflowName ? change(workflowTexts[other]) : workflowTexts[other];
+      if (other === workflowName && text === workflowTexts[other]) {
+        throw new Error(`workflow self-test change had no effect: ${name}`);
+      }
+      await writeFile(join(copy, `${other}.yml`), text, 'utf8');
+    }
+    const result = await runNode('scripts/check-workflows.mjs', relative(repositoryRoot, copy));
+    if (result.code === 0) {
+      throw new Error(`workflow trigger self-test passed unexpectedly: ${name}`);
+    }
+    console.log(`  ok  ${name} is rejected`);
+  }
+  const workflowsOk = await runNode('scripts/check-workflows.mjs');
+  if (workflowsOk.code !== 0) {
+    throw new Error(`workflow trigger check fails on the real workflows\n${workflowsOk.output}`);
+  }
+  // Version and tunables checks (PIP-018, PIP-020, ARC-008): a seeded defect must be rejected.
+  const versionRoot = await mkdtemp(join(tmpdir(), 'cm-version-'));
+  staticRoots.push(versionRoot);
+  const generatedBroken = join(versionRoot, 'version.generated.ts');
+  await writeFile(generatedBroken, 'export const APP_VERSION_DISPLAY = "v9.9.9";\nexport const APP_VERSION_FULL = "v1.5.0-3-gabc1234";\n', 'utf8');
+  const generatedResult = await runNode('scripts/check-versions.mjs', relative(repositoryRoot, generatedBroken));
+  if (generatedResult.code === 0) {
+    throw new Error('version self-test passed unexpectedly: PIP-018 generated-display-mismatch');
+  }
+  console.log('  ok  PIP-018 generated-display-mismatch is rejected');
+  const versionWorkflows = join(versionRoot, 'workflows');
+  await mkdir(versionWorkflows, { recursive: true });
+  for (const name of ['android', 'ios']) {
+    await writeFile(join(versionWorkflows, `${name}.yml`), await readFile(join(repositoryRoot, `.github/workflows/${name}.yml`), 'utf8'), 'utf8');
+  }
+  for (const name of ['android', 'ios']) {
+    const file = join(versionWorkflows, `${name}.yml`);
+    const original = await readFile(file, 'utf8');
+    await writeFile(file, original.replaceAll('"$(node scripts/version-info.mjs name)"', '"$(git describe --tags --always --long | sed s/^v//)"'), 'utf8');
+    const result = await runNode('scripts/check-versions.mjs', 'src/config/version.generated.ts', relative(repositoryRoot, versionWorkflows));
+    if (result.code === 0) {
+      throw new Error(`version self-test passed unexpectedly: PIP-020 ${name}-inline-version`);
+    }
+    console.log(`  ok  PIP-020 ${name}-inline-version is rejected`);
+    await writeFile(file, original, 'utf8');
+  }
+  const tunablesText = await readFile(join(repositoryRoot, 'src/config/tunables.ts'), 'utf8');
+  const tunablesBroken = join(versionRoot, 'tunables.ts');
+  await writeFile(tunablesBroken, tunablesText.replace(/^( {2}identity: \{)/m, '  seededPx: 42,\n$1'), 'utf8');
+  const tunablesResult = await runNode('scripts/check-tunables-comments.mjs', relative(repositoryRoot, tunablesBroken));
+  if (tunablesResult.code === 0) {
+    throw new Error('tunables self-test passed unexpectedly: ARC-008 tunable-without-comment');
+  }
+  console.log('  ok  ARC-008 tunable-without-comment is rejected');
+
+  // Build output, Gradle default and workflow steps (NFR-019, PIP-016, PIP-018, PIP-019, TST-009): a seeded defect must be rejected.
+  const buildRoot = join(versionRoot, 'build-output');
+  const generatedOk = join(buildRoot, 'version.generated.ts');
+  await mkdir(join(buildRoot, 'good'), { recursive: true });
+  await writeFile(generatedOk, 'export const APP_VERSION_DISPLAY = "v1.5.0";\nexport const APP_VERSION_FULL = "v1.5.0-3-gabc1234";\n', 'utf8');
+  const minifiedBundle = `import{a as b}from"./x.js";var v="v1.5.0";${'a'.repeat(2000)}\n`;
+  const builds = [
+    ['NFR-019 build-with-source-map', minifiedBundle, true],
+    ['NFR-019 build-not-minified', Array.from({ length: 400 }, (_, i) => `const value${i} = "${i === 0 ? 'v1.5.0' : 'x'}";`).join('\n'), false],
+    ['PIP-018 build-without-display-version', minifiedBundle.replace('v1.5.0', 'v9.9.9'), false],
+  ];
+  const goodBuild = join(buildRoot, 'good');
+  await writeFile(join(goodBuild, 'main-ABC123.js'), minifiedBundle, 'utf8');
+  const goodBuildResult = await runNode('scripts/check-versions.mjs', '--built', relative(repositoryRoot, goodBuild), relative(repositoryRoot, generatedOk));
+  if (goodBuildResult.code !== 0) {
+    throw new Error(`built version check fails on a good fixture\n${goodBuildResult.output}`);
+  }
+  for (const [name, bundle, withMap] of builds) {
+    const dir = join(buildRoot, name.replace(/\W+/g, '-'));
+    await mkdir(dir, { recursive: true });
+    await writeFile(join(dir, 'main-ABC123.js'), bundle, 'utf8');
+    if (withMap) await writeFile(join(dir, 'main-ABC123.js.map'), '{}', 'utf8');
+    const result = await runNode('scripts/check-versions.mjs', '--built', relative(repositoryRoot, dir), relative(repositoryRoot, generatedOk));
+    if (result.code === 0) {
+      throw new Error(`build output self-test passed unexpectedly: ${name}`);
+    }
+    console.log(`  ok  ${name} is rejected`);
+  }
+  const gradleBroken = join(versionRoot, 'build.gradle');
+  const gradle = await readFile(join(repositoryRoot, 'android/app/build.gradle'), 'utf8');
+  await writeFile(gradleBroken, gradle.replace("?: '0.0.0'", "?: '0.0.0-local'"), 'utf8');
+  const gradleResult = await runNode('scripts/check-versions.mjs', 'src/config/version.generated.ts', '.github/workflows', relative(repositoryRoot, gradleBroken));
+  if (gradleResult.code === 0) {
+    throw new Error('version self-test passed unexpectedly: PIP-019 gradle-default-with-suffix');
+  }
+  console.log('  ok  PIP-019 gradle-default-with-suffix is rejected');
+  const stepBroken = [
+    ['PIP-016 lint-test-without-coverage-summary', 'lint-test', (text) => text.replace('node scripts/coverage-summary.mjs', 'echo skipped')],
+    ['PIP-016 lint-test-without-artifact', 'lint-test', (text) => text.replace('actions/upload-artifact@', 'actions/cache@')],
+    ['PIP-017 lint-test-with-threshold', 'lint-test', (text) => text.replace('--coverage\n', '--coverage --coverage.thresholds.lines=90\n')],
+    ['TST-009 e2e-without-small-phone', 'e2e', (text) => text.replace(/^.*firefox-small-phone.*\n/m, '')],
+  ];
+  for (const [name, workflowName, change] of stepBroken) {
+    const copy = join(versionRoot, `steps-${workflowName}`);
+    await mkdir(copy, { recursive: true });
+    for (const other of workflowFiles) {
+      const text = other === workflowName ? change(workflowTexts[other]) : workflowTexts[other];
+      if (other === workflowName && text === workflowTexts[other]) {
+        throw new Error(`workflow step self-test change had no effect: ${name}`);
+      }
+      await writeFile(join(copy, `${other}.yml`), text, 'utf8');
+    }
+    const result = await runNode('scripts/check-workflows.mjs', relative(repositoryRoot, copy));
+    if (result.code === 0) {
+      throw new Error(`workflow step self-test passed unexpectedly: ${name}`);
+    }
+    console.log(`  ok  ${name} is rejected`);
+  }
+
+  // Static checks (PIP-013, PIP-014, PIP-015): a seeded defect must be rejected, the real repository must pass.
+  const staticRoot = await mkdtemp(join(tmpdir(), 'cm-static-'));
+  staticRoots.push(staticRoot);
+  const staticApp = join(staticRoot, 'app');
+  await mkdir(staticApp, { recursive: true });
+  const noExceptions = join(staticRoot, 'none.md');
+  await writeFile(noExceptions, '', 'utf8');
+  await writeFile(join(staticApp, 'main.ts'), "import { used } from './used';\nconsole.log(used);\n", 'utf8');
+  await writeFile(join(staticApp, 'used.ts'), 'export const used = 1;\n', 'utf8');
+  const relativeApp = relative(repositoryRoot, staticApp);
+  const cleanResult = await runNode('scripts/check-unused-code.mjs', relativeApp, relative(repositoryRoot, noExceptions));
+  if (cleanResult.code !== 0) {
+    throw new Error(`unused code check fails on a clean fixture\n${cleanResult.output}`);
+  }
+  const seeded = [
+    ['PIP-013 unused-file', 'orphan.ts', 'export const orphan = 1;\n'],
+    ['PIP-013 unused-export', 'used.ts', 'export const used = 1;\nexport const unusedExport = 2;\n'],
+  ];
+  for (const [name, file, source] of seeded) {
+    const original = await readFile(join(staticApp, file), 'utf8').catch(() => null);
+    await writeFile(join(staticApp, file), source, 'utf8');
+    const result = await runNode('scripts/check-unused-code.mjs', relativeApp, relative(repositoryRoot, noExceptions));
+    if (result.code === 0) {
+      throw new Error(`static check self-test passed unexpectedly: ${name}`);
+    }
+    console.log(`  ok  ${name} is rejected`);
+    if (original === null) await rm(join(staticApp, file));
+    else await writeFile(join(staticApp, file), original, 'utf8');
+  }
+  const manifest = JSON.parse(await readFile(join(repositoryRoot, 'package.json'), 'utf8'));
+  const manifestCopy = join(staticRoot, 'package.json');
+  await writeFile(manifestCopy, JSON.stringify({ ...manifest, dependencies: { ...manifest.dependencies, 'left-pad': '1.3.0' } }), 'utf8');
+  const dependencyResult = await runNode('scripts/check-unused-dependencies.mjs', relative(repositoryRoot, manifestCopy));
+  if (dependencyResult.code === 0) {
+    throw new Error('static check self-test passed unexpectedly: PIP-014 unused-dependency');
+  }
+  console.log('  ok  PIP-014 unused-dependency is rejected');
+  const lock = JSON.parse(await readFile(join(repositoryRoot, 'package-lock.json'), 'utf8'));
+  const licenseBroken = [
+    ['PIP-015 license-gpl', { license: 'GPL-3.0-only' }],
+    ['PIP-015 license-unknown', { license: undefined }],
+    ['PIP-015 license-not-listed', { license: 'SSPL-1.0' }],
+  ];
+  for (const [name, change] of licenseBroken) {
+    const lockCopy = join(staticRoot, 'package-lock.json');
+    const packages = { ...lock.packages, 'node_modules/seeded-package': { version: '1.0.0', ...change } };
+    await writeFile(lockCopy, JSON.stringify({ ...lock, packages }), 'utf8');
+    const result = await runNode('scripts/check-licenses.mjs', relative(repositoryRoot, lockCopy));
+    if (result.code === 0) {
+      throw new Error(`license self-test passed unexpectedly: ${name}`);
+    }
+    console.log(`  ok  ${name} is rejected`);
+  }
+  console.log(`lint self-test passed (${fixtures.length} deliberate violations plus template, iOS config, workflow trigger, static, version and tunables checks)`);
 } finally {
   await rm(fixtureRoot, { recursive: true, force: true });
+  for (const staticRoot of staticRoots) await rm(staticRoot, { recursive: true, force: true });
+}
+// The real repository passes the static checks (run after the fixtures are gone, since they live in src/).
+for (const script of ['check-unused-code', 'check-unused-dependencies', 'check-licenses', 'check-versions', 'check-tunables-comments']) {
+  const result = await runNode(`scripts/${script}.mjs`);
+  if (result.code !== 0) {
+    throw new Error(`${script} fails on the real repository\n${result.output}`);
+  }
 }

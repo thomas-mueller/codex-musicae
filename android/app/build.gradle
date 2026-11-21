@@ -1,6 +1,6 @@
 apply plugin: 'com.android.application'
 
-def appVersionName = System.getenv('APP_VERSION_NAME') ?: '0.0.0-local'
+def appVersionName = System.getenv('APP_VERSION_NAME') ?: '0.0.0'
 def appVersionCode = Integer.parseInt(System.getenv('APP_VERSION_CODE') ?: '1')
 def keystorePath = System.getenv('ANDROID_KEYSTORE_PATH')
 def keystorePassword = System.getenv('ANDROID_KEYSTORE_PASSWORD')

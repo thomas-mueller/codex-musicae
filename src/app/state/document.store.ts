@@ -19,12 +19,12 @@ import type { ProvisionalBar } from './detection-run';
 export type DocumentStatus = 'restoring' | 'loading' | 'ready' | 'error';
 export type DocumentErrorCode = PdfOpenError;
 /** SLD-012: `entry` = index into the playing order of the first entry on the current slide, `system` = that entry's system. */
-export interface SlidePosition {
+interface SlidePosition {
   readonly entry: number;
   readonly system: number;
 }
 /** SLD-015: per-PDF aspect-ratio overrides, in memory (saving comes in M15). */
-export type RatioOverride = { readonly [O in Orientation]?: number };
+type RatioOverride = { readonly [O in Orientation]?: number };
 /** ANN-011: what M15 (autosave) listens to; `t` is the clock time of the event. */
 export interface DocChange {
   readonly type: 'change' | 'strokeStart' | 'strokeEnd';

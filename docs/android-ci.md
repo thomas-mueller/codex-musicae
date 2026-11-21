@@ -4,17 +4,17 @@ The `android` workflow (`.github/workflows/android.yml`) builds a signed release
 
 ## Trigger
 
-The workflow runs on `workflow_run` after a successful `lint-test` on any branch, like `deploy-web` (PIP-003), so every branch push produces a tester build. Tag pushes do not run `lint-test`, so a tag deploys nothing (PIP-009).
+The workflow runs on `workflow_run` after a successful `lint-test` on any branch, like `deploy-web` (PIP-003), so every branch push produces a tester build. Tag pushes do not run `lint-test`, so a tag deploys nothing (PIP-009). The workflow can also be started manually (PIP-011); trigger table: `docs/ci.md`.
 
 ## Tester groups
 
 The upload goes to the owners group (`FIREBASE_OWNERS_TESTER_GROUPS`) on every run, and additionally to the Android tester group (`FIREBASE_ANDROID_TESTER_GROUPS`) when the run is for `main`. The branch is `github.event.workflow_run.head_branch`. If no group applies (for example a feature branch while the owners variable is not set) the upload is skipped, not failed.
 
-## Versions (PIP-006)
+## Versions (PIP-006, PIP-019)
 
-- `versionName` = `git describe --tags --always --long` without the leading `v` (for example `0.3.0-0-g648ebe4`).
+- `versionName` = `X.Y.Z` of the nearest tag, without the `v` and without a describe suffix (PIP-019; for example `1.5.0`). `scripts/version-info.mjs name` computes it for the workflow, the iOS marketing version uses the same value, and `scripts/check-versions.mjs` (part of `npm run lint`) fails when web, Android and iOS differ (PIP-020). The full describe string stays in the release notes.
 - `versionCode` = `git rev-list --count HEAD`.
-- Gradle reads them from the environment variables `APP_VERSION_NAME` and `APP_VERSION_CODE`; local builds default to `0.0.0-local` and `1`.
+- Gradle reads them from the environment variables `APP_VERSION_NAME` and `APP_VERSION_CODE`; local builds default to `0.0.0` and `1`.
 - A workflow step reads the built APK with `aapt2` and fails if package, `versionCode`, `versionName` or `minSdkVersion` differ from the expected values.
 
 ## Release signing (owner, once)

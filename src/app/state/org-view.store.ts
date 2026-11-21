@@ -8,7 +8,7 @@ import { SessionStore } from './session.store';
 import { UiStore } from './ui.store';
 
 /** A request for the viewer to scroll vertically to `top`; `seq` makes equal requests distinct. */
-export interface ScrollRequest {
+interface ScrollRequest {
   readonly top: number;
   readonly animate: boolean;
   readonly seq: number;

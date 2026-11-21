@@ -1,0 +1,4 @@
+{
+  "_comment": "Numbers that need no comment of their own (ARC-008): a line whose only numbers are in this list is fine without one.",
+  "obviousNumbers": [0, 1]
+}

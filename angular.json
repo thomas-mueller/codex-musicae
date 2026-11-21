@@ -116,7 +116,11 @@
           "defaultConfiguration": "development"
         },
         "test": {
-          "builder": "@angular/build:unit-test"
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "coverageReporters": ["json-summary", "text-summary"],
+            "coverageExclude": ["**/*.spec.ts", "src/testing/**", "**/fixtures/**", "**/testing/**"]
+          }
         }
       }
     }
