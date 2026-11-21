@@ -482,11 +482,11 @@ V2 terms (target `v2` entries):
 - **TST-007** [v1·done·M17] A tester checklist for iOS Safari (open, scroll, draw, save a copy, presentation mode, pedal) is delivered with the hosted URL.
 - **TST-008** [v1·done·M17] A performance test on the reference PDF fails the pipeline when a budget in `T:budgets` is exceeded.
 - **TST-009** [v2·done·M1] Playwright projects cover desktop Chrome, Firefox and Safari, a small Android phone (about 360 × 640), a large Android phone, an Android tablet, iPhone and iPad.
-- **TST-010** [v2·todo·M2] The real-PDF corpus consists of a repository folder and a URL list; either may be empty.
-- **TST-011** [v2·todo·M2] URL-list PDFs are downloaded and cached by tests only and checksum-verified; a failed download or a checksum mismatch skips the entry with a warning.
-- **TST-012** [v2·todo·M2] Every corpus PDF has a license note (source, license, date).
+- **TST-010** [v2·todo·M2] The real-PDF corpus consists of a repository folder and a plain list of URLs; either may be empty. The owner provides nothing but the PDF files or their URLs.
+- **TST-011** [v2·todo·M2] URL-list PDFs are downloaded and cached by a script (run by tests and CI only); the script records each checksum on first download and verifies it afterwards; a failed download or a checksum mismatch skips the entry with a warning.
+- **TST-012** [v2·dropped·M2] Every corpus PDF has a license note (source, license, date). Dropped: licenses are not tracked for the test corpus (owner decision).
 - **TST-013** [v2·todo·M2] An expectation file extending `e2e/corpus/expected.json` gives the number of systems per page for every corpus PDF.
-- **TST-014** [v2·todo·M2] A helper script proposes expectation entries and never overwrites an entry marked as reviewed unless called with `--force`.
+- **TST-014** [v2·todo·M2] One easy-to-use script (`npm run corpus`) does all corpus bookkeeping: it downloads the listed URLs, records checksums, and proposes expectation entries; it never overwrites an entry marked as reviewed unless called with `--force`.
 - **TST-015** [v2·todo·M2] The corpus runs as detection regression test, and the largest real PDFs replace the generated reference PDF in the performance test.
 - **TST-016** [v2·todo·M2] Generated synthetic scores and the generated large reference PDF are removed; only the failure-case fixtures damaged, zero pages, blank page and encrypted stay.
 - **TST-017** [v2·todo·M14] Seeded random stress tests (page jumps, scrolling, zoom sequences, mode switches, rendering during detection) assert that no visible tile stays blank; the seed is printed on failure and budgets are in `T:budgets`.
