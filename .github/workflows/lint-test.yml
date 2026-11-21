@@ -42,8 +42,22 @@ jobs:
       - name: Lint self-test
         run: npm run lint:selftest
 
+      # Coverage is information only: no threshold fails the build (PIP-017).
       - name: Unit tests
-        run: npm test -- --watch=false
+        run: npm test -- --watch=false --coverage
+
+      - name: Coverage per kind of test
+        run: node scripts/coverage-summary.mjs
+
+      - name: Upload coverage summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-summary
+          path: coverage/coverage-summary.md
+          retention-days: 14
 
       - name: Production build
         run: npm run build
+
+      - name: Version and build output check
+        run: node scripts/check-versions.mjs --built

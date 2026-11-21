@@ -48,9 +48,9 @@ jobs:
       - name: Compute Android version
         shell: bash
         run: |
-          version_string="$(git describe --tags --always --long)"
-          version_name="${version_string#v}"
-          version_code="$(git rev-list --count HEAD)"
+          version_string="$(node scripts/version-info.mjs full)"
+          version_name="$(node scripts/version-info.mjs name)"
+          version_code="$(node scripts/version-info.mjs code)"
           commit_subject="$(git log -1 --pretty=%s)"
 
           {

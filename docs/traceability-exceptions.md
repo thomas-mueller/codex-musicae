@@ -8,6 +8,9 @@
 - **ARC-002** ESLint (`no-restricted-imports`, `no-restricted-globals` for `core/`) and `lint:selftest`; determinism is checked by the unit specs of `core/` only indirectly.
 - **PLT-003** ESLint restricts platform APIs to `adapters/` and the composition root; checked by `npm run lint` and `lint:selftest`.
 - **NFR-014** The Angular build budget (`angular.json`, `T:budgets.initialBundleKbGzip`) fails `npm run build`, which `lint-test` runs on every push.
+- **ARC-007** A rule for later changes (a change to layers, ports or the import matrix needs a decision entry first); V2-M1 changes none (DEC-141), and the layers are enforced by `npm run lint` and `lint:selftest`.
+- **NFR-019** `node scripts/check-versions.mjs --built` runs in `lint-test` after the production build and fails on source maps or unminified bundles (DEC-141); it needs a build, so it has no unit test.
+- **TST-009** The Playwright projects are in `playwright.config.ts` and `.github/workflows/e2e.yml` (small phone 360 × 640, Pixel 7, Galaxy Tab S9, iPhone 13, iPad Pro 11, three desktop engines); a project list has no test of its own, the smoke tests run on every one of them.
 - **PIP-011** `scripts/check-workflows.mjs` (part of `npm run lint`) checks the triggers; its failing examples are the `PIP-011 …` cases of `npm run lint:selftest`.
 - **PIP-012** Same check and self-test (`PIP-012 …` cases); the triggers themselves are only seen when GitHub runs the workflows.
 

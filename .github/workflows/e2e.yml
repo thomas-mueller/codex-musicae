@@ -42,9 +42,11 @@ jobs:
         include:
           - { project: chromium, browser: chromium, dev: '1' }
           - { project: chromium-pixel-phone, browser: chromium, dev: '0', grep: '@smoke' }
+          - { project: chromium-small-phone, browser: chromium, dev: '0', grep: '@smoke' }
           - { project: chromium-galaxy-tablet, browser: chromium, dev: '0', grep: '@smoke' }
           - { project: firefox, browser: firefox, dev: '0' }
           - { project: firefox-pixel-phone, browser: firefox, dev: '0', grep: '@smoke' }
+          - { project: firefox-small-phone, browser: firefox, dev: '0', grep: '@smoke' }
           - { project: firefox-galaxy-tablet, browser: firefox, dev: '0', grep: '@smoke' }
           - { project: webkit, browser: webkit, dev: '0' }
           - { project: webkit-iphone, browser: webkit, dev: '0', grep: '@smoke' }

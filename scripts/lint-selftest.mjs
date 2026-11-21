@@ -164,6 +164,41 @@ try {
   if (workflowsOk.code !== 0) {
     throw new Error(`workflow trigger check fails on the real workflows\n${workflowsOk.output}`);
   }
+  // Version and tunables checks (PIP-018, PIP-020, ARC-008): a seeded defect must be rejected.
+  const versionRoot = await mkdtemp(join(tmpdir(), 'cm-version-'));
+  staticRoots.push(versionRoot);
+  const generatedBroken = join(versionRoot, 'version.generated.ts');
+  await writeFile(generatedBroken, 'export const APP_VERSION_DISPLAY = "v9.9.9";\nexport const APP_VERSION_FULL = "v1.5.0-3-gabc1234";\n', 'utf8');
+  const generatedResult = await runNode('scripts/check-versions.mjs', relative(repositoryRoot, generatedBroken));
+  if (generatedResult.code === 0) {
+    throw new Error('version self-test passed unexpectedly: PIP-018 generated-display-mismatch');
+  }
+  console.log('  ok  PIP-018 generated-display-mismatch is rejected');
+  const versionWorkflows = join(versionRoot, 'workflows');
+  await mkdir(versionWorkflows, { recursive: true });
+  for (const name of ['android', 'ios']) {
+    await writeFile(join(versionWorkflows, `${name}.yml`), await readFile(join(repositoryRoot, `.github/workflows/${name}.yml`), 'utf8'), 'utf8');
+  }
+  for (const name of ['android', 'ios']) {
+    const file = join(versionWorkflows, `${name}.yml`);
+    const original = await readFile(file, 'utf8');
+    await writeFile(file, original.replaceAll('"$(node scripts/version-info.mjs name)"', '"$(git describe --tags --always --long | sed s/^v//)"'), 'utf8');
+    const result = await runNode('scripts/check-versions.mjs', 'src/config/version.generated.ts', relative(repositoryRoot, versionWorkflows));
+    if (result.code === 0) {
+      throw new Error(`version self-test passed unexpectedly: PIP-020 ${name}-inline-version`);
+    }
+    console.log(`  ok  PIP-020 ${name}-inline-version is rejected`);
+    await writeFile(file, original, 'utf8');
+  }
+  const tunablesText = await readFile(join(repositoryRoot, 'src/config/tunables.ts'), 'utf8');
+  const tunablesBroken = join(versionRoot, 'tunables.ts');
+  await writeFile(tunablesBroken, tunablesText.replace(/^( {2}identity: \{)/m, '  seededPx: 42,\n$1'), 'utf8');
+  const tunablesResult = await runNode('scripts/check-tunables-comments.mjs', relative(repositoryRoot, tunablesBroken));
+  if (tunablesResult.code === 0) {
+    throw new Error('tunables self-test passed unexpectedly: ARC-008 tunable-without-comment');
+  }
+  console.log('  ok  ARC-008 tunable-without-comment is rejected');
+
   // Static checks (PIP-013, PIP-014, PIP-015): a seeded defect must be rejected, the real repository must pass.
   const staticRoot = await mkdtemp(join(tmpdir(), 'cm-static-'));
   staticRoots.push(staticRoot);
@@ -217,13 +252,13 @@ try {
     }
     console.log(`  ok  ${name} is rejected`);
   }
-  console.log(`lint self-test passed (${fixtures.length} deliberate violations plus template, iOS config, workflow trigger and static checks)`);
+  console.log(`lint self-test passed (${fixtures.length} deliberate violations plus template, iOS config, workflow trigger, static, version and tunables checks)`);
 } finally {
   await rm(fixtureRoot, { recursive: true, force: true });
   for (const staticRoot of staticRoots) await rm(staticRoot, { recursive: true, force: true });
 }
 // The real repository passes the static checks (run after the fixtures are gone, since they live in src/).
-for (const script of ['check-unused-code', 'check-unused-dependencies', 'check-licenses']) {
+for (const script of ['check-unused-code', 'check-unused-dependencies', 'check-licenses', 'check-versions', 'check-tunables-comments']) {
   const result = await runNode(`scripts/${script}.mjs`);
   if (result.code !== 0) {
     throw new Error(`${script} fails on the real repository\n${result.output}`);

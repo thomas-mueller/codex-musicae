@@ -428,7 +428,7 @@ V2 terms (target `v2` entries):
 - **NFR-016** [v1·todo·M17] A reference PDF with 100+ pages (one scanned) runs within the budgets on a mid-range small tablet.
 - **NFR-017** [v2·done·M1] No library, font or other resource is loaded from a third-party host at runtime.
 - **NFR-018** [v2·done·M1] An E2E test on the production build fails when the app requests anything whose origin is not its own (except `data:` and `blob:`), in Chromium, Firefox and WebKit.
-- **NFR-019** [v2·todo·M1] Production builds are minified and contain no source maps.
+- **NFR-019** [v2·done·M1] Production builds are minified and contain no source maps.
 - **NFR-020** [v2·todo·M6] When a file becomes inactive its rendered bitmaps are released at once, not only under memory pressure; a memory test with 30 real PDFs checks it.
 - **NFR-021** [v2·todo·M14] After every zoom, tiles are re-rendered and placed correctly in all three modes.
 - **NFR-022** [v2·todo·M14] Visible pages and tiles are never left blank after scrolling, zooming, page jumps or mode changes.
@@ -443,8 +443,8 @@ V2 terms (target `v2` entries):
 - **ARC-004** [v1·done·M1] All numbers, colors, icon names and key bindings come from `src/config/tunables.ts`.
 - **ARC-005** [v1·done·M4] Errors cross port boundaries as typed results; the UI shows icons, not messages.
 - **ARC-006** [v1·done·M13] A single place in the input layer decides whether a pointer draws or navigates.
-- **ARC-007** [v2·todo·M1] V2 keeps the V1 layers, ports and import matrix; a change to them needs a decision entry in `docs/decisions.md` first.
-- **ARC-008** [v2·todo·M1] Every value in `src/config/tunables.ts` has a comment with unit and meaning; a check fails on a numeric value without one.
+- **ARC-007** [v2·done·M1] V2 keeps the V1 layers, ports and import matrix; a change to them needs a decision entry in `docs/decisions.md` first.
+- **ARC-008** [v2·done·M1] Every value in `src/config/tunables.ts` has a comment with unit and meaning; a check fails on a numeric value without one.
 - **ARC-009** [v2·todo·M3] Tunables and the feature configuration are bundled at build time; nothing of them is loaded at runtime.
 
 ## PIP — Pipelines and versioning
@@ -464,11 +464,11 @@ V2 terms (target `v2` entries):
 - **PIP-013** [v2·done·M1] A check in `lint-test` fails on unused exports or files.
 - **PIP-014** [v2·done·M1] A check in `lint-test` fails on unused dependencies in `package.json`.
 - **PIP-015** [v2·done·M1] A license check in `lint-test` fails when a production dependency has a license outside an allow-list; GPL and AGPL are never allowed.
-- **PIP-016** [v2·todo·M1] Coverage is reported per kind of test (unit, integration, E2E and emulator, real-PDF detection, performance) in the CI job summary; a kind without coverage numbers reports its test count.
-- **PIP-017** [v2·todo·M1] No coverage threshold fails a build.
-- **PIP-018** [v2·todo·M1] Users see only the version `vX.Y.Z` taken from the nearest tag; the full `git describe` string appears only in internal places.
-- **PIP-019** [v2·todo·M1] Android `versionName` is `X.Y.Z` (no `v`, no describe suffix).
-- **PIP-020** [v2·todo·M1] A build check fails when the web, Android and iOS versions differ; free and paid builds have the same version.
+- **PIP-016** [v2·done·M1] Coverage is reported per kind of test (unit, integration, E2E and emulator, real-PDF detection, performance) in the CI job summary; a kind without coverage numbers reports its test count.
+- **PIP-017** [v2·done·M1] No coverage threshold fails a build.
+- **PIP-018** [v2·done·M1] Users see only the version `vX.Y.Z` taken from the nearest tag; the full `git describe` string appears only in internal places.
+- **PIP-019** [v2·done·M1] Android `versionName` is `X.Y.Z` (no `v`, no describe suffix).
+- **PIP-020** [v2·done·M1] A build check fails when the web, Android and iOS versions differ; free and paid builds have the same version.
 - **PIP-021** [v2·todo·M19] Store build numbers (Android `versionCode`, iOS build number) are the commit count, set by CI.
 
 ## TST — Testing
@@ -481,7 +481,7 @@ V2 terms (target `v2` entries):
 - **TST-006** [v1·done·M17] A manual device checklist covers pedals, full screen, wake lock, "open with", in-place save and performance on a real Android tablet.
 - **TST-007** [v1·done·M17] A tester checklist for iOS Safari (open, scroll, draw, save a copy, presentation mode, pedal) is delivered with the hosted URL.
 - **TST-008** [v1·done·M17] A performance test on the reference PDF fails the pipeline when a budget in `T:budgets` is exceeded.
-- **TST-009** [v2·todo·M1] Playwright projects cover desktop Chrome, Firefox and Safari, a small Android phone (about 360 × 640), a large Android phone, an Android tablet, iPhone and iPad.
+- **TST-009** [v2·done·M1] Playwright projects cover desktop Chrome, Firefox and Safari, a small Android phone (about 360 × 640), a large Android phone, an Android tablet, iPhone and iPad.
 - **TST-010** [v2·todo·M2] The real-PDF corpus consists of a repository folder and a URL list; either may be empty.
 - **TST-011** [v2·todo·M2] URL-list PDFs are downloaded and cached by tests only and checksum-verified; a failed download or a checksum mismatch skips the entry with a warning.
 - **TST-012** [v2·todo·M2] Every corpus PDF has a license note (source, license, date).

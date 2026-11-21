@@ -14,8 +14,8 @@ import { provideRouter } from '@angular/router';
 import { TUNABLES } from '../config/tunables';
 import { tunablesToCssVars } from './state/css-vars';
 import { DetectionService } from './state/detection.service';
-import { APP_VERSION_RAW } from '../config/version.generated';
-import { APP_VERSION } from './ports/app-version';
+import { APP_VERSION_DISPLAY, APP_VERSION_FULL as APP_VERSION_FULL_VALUE } from '../config/version.generated';
+import { APP_VERSION, APP_VERSION_FULL } from './ports/app-version';
 
 import { provideAppIdentity } from './adapters/web/app-identity';
 import { AppTranslocoLoader } from './adapters/web/transloco-loader';
@@ -63,7 +63,8 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideZonelessChangeDetection(),
     provideHttpClient(),
-    { provide: APP_VERSION, useValue: APP_VERSION_RAW },
+    { provide: APP_VERSION, useValue: APP_VERSION_DISPLAY },
+    { provide: APP_VERSION_FULL, useValue: APP_VERSION_FULL_VALUE },
     provideServiceWorker('ngsw-worker.js', {
       enabled: shouldRegisterServiceWorker(isDevMode(), Capacitor),
       registrationStrategy: 'registerWhenStable:30000',

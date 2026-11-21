@@ -24,6 +24,9 @@ const PERF_GLOB = '**/e2e/perf/**';
 // Locally Playwright still builds before serving, so `npx playwright test` works from a clean checkout.
 const buildFirst = (command: string): string => (IN_CI ? '' : `${command} && `);
 
+// A small Android phone (TST-009): the Pixel 7 settings with a 360 x 640 CSS pixel viewport.
+const SMALL_PHONE_VIEWPORT = { width: 360, height: 640 };
+
 type DeviceProject = {
   name: string;
   use: Record<string, unknown>;
@@ -33,19 +36,22 @@ const deviceProject = (
   name: string,
   browserName: 'chromium' | 'firefox' | 'webkit',
   deviceName: string,
+  viewport?: { width: number; height: number },
 ): DeviceProject | undefined => {
   const device = devices[deviceName];
   if (!device) {
     return undefined;
   }
 
-  return { name, use: { ...device, browserName } };
+  return { name, use: { ...device, browserName, ...(viewport ? { viewport } : {}) } };
 };
 
 const deviceProjects = [
   deviceProject('chromium-pixel-phone', 'chromium', 'Pixel 7'),
+  deviceProject('chromium-small-phone', 'chromium', 'Pixel 7', SMALL_PHONE_VIEWPORT),
   deviceProject('chromium-galaxy-tablet', 'chromium', 'Galaxy Tab S9'),
   deviceProject('firefox-pixel-phone', 'firefox', 'Pixel 7'),
+  deviceProject('firefox-small-phone', 'firefox', 'Pixel 7', SMALL_PHONE_VIEWPORT),
   deviceProject('firefox-galaxy-tablet', 'firefox', 'Galaxy Tab S9'),
   deviceProject('webkit-iphone', 'webkit', 'iPhone 13'),
   deviceProject('webkit-ipad', 'webkit', 'iPad Pro 11'),

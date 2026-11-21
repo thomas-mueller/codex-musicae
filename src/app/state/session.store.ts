@@ -4,7 +4,7 @@ import type { WritableSignal } from '@angular/core';
 import { TUNABLES } from '../../config/tunables';
 import { parseMetadata, parseSession, reconcileMetadata } from '../core';
 import { APP_LIFECYCLE } from '../ports/app-lifecycle';
-import { APP_VERSION } from '../ports/app-version';
+import { APP_VERSION_FULL } from '../ports/app-version';
 import { FILE_ACCESS } from '../ports/file-access';
 import type { FileAccessError, FileRef, OpenedFile } from '../ports/file-access';
 import { PDF_RENDERER } from '../ports/pdf-renderer';
@@ -78,7 +78,7 @@ export class SessionStore {
   private readonly injector = inject(Injector);
   private readonly writer = inject(PDF_WRITER);
   private readonly scheduler = inject(Scheduler);
-  private readonly appVersion = inject(APP_VERSION);
+  private readonly appVersion = inject(APP_VERSION_FULL);
   private readonly prefs = inject(PREFERENCES);
   private readonly entries = signal<readonly TabEntry[]>([]);
   private readonly activeIdSignal = signal<string | null>(null);

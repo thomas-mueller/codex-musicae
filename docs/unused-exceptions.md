@@ -16,3 +16,4 @@ Findings of `scripts/check-unused-code.mjs` (PIP-013) and `scripts/check-unused-
 - **jsdom** The DOM environment of the Vitest runner behind `ng test`.
 - **prettier** Formatter run by editors and the owner with `.prettierrc`; no script calls it.
 - **tslib** `importHelpers: true` in `tsconfig.json` makes the compiler emit imports of it.
+- **@vitest/coverage-v8** Coverage provider of Vitest, loaded by `ng test --coverage` (DEC-140); no import.
