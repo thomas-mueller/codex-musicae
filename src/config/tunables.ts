@@ -294,6 +294,9 @@ export const TUNABLES = {
     governorLowResFactor: 0.75, // NFR-010: render scale factor at level 2 and above
     governorMaxLevel: 3, // NFR-010: 0 = normal … 3 = inactive tabs' bitmaps freed
     schedulerMaxPerClass: 1, // NFR-003: running tasks per priority class
+    workingLongSidePx: 3600, // NFR-025: long side in pixels of the working raster of a page; views up to this scale never decode the source images
+    workingPagesKept: 3, // NFR-025: working rasters kept per document (about 40 MB each at the canvas cap)
+    sourceDecodeSlots: 1, // NFR-025: source renders (pdf.js decodes the page's images) running at once per document
   },
 
   files: {
@@ -327,6 +330,7 @@ export const TUNABLES = {
     wasmUrl: 'assets/pdfjs/wasm/', // GEN-005
     iccUrl: 'assets/pdfjs/iccs/', // GEN-005
     annotationModeDisable: 0, // SAV-006: pdf.js AnnotationMode.DISABLE; the app draws every stroke itself
+    sourceImageMaxBytes: 16_000_000 * 4, // NFR-025: bytes (4 per pixel) a decoded source image may use; pdf.js shrinks larger images in its worker before they reach the page
   },
 
   rendering: {

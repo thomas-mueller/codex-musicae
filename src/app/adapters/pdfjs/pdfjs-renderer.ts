@@ -108,6 +108,8 @@ export class PdfJsRenderer implements PdfRenderer {
         standardFontDataUrl: this.url(TUNABLES.pdf.standardFontDataUrl),
         wasmUrl: this.url(TUNABLES.pdf.wasmUrl),
         iccUrl: this.url(TUNABLES.pdf.iccUrl),
+        // NFR-025: images larger than this are reduced in the worker; the app never needs more than the working resolution of a page.
+        canvasMaxAreaInBytes: TUNABLES.pdf.sourceImageMaxBytes,
       });
       const doc = await task.promise;
       if (doc.numPages === 0) {

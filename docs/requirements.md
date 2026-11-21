@@ -434,6 +434,7 @@ V2 terms (target `v2` entries):
 - **NFR-022** [v2·todo·M14] Visible pages and tiles are never left blank after scrolling, zooming, page jumps or mode changes.
 - **NFR-023** [v2·todo·M14] Rendering keeps visible-first priority, cancels stale requests and uses a bounded queue.
 - **NFR-024** [v2·todo·M14] A watchdog periodically re-requests any empty visible area at the lowest priority, at most one request per tick.
+- **NFR-025** [v2·todo·M2] Rendering, detection and display work on a working raster whose size depends only on the page size and the view, never on the resolution of the PDF's images; source images larger than `T:pdf.sourceImageMaxBytes` are reduced by pdf.js, and source pixels are decoded for a region only when it is zoomed beyond the working resolution, one request at a time.
 
 ## ARC — Architecture rules
 

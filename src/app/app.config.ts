@@ -22,6 +22,7 @@ import { AppTranslocoLoader } from './adapters/web/transloco-loader';
 import { PwaUpdatePolicy } from './adapters/web/pwa-update-policy';
 import { OpenCvDetectionEngine } from './adapters/opencv/opencv-detection-engine';
 import { PdfJsRenderer } from './adapters/pdfjs/pdfjs-renderer';
+import { WorkingResolutionRenderer } from './adapters/pdfjs/working-resolution-renderer';
 import { installDebugHook } from './adapters/web/debug-hook';
 import type { DebugHost } from './adapters/web/debug-hook';
 import { BitmapCache } from './state/bitmap-cache';
@@ -157,7 +158,7 @@ export const appConfig: ApplicationConfig = {
       loader: AppTranslocoLoader,
     }),
     provideAppIdentity(),
-    { provide: PDF_RENDERER, useFactory: () => new PdfJsRenderer() },
+    { provide: PDF_RENDERER, useFactory: () => new WorkingResolutionRenderer(new PdfJsRenderer()) },
     { provide: DETECTION_ENGINE, useFactory: () => new OpenCvDetectionEngine() },
     { provide: PDF_WRITER, useFactory: () => new PdfLibWriter() },
     { provide: APP_LIFECYCLE, useFactory: () => new WebAppLifecycle() },
