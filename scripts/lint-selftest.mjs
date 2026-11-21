@@ -199,6 +199,65 @@ try {
   }
   console.log('  ok  ARC-008 tunable-without-comment is rejected');
 
+  // Build output, Gradle default and workflow steps (NFR-019, PIP-016, PIP-018, PIP-019, TST-009): a seeded defect must be rejected.
+  const buildRoot = join(versionRoot, 'build-output');
+  const generatedOk = join(buildRoot, 'version.generated.ts');
+  await mkdir(join(buildRoot, 'good'), { recursive: true });
+  await writeFile(generatedOk, 'export const APP_VERSION_DISPLAY = "v1.5.0";\nexport const APP_VERSION_FULL = "v1.5.0-3-gabc1234";\n', 'utf8');
+  const minifiedBundle = `import{a as b}from"./x.js";var v="v1.5.0";${'a'.repeat(2000)}\n`;
+  const builds = [
+    ['NFR-019 build-with-source-map', minifiedBundle, true],
+    ['NFR-019 build-not-minified', Array.from({ length: 400 }, (_, i) => `const value${i} = "${i === 0 ? 'v1.5.0' : 'x'}";`).join('\n'), false],
+    ['PIP-018 build-without-display-version', minifiedBundle.replace('v1.5.0', 'v9.9.9'), false],
+  ];
+  const goodBuild = join(buildRoot, 'good');
+  await writeFile(join(goodBuild, 'main-ABC123.js'), minifiedBundle, 'utf8');
+  const goodBuildResult = await runNode('scripts/check-versions.mjs', '--built', relative(repositoryRoot, goodBuild), relative(repositoryRoot, generatedOk));
+  if (goodBuildResult.code !== 0) {
+    throw new Error(`built version check fails on a good fixture\n${goodBuildResult.output}`);
+  }
+  for (const [name, bundle, withMap] of builds) {
+    const dir = join(buildRoot, name.replace(/\W+/g, '-'));
+    await mkdir(dir, { recursive: true });
+    await writeFile(join(dir, 'main-ABC123.js'), bundle, 'utf8');
+    if (withMap) await writeFile(join(dir, 'main-ABC123.js.map'), '{}', 'utf8');
+    const result = await runNode('scripts/check-versions.mjs', '--built', relative(repositoryRoot, dir), relative(repositoryRoot, generatedOk));
+    if (result.code === 0) {
+      throw new Error(`build output self-test passed unexpectedly: ${name}`);
+    }
+    console.log(`  ok  ${name} is rejected`);
+  }
+  const gradleBroken = join(versionRoot, 'build.gradle');
+  const gradle = await readFile(join(repositoryRoot, 'android/app/build.gradle'), 'utf8');
+  await writeFile(gradleBroken, gradle.replace("?: '0.0.0'", "?: '0.0.0-local'"), 'utf8');
+  const gradleResult = await runNode('scripts/check-versions.mjs', 'src/config/version.generated.ts', '.github/workflows', relative(repositoryRoot, gradleBroken));
+  if (gradleResult.code === 0) {
+    throw new Error('version self-test passed unexpectedly: PIP-019 gradle-default-with-suffix');
+  }
+  console.log('  ok  PIP-019 gradle-default-with-suffix is rejected');
+  const stepBroken = [
+    ['PIP-016 lint-test-without-coverage-summary', 'lint-test', (text) => text.replace('node scripts/coverage-summary.mjs', 'echo skipped')],
+    ['PIP-016 lint-test-without-artifact', 'lint-test', (text) => text.replace('actions/upload-artifact@', 'actions/cache@')],
+    ['PIP-017 lint-test-with-threshold', 'lint-test', (text) => text.replace('--coverage\n', '--coverage --coverage.thresholds.lines=90\n')],
+    ['TST-009 e2e-without-small-phone', 'e2e', (text) => text.replace(/^.*firefox-small-phone.*\n/m, '')],
+  ];
+  for (const [name, workflowName, change] of stepBroken) {
+    const copy = join(versionRoot, `steps-${workflowName}`);
+    await mkdir(copy, { recursive: true });
+    for (const other of workflowFiles) {
+      const text = other === workflowName ? change(workflowTexts[other]) : workflowTexts[other];
+      if (other === workflowName && text === workflowTexts[other]) {
+        throw new Error(`workflow step self-test change had no effect: ${name}`);
+      }
+      await writeFile(join(copy, `${other}.yml`), text, 'utf8');
+    }
+    const result = await runNode('scripts/check-workflows.mjs', relative(repositoryRoot, copy));
+    if (result.code === 0) {
+      throw new Error(`workflow step self-test passed unexpectedly: ${name}`);
+    }
+    console.log(`  ok  ${name} is rejected`);
+  }
+
   // Static checks (PIP-013, PIP-014, PIP-015): a seeded defect must be rejected, the real repository must pass.
   const staticRoot = await mkdtemp(join(tmpdir(), 'cm-static-'));
   staticRoots.push(staticRoot);

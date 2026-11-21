@@ -18,3 +18,4 @@ Every workflow can be started by hand (`workflow_dispatch`, Actions tab → work
 - `lint-test` runs the unit tests with coverage (`@vitest/coverage-v8`, DEC-140), writes the table per kind of test to the job summary and uploads `coverage/coverage-summary.md` as the artifact `coverage-summary`; no threshold fails a build. After the production build it runs `node scripts/check-versions.mjs --built` (display version in the bundle, no source maps, minified).
 - The version `vX.Y.Z` of web, Android and iOS comes from `scripts/lib/version.mjs` (DEC-141); the workflows call `node scripts/version-info.mjs`.
 - Small phone profile: `chromium-small-phone` and `firefox-small-phone` (360 × 640) run the `@smoke` subset.
+- `scripts/check-workflows.mjs` also checks the coverage steps of `lint-test` (PIP-016, PIP-017) and the small-phone projects of `e2e` (TST-009); the matching unit specs are in `src/testing/workflow-rules.spec.ts`.

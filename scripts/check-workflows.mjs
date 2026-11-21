@@ -40,6 +40,22 @@ if (code.e2e) {
   if (pullRequest === undefined || !/branches:\s*\n\s*-\s*main\b/.test(pullRequest)) violations.push('e2e.yml: must run on pull requests to main (PIP-012)');
 }
 
+// Coverage in lint-test (PIP-016, PIP-017): unit tests with coverage, the table in the job summary, the summary file as an artifact, no threshold.
+if (code['lint-test']) {
+  const text = code['lint-test'];
+  if (!/npm test -- --watch=false --coverage\b/.test(text)) violations.push('lint-test.yml: the unit tests must run with --coverage (PIP-016)');
+  if (!text.includes('node scripts/coverage-summary.mjs')) violations.push('lint-test.yml: the coverage table per kind of test is missing (PIP-016)');
+  if (!/actions\/upload-artifact@/.test(text) || !text.includes('coverage/coverage-summary.md')) violations.push('lint-test.yml: the coverage summary must be uploaded as an artifact (PIP-016)');
+  if (/threshold/i.test(text)) violations.push('lint-test.yml: no coverage threshold may fail the build (PIP-017)');
+}
+
+// The small Android phone runs the smoke subset in the e2e workflow (TST-009).
+if (code.e2e) {
+  for (const project of ['chromium-small-phone', 'firefox-small-phone']) {
+    if (!new RegExp(`project: ${project},[^}]*grep: '@smoke'`).test(code.e2e)) violations.push(`e2e.yml: project ${project} with the @smoke subset is missing (TST-009)`);
+  }
+}
+
 // A manual run has no workflow_run payload: the job must accept it and check out the dispatched commit.
 for (const name of FOLLOWERS) {
   const text = code[name];

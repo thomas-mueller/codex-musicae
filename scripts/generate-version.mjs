@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { displayVersion } from './lib/version.mjs';
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
-const outputPath = join(repositoryRoot, 'src/config/version.generated.ts');
+// An optional first argument replaces the output path (used by the unit test, so that it does not touch the real file).
+const outputPath = process.argv[2] ?? join(repositoryRoot, 'src/config/version.generated.ts');
 
 let raw = 'unknown';
 try {
