@@ -357,8 +357,8 @@ V2 terms (target `v2` entries):
 - **UIX-001** [v1·changed·M7] The modes are organization, annotation and presentation; the current mode is global state. *(Changed in V2 → UIX-025, V2-M5.)*
 - **UIX-002** [v1·done·M7] A segmented three-icon control switches modes, in the same place in both layouts; the active mode is filled, the others outlined; it is hidden in presentation mode.
 - **UIX-003** [v1·done·M7] The layout is compact if viewport width < `T:layout.compactMaxWidthPx` or height < `compactMaxHeightPx`, else expanded.
-- **UIX-004** [v1·changed·M7] Compact annotation layout: top bar with tab switcher, open-file, mode switch, undo, redo; bottom bar with previous, "slide x of n", next, zoom −, zoom +, zoom reset; one floating button expands to pen, highlighter, eraser; aspect-ratio buttons and the version info sit in the overflow menu. *(Changed in V2 → FIL-021, V2-M6.)*
-- **UIX-005** [v1·changed·M7] Expanded annotation layout: tab bar on top; vertical tool strip on `T:layout.toolStripSide` with pen, highlighter, eraser, undo, redo; popup next to it; the same bottom bar plus the aspect-ratio buttons. *(Changed in V2 → FIL-021, V2-M6.)*
+- **UIX-004** [v1·changed·M7] Compact annotation layout: top bar with tab switcher, open-file, mode switch, undo, redo; bottom bar with previous, "slide x of n", next, zoom −, zoom +, zoom reset; one floating button expands to pen, highlighter, eraser; aspect-ratio buttons and the version info sit in the overflow menu. *(Changed in V2 → FIL-021, V2-M6; undo and redo → UIX-033/034, V2-M7.)*
+- **UIX-005** [v1·changed·M7] Expanded annotation layout: tab bar on top; vertical tool strip on `T:layout.toolStripSide` with pen, highlighter, eraser, undo, redo; popup next to it; the same bottom bar plus the aspect-ratio buttons. *(Changed in V2 → FIL-021, V2-M6; undo and redo → UIX-033, V2-M7.)*
 - **UIX-006** [v1·changed·M7] Organization layout uses the same frame; the tool strip is replaced by level selector, marks-list button and overflow; the bottom bar shows "page x of n", previous, next and zoom buttons. In compact layout the organization controls sit behind one overflow button that opens a sheet. *(Changed in V2 → ORG-042, V2-M10.)*
 - **UIX-007** [v1·done·M7] Bars are `T:layout.barHeightPx` high, touch targets are at least `minTouchTargetPx`, icons are monochrome, bars never grow; additional controls go into overflow menus.
 - **UIX-008** [v1·done·M7] Bars stay visible in annotation and organization mode; there is no auto-hide.
@@ -386,6 +386,8 @@ V2 terms (target `v2` entries):
 - **UIX-030** [v2·todo·M5] `docs/icons.md` describes where icons live, how to replace one and which test covers it.
 - **UIX-031** [v2·todo·M14] Desktop browsers show no page-level scroll bar at the right edge; scroll bars inside the PDF area stay.
 - **UIX-032** [v2·todo·M14] A test places tooltips at all four screen edges in organization, annotation and settings mode and asserts they stay inside the screen.
+- **UIX-033** [v2·todo·M7] Undo and redo buttons belong to the tool area in annotation and organization mode: in the tool strip in expanded layout, in the expanded tool popup (FAB group) next to the tools in compact layout. They are disabled when their history is empty (ANN-016).
+- **UIX-034** [v2·todo·M7] The top bar contains no undo or redo button in any layout.
 
 ## PLT — Platforms
 
