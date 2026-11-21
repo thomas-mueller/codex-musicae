@@ -14,3 +14,4 @@ Every workflow can be started by hand (`workflow_dispatch`, Actions tab → work
 - A manual run of `deploy-web`, `android` or `ios` builds the commit of the selected ref (`github.sha`); a `workflow_run` run builds the validated commit (`workflow_run.head_sha`). A manual `deploy-web` run deploys to the live channel.
 - Tag pushes run `e2e` only; they do not run `lint-test`, so a tag deploys nothing (PIP-009).
 - Android details: `docs/android-ci.md`. iOS: `docs/ios-distribution.md`.
+- The `e2e` suite includes the request test (`e2e/no-external-requests.spec.ts`, NFR-017, NFR-018) on the production build in Chromium, Firefox and WebKit: it records every request while a PDF is opened, detected, shown in two modes, drawn on and saved, and fails on any request outside the app's own origin (`data:` and `blob:` excepted). The phone and tablet profiles run only `@smoke` and skip it.

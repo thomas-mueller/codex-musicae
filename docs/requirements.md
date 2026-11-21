@@ -426,8 +426,8 @@ V2 terms (target `v2` entries):
 - **NFR-014** [v1·done·M1] The initial bundle stays within `T:budgets.initialBundleKbGzip` (Angular build budget).
 - **NFR-015** [v1·todo·M16] After the OS kills the WebView, the next start restores tabs and positions; unsaved loss is limited to the autosave delay.
 - **NFR-016** [v1·todo·M17] A reference PDF with 100+ pages (one scanned) runs within the budgets on a mid-range small tablet.
-- **NFR-017** [v2·todo·M1] No library, font or other resource is loaded from a third-party host at runtime.
-- **NFR-018** [v2·todo·M1] An E2E test on the production build fails when the app requests anything whose origin is not its own (except `data:` and `blob:`), in Chromium, Firefox and WebKit.
+- **NFR-017** [v2·done·M1] No library, font or other resource is loaded from a third-party host at runtime.
+- **NFR-018** [v2·done·M1] An E2E test on the production build fails when the app requests anything whose origin is not its own (except `data:` and `blob:`), in Chromium, Firefox and WebKit.
 - **NFR-019** [v2·todo·M1] Production builds are minified and contain no source maps.
 - **NFR-020** [v2·todo·M6] When a file becomes inactive its rendered bitmaps are released at once, not only under memory pressure; a memory test with 30 real PDFs checks it.
 - **NFR-021** [v2·todo·M14] After every zoom, tiles are re-rendered and placed correctly in all three modes.
