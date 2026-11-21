@@ -204,6 +204,17 @@ export class DetectionService {
   }
 
   private async extract(handle: PdfDocumentHandle, info: PdfPageInfo, scale: number, params: ExtractionParams, signal: AbortSignal) {
+    // NFR-025: from the working raster, reduced to the level's size inside the engine: the same pixels in every browser.
+    const raster = await handle.renderWorkingRaster?.(info.pageIndex, signal);
+    if (raster?.ok) {
+      if (raster.value.scale >= scale) {
+        const target = { width: Math.max(1, Math.round(info.width * scale)), height: Math.max(1, Math.round(info.height * scale)) };
+        return this.engine.extractComponents(raster.value.bitmap, signal, { ...params, target });
+      }
+      raster.value.bitmap.close();
+    } else if (raster && raster.error === 'cancelled') {
+      return raster;
+    }
     const region = { x: 0, y: 0, width: info.width, height: info.height };
     const bitmap = await handle.renderRegion({ pageIndex: info.pageIndex, region, scale }, signal);
     if (!bitmap.ok) {

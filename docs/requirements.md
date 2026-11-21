@@ -171,6 +171,7 @@ V2 terms (target `v2` entries):
 - **DET-032** [v2·todo·M8] The default parameters are the V1 `standard` values (150 dpi, `minSystemWidthRatio`); the defaults of the new limits are chosen on the real-PDF corpus and make no corpus entry worse than V1.
 - **DET-033** [v2·todo·M8] `fullWidthSystemRatio`, the adaptive block size and the adaptive constant stay tunables and are not in the popup.
 - **DET-034** [v2·todo·M8] The connected-component boxes of each detected page stay in memory until the document closes.
+- **DET-035** [v2·todo·M2] The systems found on a page do not depend on the browser: detection works on the working raster of the page, reduced to the level's size inside the detection engine (area averaging, the same code in every browser), and the same corpus PDF gives the same systems per page in Chromium, Firefox and WebKit.
 
 ## PLY — Junctions and playing order (pure logic)
 

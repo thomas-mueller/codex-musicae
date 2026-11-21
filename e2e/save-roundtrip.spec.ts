@@ -7,7 +7,7 @@ import { label, openScore, SCORE_BARS, SCORE_SYSTEMS, waitForFinalSlideCount } f
 import {
   addJumpToStart, annotationFacts, attachmentText, COLOR_TOLERANCE, drag, enterAnnotation, enterOrganization, FOREIGN_ATTACHMENT,
   FOREIGN_ATTACHMENT_TEXT, foreignScoreBytes, forceFilePaths, inkBounds, inspect, KEY, openPdf, qpdfCheck, RED, saveCopyDownload,
-  strokeLine, tool, YELLOW,
+  strokeLine, tool, waitForDrawnSlide, YELLOW,
 } from './support/saving';
 
 import type { Page } from '@playwright/test';
@@ -16,8 +16,9 @@ const PEN_ROW = 0.25;
 const HIGHLIGHTER_ROW = 0.6;
 const RIGHT_FROM = 0.75;
 const RIGHT_TO = 0.95;
-const BREAK_BAR_INDEX = 1;
-const STOP_BAR_INDEX = 2;
+// Plain bars inside page 3 of the standard score (bars 1 and 2 are the two bars of junction 1: a stop there would leave a single system to play).
+const BREAK_BAR_INDEX = 3; // junction 2
+const STOP_BAR_INDEX = 7; // junction 6
 const SHOW_MORE_CLICKS = 8; // as in slides.spec.ts: clearly taller slides
 const SWEEP_HALF = 30;
 const MIN_POINTS = 2;
@@ -109,10 +110,12 @@ desktopTest('TST-003 SAV-001 SAV-004 SAV-006 SAV-007 ANN-005 a copy with two str
   // Erasing one stroke and saving again leaves one annotation.
   await enterAnnotation(page);
   await expect.poll(() => inkedPixelsNear(highlighterInk(page), YELLOW, HIGHLIGHTER_TOLERANCE)).toBeGreaterThan(0);
-  // The ratio changed the slide's size: aim at where the pen stroke is now.
+  // The slide canvas keeps its placeholder until the page of the scan is drawn; the ratio also changed the slide's size: aim at where the pen stroke is now.
+  await waitForDrawnSlide(page);
   const pen = await inkBounds(page, 'ink-canvas', RED, COLOR_TOLERANCE);
   expect(pen).not.toBeNull();
-  await sweep(page, pen!.x + pen!.width / 2, pen!.y + pen!.height / 2);
+  // With the standard score the first system is shown twice on this slide (the jump), so the bounds hold two lines: aim at the first one.
+  await sweep(page, pen!.x + pen!.width / 2, pen!.y);
   await expect.poll(() => inkedPixelsNear(penInk(page), RED, COLOR_TOLERANCE)).toBe(0);
   expect(await inkedPixelsNear(highlighterInk(page), YELLOW, HIGHLIGHTER_TOLERANCE)).toBeGreaterThan(0);
   const second = await saveCopyDownload(page);

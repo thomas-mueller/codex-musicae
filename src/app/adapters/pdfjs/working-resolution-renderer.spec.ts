@@ -54,6 +54,7 @@ function layer(inner: PdfRenderer) {
       return canvas;
     },
     createBitmap: (canvas) => Promise.resolve(bitmap(canvas.width, canvas.height) as unknown as ImageBitmap),
+    copyBitmap: (original) => Promise.resolve(bitmap(original.width, original.height) as unknown as ImageBitmap),
   });
   return { renderer, draws, canvases };
 }
@@ -184,5 +185,28 @@ describe('WorkingResolutionRenderer (NFR-025)', () => {
     const aborted = new AbortController();
     aborted.abort();
     expect(await handle.renderRegion(request, aborted.signal)).toEqual({ ok: false, error: 'cancelled' });
+  });
+
+  it('NFR-025 the working raster is handed out as a copy without any drawing, from the one source render of the page', async () => {
+    const src = source();
+    const { handle, draws } = await open(src.renderer);
+    const first = await handle.renderWorkingRaster!(0, NEVER);
+    const second = await handle.renderWorkingRaster!(0, NEVER);
+    expect(first.ok && second.ok).toBe(true);
+    if (first.ok && second.ok) {
+      expect(first.value.bitmap).not.toBe(second.value.bitmap);
+      expect(first.value.scale).toBeCloseTo(WORKING_SCALE, 5);
+      expect([first.value.bitmap.width, first.value.bitmap.height]).toEqual([Math.ceil(PAGE_WIDTH * WORKING_SCALE), Math.ceil(PAGE_HEIGHT * WORKING_SCALE)]);
+    }
+    expect(draws).toHaveLength(0);
+    expect(src.requests).toHaveLength(1);
+  });
+
+  it('NFR-025 an aborted request for the working raster is cancelled', async () => {
+    const src = source();
+    const { handle } = await open(src.renderer);
+    const aborted = new AbortController();
+    aborted.abort();
+    expect(await handle.renderWorkingRaster!(0, aborted.signal)).toEqual({ ok: false, error: 'cancelled' });
   });
 });

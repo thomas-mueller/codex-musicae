@@ -107,10 +107,20 @@ export const appConfig: ApplicationConfig = {
             const info = await doc.value.getPageInfo(pageIndex);
             if (!info.ok) throw new Error(info.error);
             const region = { x: 0, y: 0, width: info.value.width, height: info.value.height };
-            const bitmap = await doc.value.renderRegion({ pageIndex, region, scale }, signal);
-            if (!bitmap.ok) throw new Error(bitmap.error);
             const level = TUNABLES.detection.levels[TUNABLES.detection.defaultLevel];
-            const set = await engine.extractComponents(bitmap.value, signal, { blockSize: level.adaptiveBlockSize, c: level.adaptiveC });
+            const params = { blockSize: level.adaptiveBlockSize, c: level.adaptiveC };
+            // The same path as the detection service: from the working raster, reduced inside the engine (NFR-025).
+            const raster = await doc.value.renderWorkingRaster?.(pageIndex, signal);
+            let set;
+            if (raster?.ok && raster.value.scale >= scale) {
+              const target = { width: Math.max(1, Math.round(info.value.width * scale)), height: Math.max(1, Math.round(info.value.height * scale)) };
+              set = await engine.extractComponents(raster.value.bitmap, signal, { ...params, target });
+            } else {
+              if (raster?.ok) raster.value.bitmap.close();
+              const bitmap = await doc.value.renderRegion({ pageIndex, region, scale }, signal);
+              if (!bitmap.ok) throw new Error(bitmap.error);
+              set = await engine.extractComponents(bitmap.value, signal, params);
+            }
             if (!set.ok) throw new Error(set.error);
             return set.value.components.map((component) => component.rect);
           } finally {
@@ -119,6 +129,7 @@ export const appConfig: ApplicationConfig = {
         };
         installDebugHook(window as DebugHost, inject(BitmapCache), {
           detect,
+          sourceRenders: () => (renderer instanceof WorkingResolutionRenderer ? renderer.stats.sourceRenders : 0),
           startedOrder: () => session.activeDocument()?.detection.startedOrder ?? [],
           detectionState: () => {
             const doc = session.activeDocument();

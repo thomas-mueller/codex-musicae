@@ -89,6 +89,14 @@ export { enterOrganization };
 
 export const tool = (page: Page, key: 'pen' | 'highlighter' | 'eraser') => page.getByRole('button', { name: label(key), exact: true });
 
+/** Width of the slide canvas before its slide is drawn (the default size of a canvas). */
+const SLIDE_PLACEHOLDER_WIDTH_PX = 300;
+
+/** The slide canvas keeps its placeholder size until the page of a large scan is drawn: waits until it has its final size. */
+export async function waitForDrawnSlide(page: Page): Promise<void> {
+  await expect.poll(async () => (await slideBox(page)).width).toBeGreaterThan(SLIDE_PLACEHOLDER_WIDTH_PX);
+}
+
 export async function slideBox(page: Page) {
   const box = await page.getByTestId('slide-canvas').boundingBox();
   expect(box).not.toBeNull();

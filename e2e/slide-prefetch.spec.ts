@@ -15,7 +15,9 @@ const MIN_SLIDES_CACHED = 1.5; // the shown slide plus at least a good part of o
 const SEQUENCE = ['next', 'next', 'previous', 'previous'] as const;
 
 test.use({ viewport: { width: 1280, height: 800 } });
-test.skip(({ browserName }, testInfo) => browserName !== 'chromium' || testInfo.project.name !== 'chromium', 'timing of draw calls: desktop Chromium, development build');
+test.beforeEach(({ browserName }, testInfo) => {
+  test.skip(browserName !== 'chromium' || testInfo.project.name !== 'chromium', 'timing of draw calls: desktop Chromium, development build');
+});
 
 const cacheBytes = (page: Page): Promise<number> => page.evaluate(() => (globalThis as unknown as { __cm: { cache: { totalBytes: number } } }).__cm.cache.totalBytes);
 
@@ -78,7 +80,7 @@ test('NFR-001 NFR-003 TST-015 the next slide is pre-loaded: forward and backward
   });
 
   // The cache holds the shown slide and, once the pre-loading is over, at least one more slide of a similar size.
-  const shown = await page.getByTestId('slide-canvas').evaluate((canvas: HTMLCanvasElement) => canvas.width * canvas.height * BYTES_PER_PIXEL);
+  const shown = await page.getByTestId('slide-canvas').evaluate((canvas: HTMLCanvasElement, bytesPerPixel) => canvas.width * canvas.height * bytesPerPixel, BYTES_PER_PIXEL);
   const afterFirst = await settledCacheBytes(page);
   expect(afterFirst, 'the neighbors of the first slide were loaded in advance').toBeGreaterThanOrEqual(shown * MIN_SLIDES_CACHED);
 
@@ -91,4 +93,5 @@ test('NFR-001 NFR-003 TST-015 the next slide is pre-loaded: forward and backward
     expect(elapsed, `${key} right after the neighbors were pre-loaded`).toBeLessThan(limit);
   }
   testInfo.annotations.push({ type: 'slide changes (ms)', description: times.join(' ') });
+  process.stdout.write(`PERF slide changes after pre-loading (ms): ${times.join(' ')} (limit ${limit})\n`);
 });

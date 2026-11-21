@@ -6,13 +6,12 @@ import { DETECTION_TIMEOUT_MS } from './support/timing';
 import { openScore, scoreBytes, SCORE_BARS, SCORE_SYSTEMS, waitForBars, waitForFinalSlideCount } from './support/score';
 import {
   addJumpToStart, COLOR_TOLERANCE, drag, enterAnnotation, enterOrganization, forceFilePaths, inspect, openPdf, qpdfCheck, RED,
-  redPixelsOnSlide, saveCopyDownload, shorterPdfWithMetadata, slideBox, strokeLine, tool,
+  redPixelsOnSlide, saveCopyDownload, shorterPdfWithMetadata, strokeLine, tool, waitForDrawnSlide,
 } from './support/saving';
 
 test.use({ viewport: { width: 1600, height: 700 } });
 
 const DEV_URL = 'http://127.0.0.1:4174';
-const SLIDE_PLACEHOLDER_WIDTH_PX = 300; // width of the canvas before its slide is drawn
 const PAGES_OF_SHORTER_PDF = 4;
 const SHORTER_PDF_BARS = 16; // pages 1 to 4 of the standard score: page 1 has 2 bars, pages 3 and 4 have 7 each
 const penInk = (page: import('@playwright/test').Page) => page.getByTestId('ink-canvas');
@@ -111,8 +110,8 @@ test('SAV-006 ANN-005 DET-023 SAV-012 erasing a loaded stroke removes it from th
   const state = await hook((cm) => cm.detectionState());
   expect(state).toEqual({ complete: true, startedOrder: [] });
 
-  // The slide canvas keeps a 300 x 150 placeholder until the page of the 1000 dpi scan is drawn: aim at the final slide.
-  await expect.poll(async () => (await slideBox(page)).width).toBeGreaterThan(SLIDE_PLACEHOLDER_WIDTH_PX);
+  // The slide canvas keeps its placeholder until the page of the scan is drawn: aim at the final slide.
+  await waitForDrawnSlide(page);
   await tool(page, 'eraser').click();
   const line = await strokeLine(page);
   const middle = (line.from.x + line.to.x) / 2;

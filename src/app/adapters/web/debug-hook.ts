@@ -23,6 +23,8 @@ interface DebugHook {
   readonly systemCounts?: () => { readonly level: string; readonly counts: readonly (number | null)[] };
   /** Starts a re-run at `level` for the active document, as confirming the level dialog does (TST-002 corpus E2E). */
   readonly redetect?: (level: DetectionLevelName) => void;
+  /** Number of calls that reached the source renderer (pdf.js) since the page loaded (NFR-025 E2E). */
+  readonly sourceRenders?: () => number;
   /** The strokes of the active document, in model order (TST-003 property test). */
   readonly strokes?: () => readonly InkStroke[];
   /** Applies ink edits to the active document through the store, in order (TST-003 property test). */

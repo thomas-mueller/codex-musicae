@@ -1,6 +1,6 @@
 import { TUNABLES } from '../../../config/tunables';
 import { fitScaleToPixelCap } from '../../core/geometry';
-import type { PdfDocumentHandle, PdfOpenError, PdfPageInfo, PdfRenderError, PdfRenderer, RenderRequest } from '../../ports/pdf-renderer';
+import type { PdfDocumentHandle, PdfOpenError, PdfPageInfo, PdfRenderError, PdfRenderer, RenderRequest, WorkingRaster } from '../../ports/pdf-renderer';
 import { err, ok } from '../../ports/result';
 import type { Result } from '../../ports/result';
 
@@ -19,6 +19,7 @@ interface Drawing {
 interface WorkingResolutionOptions {
   readonly createCanvas?: (width: number, height: number) => DrawCanvas;
   readonly createBitmap?: (canvas: DrawCanvas) => Promise<ImageBitmap>;
+  readonly copyBitmap?: (bitmap: ImageBitmap) => Promise<ImageBitmap>;
 }
 
 const SMOOTHING = 'high';
@@ -84,20 +85,17 @@ class Slots {
   }
 }
 
-interface WorkingRaster {
-  readonly bitmap: ImageBitmap;
-  /** Pixels per display point of the raster. */
-  readonly scale: number;
-}
-
 /**
  * NFR-025: rendering never depends on the resolution of the PDF's images. Every page is rendered once, whole, into a working raster whose
  * size depends only on the page size (`T:resources.workingLongSidePx`, capped by `maxCanvasPixels`); views up to that scale (fit views,
  * detection, prefetch, slides) are cut and scaled from the raster. Only regions zoomed beyond it reach the source renderer, one at a time.
  */
 export class WorkingResolutionRenderer implements PdfRenderer {
+  /** Counts of the calls that reached the source renderer (shown by the development debug hook). */
+  readonly stats = { sourceRenders: 0 };
   private readonly createCanvas: (width: number, height: number) => DrawCanvas;
   private readonly createBitmap: (canvas: DrawCanvas) => Promise<ImageBitmap>;
+  private readonly copyBitmap: (bitmap: ImageBitmap) => Promise<ImageBitmap>;
 
   constructor(
     private readonly source: PdfRenderer,
@@ -105,11 +103,12 @@ export class WorkingResolutionRenderer implements PdfRenderer {
   ) {
     this.createCanvas = options.createCanvas ?? defaultCreateCanvas;
     this.createBitmap = options.createBitmap ?? defaultCreateBitmap;
+    this.copyBitmap = options.copyBitmap ?? ((bitmap) => createImageBitmap(bitmap));
   }
 
   async open(bytes: Uint8Array): Promise<Result<PdfDocumentHandle, PdfOpenError>> {
     const opened = await this.source.open(bytes);
-    return opened.ok ? ok(new WorkingResolutionHandle(opened.value, this.createCanvas, this.createBitmap)) : opened;
+    return opened.ok ? ok(new WorkingResolutionHandle(opened.value, this.createCanvas, this.createBitmap, this.copyBitmap, this.stats)) : opened;
   }
 }
 
@@ -124,6 +123,8 @@ class WorkingResolutionHandle implements PdfDocumentHandle {
     private readonly source: PdfDocumentHandle,
     private readonly createCanvas: (width: number, height: number) => DrawCanvas,
     private readonly createBitmap: (canvas: DrawCanvas) => Promise<ImageBitmap>,
+    private readonly copyBitmap: (bitmap: ImageBitmap) => Promise<ImageBitmap>,
+    private readonly stats: { sourceRenders: number },
   ) {
     this.pageCount = source.pageCount;
   }
@@ -163,6 +164,30 @@ class WorkingResolutionHandle implements PdfDocumentHandle {
       return err('cancelled');
     }
     return this.cut(raster.value, req);
+  }
+
+  /** The working raster itself (a copy the caller owns): no browser resampling between the source and the caller. */
+  async renderWorkingRaster(pageIndex: number, signal: AbortSignal): Promise<Result<WorkingRaster, PdfRenderError>> {
+    if (signal.aborted) {
+      return err('cancelled');
+    }
+    const info = await this.getPageInfo(pageIndex);
+    if (!info.ok) {
+      return err('unknown');
+    }
+    const { width, height } = info.value;
+    const raster = await this.rasterOf(pageIndex, width, height, this.workingScaleOf(width, height), signal);
+    if (!raster.ok) {
+      return raster;
+    }
+    if (signal.aborted) {
+      return err('cancelled');
+    }
+    try {
+      return ok({ bitmap: await this.copyBitmap(raster.value.bitmap), scale: raster.value.scale });
+    } catch (e) {
+      return err(e instanceof RangeError || (e instanceof DOMException && e.name === 'QuotaExceededError') ? 'out-of-memory' : 'unknown');
+    }
   }
 
   async destroy(): Promise<void> {
@@ -218,6 +243,7 @@ class WorkingResolutionHandle implements PdfDocumentHandle {
 
   private build(pageIndex: number, width: number, height: number, scale: number): Promise<Result<WorkingRaster, PdfRenderError>> {
     return this.withSlot(this.lifetime.signal, async (signal) => {
+      this.stats.sourceRenders++;
       const rendered = await this.source.renderRegion({ pageIndex, region: { x: 0, y: 0, width, height }, scale }, signal);
       return rendered.ok ? ok({ bitmap: rendered.value, scale }) : rendered;
     });
@@ -238,7 +264,10 @@ class WorkingResolutionHandle implements PdfDocumentHandle {
   }
 
   private async renderFromSource(req: RenderRequest, signal: AbortSignal): Promise<Result<ImageBitmap, PdfRenderError>> {
-    return this.withSlot(signal, (slotSignal) => this.source.renderRegion(req, slotSignal));
+    return this.withSlot(signal, (slotSignal) => {
+      this.stats.sourceRenders++;
+      return this.source.renderRegion(req, slotSignal);
+    });
   }
 
   private async withSlot<T>(signal: AbortSignal, run: (signal: AbortSignal) => Promise<Result<T, PdfRenderError>>): Promise<Result<T, PdfRenderError>> {
