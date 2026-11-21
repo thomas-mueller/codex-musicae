@@ -4,7 +4,7 @@ The `android` workflow (`.github/workflows/android.yml`) builds a signed release
 
 ## Trigger
 
-The workflow runs on `workflow_run` after a successful `lint-test` on any branch, like `deploy-web` (PIP-003), so every branch push produces a tester build. Tag pushes do not run `lint-test`, so a tag deploys nothing (PIP-009).
+The workflow runs on `workflow_run` after a successful `lint-test` on any branch, like `deploy-web` (PIP-003), so every branch push produces a tester build. Tag pushes do not run `lint-test`, so a tag deploys nothing (PIP-009). The workflow can also be started manually (PIP-011); trigger table: `docs/ci.md`.
 
 ## Tester groups
 

@@ -126,7 +126,43 @@ try {
   if (iosOk.code !== 0) {
     throw new Error(`iOS config check fails on the real project\n${iosOk.output}`);
   }
-  console.log(`lint self-test passed (${fixtures.length} deliberate violations plus template and iOS config checks)`);
+  // Workflow triggers (PIP-011, PIP-012): each defect in a copy of the workflows must be rejected.
+  const workflowFiles = ['lint-test', 'e2e', 'deploy-web', 'android', 'ios'];
+  const workflowTexts = {};
+  for (const name of workflowFiles) {
+    workflowTexts[name] = await readFile(join(repositoryRoot, `.github/workflows/${name}.yml`), 'utf8');
+  }
+  const triggerBroken = [
+    ['PIP-011 workflow-no-dispatch-android', 'android', (text) => text.replace(/^ {2}workflow_dispatch:\n/m, '')],
+    ['PIP-011 workflow-no-dispatch-lint-test', 'lint-test', (text) => text.replace(/^ {2}workflow_dispatch:\n/m, '')],
+    ['PIP-011 android-dispatch-ungated', 'android', (text) => text.replace("github.event_name == 'workflow_dispatch' || ", '')],
+    ['PIP-011 deploy-web-ref-without-fallback', 'deploy-web', (text) => text.replace(' || github.sha', '')],
+    ['PIP-012 e2e-on-every-push', 'e2e', (text) => text.replace(/^ {2}push:\n/m, "  push:\n    branches:\n      - '**'\n")],
+    ['PIP-012 e2e-no-pull-request', 'e2e', (text) => text.replace(/^ {2}pull_request:\n(?: {4}.*\n)+/m, '')],
+    ['PIP-012 e2e-no-tag-trigger', 'e2e', (text) => text.replace("      - 'v*'", "      - 'x*'")],
+    ['PIP-012 lint-test-not-every-push', 'lint-test', (text) => text.replace("      - '**'\n    tags-ignore", "      - main\n    tags-ignore")],
+  ];
+  for (const [name, workflowName, change] of triggerBroken) {
+    const copy = join(fixtureRoot, 'workflows-copy');
+    await mkdir(copy, { recursive: true });
+    for (const other of workflowFiles) {
+      const text = other === workflowName ? change(workflowTexts[other]) : workflowTexts[other];
+      if (other === workflowName && text === workflowTexts[other]) {
+        throw new Error(`workflow self-test change had no effect: ${name}`);
+      }
+      await writeFile(join(copy, `${other}.yml`), text, 'utf8');
+    }
+    const result = await runNode('scripts/check-workflows.mjs', relative(repositoryRoot, copy));
+    if (result.code === 0) {
+      throw new Error(`workflow trigger self-test passed unexpectedly: ${name}`);
+    }
+    console.log(`  ok  ${name} is rejected`);
+  }
+  const workflowsOk = await runNode('scripts/check-workflows.mjs');
+  if (workflowsOk.code !== 0) {
+    throw new Error(`workflow trigger check fails on the real workflows\n${workflowsOk.output}`);
+  }
+  console.log(`lint self-test passed (${fixtures.length} deliberate violations plus template, iOS config and workflow trigger checks)`);
 } finally {
   await rm(fixtureRoot, { recursive: true, force: true });
 }

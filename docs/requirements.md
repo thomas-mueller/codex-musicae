@@ -459,8 +459,8 @@ V2 terms (target `v2` entries):
 - **PIP-008** [v1·done·M0] Signing keys and Firebase credentials exist only as GitHub secrets; their names are listed in `docs/milestones/V1-M00.md`.
 - **PIP-009** [v1·done·M2] Milestone `V1-M<m>` is tagged `v0.<m>.0` and fixes `v0.<m>.<p>`; the release of v1 additionally tags the commit of the last included milestone `v1.0.0`; a tag deploys nothing by itself.
 - **PIP-010** [v1-optional·todo·M18] Pipeline `ios` also builds a signed ad hoc IPA and uploads it to Firebase App Distribution (owners group on every run, iOS tester group on `main` only) when the Apple signing secrets exist; without them these steps are skipped and the pipeline stays green.
-- **PIP-011** [v2·todo·M1] Every workflow can be started manually (`workflow_dispatch`).
-- **PIP-012** [v2·todo·M1] `lint-test` (lint, unit tests, build) runs on every push; the `e2e` workflow runs on pull requests to `main`, on tags and manually, not on every push.
+- **PIP-011** [v2·done·M1] Every workflow can be started manually (`workflow_dispatch`).
+- **PIP-012** [v2·done·M1] `lint-test` (lint, unit tests, build) runs on every push; the `e2e` workflow runs on pull requests to `main`, on tags and manually, not on every push.
 - **PIP-013** [v2·todo·M1] A check in `lint-test` fails on unused exports or files.
 - **PIP-014** [v2·todo·M1] A check in `lint-test` fails on unused dependencies in `package.json`.
 - **PIP-015** [v2·todo·M1] A license check in `lint-test` fails when a production dependency has a license outside an allow-list; GPL and AGPL are never allowed.

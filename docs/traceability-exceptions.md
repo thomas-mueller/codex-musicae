@@ -8,6 +8,8 @@
 - **ARC-002** ESLint (`no-restricted-imports`, `no-restricted-globals` for `core/`) and `lint:selftest`; determinism is checked by the unit specs of `core/` only indirectly.
 - **PLT-003** ESLint restricts platform APIs to `adapters/` and the composition root; checked by `npm run lint` and `lint:selftest`.
 - **NFR-014** The Angular build budget (`angular.json`, `T:budgets.initialBundleKbGzip`) fails `npm run build`, which `lint-test` runs on every push.
+- **PIP-011** `scripts/check-workflows.mjs` (part of `npm run lint`) checks the triggers; its failing examples are the `PIP-011 …` cases of `npm run lint:selftest`.
+- **PIP-012** Same check and self-test (`PIP-012 …` cases); the triggers themselves are only seen when GitHub runs the workflows.
 
 ## Pipeline, repository and process facts (verified by running them)
 
