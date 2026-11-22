@@ -18,7 +18,7 @@ try {
   // Builds from source archives or environments without Git still compile.
 }
 
-// PIP-018: users see `display` (vX.Y.Z of the nearest tag); `full` (the describe string) is for internal places such as the build log
+// PIP-018: users see `display` (vX.Y.Z, Z = tag patch + commits since the tag); `full` (the describe string) is for internal places such as the build log
 // and the metadata of a saved file.
 const display = displayVersion(raw);
 await mkdir(dirname(outputPath), { recursive: true });

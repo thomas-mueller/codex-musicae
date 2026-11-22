@@ -14,7 +14,7 @@ import { displayVersion } from '../../scripts/lib/version.mjs';
 import { provideTestPorts } from './provide-test-ports';
 import { provideTestTransloco } from './transloco';
 
-const DISPLAY = 'v1.5.0';
+const DISPLAY = 'v1.5.3';
 const FULL = 'v1.5.0-3-gabc1234-dirty';
 
 describe('version wiring (PIP-018)', () => {

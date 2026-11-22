@@ -470,7 +470,7 @@ V2 terms (target `v2` entries):
 - **PIP-015** [v2·done·M1] A license check in `lint-test` fails when a production dependency has a license outside an allow-list; GPL and AGPL are never allowed.
 - **PIP-016** [v2·done·M1] Coverage is reported per kind of test (unit, integration, E2E and emulator, real-PDF detection, performance) in the CI job summary; a kind without coverage numbers reports its test count.
 - **PIP-017** [v2·done·M1] No coverage threshold fails a build.
-- **PIP-018** [v2·done·M1] Users see only the version `vX.Y.Z` taken from the nearest tag; the full `git describe` string appears only in internal places.
+- **PIP-018** [v2·done·M1] Users see only the version `vX.Y.Z`: X.Y come from the nearest tag and Z is that tag's patch number plus the number of commits since the tag (`v1.1.0-19-g…-dirty` shows `v1.1.19`); no hash, no dirty flag. The full `git describe` string appears only in internal places. *(Z rule changed 2026-11-22, DEC-149.)*
 - **PIP-019** [v2·done·M1] Android `versionName` is `X.Y.Z` (no `v`, no describe suffix).
 - **PIP-020** [v2·done·M1] A build check fails when the web, Android and iOS versions differ; free and paid builds have the same version.
 - **PIP-021** [v2·todo·M19] Store build numbers (Android `versionCode`, iOS build number) are the commit count, set by CI.

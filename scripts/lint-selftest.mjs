@@ -203,12 +203,12 @@ try {
   const buildRoot = join(versionRoot, 'build-output');
   const generatedOk = join(buildRoot, 'version.generated.ts');
   await mkdir(join(buildRoot, 'good'), { recursive: true });
-  await writeFile(generatedOk, 'export const APP_VERSION_DISPLAY = "v1.5.0";\nexport const APP_VERSION_FULL = "v1.5.0-3-gabc1234";\n', 'utf8');
-  const minifiedBundle = `import{a as b}from"./x.js";var v="v1.5.0";${'a'.repeat(2000)}\n`;
+  await writeFile(generatedOk, 'export const APP_VERSION_DISPLAY = "v1.5.3";\nexport const APP_VERSION_FULL = "v1.5.0-3-gabc1234";\n', 'utf8');
+  const minifiedBundle = `import{a as b}from"./x.js";var v="v1.5.3";${'a'.repeat(2000)}\n`;
   const builds = [
     ['NFR-019 build-with-source-map', minifiedBundle, true],
-    ['NFR-019 build-not-minified', Array.from({ length: 400 }, (_, i) => `const value${i} = "${i === 0 ? 'v1.5.0' : 'x'}";`).join('\n'), false],
-    ['PIP-018 build-without-display-version', minifiedBundle.replace('v1.5.0', 'v9.9.9'), false],
+    ['NFR-019 build-not-minified', Array.from({ length: 400 }, (_, i) => `const value${i} = "${i === 0 ? 'v1.5.3' : 'x'}";`).join('\n'), false],
+    ['PIP-018 build-without-display-version', minifiedBundle.replace('v1.5.3', 'v9.9.9'), false],
   ];
   const goodBuild = join(buildRoot, 'good');
   await writeFile(join(goodBuild, 'main-ABC123.js'), minifiedBundle, 'utf8');
