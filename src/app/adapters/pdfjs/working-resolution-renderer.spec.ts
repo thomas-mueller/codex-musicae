@@ -238,7 +238,7 @@ describe('WorkingResolutionRenderer (NFR-025)', () => {
     expect(src.requests).toHaveLength(1);
   });
 
-  it('NFR-025 NFR-008 a running raster build whose last waiter leaves is cancelled and built again when the page is wanted later', async () => {
+  it('NFR-025 NFR-008 a running raster build whose last waiter leaves runs on and is reused when the page is wanted later', async () => {
     const src = source(20);
     const { handle } = await open(src.renderer);
     const gone = new AbortController();
@@ -248,6 +248,6 @@ describe('WorkingResolutionRenderer (NFR-025)', () => {
     expect(await first).toEqual({ ok: false, error: 'cancelled' });
     const again = await handle.renderRegion(whole(0), NEVER);
     expect(again.ok).toBe(true);
-    expect(src.requests).toHaveLength(2);
+    expect(src.requests).toHaveLength(1); // the page is rendered once
   });
 });

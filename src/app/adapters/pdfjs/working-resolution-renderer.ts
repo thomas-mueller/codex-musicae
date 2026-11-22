@@ -118,6 +118,8 @@ interface RasterEntry {
   readonly controller: AbortController;
   waiters: number;
   settled: boolean;
+  /** The source render has begun: it is not cancelled any more, so a page is not rendered twice (NFR-025). */
+  started: boolean;
 }
 
 class WorkingResolutionHandle implements PdfDocumentHandle {
@@ -219,7 +221,7 @@ class WorkingResolutionHandle implements PdfDocumentHandle {
 
   /**
    * The working raster of a page: made once (shared by every waiting request), the oldest ones are released.
-   * A build that nobody waits for any more is cancelled, so the slots serve the pages that are still wanted (the pages a fast scroll has left do not queue up).
+   * A build that nobody waits for any more is cancelled while it still queues for a slot (one that already renders is finished, so no page is rendered twice), so the slots serve the pages that are still wanted (the pages a fast scroll has left do not queue up).
    */
   private rasterOf(pageIndex: number, width: number, height: number, scale: number, signal: AbortSignal): Promise<Result<WorkingRaster, PdfRenderError>> {
     if (signal.aborted) {
@@ -244,7 +246,8 @@ class WorkingResolutionHandle implements PdfDocumentHandle {
       controller,
       waiters: 0,
       settled: false,
-      pending: this.build(pageIndex, width, height, scale, controller.signal).then((result) => {
+      started: false,
+      pending: this.build(pageIndex, width, height, scale, controller.signal, () => (entry.started = true)).then((result) => {
         entry.settled = true;
         this.lifetime.signal.removeEventListener('abort', abort);
         if (!result.ok && this.rasters.get(pageIndex) === entry) {
@@ -268,8 +271,8 @@ class WorkingResolutionHandle implements PdfDocumentHandle {
     return new Promise((resolve) => {
       const leave = (): void => {
         entry.waiters--;
-        if (entry.waiters === 0 && !entry.settled) {
-          entry.controller.abort(); // nobody needs this build any more
+        if (entry.waiters === 0 && !entry.settled && !entry.started) {
+          entry.controller.abort(); // nobody needs this build any more (one that already renders runs on and stays cached)
           for (const [key, value] of this.rasters) {
             if (value === entry) {
               this.rasters.delete(key);
@@ -292,8 +295,9 @@ class WorkingResolutionHandle implements PdfDocumentHandle {
     });
   }
 
-  private build(pageIndex: number, width: number, height: number, scale: number, signal: AbortSignal): Promise<Result<WorkingRaster, PdfRenderError>> {
+  private build(pageIndex: number, width: number, height: number, scale: number, signal: AbortSignal, onStart: () => void): Promise<Result<WorkingRaster, PdfRenderError>> {
     return this.withSlot(signal, async (slotSignal) => {
+      onStart();
       this.stats.sourceRenders++;
       const rendered = await this.source.renderRegion({ pageIndex, region: { x: 0, y: 0, width, height }, scale }, slotSignal);
       return rendered.ok ? ok({ bitmap: rendered.value, scale }) : rendered;
