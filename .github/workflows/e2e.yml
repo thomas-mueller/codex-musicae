@@ -93,17 +93,8 @@ jobs:
         run: node scripts/corpus.mjs --no-expected
 
       # CI=true (set by GitHub) makes playwright.config.ts serve the builds above, retry twice and use two workers.
-      # The cache-budget tests (NFR-004 NFR-009) hold up to 12 renders of a 1000 dpi scan in the unoptimized development build; next to a second
-      # busy worker they exhaust the runner's memory and the job is killed (exit 143). They run alone, in their own step, with one worker.
       - name: End-to-end tests
-        run: |
-          # Diagnostics for runs that are killed without a test failure: memory and load every 15 s next to the test output.
-          (while true; do echo "[mem] $(free -m | awk 'NR==2{print "used="$3"MB free="$4"MB avail="$7"MB"}') load=$(cut -d' ' -f1 /proc/loadavg)"; sleep 15; done) &
-          npx playwright test --project=${{ matrix.project }} ${{ matrix.dev == '1' && matrix.project == 'chromium' && '--grep-invert "NFR-004 NFR-009"' || '' }} ${{ matrix.grep && format('--grep {0}', matrix.grep) || '' }}
-
-      - name: End-to-end resource tests (one worker)
-        if: ${{ matrix.project == 'chromium' }}
-        run: npx playwright test --project=chromium --workers=1 --grep "NFR-004 NFR-009"
+        run: npx playwright test --project=${{ matrix.project }} ${{ matrix.grep && format('--grep {0}', matrix.grep) || '' }}
 
   # TST-008: the performance budgets of T:budgets on the largest real PDFs of the corpus (Chromium only, no retries). Runs after the
   # e2e matrix (also when it failed); like the rest of this workflow a breach never blocks a deployment or an APK.

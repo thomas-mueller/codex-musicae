@@ -28,8 +28,19 @@ const WEIGHT_UNDO = 3;
 const WEIGHT_REDO = 2;
 
 type Hook = { strokes: () => InkStroke[]; applyOps: (ops: DebugStrokeOp[]) => void };
-const hook = <T>(page: import('@playwright/test').Page, fn: (cm: Hook, arg: never) => T, arg?: unknown) =>
-  page.evaluate(([source, a]) => (new Function(`return (${source})`)() as (cm: Hook, a: unknown) => T)((globalThis as unknown as { __cm: Hook }).__cm, a), [fn.toString(), arg] as const);
+const hook = <T>(
+  page: import('@playwright/test').Page,
+  fn: (cm: Hook, arg: never) => T,
+  arg?: unknown,
+) =>
+  page.evaluate(
+    ([source, a]) =>
+      (new Function(`return (${source})`)() as (cm: Hook, a: unknown) => T)(
+        (globalThis as unknown as { __cm: Hook }).__cm,
+        a,
+      ),
+    [fn.toString(), arg] as const,
+  );
 
 /** mulberry32: a fixed seed gives the same sequences on every run. */
 function makeRandom(seed: number): () => number {
@@ -84,48 +95,74 @@ function makeSequence(random: () => number, sequence: number): DebugStrokeOp[] {
 
 test.setTimeout(TEST_TIMEOUT_MS);
 test.beforeEach(({ browserName }, testInfo) => {
-  test.skip(browserName !== 'chromium' || testInfo.project.name !== 'chromium', 'dev build with the debug hook: desktop Chromium');
+  test.skip(
+    browserName !== 'chromium' || testInfo.project.name !== 'chromium',
+    'dev build with the debug hook: desktop Chromium',
+  );
 });
 
-test('TST-003 SAV-006 SAV-007 ANN-005 ANN-006 random add, erase, undo and redo sequences survive a save and reopen unchanged', async ({ page }) => {
+test('TST-003 SAV-006 SAV-007 ANN-005 ANN-006 random add, erase, undo and redo sequences survive a save and reopen unchanged', async ({
+  page: basePage,
+  browser,
+}, testInfo) => {
   // One copy with the detection inside serves as the document of every sequence (opening it runs no detection).
-  await forceFilePaths(page);
-  await page.goto(DEV_URL);
-  await openScore(page);
-  await waitForFinalSlideCount(page);
-  const base = await saveCopyDownload(page);
+  await forceFilePaths(basePage);
+  await basePage.goto(DEV_URL);
+  await openScore(basePage);
+  await waitForFinalSlideCount(basePage);
+  const base = await saveCopyDownload(basePage);
+  await basePage.close();
 
   const random = makeRandom(SEED);
   let compared = 0;
   for (let sequence = 0; sequence < SEQUENCES; sequence++) {
-    await page.goto(DEV_URL);
-    await openPdf(page, base.bytes, base.name);
-    await waitForFinalSlideCount(page);
-    await hook(page, (cm, ops) => cm.applyOps(ops as DebugStrokeOp[]), makeSequence(random, sequence));
-    const expected = await hook(page, (cm) => cm.strokes());
+    // Every sequence runs in its own browser context: Chromium keeps the memory of the decoded scan pages (about 1 GB per open) in a
+    // long-lived renderer, so 40 loads in one page exhaust a CI runner. A new context ends that process; the assertions are unchanged.
+    const context = await browser.newContext(
+      testInfo.project.use as Parameters<typeof browser.newContext>[0],
+    );
+    const page = await context.newPage();
+    try {
+      await forceFilePaths(page);
+      await page.goto(DEV_URL);
+      await openPdf(page, base.bytes, base.name);
+      await waitForFinalSlideCount(page);
+      await hook(
+        page,
+        (cm, ops) => cm.applyOps(ops as DebugStrokeOp[]),
+        makeSequence(random, sequence),
+      );
+      const expected = await hook(page, (cm) => cm.strokes());
 
-    const copy = await saveCopyDownload(page);
-    qpdfCheck(copy.bytes);
-    const saved = (await inspect(copy.bytes)).ink ?? [];
-    expect(saved.map((i) => i.strokeId).sort(), `sequence ${sequence}`).toEqual(expected.map((s) => s.id).sort());
-    compared += expected.length;
-    for (const stroke of expected) {
-      const file = saved.find((i) => i.strokeId === stroke.id)!;
-      expect(file.pageIndex).toBe(stroke.pageIndex);
-      expect(file.points).toHaveLength(stroke.points.length);
-      stroke.points.forEach((p, k) => {
-        expect(Math.abs(file.points[k]!.x - p.x)).toBeLessThan(POINT_TOLERANCE);
-        expect(Math.abs(file.points[k]!.y - p.y)).toBeLessThan(POINT_TOLERANCE);
-      });
-      expect(file.color.toLowerCase()).toBe(stroke.color.toLowerCase());
+      const copy = await saveCopyDownload(page);
+      qpdfCheck(copy.bytes);
+      const saved = (await inspect(copy.bytes)).ink ?? [];
+      expect(saved.map((i) => i.strokeId).sort(), `sequence ${sequence}`).toEqual(
+        expected.map((s) => s.id).sort(),
+      );
+      compared += expected.length;
+      for (const stroke of expected) {
+        const file = saved.find((i) => i.strokeId === stroke.id)!;
+        expect(file.pageIndex).toBe(stroke.pageIndex);
+        expect(file.points).toHaveLength(stroke.points.length);
+        stroke.points.forEach((p, k) => {
+          expect(Math.abs(file.points[k]!.x - p.x)).toBeLessThan(POINT_TOLERANCE);
+          expect(Math.abs(file.points[k]!.y - p.y)).toBeLessThan(POINT_TOLERANCE);
+        });
+        expect(file.color.toLowerCase()).toBe(stroke.color.toLowerCase());
+      }
+
+      // Reopening the copy gives the same strokes back.
+      await page.goto(DEV_URL);
+      await openPdf(page, copy.bytes, copy.name);
+      await expect
+        .poll(async () => (await hook(page, (cm) => cm.strokes())).length)
+        .toBe(expected.length);
+      const reopened = await hook(page, (cm) => cm.strokes());
+      expect(reopened.map((s) => s.id).sort()).toEqual(expected.map((s) => s.id).sort());
+    } finally {
+      await context.close();
     }
-
-    // Reopening the copy gives the same strokes back.
-    await page.goto(DEV_URL);
-    await openPdf(page, copy.bytes, copy.name);
-    await expect.poll(async () => (await hook(page, (cm) => cm.strokes())).length).toBe(expected.length);
-    const reopened = await hook(page, (cm) => cm.strokes());
-    expect(reopened.map((s) => s.id).sort()).toEqual(expected.map((s) => s.id).sort());
   }
   expect(compared, 'the sequences leave strokes to compare').toBeGreaterThan(0);
 });
