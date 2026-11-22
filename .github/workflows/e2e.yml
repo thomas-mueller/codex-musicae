@@ -49,11 +49,13 @@ jobs:
           - { project: firefox-pixel-phone, browser: firefox, dev: '0', grep: '@smoke' }
           - { project: firefox-small-phone, browser: firefox, dev: '0', grep: '@smoke' }
           - { project: firefox-galaxy-tablet, browser: firefox, dev: '0', grep: '@smoke' }
-          - { project: webkit, browser: webkit, dev: '1' }
+          - { project: webkit, browser: webkit, dev: '1', workers: '1' }
           - { project: webkit-iphone, browser: webkit, dev: '0', grep: '@smoke' }
           - { project: webkit-ipad, browser: webkit, dev: '0', grep: '@smoke' }
     env:
       E2E_DEV_BUILD: ${{ matrix.dev }}
+      # WebKit uses about 5 GB per worker on the corpus and drawing specs; two workers exhaust the 16 GB runner and detection stalls. Empty = the default of playwright.config.ts.
+      E2E_WORKERS: ${{ matrix.workers }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
