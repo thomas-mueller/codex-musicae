@@ -96,7 +96,10 @@ jobs:
       # The cache-budget tests (NFR-004 NFR-009) hold up to 12 renders of a 1000 dpi scan in the unoptimized development build; next to a second
       # busy worker they exhaust the runner's memory and the job is killed (exit 143). They run alone, in their own step, with one worker.
       - name: End-to-end tests
-        run: npx playwright test --project=${{ matrix.project }} ${{ matrix.dev == '1' && matrix.project == 'chromium' && '--grep-invert "NFR-004 NFR-009"' || '' }} ${{ matrix.grep && format('--grep {0}', matrix.grep) || '' }}
+        run: |
+          # Diagnostics for runs that are killed without a test failure: memory and load every 15 s next to the test output.
+          (while true; do echo "[mem] $(free -m | awk 'NR==2{print "used="$3"MB free="$4"MB avail="$7"MB"}') load=$(cut -d' ' -f1 /proc/loadavg)"; sleep 15; done) &
+          npx playwright test --project=${{ matrix.project }} ${{ matrix.dev == '1' && matrix.project == 'chromium' && '--grep-invert "NFR-004 NFR-009"' || '' }} ${{ matrix.grep && format('--grep {0}', matrix.grep) || '' }}
 
       - name: End-to-end resource tests (one worker)
         if: ${{ matrix.project == 'chromium' }}
