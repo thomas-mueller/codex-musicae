@@ -4,7 +4,7 @@ Input: `docs/v2-requirements.md` (final, decisions D-1…D-32). Milestone files 
 
 ## Naming and tags
 
-- Milestones of version 2 are named `V2-M<n>` and tagged **`v1.<n>.0`** (e.g. `V2-M5` → `v1.5.0`). Fixes between milestones: `v1.5.1`. The minor number is always the milestone number. M0 is documentation and owner work: no tag.
+- Milestones of version 2 are named `V2-M<n>` and tagged **`v1.<n>.0`** (e.g. `V2-M5` → `v1.5.0`). Fixes between milestones: `v1.5.1`. A milestone inserted between two others takes a letter (`M2b`) and the patch tag of the milestone before it (`v1.2.1`). The minor number is always the milestone number. M0 is documentation and owner work: no tag.
 - **Release of v2:** tag the last milestone's commit (M19) additionally **`v2.0.0`** — annotated (`git tag -a v2.0.0 -m "v2"`), created last — and publish a GitHub release note. Example: `v1.19.0` and `v2.0.0` point to the same commit. Only the `v2.0.0` commit is built for the stores.
 - **Collision rule.** The minor numbers `v1.1.0…v1.19.0` belong to V2 milestones. Until `v2.0.0` exists, fixes to the released V1 are **patch-only** (`v1.0.1`, `v1.0.2`, …). After `v2.0.0`: fixes `v2.0.1`, additions `v2.1.0`.
 - Users see only `vX.Y.Z` (R-16). The version script (M1) turns `git describe` output of this scheme into that form; internal places may show the full describe string.
@@ -32,6 +32,7 @@ As V1: a **step** is one agent session — one layer or feature area, about 15 r
 | M0 | — | **Owner + strong agent:** V2 requirements into `requirements.md`, decisions, limitations, architecture, changelog, `AGENTS.md` update and sync of its copies, review report; **owner starts the long-lead tasks** (store accounts, business and tax preparation, supplying real PDFs) | all | strong, high |
 | M1 | v1.1.0 | Pipeline and quality gates: manual workflows, e2e triggers, coverage report, unused-code, dependency and license checks, external-request test, small-phone profile, version `vX.Y.Z`, tunables comments | R-44a, R-15, R-14c, #49, R-8d, R-11a, R-16, R-12c | mid, medium |
 | M2 | v1.2.0 | Real-PDF corpus: folder, URL list, checksums, expectation format and helper script, synthetic fixtures reduced to failure cases | R-13, R-14a, D-22 | mid, medium |
+| M2b | v1.2.1 | Large scans on 4K displays: pdf.js page state kept warm per device-memory bucket, prefetch that never evicts the current slide, 4K performance profile (inserted after the M2 analysis, DEC-148) | NFR-026, NFR-027, TST-022 | mid, medium |
 | M3 | v1.3.0 | Editions: feature-configuration files, free and paid builds, persistence behind switches, app IDs, four store variants, tests per configuration | R-22a…l, R-8a…c, D-7, D-9, D-32 | mid, medium |
 | M4 | v1.4.0 | **Data model v2 (core, contracts first):** marks on systems, new `schemaVersion` and migration, start mark, pass number, labels, cross-file references, deletion rules | D-10…D-13, D-24, D-26, D-31, R-28k, R-30a, R-30e | **strong, high** |
 | M5 | v1.5.0 | Settings mode, Reset all settings, language infrastructure, tooltips at the screen edge, icon registry | R-12a/b, R-6d, R-47 (infrastructure), R-46, R-5 | mid, medium |

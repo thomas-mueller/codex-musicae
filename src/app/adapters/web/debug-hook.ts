@@ -25,6 +25,8 @@ interface DebugHook {
   readonly redetect?: (level: DetectionLevelName) => void;
   /** Number of calls that reached the source renderer (pdf.js) since the page loaded (NFR-025 E2E). */
   readonly sourceRenders?: () => number;
+  /** The part of `sourceRenders` that were regions beyond the working scale, not whole-page raster builds (NFR-025 profile). */
+  readonly directRenders?: () => number;
   /** The strokes of the active document, in model order (TST-003 property test). */
   readonly strokes?: () => readonly InkStroke[];
   /** Applies ink edits to the active document through the store, in order (TST-003 property test). */

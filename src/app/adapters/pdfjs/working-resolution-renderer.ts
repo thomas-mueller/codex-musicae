@@ -91,8 +91,8 @@ class Slots {
  * detection, prefetch, slides) are cut and scaled from the raster. Only regions zoomed beyond it reach the source renderer, one at a time.
  */
 export class WorkingResolutionRenderer implements PdfRenderer {
-  /** Counts of the calls that reached the source renderer (shown by the development debug hook). */
-  readonly stats = { sourceRenders: 0 };
+  /** Counts of the calls that reached the source renderer; `directRenders` are the ones beyond the working scale, not raster builds (development debug hook). */
+  readonly stats = { sourceRenders: 0, directRenders: 0 };
   private readonly createCanvas: (width: number, height: number) => DrawCanvas;
   private readonly createBitmap: (canvas: DrawCanvas) => Promise<ImageBitmap>;
   private readonly copyBitmap: (bitmap: ImageBitmap) => Promise<ImageBitmap>;
@@ -124,7 +124,7 @@ class WorkingResolutionHandle implements PdfDocumentHandle {
     private readonly createCanvas: (width: number, height: number) => DrawCanvas,
     private readonly createBitmap: (canvas: DrawCanvas) => Promise<ImageBitmap>,
     private readonly copyBitmap: (bitmap: ImageBitmap) => Promise<ImageBitmap>,
-    private readonly stats: { sourceRenders: number },
+    private readonly stats: { sourceRenders: number; directRenders: number },
   ) {
     this.pageCount = source.pageCount;
   }
@@ -266,6 +266,7 @@ class WorkingResolutionHandle implements PdfDocumentHandle {
   private async renderFromSource(req: RenderRequest, signal: AbortSignal): Promise<Result<ImageBitmap, PdfRenderError>> {
     return this.withSlot(signal, (slotSignal) => {
       this.stats.sourceRenders++;
+      this.stats.directRenders++;
       return this.source.renderRegion(req, slotSignal);
     });
   }

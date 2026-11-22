@@ -130,6 +130,7 @@ export const appConfig: ApplicationConfig = {
         installDebugHook(window as DebugHost, inject(BitmapCache), {
           detect,
           sourceRenders: () => (renderer instanceof WorkingResolutionRenderer ? renderer.stats.sourceRenders : 0),
+          directRenders: () => (renderer instanceof WorkingResolutionRenderer ? renderer.stats.directRenders : 0),
           startedOrder: () => session.activeDocument()?.detection.startedOrder ?? [],
           detectionState: () => {
             const doc = session.activeDocument();
