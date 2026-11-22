@@ -331,6 +331,13 @@ export const TUNABLES = {
     iccUrl: 'assets/pdfjs/iccs/', // GEN-005
     annotationModeDisable: 0, // SAV-006: pdf.js AnnotationMode.DISABLE; the app draws every stroke itself
     sourceImageMaxBytes: 16_000_000 * 4, // NFR-025: bytes (4 per pixel) a decoded source image may use; pdf.js shrinks larger images in its worker before they reach the page
+    warmPagesByDeviceMemoryGb: {
+      1: 1, // pages whose pdf.js state (parsed content, decoded images) stays warm on a device with 1 GB
+      2: 1, // pages on 2 GB
+      4: 2, // pages on 4 GB
+      8: 3, // pages on 8 GB or more
+    }, // NFR-026 (navigator.deviceMemory buckets)
+    warmPagesDefault: 2, // NFR-026: pages kept warm when the device memory is unknown
   },
 
   rendering: {

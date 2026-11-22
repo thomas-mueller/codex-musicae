@@ -45,6 +45,8 @@ interface PdfJsRendererOptions {
   readonly loadModule?: () => Promise<PdfjsModule>;
   readonly createCanvas?: (width: number, height: number) => RenderCanvas;
   readonly createBitmap?: (canvas: RenderCanvas) => Promise<ImageBitmap>;
+  /** NFR-026: pages whose pdf.js state stays warm after a render (the composition root resolves it from the device memory). */
+  readonly warmPages?: number;
   /** Base for the relative asset paths in `T:pdf`. */
   readonly baseUri?: string;
 }
@@ -84,6 +86,7 @@ export class PdfJsRenderer implements PdfRenderer {
   private readonly createCanvas: (width: number, height: number) => RenderCanvas;
   private readonly createBitmap: (canvas: RenderCanvas) => Promise<ImageBitmap>;
   private readonly baseUri: string;
+  private readonly warmPages: number;
   private modulePromise: Promise<PdfjsModule> | null = null;
 
   constructor(options: PdfJsRendererOptions = {}) {
@@ -91,6 +94,7 @@ export class PdfJsRenderer implements PdfRenderer {
     this.createCanvas = options.createCanvas ?? defaultCreateCanvas;
     this.createBitmap = options.createBitmap ?? defaultCreateBitmap;
     this.baseUri = options.baseUri ?? document.baseURI;
+    this.warmPages = options.warmPages ?? TUNABLES.pdf.warmPagesDefault;
   }
 
   async open(bytes: Uint8Array): Promise<Result<PdfDocumentHandle, PdfOpenError>> {
@@ -116,7 +120,7 @@ export class PdfJsRenderer implements PdfRenderer {
         await doc.destroy().catch(() => undefined);
         return err('empty');
       }
-      return ok(new PdfJsDocumentHandle(doc, this.createCanvas, this.createBitmap));
+      return ok(new PdfJsDocumentHandle(doc, this.createCanvas, this.createBitmap, this.warmPages));
     } catch (e) {
       return err(errorName(e) === NAME_PASSWORD ? 'encrypted' : 'invalid');
     }
@@ -137,11 +141,14 @@ export class PdfJsRenderer implements PdfRenderer {
 
 class PdfJsDocumentHandle implements PdfDocumentHandle {
   readonly pageCount: number;
+  /** NFR-026: page numbers (1-based) whose pdf.js state is kept, least recently rendered first. */
+  private warm: number[] = [];
 
   constructor(
     private readonly doc: PdfjsDocument,
     private readonly createCanvas: (width: number, height: number) => RenderCanvas,
     private readonly createBitmap: (canvas: RenderCanvas) => Promise<ImageBitmap>,
+    private readonly warmLimit: number,
   ) {
     this.pageCount = doc.numPages;
   }
@@ -152,7 +159,9 @@ class PdfJsDocumentHandle implements PdfDocumentHandle {
       const [x0, y0, x1, y1] = page.view;
       const box: PageBox = { view: [x0, y0, x1, y1], rotate: page.rotate as PageRotation };
       const viewport = page.getViewport({ scale: 1 });
-      page.cleanup();
+      if (!this.warm.includes(pageIndex + 1)) {
+        page.cleanup();
+      }
       return ok({ pageIndex, box, width: viewport.width, height: viewport.height });
     } catch {
       return err('unknown');
@@ -170,8 +179,10 @@ class PdfJsDocumentHandle implements PdfDocumentHandle {
     }
     let canvas: RenderCanvas | null = null;
     let onAbort: (() => void) | null = null;
+    const pageNumber = req.pageIndex + 1;
+    let page: PdfjsPage | null = null;
     try {
-      const page = await this.doc.getPage(req.pageIndex + 1);
+      page = await this.doc.getPage(pageNumber);
       if (signal.aborted) {
         return err('cancelled');
       }
@@ -189,14 +200,17 @@ class PdfJsDocumentHandle implements PdfDocumentHandle {
       onAbort = () => task.cancel();
       signal.addEventListener('abort', onAbort, { once: true });
       await task.promise;
-      page.cleanup();
       const bitmap = await this.createBitmap(canvas);
       if (signal.aborted) {
         bitmap.close();
         return err('cancelled');
       }
+      this.markWarm(pageNumber, page);
       return ok(bitmap);
     } catch (e) {
+      if (page && !this.warm.includes(pageNumber)) {
+        page.cleanup(); // a cancelled or failed render of a cold page leaves no pdf.js state behind
+      }
       if (signal.aborted || errorName(e) === NAME_CANCELLED) {
         return err('cancelled');
       }
@@ -211,7 +225,42 @@ class PdfJsDocumentHandle implements PdfDocumentHandle {
     }
   }
 
+  /**
+   * NFR-026: releases the pdf.js state of every warm page.
+   * NFR-020: V2-M6 must call it where an inactive tab drops its bitmaps; that needs an optional method on the `PdfDocumentHandle` port.
+   */
+  releaseWarmPages(): void {
+    const pages = this.warm;
+    this.warm = [];
+    for (const number of pages) {
+      void this.cleanupPage(number);
+    }
+  }
+
+  /** Remembers a rendered page as the most recent warm one; the pages beyond the limit are cleaned up. */
+  private markWarm(pageNumber: number, page: PdfjsPage): void {
+    if (this.warmLimit <= 0) {
+      page.cleanup();
+      return;
+    }
+    this.warm = [...this.warm.filter((n) => n !== pageNumber), pageNumber];
+    while (this.warm.length > this.warmLimit) {
+      void this.cleanupPage(this.warm.shift()!);
+    }
+  }
+
+  private async cleanupPage(pageNumber: number): Promise<void> {
+    try {
+      (await this.doc.getPage(pageNumber)).cleanup();
+    } catch {
+      // the document is gone or the page cannot be loaded: nothing left to release
+    }
+  }
+
   async destroy(): Promise<void> {
+    const pages = this.warm;
+    this.warm = [];
+    await Promise.all(pages.map((n) => this.cleanupPage(n)));
     try {
       await this.doc.destroy();
     } catch {

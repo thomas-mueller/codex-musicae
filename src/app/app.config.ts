@@ -12,6 +12,7 @@ import { Capacitor } from '@capacitor/core';
 import { provideTransloco } from '@jsverse/transloco';
 import { provideRouter } from '@angular/router';
 import { TUNABLES } from '../config/tunables';
+import { cacheBudgetFor } from './core/cache-budget';
 import { tunablesToCssVars } from './state/css-vars';
 import { DetectionService } from './state/detection.service';
 import { APP_VERSION_DISPLAY, APP_VERSION_FULL as APP_VERSION_FULL_VALUE } from '../config/version.generated';
@@ -170,7 +171,14 @@ export const appConfig: ApplicationConfig = {
       loader: AppTranslocoLoader,
     }),
     provideAppIdentity(),
-    { provide: PDF_RENDERER, useFactory: () => new WorkingResolutionRenderer(new PdfJsRenderer()) },
+    {
+      provide: PDF_RENDERER,
+      useFactory: () => {
+        // NFR-026: pages whose pdf.js state stays warm, by device memory.
+        const warmPages = cacheBudgetFor(inject(DEVICE_INFO).deviceMemoryGb(), TUNABLES.pdf.warmPagesByDeviceMemoryGb, TUNABLES.pdf.warmPagesDefault);
+        return new WorkingResolutionRenderer(new PdfJsRenderer({ warmPages }));
+      },
+    },
     { provide: DETECTION_ENGINE, useFactory: () => new OpenCvDetectionEngine() },
     { provide: PDF_WRITER, useFactory: () => new PdfLibWriter() },
     { provide: APP_LIFECYCLE, useFactory: () => new WebAppLifecycle() },
