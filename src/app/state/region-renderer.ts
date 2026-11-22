@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 
 import { TUNABLES } from '../../config/tunables';
 import type { Rect } from '../core';
-import { fitScaleToPixelCap } from '../core';
+import { BITMAP_BYTES_PER_PIXEL, fitScaleToPixelCap } from '../core';
 import { DEVICE_INFO } from '../ports/device-info';
 import type { PdfRenderError } from '../ports/pdf-renderer';
 import { err, ok } from '../ports/result';
@@ -45,6 +45,13 @@ export class RegionRenderer {
     this.governor.reportFailure();
     const smaller = this.fit(request.region, wanted * TUNABLES.resources.governorLowResFactor);
     return this.attempt(doc, request, smaller, signal);
+  }
+
+  /** NFR-027: the bytes the bitmap of `renderRegionCached` for this region and scale takes in the cache (without rendering). */
+  estimatedBytes(region: Rect, scale: number): number {
+    const dpr = Math.min(this.device.devicePixelRatio(), TUNABLES.resources.devicePixelRatioCap);
+    const pxPerUnit = this.fit(region, scale * dpr * this.governor.renderScaleFactor());
+    return Math.ceil(region.width * pxPerUnit) * Math.ceil(region.height * pxPerUnit) * BITMAP_BYTES_PER_PIXEL;
   }
 
   private fit(region: Rect, scale: number): number {

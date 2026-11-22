@@ -138,4 +138,23 @@ describe('RegionRenderer.renderRegionCached', () => {
       err('unknown'),
     );
   });
+
+  it('NFR-027 estimatedBytes is the size of the bitmap that the render would cache', async () => {
+    const { doc, handle, regions, cache } = await setup(2);
+    handle.renderRegion.mockImplementation((request) => Promise.resolve(ok(fakeBitmap(Math.ceil(request.region.width * request.scale), Math.ceil(request.region.height * request.scale)))));
+    const estimate = regions.estimatedBytes(REGION, 1);
+    const before = cache.totalBytes;
+    await regions.renderRegionCached(doc, { pageIndex: 0, region: REGION, scale: 1 }, signal());
+    expect(cache.totalBytes - before).toBe(estimate);
+  });
+
+  it('NFR-027 estimatedBytes follows the governor render scale', async () => {
+    const { regions, governor } = await setup();
+    const full = regions.estimatedBytes(REGION, 1);
+    governor.reportFailure();
+    (TestBed.inject(CLOCK) as unknown as FakeClock).advance(R.governorEscalateCooldownMs);
+    governor.reportFailure();
+    expect(governor.level()).toBe(2);
+    expect(regions.estimatedBytes(REGION, 1)).toBeLessThan(full);
+  });
 });

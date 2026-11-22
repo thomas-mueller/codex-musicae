@@ -1,11 +1,10 @@
 import { inject, Injectable } from '@angular/core';
 
 import { TUNABLES } from '../../config/tunables';
-import { cacheBudgetFor, LruByteCache } from '../core';
+import { BITMAP_BYTES_PER_PIXEL, cacheBudgetFor, LruByteCache } from '../core';
 import { DEVICE_INFO } from '../ports/device-info';
 import { ResourceGovernor } from './resource-governor';
 
-const BYTES_PER_PIXEL = 4;
 /** Key separator: every key starts with `${tabId}|`. */
 const TAB_SEPARATOR = '|';
 
@@ -39,7 +38,7 @@ export class BitmapCache {
 
   /** Returns false when the bitmap was rejected (and closed). */
   set(key: string, bitmap: ImageBitmap): boolean {
-    this.cache.set(key, bitmap, bitmap.width * bitmap.height * BYTES_PER_PIXEL);
+    this.cache.set(key, bitmap, bitmap.width * bitmap.height * BITMAP_BYTES_PER_PIXEL);
     return this.cache.peek(key) === bitmap;
   }
 

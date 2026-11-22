@@ -143,6 +143,7 @@ const COMPARED_SLIDES = 15; // slide changes per run, each waited for until repa
 const PAINT_POLL_MS = 50;
 const STABLE_POLL_MS = 500;
 const MEGA = 1_000_000;
+const BITMAP_BYTES_PER_PIXEL = 4; // the bitmap cache counts 4 bytes per pixel
 const DEFAULT_CANVAS_WIDTH = 300; // width of a canvas that was never painted
 const RUN_MARGIN_MS = 120_000; // per run: opening, mode switch and the changes
 
@@ -202,6 +203,17 @@ for (const viewport of VIEWPORTS) {
         testInfo.annotations.push({ type: 'perf', description: `${run}: key to repaint per change (ms): ${times.map((t) => t.toFixed(0)).join(',')}` });
         const cache = await page.evaluate(() => (globalThis as unknown as Probe).__cm.cache);
         report(testInfo, `${run}: heap and bitmap cache (MiB)`, { heap: await heapMib(page), cache: cache.totalBytes / BYTES_PER_MIB, budget: cache.budgetBytes / BYTES_PER_MIB });
+        // NFR-027: does the slide just left survive the prefetch of its neighbors? Going back to it should not render anything.
+        const slideBytes = stage.pxWidth * stage.pxHeight * BITMAP_BYTES_PER_PIXEL;
+        const rendersBeforeBack = await sourceRenders(page);
+        const paintsBeforeBack = (await takePaintTimes(page)).length;
+        await page.keyboard.press(PREVIOUS_KEY);
+        await expect.poll(async () => (await takePaintTimes(page)).length, { timeout: PERF_WAIT_MS, intervals: [PAINT_POLL_MS] }).toBeGreaterThan(paintsBeforeBack);
+        report(testInfo, `${run}: slide bitmap and the slide left by one Previous press`, {
+          slideMiB: slideBytes / BYTES_PER_MIB,
+          slidesInBudget: cache.budgetBytes / slideBytes,
+          rendersOnBack: (await sourceRenders(page)) - rendersBeforeBack,
+        });
         expect(times.length).toBeGreaterThan(0);
         expect(stage.pxWidth * stage.pxHeight).toBeLessThanOrEqual(TUNABLES.resources.maxCanvasPixels);
       });

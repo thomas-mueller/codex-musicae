@@ -73,4 +73,15 @@ describe('ResourceGovernor', () => {
     clock.advance(1);
     expect(governor.level()).toBe(1);
   });
+
+  it('NFR-027 prefetch follows the cache budget: a slide that leaves no room for neighbors prefetches none', () => {
+    const slide = 33 * 1024 * 1024;
+    expect(governor.prefetchNeighborsFor(slide, 96 * 1024 * 1024)).toBe(0);
+    expect(governor.prefetchNeighborsFor(slide, 192 * 1024 * 1024)).toBe(R.prefetchNeighbors);
+  });
+
+  it('NFR-027 prefetch stays 0 once the governor dropped it, whatever the budget', () => {
+    governor.reportFailure();
+    expect(governor.prefetchNeighborsFor(1, Number.MAX_SAFE_INTEGER)).toBe(0);
+  });
 });

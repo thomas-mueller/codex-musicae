@@ -1,6 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 
 import { TUNABLES } from '../../config/tunables';
+import { prefetchCountFor } from '../core';
 import { CLOCK } from './clock';
 
 const R = TUNABLES.resources;
@@ -20,6 +21,10 @@ export class ResourceGovernor {
 
   readonly level = this.levelSignal.asReadonly();
   readonly prefetchNeighbors = computed(() => (this.level() >= LEVEL_NO_PREFETCH ? 0 : R.prefetchNeighbors));
+  /** NFR-027: the neighbors per side whose bitmaps fit into the cache budget together with the displayed slide (0 when prefetch is dropped). */
+  prefetchNeighborsFor(slideBytes: number, budgetBytes: number): number {
+    return prefetchCountFor(slideBytes, budgetBytes, this.prefetchNeighbors(), R.prefetchBudgetShare);
+  }
   readonly renderScaleFactor = computed(() => (this.level() >= LEVEL_LOW_RES ? R.governorLowResFactor : 1));
 
   /** An allocation failed or the cache is over budget after eviction. */

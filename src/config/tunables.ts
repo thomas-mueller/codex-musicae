@@ -286,6 +286,7 @@ export const TUNABLES = {
     maxCanvasPixels: 12_000_000, // NFR-006 (also protects iOS/WebKit canvas limits)
     tileSizePx: 1024, // NFR-007
     prefetchNeighbors: 1, // NFR-003, NFR-004
+    prefetchBudgetShare: 0.8, // NFR-027: fraction of the bitmap cache budget that the current slide and its prefetched neighbors may fill; the rest is for older entries, tiles and other tabs
     recentFilesMax: 20, // FIL-008
     orgRenderPagesAround: 1, // ORG-002
     fileChunkBytes: 2 * 1024 * 1024, // PLT-008: chunk size for file transfer between the Android plugin and the WebView
