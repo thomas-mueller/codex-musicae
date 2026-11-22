@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { TUNABLES } from '../../src/config/tunables';
 import { label } from '../support/score';
 import { MIN_PERF_SLIDE_CHANGES } from '../../scripts/lib/corpus-files.mjs';
 import {
@@ -132,43 +133,78 @@ async function installCanvasChangeTimer(page: Page): Promise<void> {
 
 const takePaintTimes = (page: Page): Promise<number[]> => page.evaluate(() => [...((globalThis as unknown as { __paintMs?: number[] }).__paintMs ?? [])]);
 
-const FULL_HD = { width: 1920, height: 1080 };
-const HIDPI = 2;
-const COMPARED_SLIDES = 15;
-const PAINT_WAIT_MS = 1_500;
+/** Viewports of the 4K profile (TST-022): physical size is width x ratio. */
+const VIEWPORTS = [
+  { name: '3840x2160 ratio 1', width: 3840, height: 2160, ratio: 1 },
+  { name: '2560x1440 ratio 1.5', width: 2560, height: 1440, ratio: 1.5 },
+  { name: '1920x1080 ratio 2', width: 1920, height: 1080, ratio: 2 },
+] as const;
+const COMPARED_SLIDES = 15; // slide changes per run, each waited for until repainted
+const PAINT_POLL_MS = 50;
+const STABLE_POLL_MS = 500;
+const MEGA = 1_000_000;
 const DEFAULT_CANVAS_WIDTH = 300; // width of a canvas that was never painted
+const RUN_MARGIN_MS = 120_000; // per run: opening, mode switch and the changes
 
-for (const mode of ['annotation', 'presentation'] as const) {
-  test.describe(`${mode} mode at 1920x1080, devicePixelRatio 2`, () => {
-    test.use({ viewport: FULL_HD, deviceScaleFactor: HIDPI });
+type Stage = { cssWidth: number; cssHeight: number; pxWidth: number; pxHeight: number };
+const readStage = (page: Page): Promise<Stage> =>
+  page.getByTestId('slide-canvas').evaluate((c: HTMLCanvasElement) => ({ cssWidth: c.clientWidth, cssHeight: c.clientHeight, pxWidth: c.width, pxHeight: c.height }));
 
-    test(`NFR-001 NFR-025 TST-008 profile: ${mode} mode slide changes and source renders (report only)`, async ({ page }, testInfo) => {
-      test.skip(realPdfs().regular === null, 'no regular real PDF in the corpus');
-      await openReference(page, DEV_URL, 'regular');
-      await waitForFirstSlideDrawn(page);
-      await waitForDetectionComplete(page);
-      if (mode === 'presentation') {
-        await page.getByLabel(label('modePresentation'), { exact: true }).click();
-        await expect(page.locator('app-shell')).toHaveAttribute('data-mode', 'presentation');
-      }
-      // The slide view of the new mode paints once its first render is done (seconds on a large scan); the canvas keeps the 300x150 default until then.
-      await expect.poll(() => page.getByTestId('slide-canvas').evaluate((c: HTMLCanvasElement) => c.width), { timeout: PERF_WAIT_MS }).toBeGreaterThan(DEFAULT_CANVAS_WIDTH);
-      await page.waitForTimeout(PAINT_WAIT_MS);
-      const stage = await page.getByTestId('slide-canvas').evaluate((c: HTMLCanvasElement) => ({ cssWidth: c.clientWidth, cssHeight: c.clientHeight, pxWidth: c.width, pxHeight: c.height }));
-      await installCanvasChangeTimer(page);
-      const rendersBefore = await sourceRenders(page);
-      const directBefore = await directRenders(page);
-      for (let i = 0; i < COMPARED_SLIDES; i++) {
-        await page.keyboard.press(NEXT_KEY);
-        await page.waitForTimeout(PAINT_WAIT_MS);
-      }
-      const times = await takePaintTimes(page);
-      report(testInfo, `${mode}: slide canvas`, stage);
-      report(testInfo, `${mode}: source renders during ${COMPARED_SLIDES} Next presses`, { renders: (await sourceRenders(page)) - rendersBefore, directRegions: (await directRenders(page)) - directBefore, painted: times.length });
-      if (times.length > 0) {
-        report(testInfo, `${mode}: key to changed slide pixels (ms)`, summary(times));
-      }
-      expect(times.length).toBeGreaterThan(0);
+/** Waits until the source render counter stays unchanged for one poll interval: the first render of the mode (and its prefetch) is done. */
+async function waitForRendersStable(page: Page): Promise<void> {
+  let last = -2;
+  await expect
+    .poll(async () => {
+      const now = await sourceRenders(page);
+      const stable = now === last;
+      last = now;
+      return stable;
+    }, { timeout: PERF_WAIT_MS, intervals: [STABLE_POLL_MS] })
+    .toBe(true);
+}
+
+for (const viewport of VIEWPORTS) {
+  for (const mode of ['annotation', 'presentation'] as const) {
+    test.describe(`${mode} mode at ${viewport.name}`, () => {
+      test.use({ viewport: { width: viewport.width, height: viewport.height }, deviceScaleFactor: viewport.ratio });
+      test.setTimeout(PERF_BASE_TEST_TIMEOUT_MS + RUN_MARGIN_MS + detectionTimeoutMs());
+
+      test(`TST-022 NFR-027 profile: ${mode} mode at ${viewport.name}, slide changes, renders, heap and cache (report only)`, async ({ page }, testInfo) => {
+        test.skip(realPdfs().regular === null, 'no regular real PDF in the corpus');
+        const run = `${mode} ${viewport.name}`;
+        await openReference(page, DEV_URL, 'regular');
+        await waitForFirstSlideDrawn(page);
+        await waitForDetectionComplete(page);
+        if (mode === 'presentation') {
+          await page.getByLabel(label('modePresentation'), { exact: true }).click();
+          await expect(page.locator('app-shell')).toHaveAttribute('data-mode', 'presentation');
+        }
+        // The slide view of the new mode paints once its first render is done (seconds on a large scan); the canvas keeps the 300x150 default until then.
+        await expect.poll(() => page.getByTestId('slide-canvas').evaluate((c: HTMLCanvasElement) => c.width), { timeout: PERF_WAIT_MS }).toBeGreaterThan(DEFAULT_CANVAS_WIDTH);
+        await waitForRendersStable(page);
+        const stage = await readStage(page);
+        await installCanvasChangeTimer(page);
+        const sourceBefore = await sourceRenders(page);
+        const directBefore = await directRenders(page);
+        for (let i = 0; i < COMPARED_SLIDES; i++) {
+          const painted = (await takePaintTimes(page)).length;
+          await page.keyboard.press(NEXT_KEY);
+          // Poll the repaint of this change; a change that never repaints fails the run instead of being skipped.
+          await expect.poll(async () => (await takePaintTimes(page)).length, { timeout: PERF_WAIT_MS, intervals: [PAINT_POLL_MS] }).toBeGreaterThan(painted);
+          await waitForRendersStable(page); // the prefetch of the neighbors is done before the next key
+        }
+        const times = await takePaintTimes(page);
+        const direct = (await directRenders(page)) - directBefore;
+        const source = (await sourceRenders(page)) - sourceBefore;
+        report(testInfo, `${run}: slide canvas`, { ...stage, megaPixels: (stage.pxWidth * stage.pxHeight) / MEGA });
+        report(testInfo, `${run}: source renders during ${COMPARED_SLIDES} Next presses`, { rasterBuilds: source - direct, directRegions: direct, painted: times.length });
+        report(testInfo, `${run}: key to repaint (ms)`, summary(times));
+        testInfo.annotations.push({ type: 'perf', description: `${run}: key to repaint per change (ms): ${times.map((t) => t.toFixed(0)).join(',')}` });
+        const cache = await page.evaluate(() => (globalThis as unknown as Probe).__cm.cache);
+        report(testInfo, `${run}: heap and bitmap cache (MiB)`, { heap: await heapMib(page), cache: cache.totalBytes / BYTES_PER_MIB, budget: cache.budgetBytes / BYTES_PER_MIB });
+        expect(times.length).toBeGreaterThan(0);
+        expect(stage.pxWidth * stage.pxHeight).toBeLessThanOrEqual(TUNABLES.resources.maxCanvasPixels);
+      });
     });
-  });
+  }
 }
