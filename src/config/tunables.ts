@@ -349,7 +349,7 @@ export const TUNABLES = {
 
   budgets: {
     slideChangeP95Ms: 200, // NFR-001
-    drawingMaxLongTaskMs: 400, // NFR-002 (ms): longest main-thread task; measured 189 ms (21 pages) and 305 ms (281 pages) on real scans while detection runs, V2-M2 owner decision
+    drawingMaxLongTaskMs: 2000, // NFR-002 (ms): longest main-thread task; measured 189 ms (21 pages) and 161 to 1654 ms (281 pages, loaded machine) on real scans while detection runs; raised from 400 by owner decision, V2-M2 2026-11-22
     drawingMaxAddedLatencyMs: 16, // NFR-002
     initialBundleKbGzip: 600, // NFR-014
     ciToleranceFactor: 2, // TST-008: performance tests allow this factor on CI machines
@@ -361,6 +361,10 @@ export const TUNABLES = {
     keyPrefix: 'cm.v1.', // FIL-015 (Preferences store: UI state and file references only)
     sessionDebounceMs: 500, // FIL-011: delay before the session snapshot is written
     sessionKey: 'session', // FIL-011: preference key of the session snapshot
+  },
+
+  testing: {
+    unitTestTimeoutMs: 10_000, // TST-008 (ms): Vitest timeout for tests and hooks; real-PDF specs are heavy in the parallel run (Vitest default 5000)
   },
 
   stylus: {

@@ -5,7 +5,7 @@ import { enterOrganization, label, openScore, SCORE_BARS, SCORE_PAGES } from './
 import { DETECTION_TIMEOUT_MS, scaled } from './support/timing';
 
 const DEV_URL = 'http://127.0.0.1:4174';
-const LONG_TASK_LIMIT_MS = scaled(TUNABLES.budgets.drawingMaxLongTaskMs); // the budget of the owner (V2-M2: real scans, 400 ms); a shared CI runner stalls the main thread more often
+const LONG_TASK_LIMIT_MS = scaled(TUNABLES.budgets.drawingMaxLongTaskMs); // the budget of the owner (V2-M2: real scans, 2000 ms); a shared CI runner stalls the main thread more often
 const KEEP_ACTIVE_MS = 100; // pointer events at this interval keep detection paused (DET-017)
 const SCROLL_SETTLE_MS = scaled(600);
 const LAST_PAGE_INDEX = SCORE_PAGES - 1;

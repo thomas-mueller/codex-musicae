@@ -112,10 +112,18 @@ export class WorkingResolutionRenderer implements PdfRenderer {
   }
 }
 
+/** A working raster being built or built, with the number of requests still waiting for it (NFR-025, NFR-008). */
+interface RasterEntry {
+  readonly pending: Promise<Result<WorkingRaster, PdfRenderError>>;
+  readonly controller: AbortController;
+  waiters: number;
+  settled: boolean;
+}
+
 class WorkingResolutionHandle implements PdfDocumentHandle {
   readonly pageCount: number;
   private readonly infos = new Map<number, Promise<Result<PdfPageInfo, 'unknown'>>>();
-  private readonly rasters = new Map<number, Promise<Result<WorkingRaster, PdfRenderError>>>();
+  private readonly rasters = new Map<number, RasterEntry>();
   private readonly slots = new Slots(TUNABLES.resources.sourceDecodeSlots);
   private readonly lifetime = new AbortController();
 
@@ -194,8 +202,8 @@ class WorkingResolutionHandle implements PdfDocumentHandle {
     this.lifetime.abort();
     const rasters = [...this.rasters.values()];
     this.rasters.clear();
-    for (const pending of rasters) {
-      const raster = await pending;
+    for (const entry of rasters) {
+      const raster = await entry.pending;
       if (raster.ok) {
         raster.value.bitmap.close();
       }
@@ -209,42 +217,85 @@ class WorkingResolutionHandle implements PdfDocumentHandle {
     return fitScaleToPixelCap(width, height, wanted, TUNABLES.resources.maxCanvasPixels * CAP_MARGIN);
   }
 
-  /** The working raster of a page: made once (shared by every waiting request), the oldest ones are released. */
+  /**
+   * The working raster of a page: made once (shared by every waiting request), the oldest ones are released.
+   * A build that nobody waits for any more is cancelled, so the slots serve the pages that are still wanted (the pages a fast scroll has left do not queue up).
+   */
   private rasterOf(pageIndex: number, width: number, height: number, scale: number, signal: AbortSignal): Promise<Result<WorkingRaster, PdfRenderError>> {
-    let pending = this.rasters.get(pageIndex);
-    if (pending) {
+    if (signal.aborted) {
+      return Promise.resolve(err('cancelled')); // nobody waits: do not start (or touch) a build
+    }
+    let entry = this.rasters.get(pageIndex);
+    if (entry) {
       this.rasters.delete(pageIndex); // re-inserted below: most recently used last
     } else {
-      pending = this.build(pageIndex, width, height, scale).then((result) => {
-        if (!result.ok && this.rasters.get(pageIndex) === pending) {
-          this.rasters.delete(pageIndex); // failures are not cached
-        }
-        return result;
-      });
+      entry = this.startBuild(pageIndex, width, height, scale);
     }
-    this.rasters.set(pageIndex, pending);
+    this.rasters.set(pageIndex, entry);
     this.evict();
-    return this.waitFor(pending, signal);
+    return this.waitFor(entry, signal);
   }
 
-  private waitFor<T>(pending: Promise<Result<T, PdfRenderError>>, signal: AbortSignal): Promise<Result<T, PdfRenderError>> {
+  private startBuild(pageIndex: number, width: number, height: number, scale: number): RasterEntry {
+    const controller = new AbortController();
+    const abort = (): void => controller.abort();
+    this.lifetime.signal.addEventListener('abort', abort, { once: true });
+    const entry: RasterEntry = {
+      controller,
+      waiters: 0,
+      settled: false,
+      pending: this.build(pageIndex, width, height, scale, controller.signal).then((result) => {
+        entry.settled = true;
+        this.lifetime.signal.removeEventListener('abort', abort);
+        if (!result.ok && this.rasters.get(pageIndex) === entry) {
+          this.rasters.delete(pageIndex); // failures are not cached
+        }
+        if (result.ok && controller.signal.aborted && this.rasters.get(pageIndex) !== entry) {
+          result.value.bitmap.close(); // cancelled while the render finished: nobody owns the bitmap
+          return err('cancelled');
+        }
+        return result;
+      }),
+    };
+    return entry;
+  }
+
+  private waitFor(entry: RasterEntry, signal: AbortSignal): Promise<Result<WorkingRaster, PdfRenderError>> {
     if (signal.aborted) {
       return Promise.resolve(err('cancelled'));
     }
+    entry.waiters++;
     return new Promise((resolve) => {
-      const onAbort = (): void => resolve(err('cancelled'));
+      const leave = (): void => {
+        entry.waiters--;
+        if (entry.waiters === 0 && !entry.settled) {
+          entry.controller.abort(); // nobody needs this build any more
+          for (const [key, value] of this.rasters) {
+            if (value === entry) {
+              this.rasters.delete(key);
+            }
+          }
+        }
+      };
+      const onAbort = (): void => {
+        leave();
+        resolve(err('cancelled'));
+      };
       signal.addEventListener('abort', onAbort, { once: true });
-      void pending.then((result) => {
+      void entry.pending.then((result) => {
         signal.removeEventListener('abort', onAbort);
+        if (!signal.aborted) {
+          entry.waiters--;
+        }
         resolve(result);
       });
     });
   }
 
-  private build(pageIndex: number, width: number, height: number, scale: number): Promise<Result<WorkingRaster, PdfRenderError>> {
-    return this.withSlot(this.lifetime.signal, async (signal) => {
+  private build(pageIndex: number, width: number, height: number, scale: number, signal: AbortSignal): Promise<Result<WorkingRaster, PdfRenderError>> {
+    return this.withSlot(signal, async (slotSignal) => {
       this.stats.sourceRenders++;
-      const rendered = await this.source.renderRegion({ pageIndex, region: { x: 0, y: 0, width, height }, scale }, signal);
+      const rendered = await this.source.renderRegion({ pageIndex, region: { x: 0, y: 0, width, height }, scale }, slotSignal);
       return rendered.ok ? ok({ bitmap: rendered.value, scale }) : rendered;
     });
   }
@@ -253,9 +304,9 @@ class WorkingResolutionHandle implements PdfDocumentHandle {
   private evict(): void {
     while (this.rasters.size > TUNABLES.resources.workingPagesKept) {
       const oldest = this.rasters.keys().next().value as number;
-      const pending = this.rasters.get(oldest);
+      const entry = this.rasters.get(oldest);
       this.rasters.delete(oldest);
-      void pending?.then((raster) => {
+      void entry?.pending.then((raster) => {
         if (raster.ok) {
           raster.value.bitmap.close();
         }

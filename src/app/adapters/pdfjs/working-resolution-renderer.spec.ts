@@ -209,4 +209,45 @@ describe('WorkingResolutionRenderer (NFR-025)', () => {
     aborted.abort();
     expect(await handle.renderWorkingRaster!(0, aborted.signal)).toEqual({ ok: false, error: 'cancelled' });
   });
+
+  const whole = (pageIndex: number): RenderRequest => ({ pageIndex, region: region(0, 0, PAGE_WIDTH, PAGE_HEIGHT), scale: 1 });
+
+  it('NFR-025 NFR-008 working rasters that nobody waits for any more are not built: a fast scroll does not queue up the pages it has left', async () => {
+    const src = source(20);
+    const { handle } = await open(src.renderer);
+    const slots = TUNABLES.resources.sourceDecodeSlots;
+    const abandoned = Array.from({ length: 4 }, () => new AbortController());
+    const kept = Array.from({ length: slots }, (_, i) => handle.renderRegion(whole(i), NEVER));
+    const left = abandoned.map((controller, i) => handle.renderRegion(whole(slots + i), controller.signal));
+    abandoned.forEach((controller) => controller.abort());
+    const wanted = handle.renderRegion(whole(slots + abandoned.length), NEVER);
+    expect((await Promise.all(left)).every((r) => !r.ok && r.error === 'cancelled')).toBe(true);
+    expect((await Promise.all([...kept, wanted])).every((r) => r.ok)).toBe(true);
+    expect(src.requests.map((r) => r.pageIndex)).toEqual([...Array.from({ length: slots }, (_, i) => i), slots + abandoned.length]);
+  });
+
+  it('NFR-025 NFR-008 a raster build that one of two waiters still needs goes on and is shared', async () => {
+    const src = source(20);
+    const { handle } = await open(src.renderer);
+    const gone = new AbortController();
+    const first = handle.renderRegion(whole(0), gone.signal);
+    const second = handle.renderRegion(whole(0), NEVER);
+    gone.abort();
+    expect(await first).toEqual({ ok: false, error: 'cancelled' });
+    expect((await second).ok).toBe(true);
+    expect(src.requests).toHaveLength(1);
+  });
+
+  it('NFR-025 NFR-008 a running raster build whose last waiter leaves is cancelled and built again when the page is wanted later', async () => {
+    const src = source(20);
+    const { handle } = await open(src.renderer);
+    const gone = new AbortController();
+    const first = handle.renderRegion(whole(0), gone.signal);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    gone.abort();
+    expect(await first).toEqual({ ok: false, error: 'cancelled' });
+    const again = await handle.renderRegion(whole(0), NEVER);
+    expect(again.ok).toBe(true);
+    expect(src.requests).toHaveLength(2);
+  });
 });

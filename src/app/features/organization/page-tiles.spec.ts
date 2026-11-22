@@ -42,4 +42,30 @@ describe('PageTiles', () => {
     expect(renderer.handles[1]?.renderRegion).toHaveBeenCalled();
     expect(fixture.nativeElement.querySelectorAll('canvas')).toHaveLength(renderer.handles[1]?.renderRegion.mock.calls.length ?? -1);
   });
+
+  it('NFR-008 a tile whose render failed is rendered again, not left blank', async () => {
+    const renderer = fakeRenderer();
+    const doc = new DocumentStore('t1', renderer);
+    await doc.load(new Uint8Array([1]));
+    const handle = renderer.handles[0]!;
+    const good = handle.renderRegion.getMockImplementation()!;
+    handle.renderRegion.mockImplementationOnce(() => Promise.resolve({ ok: false, error: 'unknown' } as const));
+    handle.renderRegion.mockImplementation(good);
+    const fixture = TestBed.createComponent(PageTiles);
+    const rect = { x: 0, y: 0, width: SIZE.width, height: SIZE.height };
+    fixture.componentRef.setInput('document', doc);
+    fixture.componentRef.setInput('pageIndex', 0);
+    fixture.componentRef.setInput('pageSize', SIZE);
+    fixture.componentRef.setInput('settledScale', 1);
+    fixture.componentRef.setInput('liveScale', 1);
+    fixture.componentRef.setInput('visibleRect', rect);
+    fixture.componentRef.setInput('viewportRect', rect);
+    await fixture.whenStable();
+    await settle();
+    await settle();
+    const canvases: HTMLCanvasElement[] = Array.from(fixture.nativeElement.querySelectorAll('canvas'));
+    expect(handle.renderRegion.mock.calls.length).toBeGreaterThan(canvases.length); // the failed call plus one call per tile
+    expect(canvases.length).toBeGreaterThan(0);
+    expect(canvases.every((c) => c.style.visibility === 'visible')).toBe(true);
+  });
 });
