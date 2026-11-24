@@ -19,9 +19,10 @@ function runCheck(webText: string, nativeText: string): number {
   return spawnSync(process.execPath, [SCRIPT, join(dir, 'web.ts'), join(dir, 'native.ts')]).status ?? 1;
 }
 
-const read = (name: string) => readFileSync(new URL(name, import.meta.url), 'utf8');
-const webText = read('./features.web.ts');
-const nativeText = read('./features.native.ts');
+// Relative to the repository root (the working directory of `ng test`, like the script path below): import.meta.url is not a file URL under coverage.
+const read = (name: string) => readFileSync(`src/config/${name}`, 'utf8');
+const webText = read('features.web.ts');
+const nativeText = read('features.native.ts');
 
 describe('feature configuration files', () => {
   it('EDN-006 every shared switch is a boolean in both files', () => {
