@@ -82,10 +82,11 @@ try {
     ['PLT-012 ios-open-in-place', 'App/App/Info.plist', (text) => text.replace('LSSupportsOpeningDocumentsInPlace', 'LSSomethingElse')],
     ['PLT-013 ios-marker', 'App/App/DocumentAccessPlugin.swift', (text) => text.replaceAll('UNVERIFIED(ios)', 'checked')],
     ['PLT-013 ios-unregistered-source', 'App/App.xcodeproj/project.pbxproj', (text) => text.replaceAll('ImmersivePlugin.swift in Sources', 'ImmersivePlugin.swift in Elsewhere')],
-    ['GEN-003 ios-bundle-id', 'App/App.xcodeproj/project.pbxproj', (text) => text.replace('= app.web.codexmusicae;', '= com.getcapacitor.App;')],
+    ['GEN-003 ios-bundle-id', 'App/App.xcodeproj/project.pbxproj', (text) => text.replace('= "$(APP_BUNDLE_ID)";', '= com.getcapacitor.App;')],
+    ['GEN-011 ios-default-bundle-id', 'debug.xcconfig', (text) => text.replace('APP_BUNDLE_ID = app.web.codexmusicaefree', 'APP_BUNDLE_ID = app.web.codexmusicae')],
   ];
   const swiftSources = (await readdir(join(repositoryRoot, 'ios/App/App'))).filter((name) => name.endsWith('.swift'));
-  const iosFiles = ['App/App/Info.plist', 'App/App.xcodeproj/project.pbxproj', ...swiftSources.map((name) => `App/App/${name}`)];
+  const iosFiles = ['App/App/Info.plist', 'App/App.xcodeproj/project.pbxproj', 'debug.xcconfig', ...swiftSources.map((name) => `App/App/${name}`)];
   for (const [name, broken, change] of iosBroken) {
     const copy = join(fixtureRoot, 'ios-copy');
     for (const file of iosFiles) {
@@ -222,6 +223,55 @@ try {
     console.log(`  ok  EDN-013 ${name} is rejected`);
   }
 
+  // EDN-010, GEN-011: a build configuration, application ID or workflow that disagrees with the editions must be rejected.
+  const editionsRoot = join(versionRoot, 'editions');
+  await mkdir(editionsRoot, { recursive: true });
+  const real = async (path) => readFile(join(repositoryRoot, path), 'utf8');
+  const angularText = await real('angular.json');
+  const gradleText = await real('android/app/build.gradle');
+  const androidText = await real('.github/workflows/android.yml');
+  const iosText = await real('.github/workflows/ios.yml');
+  const tunablesReal = await real('src/config/tunables.ts');
+  const editionDefects = [
+    ['native-free-without-replacement', { angular: angularText.replace(/"native-free": \{[\s\S]*?\n {12}\},/, '"native-free": {},') }],
+    ['native-free-defines-paid', { angular: angularText.replace('"native-free": {', '"native-free": { "define": { "EDITION": "\'paid\'" },') }],
+    ['same-app-id', { tunables: tunablesReal.replace("appIdPaid: 'app.web.codexmusicae'", "appIdPaid: 'app.web.codexmusicaefree'") }],
+    ['gradle-ignores-edition', { gradle: gradleText.replace('applicationId appId', 'applicationId "app.web.codexmusicae"') }],
+    ['workflow-plain-build', { android: androidText.replace('script: build:native-${{ matrix.edition }}', 'script: build') }],
+    ['workflow-wrong-app-id', { ios: iosText.replace('appId: app.web.codexmusicae\n', 'appId: app.web.other\n') }],
+  ];
+  for (const [name, change] of editionDefects) {
+    const files = { angular: angularText, tunables: tunablesReal, gradle: gradleText, xcconfig: await real('ios/debug.xcconfig'), android: androidText, ios: iosText, ...change };
+    const paths = Object.fromEntries(Object.keys(files).map((key) => [key, join(editionsRoot, `${name}.${key}`)]));
+    for (const key of Object.keys(files)) await writeFile(paths[key], files[key], 'utf8');
+    const result = await runNode('scripts/check-editions.mjs', ...['angular', 'tunables', 'gradle', 'xcconfig', 'android', 'ios'].map((key) => relative(repositoryRoot, paths[key])));
+    if (result.code === 0) {
+      throw new Error(`editions self-test passed unexpectedly: EDN-010 ${name}`);
+    }
+    console.log(`  ok  EDN-010 ${name} is rejected`);
+  }
+  // EDN-013: a build that started from the wrong feature file must be rejected.
+  for (const [name, kind, text] of [['web-build-without-web-file', 'web', 'var a={autosave:!1};'], ['native-build-with-web-file', 'native', 'var a={autosave:!1,webOrganizational:!1};']]) {
+    const dir = join(editionsRoot, name);
+    await mkdir(dir, { recursive: true });
+    await writeFile(join(dir, 'main-ABC123.js'), text, 'utf8');
+    const result = await runNode('scripts/check-editions.mjs', '--built', relative(repositoryRoot, dir), kind);
+    if (result.code === 0) {
+      throw new Error(`editions self-test passed unexpectedly: EDN-013 ${name}`);
+    }
+    console.log(`  ok  EDN-013 ${name} is rejected`);
+  }
+
+  // GEN-012: an analytics or crash-reporting dependency must be rejected.
+  const manifestPath = join(versionRoot, 'package.json');
+  const realManifest = JSON.parse(await readFile(join(repositoryRoot, 'package.json'), 'utf8'));
+  await writeFile(manifestPath, JSON.stringify({ ...realManifest, dependencies: { ...realManifest.dependencies, '@sentry/browser': '^9.0.0' } }), 'utf8');
+  const manifestResult = await runNode('scripts/check-static-compliance.mjs', relative(repositoryRoot, manifestPath));
+  if (manifestResult.code === 0) {
+    throw new Error('static-compliance self-test passed unexpectedly: GEN-012 analytics-dependency');
+  }
+  console.log('  ok  GEN-012 analytics-dependency is rejected');
+
   // Build output, Gradle default and workflow steps (NFR-019, PIP-016, PIP-018, PIP-019, TST-009): a seeded defect must be rejected.
   const buildRoot = join(versionRoot, 'build-output');
   const generatedOk = join(buildRoot, 'version.generated.ts');
@@ -340,7 +390,7 @@ try {
   for (const staticRoot of staticRoots) await rm(staticRoot, { recursive: true, force: true });
 }
 // The real repository passes the static checks (run after the fixtures are gone, since they live in src/).
-for (const script of ['check-unused-code', 'check-unused-dependencies', 'check-licenses', 'check-versions', 'check-tunables-comments', 'check-features']) {
+for (const script of ['check-unused-code', 'check-unused-dependencies', 'check-licenses', 'check-versions', 'check-tunables-comments', 'check-features', 'check-editions', 'check-static-compliance']) {
   const result = await runNode(`scripts/${script}.mjs`);
   if (result.code !== 0) {
     throw new Error(`${script} fails on the real repository\n${result.output}`);

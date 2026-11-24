@@ -49,8 +49,8 @@ V2 terms (target `v2` entries):
 - **GEN-008** [v1·done·M7] Every area not covered by PDF content (around the slide, filler outside the page, the empty state) uses `T:colors.canvasGrey`.
 - **GEN-009** [v1·changed·M7] Every control is an icon from the icon set; visible text is limited to numbers, the version string and error codes. *(Changed in V2 → GEN-013, V2-M5.)*
 - **GEN-010** [v1·done·M7] Every icon-only control has an accessible label from the translation files.
-- **GEN-011** [v2·todo·M3] The free and the paid app have distinct application IDs (Android `applicationId`, Capacitor `appId`, iOS bundle ID), both in `src/config/tunables.ts` (`T:identity.appId` for free plus one value for paid).
-- **GEN-012** [v2·todo·M3] A static check fails when an analytics or crash-reporting package is a dependency.
+- **GEN-011** [v2·done·M3] The free and the paid app have distinct application IDs (Android `applicationId`, Capacitor `appId`, iOS bundle ID), both in `src/config/tunables.ts` (`T:identity.appId` for free plus one value for paid).
+- **GEN-012** [v2·done·M3] A static check fails when an analytics or crash-reporting package is a dependency.
 - **GEN-013** [v2·todo·M5] Controls stay icons; visible text is limited to numbers, the version string, error codes, file names, mark labels and user texts, text annotations, the settings mode, dialogs and hint bubbles.
 
 ## I18 — Localization
@@ -518,7 +518,7 @@ V2 terms (target `v2` entries):
 - **EDN-007** [v2·done·M3] Each build bundles only its own feature configuration; features read their switch through an injection token, never the files.
 - **EDN-008** [v2·done·M3] Every feature stays in the code base, including persistence, saving, recent files and session restore; free and web only switch it off.
 - **EDN-009** [v2·done·M3] Switches of web-only organizational features exist in `features.web.ts` only; the native file does not contain them.
-- **EDN-010** [v2·todo·M3] One code base builds a free and a paid app for Android and for iOS; the feature set is chosen at build time.
+- **EDN-010** [v2·done·M3] One code base builds a free and a paid app for Android and for iOS; the feature set is chosen at build time.
 - **EDN-011** [v2·done·M3] Tests prove that in the free configuration every paid feature is unreachable: no save control is enabled and no file write call is made.
 - **EDN-012** [v2·done·M3] Tests prove that the paid configuration enables every feature.
 - **EDN-013** [v2·done·M3] A shared feature switch (every switch except the web-only ones of EDN-009) missing in either configuration file, or a web-only switch present in the native file, fails the build.

@@ -5,7 +5,7 @@ The `ios` workflow (`.github/workflows/ios.yml`) always builds the unsigned simu
 ## What you need
 
 - For the **signed** route: a paid **Apple Developer Program** membership (a free Personal Team cannot create ad hoc profiles). Ad hoc builds run only on devices whose UDID is in the provisioning profile. Without a membership see "Experiment: unsigned build" at the end.
-- An iOS app in your Firebase project (same project as Android and Hosting) with the bundle ID `app.web.codexmusicae`.
+- An iOS app in your Firebase project (same project as Android and Hosting) for each edition (DEC-150): the paid app with the bundle ID `app.web.codexmusicae`, the free app with `app.web.codexmusicaefree`.
 - Testers' devices, registered (step 4).
 
 ## 1. Distribution certificate (done on Linux with `openssl`)
@@ -26,7 +26,7 @@ openssl pkcs12 -export -inkey ios-distribution.key -in distribution.pem -out ios
 
 ## 2. App ID and ad hoc profile
 
-Portal → Identifiers → **+** → App IDs → App → explicit bundle ID `app.web.codexmusicae` (no extra capabilities are needed).
+Portal → Identifiers → **+** → App IDs → App → explicit bundle ID `app.web.codexmusicae` (paid) and a second one `app.web.codexmusicaefree` (free); no extra capabilities are needed. Each needs its own ad hoc provisioning profile.
 Portal → Profiles → **+** → *Ad Hoc* → that App ID → the certificate from step 1 → the registered devices → download `*.mobileprovision`.
 
 ## 3. Firebase
@@ -45,7 +45,9 @@ Settings → Secrets and variables → Actions (never put these into the reposit
 |---|---|---|
 | `IOS_CERTIFICATE_BASE64` | secret | `base64 -w0 ios-distribution.p12` |
 | `IOS_CERTIFICATE_PASSWORD` | secret | the `.p12` export password |
-| `IOS_PROVISIONING_PROFILE_BASE64` | secret | `base64 -w0 <profile>.mobileprovision` |
+| `IOS_PROVISIONING_PROFILE_BASE64` | secret | `base64 -w0 <profile>.mobileprovision` of the **paid** app |
+| `IOS_PROVISIONING_PROFILE_BASE64_FREE` | secret | the same for the **free** app (`app.web.codexmusicaefree`) |
+| `FIREBASE_IOS_APP_ID_FREE` | variable | Firebase iOS app ID of the free app (`FIREBASE_IOS_APP_ID` is the paid app) |
 | `FIREBASE_IOS_APP_ID` | variable | the Firebase iOS app ID |
 | `FIREBASE_OWNERS_TESTER_GROUPS` | variable | the owners group alias (every build) |
 | `FIREBASE_IOS_TESTER_GROUPS` | variable | the iOS testers group alias (builds of `main` only) |

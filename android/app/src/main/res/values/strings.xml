@@ -2,6 +2,5 @@
 <resources>
     <string name="app_name">CodexMusicae</string>
     <string name="title_activity_main">CodexMusicae</string>
-    <string name="package_name">app.web.codexmusicae</string>
-    <string name="custom_url_scheme">app.web.codexmusicae</string>
+    <!-- package_name and custom_url_scheme come from the edition (app/build.gradle resValue, GEN-011) -->
 </resources>

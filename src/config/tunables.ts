@@ -9,7 +9,8 @@
 export const TUNABLES = {
   identity: {
     appName: 'CodexMusicae', // GEN-001
-    appId: 'app.web.codexmusicae', // GEN-002, GEN-003
+    appId: 'app.web.codexmusicaefree', // GEN-002, GEN-003, GEN-011: Capacitor appId, Android applicationId and iOS bundle ID of the FREE app
+    appIdPaid: 'app.web.codexmusicae', // GEN-011: the same three IDs of the PAID app (the ID of V1)
   },
 
   colors: {

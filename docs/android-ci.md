@@ -1,6 +1,6 @@
 # Android build and distribution (M3)
 
-The `android` workflow (`.github/workflows/android.yml`) builds a signed release APK and delivers it to testers through Firebase App Distribution. The package ID is `app.web.codexmusicae` (single ID, no debug suffix); `minSdk` is 29 (`android/variables.gradle`).
+The `android` workflow (`.github/workflows/android.yml`) builds a signed release APK and delivers it to testers through Firebase App Distribution. Two apps are built (DEC-150): the paid app with the package ID `app.web.codexmusicae` and the free app with `app.web.codexmusicaefree` (no debug suffix); the workflow runs once per edition (matrix); `minSdk` is 29 (`android/variables.gradle`).
 
 ## Trigger
 
@@ -36,7 +36,8 @@ GitHub Actions configuration (names as in `docs/milestones/V1-M00.md`):
 | `ANDROID_KEYSTORE_PASSWORD` | secret | keystore password |
 | `ANDROID_KEY_PASSWORD` | secret | key password |
 | `ANDROID_KEY_ALIAS` | variable | key alias (`codexmusicae`) |
-| `FIREBASE_ANDROID_APP_ID` | variable | Firebase Android app ID (`1:…:android:…`) |
+| `FIREBASE_ANDROID_APP_ID` | variable | Firebase Android app ID of the **paid** app (`1:…:android:…`) |
+| `FIREBASE_ANDROID_APP_ID_FREE` | variable | Firebase Android app ID of the **free** app (register `app.web.codexmusicaefree` in Firebase first; without it the free leg cannot upload) |
 | `FIREBASE_OWNERS_TESTER_GROUPS` | variable | owners group alias, comma separated; gets every build |
 | `FIREBASE_ANDROID_TESTER_GROUPS` | variable | Android tester group alias, comma separated; gets builds of `main` only |
 | `FIREBASE_SERVICE_ACCOUNT_CODEX_MUSICAE` | secret | service-account JSON |

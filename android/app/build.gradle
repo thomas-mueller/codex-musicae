@@ -6,13 +6,22 @@ def keystorePath = System.getenv('ANDROID_KEYSTORE_PATH')
 def keystorePassword = System.getenv('ANDROID_KEYSTORE_PASSWORD')
 def signingKeyAlias = System.getenv('ANDROID_KEY_ALIAS')
 def signingKeyPassword = System.getenv('ANDROID_KEY_PASSWORD')
+// GEN-011: the application ID of the edition, written by scripts/apply-edition.mjs; without it the free app is built.
+def editionFile = rootProject.file('edition.properties')
+def editionProperties = new Properties()
+if (editionFile.exists()) {
+    editionFile.withInputStream { editionProperties.load(it) }
+}
+def appId = editionProperties.getProperty('appId', 'app.web.codexmusicaefree')
 def hasReleaseSigning = [keystorePath, keystorePassword, signingKeyAlias, signingKeyPassword].every { value -> value }
 
 android {
     namespace = "app.web.codexmusicae"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "app.web.codexmusicae"
+        applicationId appId
+        resValue "string", "package_name", appId
+        resValue "string", "custom_url_scheme", appId
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode appVersionCode
