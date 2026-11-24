@@ -450,7 +450,7 @@ V2 terms (target `v2` entries):
 - **ARC-006** [v1·done·M13] A single place in the input layer decides whether a pointer draws or navigates.
 - **ARC-007** [v2·done·M1] V2 keeps the V1 layers, ports and import matrix; a change to them needs a decision entry in `docs/decisions.md` first.
 - **ARC-008** [v2·done·M1] Every value in `src/config/tunables.ts` has a comment with unit and meaning; a check fails on a numeric value without one.
-- **ARC-009** [v2·todo·M3] Tunables and the feature configuration are bundled at build time; nothing of them is loaded at runtime.
+- **ARC-009** [v2·done·M3] Tunables and the feature configuration are bundled at build time; nothing of them is loaded at runtime.
 
 ## PIP — Pipelines and versioning
 
