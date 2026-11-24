@@ -149,6 +149,10 @@ export const appConfig: ApplicationConfig = {
           detect,
           sourceRenders: () => (renderer instanceof WorkingResolutionRenderer ? renderer.stats.sourceRenders : 0),
           directRenders: () => (renderer instanceof WorkingResolutionRenderer ? renderer.stats.directRenders : 0),
+          rasterFaults: () => {
+            const stats = renderer instanceof WorkingResolutionRenderer ? renderer.stats : null;
+            return { lost: stats?.lostRasters ?? 0, flat: stats?.flatRasters ?? 0, retries: stats?.rasterRetries ?? 0 };
+          },
           startedOrder: () => session.activeDocument()?.detection.startedOrder ?? [],
           detectionState: () => {
             const doc = session.activeDocument();

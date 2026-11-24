@@ -27,6 +27,8 @@ interface DebugHook {
   readonly sourceRenders?: () => number;
   /** The part of `sourceRenders` that were regions beyond the working scale, not whole-page raster builds (NFR-025 profile). */
   readonly directRenders?: () => number;
+  /** What the raster probe found and did (NFR-028): transparent and flat rasters seen, rebuilds made. */
+  readonly rasterFaults?: () => { readonly lost: number; readonly flat: number; readonly retries: number };
   /** The strokes of the active document, in model order (TST-003 property test). */
   readonly strokes?: () => readonly InkStroke[];
   /** Applies ink edits to the active document through the store, in order (TST-003 property test). */

@@ -20,6 +20,8 @@ export interface RenderRequest {
   readonly region: Rect;
   /** Bitmap pixels per display point (already capped by the caller). */
   readonly scale: number;
+  /** NFR-028: drop what the renderer kept of this page (decoded images, parsed operators) first, so a second render starts cold. */
+  readonly fresh?: boolean;
 }
 
 /** The page at the working resolution of the renderer: `scale` bitmap pixels per display point. */

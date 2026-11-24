@@ -25,3 +25,4 @@ export * from './metadata';
 export * from './autosave';
 export * from './session';
 export * from './palm';
+export * from './raster-check';

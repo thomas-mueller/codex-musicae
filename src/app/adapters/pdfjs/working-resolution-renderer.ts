@@ -1,5 +1,6 @@
 import { TUNABLES } from '../../../config/tunables';
-import { fitScaleToPixelCap } from '../../core/geometry';
+import { classifyRaster, fitScaleToPixelCap } from '../../core';
+import type { RasterVerdict } from '../../core';
 import type { PdfDocumentHandle, PdfOpenError, PdfPageInfo, PdfRenderError, PdfRenderer, RenderRequest, WorkingRaster } from '../../ports/pdf-renderer';
 import { err, ok } from '../../ports/result';
 import type { Result } from '../../ports/result';
@@ -16,7 +17,14 @@ interface Drawing {
   drawImage(image: ImageBitmap, sx: number, sy: number, sw: number, sh: number, dx: number, dy: number, dw: number, dh: number): void;
 }
 
+/** What the probe needs of a 2d context; a context without `getImageData` (a test double) cannot be judged and counts as fine. */
+interface ProbeContext extends Drawing {
+  getImageData?(sx: number, sy: number, sw: number, sh: number): { readonly data: ArrayLike<number> };
+}
+
 interface WorkingResolutionOptions {
+  /** The RGBA samples of a small copy of `bitmap`, or null when they cannot be read (NFR-028). */
+  readonly probe?: (bitmap: ImageBitmap) => Promise<ArrayLike<number> | null>;
   readonly createCanvas?: (width: number, height: number) => DrawCanvas;
   readonly createBitmap?: (canvas: DrawCanvas) => Promise<ImageBitmap>;
   readonly copyBitmap?: (bitmap: ImageBitmap) => Promise<ImageBitmap>;
@@ -37,6 +45,37 @@ function defaultCreateCanvas(width: number, height: number): DrawCanvas {
 }
 
 const defaultCreateBitmap = (canvas: DrawCanvas): Promise<ImageBitmap> => createImageBitmap(canvas as unknown as ImageBitmapSource);
+
+interface RendererStats {
+  sourceRenders: number;
+  directRenders: number;
+  lostRasters: number;
+  flatRasters: number;
+  rasterRetries: number;
+}
+
+/** NFR-028: the RGBA samples of a `rasterProbeSize` square copy of the raster (area averaged), or null when they cannot be read. */
+async function defaultProbe(createCanvas: (width: number, height: number) => DrawCanvas, bitmap: ImageBitmap): Promise<ArrayLike<number> | null> {
+  const size = TUNABLES.resources.rasterProbeSize;
+  let canvas: DrawCanvas | null = null;
+  try {
+    canvas = createCanvas(size, size);
+    const context = canvas.getContext('2d') as ProbeContext | null;
+    if (!context || typeof context.getImageData !== 'function') {
+      return null;
+    }
+    context.imageSmoothingQuality = SMOOTHING;
+    context.drawImage(bitmap, 0, 0, bitmap.width, bitmap.height, 0, 0, size, size);
+    return context.getImageData(0, 0, size, size).data;
+  } catch {
+    return null; // unreadable is not the same as lost: the raster is used as before
+  } finally {
+    if (canvas) {
+      canvas.width = 0;
+      canvas.height = 0;
+    }
+  }
+}
 
 /** Lets `slots` tasks run at once; waiters leave the line when their signal aborts. */
 class Slots {
@@ -91,11 +130,15 @@ class Slots {
  * detection, prefetch, slides) are cut and scaled from the raster. Only regions zoomed beyond it reach the source renderer, one at a time.
  */
 export class WorkingResolutionRenderer implements PdfRenderer {
-  /** Counts of the calls that reached the source renderer; `directRenders` are the ones beyond the working scale, not raster builds (development debug hook). */
-  readonly stats = { sourceRenders: 0, directRenders: 0 };
+  /**
+   * Counts of the calls that reached the source renderer; `directRenders` are the ones beyond the working scale, not raster builds
+   * (development debug hook). NFR-028: `lostRasters` and `flatRasters` count what the probe found, `rasterRetries` the rebuilds.
+   */
+  readonly stats: RendererStats = { sourceRenders: 0, directRenders: 0, lostRasters: 0, flatRasters: 0, rasterRetries: 0 };
   private readonly createCanvas: (width: number, height: number) => DrawCanvas;
   private readonly createBitmap: (canvas: DrawCanvas) => Promise<ImageBitmap>;
   private readonly copyBitmap: (bitmap: ImageBitmap) => Promise<ImageBitmap>;
+  private readonly probe: (bitmap: ImageBitmap) => Promise<ArrayLike<number> | null>;
 
   constructor(
     private readonly source: PdfRenderer,
@@ -104,11 +147,12 @@ export class WorkingResolutionRenderer implements PdfRenderer {
     this.createCanvas = options.createCanvas ?? defaultCreateCanvas;
     this.createBitmap = options.createBitmap ?? defaultCreateBitmap;
     this.copyBitmap = options.copyBitmap ?? ((bitmap) => createImageBitmap(bitmap));
+    this.probe = options.probe ?? ((bitmap) => defaultProbe(this.createCanvas, bitmap));
   }
 
   async open(bytes: Uint8Array): Promise<Result<PdfDocumentHandle, PdfOpenError>> {
     const opened = await this.source.open(bytes);
-    return opened.ok ? ok(new WorkingResolutionHandle(opened.value, this.createCanvas, this.createBitmap, this.copyBitmap, this.stats)) : opened;
+    return opened.ok ? ok(new WorkingResolutionHandle(opened.value, this.createCanvas, this.createBitmap, this.copyBitmap, this.stats, this.probe)) : opened;
   }
 }
 
@@ -134,7 +178,8 @@ class WorkingResolutionHandle implements PdfDocumentHandle {
     private readonly createCanvas: (width: number, height: number) => DrawCanvas,
     private readonly createBitmap: (canvas: DrawCanvas) => Promise<ImageBitmap>,
     private readonly copyBitmap: (bitmap: ImageBitmap) => Promise<ImageBitmap>,
-    private readonly stats: { sourceRenders: number; directRenders: number },
+    private readonly stats: RendererStats,
+    private readonly probe: (bitmap: ImageBitmap) => Promise<ArrayLike<number> | null>,
   ) {
     this.pageCount = source.pageCount;
   }
@@ -298,10 +343,50 @@ class WorkingResolutionHandle implements PdfDocumentHandle {
   private build(pageIndex: number, width: number, height: number, scale: number, signal: AbortSignal, onStart: () => void): Promise<Result<WorkingRaster, PdfRenderError>> {
     return this.withSlot(signal, async (slotSignal) => {
       onStart();
-      this.stats.sourceRenders++;
-      const rendered = await this.source.renderRegion({ pageIndex, region: { x: 0, y: 0, width, height }, scale }, slotSignal);
-      return rendered.ok ? ok({ bitmap: rendered.value, scale }) : rendered;
+      const limits = { minAlpha: TUNABLES.resources.rasterMinAlpha, flatTolerance: TUNABLES.resources.rasterFlatTolerance };
+      for (let attempt = 0; ; attempt++) {
+        if (attempt === 0) {
+          this.stats.sourceRenders++; // rebuilds after a lost raster are counted in `rasterRetries`, not as renders of the page (NFR-025)
+        }
+        const rendered = await this.source.renderRegion({ pageIndex, region: { x: 0, y: 0, width, height }, scale, fresh: attempt > 0 }, slotSignal);
+        if (!rendered.ok) {
+          return rendered;
+        }
+        const samples = await this.probe(rendered.value);
+        const verdict: RasterVerdict = samples === null ? 'ok' : classifyRaster(samples, limits);
+        if (verdict === 'flat') {
+          this.stats.flatRasters++; // may be a really white page: counted for diagnosis, accepted as it is
+        }
+        if (verdict !== 'lost') {
+          return ok({ bitmap: rendered.value, scale });
+        }
+        // NFR-028: a transparent raster is a canvas the browser dropped, never a page: rebuild it, or fail instead of handing it out.
+        this.stats.lostRasters++;
+        rendered.value.close();
+        if (attempt >= TUNABLES.resources.rasterLostRetries || slotSignal.aborted) {
+          return slotSignal.aborted ? err('cancelled') : err('out-of-memory');
+        }
+        this.stats.rasterRetries++;
+        this.shed(pageIndex);
+        await new Promise((resolve) => setTimeout(resolve, TUNABLES.resources.rasterRetryDelayMs * (attempt + 1))); // let the browser reclaim the canvas
+      }
     });
+  }
+
+  /** NFR-028: frees the oldest other working raster before a rebuild (memory pressure is the likely cause of a lost canvas). */
+  private shed(keep: number): void {
+    for (const [key, entry] of this.rasters) {
+      if (key === keep) {
+        continue;
+      }
+      this.rasters.delete(key);
+      void entry.pending.then((raster) => {
+        if (raster.ok) {
+          raster.value.bitmap.close();
+        }
+      });
+      return;
+    }
   }
 
   /** Keeps `workingPagesKept` rasters; the least recently used are closed once they are built. */

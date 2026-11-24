@@ -299,6 +299,11 @@ export const TUNABLES = {
     workingLongSidePx: 3600, // NFR-025: long side in pixels of the working raster of a page; views up to this scale never decode the source images
     workingPagesKept: 3, // NFR-025: working rasters kept per document (about 40 MB each at the canvas cap)
     sourceDecodeSlots: 1, // NFR-025: source renders (pdf.js decodes the page's images) running at once per document
+    rasterProbeSize: 32, // NFR-028: px (square) of the small copy of a finished working raster that is read back to check it
+    rasterMinAlpha: 250, // NFR-028: alpha (0..255) below which a probe pixel counts as transparent; a rendered page is opaque, a dropped canvas is not
+    rasterFlatTolerance: 2, // NFR-028: gray levels per channel within which the probe counts as one flat colour
+    rasterLostRetries: 2, // NFR-028: rebuilds of a working raster that came back transparent before the build fails with out-of-memory
+    rasterRetryDelayMs: 300, // NFR-028 (ms): wait before a rebuild of a lost raster, times the number of the rebuild
   },
 
   files: {
