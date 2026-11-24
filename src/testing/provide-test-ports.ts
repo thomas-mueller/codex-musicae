@@ -7,6 +7,8 @@ import { DETECTION_ENGINE } from '../app/ports/detection-engine';
 import { ok } from '../app/ports/result';
 import { DEVICE_INFO } from '../app/ports/device-info';
 import { FILE_ACCESS } from '../app/ports/file-access';
+import { FEATURE_FLAGS } from '../app/ports/feature-flags';
+import type { FeatureFlags } from '../app/ports/feature-flags';
 import { APP_VERSION } from '../app/ports/app-version';
 import { PDF_RENDERER } from '../app/ports/pdf-renderer';
 import { PDF_WRITER } from '../app/ports/pdf-writer';
@@ -18,6 +20,20 @@ import { fakeRenderer } from '../app/state/testing/fake-renderer';
 
 const TEST_MEMORY_GB = 4;
 
+/** Specs run with the V1 behavior (every switch on, like the paid edition); specs of a configuration override FEATURE_FLAGS. */
+export const ALL_FEATURES_ON: FeatureFlags = {
+  autosave: true,
+  saveCopy: true,
+  sendTo: true,
+  recentFiles: true,
+  sessionRestore: true,
+  persistSettings: true,
+  persistFileChoices: true,
+  restoreZoom: true,
+  crossFileAutoOpen: true,
+  shareIn: true,
+};
+
 /** Fake platform ports for specs that render the shell or use the stores. */
 export function provideTestPorts(fullscreen = fakeFullscreen()): Provider[] {
   return [
@@ -28,6 +44,7 @@ export function provideTestPorts(fullscreen = fakeFullscreen()): Provider[] {
     { provide: WAKE_LOCK, useValue: fakeWakeLock() },
     ...provideTestDetectionPorts(),
     ...provideTestSavePorts(),
+    { provide: FEATURE_FLAGS, useValue: ALL_FEATURES_ON },
   ];
 }
 

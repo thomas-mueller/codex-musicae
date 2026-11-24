@@ -12,6 +12,11 @@ import { Capacitor } from '@capacitor/core';
 import { provideTransloco } from '@jsverse/transloco';
 import { provideRouter } from '@angular/router';
 import { TUNABLES } from '../config/tunables';
+// EDN-007: the build replaces this file with features.native.ts for the native editions (angular.json fileReplacements).
+import { FEATURES } from '../config/features.web';
+import { resolveFeatures } from '../config/edition';
+import type { Edition } from '../config/edition';
+import { FEATURE_FLAGS } from './ports/feature-flags';
 import { cacheBudgetFor } from './core/cache-budget';
 import { tunablesToCssVars } from './state/css-vars';
 import { DetectionService } from './state/detection.service';
@@ -59,6 +64,8 @@ import { NavigationHandler } from './input/navigation-handler';
 import { routes } from './app.routes';
 
 declare const ngDevMode: boolean | object | undefined;
+/** EDN-010: build constant set by the build configuration (angular.json `define`): 'paid' only for native-paid. */
+declare const EDITION: Edition;
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -67,6 +74,7 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(),
     { provide: APP_VERSION, useValue: APP_VERSION_DISPLAY },
     { provide: APP_VERSION_FULL, useValue: APP_VERSION_FULL_VALUE },
+    { provide: FEATURE_FLAGS, useValue: resolveFeatures(FEATURES, typeof EDITION === 'undefined' ? 'free' : EDITION) },
     provideServiceWorker('ngsw-worker.js', {
       enabled: shouldRegisterServiceWorker(isDevMode(), Capacitor),
       registrationStrategy: 'registerWhenStable:30000',

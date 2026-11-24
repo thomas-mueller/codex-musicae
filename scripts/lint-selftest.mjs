@@ -14,6 +14,7 @@ const fixtures = [
   ['PLT-003 capacitor-import', 'state/violates-capacitor.ts', "import { Preferences } from '@capacitor/preferences';\n"],
   ['magic-number', 'state/violates-magic-number.ts', 'export const value = 3 + 4;\n'],
   ['console-log', 'state/violates-console.ts', "console.log('x');\n"],
+  ['EDN-007 features-file-import', 'features/violates-features.ts', "import { FEATURES } from '../../../config/features.web';\n"],
   ['color-literal', 'state/violates-color.ts', "export const color = '#FFFFFF';\n"],
 ];
 
@@ -199,6 +200,28 @@ try {
   }
   console.log('  ok  ARC-008 tunable-without-comment is rejected');
 
+  // EDN-013: a shared switch missing in the native file, and a web-only switch in the native file, must be rejected.
+  const featuresRoot = join(versionRoot, 'features');
+  await mkdir(featuresRoot, { recursive: true });
+  const webFeatures = await readFile(join(repositoryRoot, 'src/config/features.web.ts'), 'utf8');
+  const nativeFeatures = await readFile(join(repositoryRoot, 'src/config/features.native.ts'), 'utf8');
+  const featureDefects = [
+    ['missing-shared-key', webFeatures, nativeFeatures.replace(/^ {2}autosave:.*\n/m, '')],
+    ['web-only-in-native', webFeatures, nativeFeatures.replace(/^ {2}autosave:/m, '  webOrganizational: false, // x\n  autosave:')],
+    ['switch-without-comment', webFeatures, nativeFeatures.replace(/^ {2}autosave:.*$/m, '  autosave: false,')],
+  ];
+  for (const [name, webText, nativeText] of featureDefects) {
+    const webPath = join(featuresRoot, `${name}.web.ts`);
+    const nativePath = join(featuresRoot, `${name}.native.ts`);
+    await writeFile(webPath, webText, 'utf8');
+    await writeFile(nativePath, nativeText, 'utf8');
+    const featuresResult = await runNode('scripts/check-features.mjs', relative(repositoryRoot, webPath), relative(repositoryRoot, nativePath));
+    if (featuresResult.code === 0) {
+      throw new Error(`features self-test passed unexpectedly: EDN-013 ${name}`);
+    }
+    console.log(`  ok  EDN-013 ${name} is rejected`);
+  }
+
   // Build output, Gradle default and workflow steps (NFR-019, PIP-016, PIP-018, PIP-019, TST-009): a seeded defect must be rejected.
   const buildRoot = join(versionRoot, 'build-output');
   const generatedOk = join(buildRoot, 'version.generated.ts');
@@ -317,7 +340,7 @@ try {
   for (const staticRoot of staticRoots) await rm(staticRoot, { recursive: true, force: true });
 }
 // The real repository passes the static checks (run after the fixtures are gone, since they live in src/).
-for (const script of ['check-unused-code', 'check-unused-dependencies', 'check-licenses', 'check-versions', 'check-tunables-comments']) {
+for (const script of ['check-unused-code', 'check-unused-dependencies', 'check-licenses', 'check-versions', 'check-tunables-comments', 'check-features']) {
   const result = await runNode(`scripts/${script}.mjs`);
   if (result.code !== 0) {
     throw new Error(`${script} fails on the real repository\n${result.output}`);
