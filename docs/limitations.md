@@ -31,6 +31,7 @@ Accepted on purpose. They are not bugs; do not "fix" them in a v1 milestone.
 - **LIM-026** A jump that starts at junction 0 or ends at junction N has no source or next system; its marker sits on the bar of that junction and the end at N shows no number (ORG-018, DEC-098).
 - **LIM-027** A jump, slide break or stop that is never reached in the playing order has no playing-order numbers: it is listed at the end of the marks list, dimmed, with the placeholder `T:layout.unknownNumber` (ORG-018, ORG-021).
 - **LIM-032** File identity for cross-file marks and per-file choices is the file name only (D-1): two different files with the same name in different folders share per-file choices, and renaming a referenced file breaks its cross-file marks (they count as unresolved). (V2: FIL-041, MRK-012)
+- **LIM-033** On displays whose slide bitmap is larger than the working raster allows (4K, or any stage that needs more than about 4.9 pixels per point on an A4 page), the first view of each slide is a direct render from the PDF and takes longer on scans with large images; slides of a page that is still warm (NFR-026) are faster. (V2-M2b, DEC-148)
 - **LIM-023** Samsung Internet is treated as covered by Chromium and verified on a real device only.
 
 ## Future versions (backlog)

@@ -286,6 +286,7 @@ export const TUNABLES = {
     maxCanvasPixels: 12_000_000, // NFR-006 (also protects iOS/WebKit canvas limits)
     tileSizePx: 1024, // NFR-007
     prefetchNeighbors: 1, // NFR-003, NFR-004
+    prefetchBudgetShare: 0.8, // NFR-027: fraction of the bitmap cache budget that the current slide and its prefetched neighbors may fill; the rest is for older entries, tiles and other tabs
     recentFilesMax: 20, // FIL-008
     orgRenderPagesAround: 1, // ORG-002
     fileChunkBytes: 2 * 1024 * 1024, // PLT-008: chunk size for file transfer between the Android plugin and the WebView
@@ -294,6 +295,9 @@ export const TUNABLES = {
     governorLowResFactor: 0.75, // NFR-010: render scale factor at level 2 and above
     governorMaxLevel: 3, // NFR-010: 0 = normal … 3 = inactive tabs' bitmaps freed
     schedulerMaxPerClass: 1, // NFR-003: running tasks per priority class
+    workingLongSidePx: 3600, // NFR-025: long side in pixels of the working raster of a page; views up to this scale never decode the source images
+    workingPagesKept: 3, // NFR-025: working rasters kept per document (about 40 MB each at the canvas cap)
+    sourceDecodeSlots: 1, // NFR-025: source renders (pdf.js decodes the page's images) running at once per document
   },
 
   files: {
@@ -327,6 +331,14 @@ export const TUNABLES = {
     wasmUrl: 'assets/pdfjs/wasm/', // GEN-005
     iccUrl: 'assets/pdfjs/iccs/', // GEN-005
     annotationModeDisable: 0, // SAV-006: pdf.js AnnotationMode.DISABLE; the app draws every stroke itself
+    sourceImageMaxBytes: 16_000_000 * 4, // NFR-025: bytes (4 per pixel) a decoded source image may use; pdf.js shrinks larger images in its worker before they reach the page
+    warmPagesByDeviceMemoryGb: {
+      1: 1, // pages whose pdf.js state (parsed content, decoded images) stays warm on a device with 1 GB
+      2: 1, // pages on 2 GB
+      4: 2, // pages on 4 GB
+      8: 3, // pages on 8 GB or more
+    }, // NFR-026 (navigator.deviceMemory buckets)
+    warmPagesDefault: 2, // NFR-026: pages kept warm when the device memory is unknown
   },
 
   rendering: {
@@ -337,7 +349,7 @@ export const TUNABLES = {
 
   budgets: {
     slideChangeP95Ms: 200, // NFR-001
-    drawingMaxLongTaskMs: 50, // NFR-002
+    drawingMaxLongTaskMs: 2000, // NFR-002 (ms): longest main-thread task; measured 189 ms (21 pages) and 161 to 1654 ms (281 pages, loaded machine) on real scans while detection runs; raised from 400 by owner decision, V2-M2 2026-11-22
     drawingMaxAddedLatencyMs: 16, // NFR-002
     initialBundleKbGzip: 600, // NFR-014
     ciToleranceFactor: 2, // TST-008: performance tests allow this factor on CI machines
@@ -349,6 +361,10 @@ export const TUNABLES = {
     keyPrefix: 'cm.v1.', // FIL-015 (Preferences store: UI state and file references only)
     sessionDebounceMs: 500, // FIL-011: delay before the session snapshot is written
     sessionKey: 'session', // FIL-011: preference key of the session snapshot
+  },
+
+  testing: {
+    unitTestTimeoutMs: 10_000, // TST-008 (ms): Vitest timeout for tests and hooks; real-PDF specs are heavy in the parallel run (Vitest default 5000)
   },
 
   stylus: {

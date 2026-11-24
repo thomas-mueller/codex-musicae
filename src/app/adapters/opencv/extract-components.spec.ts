@@ -29,15 +29,25 @@ function fakeCv(failAt?: 'components') {
       this.deleted++;
     }
   }
-  const calls: { adaptive?: unknown[]; components?: unknown[] } = {};
+  const calls: { adaptive?: unknown[]; components?: unknown[]; resize?: unknown[] } = {};
   const cv: CvLike = {
     COLOR_RGBA2GRAY: 11,
+    INTER_AREA: 3,
     ADAPTIVE_THRESH_MEAN_C: 1,
     THRESH_BINARY_INV: 1,
     CV_32S: 4,
     Mat,
+    Size: class {
+      constructor(
+        readonly width: number,
+        readonly height: number,
+      ) {}
+    },
     matFromImageData: () => new Mat(),
     cvtColor: () => undefined,
+    resize: (...args: unknown[]) => {
+      calls.resize = args.slice(2);
+    },
     adaptiveThreshold: (...args: unknown[]) => {
       calls.adaptive = args.slice(2);
     },
@@ -84,5 +94,21 @@ describe('extractComponentsWith', () => {
     expect(() => extractComponentsWith(cv, imageData, PARAMS)).toThrow(RangeError);
     expect(mats.length).toBe(6);
     expect(mats.map((m) => m.deleted)).toEqual([1, 1, 1, 1, 1, 1]);
+  });
+
+  it('NFR-025 DET-035 with a target size the gray image is reduced by area averaging before the threshold and the target size is returned', () => {
+    const { cv, calls, mats } = fakeCv();
+    const set = extractComponentsWith(cv, imageData, { ...PARAMS, target: { width: 50, height: 100 } });
+    expect(calls.resize).toEqual([{ width: 50, height: 100 }, 0, 0, 3]); // size, fx, fy, INTER_AREA
+    expect([set.width, set.height]).toEqual([50, 100]);
+    expect(mats).toHaveLength(7);
+    expect(mats.map((m) => m.deleted)).toEqual([1, 1, 1, 1, 1, 1, 1]);
+  });
+
+  it('NFR-025 DET-035 a target equal to the bitmap size is not resized', () => {
+    const { cv, calls } = fakeCv();
+    const set = extractComponentsWith(cv, imageData, { ...PARAMS, target: { width: 100, height: 200 } });
+    expect(calls.resize).toBeUndefined();
+    expect([set.width, set.height]).toEqual([100, 200]);
   });
 });

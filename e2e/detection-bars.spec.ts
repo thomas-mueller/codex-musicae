@@ -1,13 +1,14 @@
 import { expect, test } from '@playwright/test';
 
-import { enterOrganization, label, openScore, SYNTHETIC_BARS } from './support/score';
+import { TUNABLES } from '../src/config/tunables';
+import { enterOrganization, label, openScore, SCORE_BARS, SCORE_PAGES } from './support/score';
 import { DETECTION_TIMEOUT_MS, scaled } from './support/timing';
 
 const DEV_URL = 'http://127.0.0.1:4174';
-const LONG_TASK_LIMIT_MS = scaled(50); // acceptance criterion of M10 (50 ms); a shared CI runner stalls the main thread more often
+const LONG_TASK_LIMIT_MS = scaled(TUNABLES.budgets.drawingMaxLongTaskMs); // the budget of the owner (V2-M2: real scans, 2000 ms); a shared CI runner stalls the main thread more often
 const KEEP_ACTIVE_MS = 100; // pointer events at this interval keep detection paused (DET-017)
 const SCROLL_SETTLE_MS = scaled(600);
-const LAST_PAGE_INDEX = 2;
+const LAST_PAGE_INDEX = SCORE_PAGES - 1;
 
 test.use({ viewport: { width: 1280, height: 800 } });
 test.beforeEach(async ({ page, browserName }, testInfo) => {
@@ -17,7 +18,7 @@ test.beforeEach(async ({ page, browserName }, testInfo) => {
   });
 });
 
-test('ORG-008 DET-016 DET-019 the synthetic score gets 15 bars, progress disappears, no long task during detection', async ({ page }) => {
+test('ORG-008 DET-016 DET-019 the standard score gets its bars, progress disappears, no long task during detection', async ({ page }) => {
   await page.addInitScript(() => {
     const store = ((globalThis as unknown as { __longTasks: number[] }).__longTasks = []);
     new PerformanceObserver((list) => {
@@ -29,7 +30,7 @@ test('ORG-008 DET-016 DET-019 the synthetic score gets 15 bars, progress disappe
   await page.evaluate(() => ((globalThis as unknown as { __longTasks: number[] }).__longTasks.length = 0));
   await openScore(page);
   await enterOrganization(page);
-  await expect(page.getByTestId('org-bar')).toHaveCount(SYNTHETIC_BARS, { timeout: DETECTION_TIMEOUT_MS });
+  await expect(page.getByTestId('org-bar')).toHaveCount(SCORE_BARS, { timeout: DETECTION_TIMEOUT_MS });
   await expect(page.getByTestId('detection-progress')).toHaveCount(0);
   await expect(page.getByTestId('org-bar-provisional')).toHaveCount(0);
   const longTasks = await page.evaluate(() => (globalThis as unknown as { __longTasks: number[] }).__longTasks);

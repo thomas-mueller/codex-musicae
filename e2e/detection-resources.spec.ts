@@ -1,11 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 
-import { enterOrganization, waitForBars } from './support/score';
+import { enterOrganization, scoreBytes, waitForBars } from './support/score';
 import { scaled } from './support/timing';
 
 const en = JSON.parse(readFileSync('src/assets/i18n/en.json', 'utf8')) as { a11y: Record<string, string> };
-const scoreBytes = readFileSync('e2e/fixtures/synthetic-score.pdf');
 const OPENCV_ASSET = '/assets/opencv/opencv.js';
 const FILE_CHOOSER_TIMEOUT_MS = 15_000;
 const DETECTION_WAIT_MS = scaled(30_000);

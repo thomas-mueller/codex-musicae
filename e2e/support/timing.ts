@@ -6,6 +6,8 @@ const CI_TIMEOUT_FACTOR = 3;
 const CI_FACTOR = process.env['CI'] ? CI_TIMEOUT_FACTOR : 1;
 const DETECTION_BASE_MS = 45_000;
 const RERUN_BASE_MS = 60_000;
+/** Detection of one page of a real score at one level, as a ceiling (a 281-page score is a stress test, not a failure). */
+const DETECTION_PER_PAGE_BASE_MS = 2_000;
 const NEGATIVE_SETTLE_BASE_MS = 300;
 const SCROLL_BASE_MS = 5_000;
 const DOCUMENT_OPEN_BASE_MS = 15_000;
@@ -16,6 +18,8 @@ export const scaled = (ms: number): number => ms * CI_FACTOR;
 export const DETECTION_TIMEOUT_MS = scaled(DETECTION_BASE_MS);
 /** A re-run of the detection at another level (DET-015). */
 export const RERUN_TIMEOUT_MS = scaled(RERUN_BASE_MS);
+/** One full detection run (one level) of a document with `pages` pages: never below a re-run, growing with the page count. */
+export const detectionRunTimeoutMs = (pages: number): number => Math.max(RERUN_TIMEOUT_MS, scaled(pages * DETECTION_PER_PAGE_BASE_MS));
 /** The file chooser opens right after the click; a long wait only hides a broken button. */
 export const FILE_CHOOSER_TIMEOUT_MS = 15_000;
 /** One attempt of the repeated mode click: the click can land before the app reacts (WebKit). */

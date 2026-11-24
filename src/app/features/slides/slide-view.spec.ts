@@ -8,6 +8,7 @@ import type { InkStroke } from '../../core';
 import { InkInput } from '../../input/ink-input';
 import { PDF_RENDERER } from '../../ports/pdf-renderer';
 import { ok } from '../../ports/result';
+import { BitmapCache } from '../../state/bitmap-cache';
 import { CLOCK } from '../../state/clock';
 import { DocumentStore } from '../../state/document.store';
 import { ResourceGovernor } from '../../state/resource-governor';
@@ -181,6 +182,15 @@ describe('SlideView', () => {
     await show(doc);
     const composition = composeSlide(doc.slides()[1]!, doc.geoms(), doc.pageInfos());
     expect(handle.renderRegion.mock.calls.length).toBeGreaterThan(composition.contents.length);
+  });
+
+  it('NFR-027 prefetches no neighbors when the cache budget has no room for them next to the displayed slide', async () => {
+    Object.defineProperty(TestBed.inject(BitmapCache), 'budgetBytes', { value: 1 });
+    const { doc, handle } = await openDocument();
+    doc.goToSlide(1);
+    await show(doc);
+    const composition = composeSlide(doc.slides()[1]!, doc.geoms(), doc.pageInfos());
+    expect(handle.renderRegion.mock.calls.length).toBe(composition.contents.length);
   });
 
   describe('zoom', () => {

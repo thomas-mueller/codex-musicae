@@ -2,7 +2,7 @@
   "_comment": "Kinds of test for the coverage report (PIP-016). A test file belongs to the first kind whose pattern matches its path. `vitest` kinds share the coverage numbers of the Vitest run; the others have no coverage source and report their number of tests.",
   "kinds": [
     { "id": "performance", "label": "performance", "vitest": false, "patterns": ["^e2e/perf/.*\\.spec\\.ts$"] },
-    { "id": "real-pdf-detection", "label": "real-PDF detection", "vitest": false, "patterns": ["^e2e/detection-corpus\\.spec\\.ts$"] },
+    { "id": "real-pdf-detection", "label": "real-PDF detection", "vitest": false, "patterns": ["^e2e/detection-(corpus|engines)\\.spec\\.ts$"] },
     { "id": "e2e", "label": "E2E", "vitest": false, "patterns": ["^e2e/.*\\.spec\\.ts$"] },
     { "id": "unit", "label": "unit", "vitest": true, "patterns": ["^src/app/(core|adapters|input)/.*\\.spec\\.ts$", "^src/testing/.*\\.spec\\.ts$"] },
     { "id": "integration", "label": "integration", "vitest": true, "patterns": ["^src/.*\\.spec\\.ts$"] }

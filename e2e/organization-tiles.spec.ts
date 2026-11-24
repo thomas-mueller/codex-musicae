@@ -4,11 +4,11 @@ import { openScoreInOrganization } from './support/score';
 
 test.use({ viewport: { width: 1280, height: 800 } });
 
-const DARK_MAX = 128; // 0..255
+const DARK_MAX = 200; // 0..255: the staff lines of the scan are thin and grey once the page is shown at fit-page
 const RGBA = 4;
 /** A staff line spans most of the system width. */
-const LINE_SHARE = 0.4;
-/** 2 staves x 5 lines per system, 4 systems on the first page: far more than this when the tile is really rendered. */
+const LINE_SHARE = 0.2;
+/** Rows with dark pixels over a good part of the width on the first page of the standard score: far more than this when the tile is really rendered. */
 const MIN_LINE_ROWS = 10;
 
 test('ORG-001 ORG-002 a rendered page tile has dark pixels where the staff lines are', async ({ page, browserName }, testInfo) => {

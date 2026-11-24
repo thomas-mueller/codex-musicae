@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 
-import type { PdfDocumentHandle, PdfOpenError, PdfRenderError, PdfRenderer, RenderRequest } from '../../ports/pdf-renderer';
+import type { PdfDocumentHandle, PdfOpenError, PdfRenderError, PdfRenderer, RenderRequest, WorkingRaster } from '../../ports/pdf-renderer';
 import { err, ok } from '../../ports/result';
 import type { Result } from '../../ports/result';
 import { fakeBitmap } from './fake-bitmap';
@@ -11,6 +11,8 @@ const PAGE_HEIGHT = 800;
 export interface FakeHandle extends PdfDocumentHandle {
   renderRegion: ReturnType<typeof vi.fn<(req: RenderRequest, signal: AbortSignal) => Promise<Result<ImageBitmap, PdfRenderError>>>>;
   destroy: ReturnType<typeof vi.fn<() => Promise<void>>>;
+  /** Absent on a renderer without a working raster; a spec can set it. */
+  renderWorkingRaster?: (pageIndex: number, signal: AbortSignal) => Promise<Result<WorkingRaster, PdfRenderError>>;
 }
 
 function fakeHandle(pageCount = 2): FakeHandle {

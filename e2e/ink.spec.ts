@@ -4,6 +4,7 @@ import { TUNABLES } from '../src/config/tunables';
 import { desktopTest } from './support/desktop';
 import { findWhiteRun, inkedPixelsNear, pixelAt, readPixels } from './support/pixels';
 import { label, openScore, openScoreInAnnotation } from './support/score';
+import { scaled, SCROLL_TIMEOUT_MS } from './support/timing';
 
 
 test.use({ viewport: { width: 1600, height: 700 } });
@@ -41,6 +42,8 @@ async function drag(page: Page, from: { x: number; y: number }, to: { x: number;
 }
 
 /** A horizontal line on music, at a quarter of the slide height. */
+const REDDISH_MIN = 60; // red channel minus the larger of green and blue, 0..255: the stroke pixels of NFR-002 on the scan
+
 async function horizontal(page: Page, from = 0.2, to = 0.6) {
   const slide = await slideBox(page);
   const y = slide.y + slide.height * 0.25;
@@ -156,15 +159,21 @@ desktopTest('NFR-002 after a zoom the ink stays where it was drawn and is redraw
   const factor = TUNABLES.zoom.buttonStep;
   const expectedY = centerY + (line.from.y - centerY) * factor;
   const expectedX = centerX + ((line.from.x + line.to.x) / 2 - centerX) * factor;
-  const column = await readPixels(page, { x: Math.floor(expectedX), y: Math.floor(area.y), width: 1, height: Math.floor(area.height) });
-  const rows: number[] = [];
-  for (let row = 0; row < column.height; row++) {
-    const i = row * 4;
-    if (RED.every((v, k) => Math.abs(column.data[i + k]! - v) <= COLOR_TOLERANCE * 4)) {
-      rows.push(area.y + row + 0.5);
+  const inkRows = async (): Promise<number[]> => {
+    const column = await readPixels(page, { x: Math.floor(expectedX), y: Math.floor(area.y), width: 1, height: Math.floor(area.height) });
+    const found: number[] = [];
+    for (let row = 0; row < column.height; row++) {
+      const i = row * 4;
+      // A thin stroke over a scan is anti-aliased into the paper: any clearly reddish pixel belongs to it.
+      if (column.data[i]! - Math.max(column.data[i + 1]!, column.data[i + 2]!) >= REDDISH_MIN) {
+        found.push(area.y + row + 0.5);
+      }
     }
-  }
-  expect(rows.length, 'ink pixels in the column').toBeGreaterThan(0);
+    return found;
+  };
+  // The sharp ink of a large scan is painted some time after the zoom: wait for it instead of reading the screen once.
+  await expect.poll(async () => (await inkRows()).length, { message: 'ink pixels in the column', timeout: scaled(SCROLL_TIMEOUT_MS) }).toBeGreaterThan(0);
+  const rows = await inkRows();
   const middle = rows.reduce((a, b) => a + b, 0) / rows.length;
   expect(Math.abs(middle - expectedY)).toBeLessThanOrEqual(POSITION_TOLERANCE_PX);
 });

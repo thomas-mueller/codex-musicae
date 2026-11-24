@@ -11,7 +11,7 @@ let dir = '';
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'cm-build-'));
   mkdirSync(join(dir, 'build'));
-  writeFileSync(join(dir, 'version.generated.ts'), 'export const APP_VERSION_DISPLAY = "v1.5.0";\nexport const APP_VERSION_FULL = "v1.5.0-3-gabc1234";\n');
+  writeFileSync(join(dir, 'version.generated.ts'), 'export const APP_VERSION_DISPLAY = "v1.5.3";\nexport const APP_VERSION_FULL = "v1.5.0-3-gabc1234";\n');
 });
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
@@ -22,13 +22,13 @@ const bundle = (text: string): void => writeFileSync(join(dir, 'build', 'main-AB
 
 describe('production build output', () => {
   it('NFR-019 a minified build without source maps passes', () => {
-    bundle(minified('v1.5.0'));
+    bundle(minified('v1.5.3'));
     const result = check();
     expect(result.status, result.stderr).toBe(0);
   });
 
   it('NFR-019 a source map in the build fails', () => {
-    bundle(minified('v1.5.0'));
+    bundle(minified('v1.5.3'));
     writeFileSync(join(dir, 'build', 'main-ABC123.js.map'), '{}');
     const result = check();
     expect(result.status).not.toBe(0);
@@ -36,7 +36,7 @@ describe('production build output', () => {
   });
 
   it('NFR-019 an unminified bundle fails', () => {
-    bundle(unminified('v1.5.0'));
+    bundle(unminified('v1.5.3'));
     const result = check();
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain('not minified');

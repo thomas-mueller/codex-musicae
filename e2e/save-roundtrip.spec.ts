@@ -3,11 +3,11 @@ import { expect, test } from '@playwright/test';
 import { desktopTest } from './support/desktop';
 import { inkedPixelsNear } from './support/pixels';
 import { DETECTION_TIMEOUT_MS, SCROLL_TIMEOUT_MS } from './support/timing';
-import { label, openScore, SYNTHETIC_BARS, SYNTHETIC_SYSTEMS, waitForFinalSlideCount } from './support/score';
+import { label, openScore, SCORE_BARS, SCORE_SYSTEMS, waitForFinalSlideCount } from './support/score';
 import {
   addJumpToStart, annotationFacts, attachmentText, COLOR_TOLERANCE, drag, enterAnnotation, enterOrganization, FOREIGN_ATTACHMENT,
   FOREIGN_ATTACHMENT_TEXT, foreignScoreBytes, forceFilePaths, inkBounds, inspect, KEY, openPdf, qpdfCheck, RED, saveCopyDownload,
-  strokeLine, tool, YELLOW,
+  strokeLine, tool, waitForDrawnSlide, YELLOW,
 } from './support/saving';
 
 import type { Page } from '@playwright/test';
@@ -16,8 +16,9 @@ const PEN_ROW = 0.25;
 const HIGHLIGHTER_ROW = 0.6;
 const RIGHT_FROM = 0.75;
 const RIGHT_TO = 0.95;
-const BREAK_BAR_INDEX = 1;
-const STOP_BAR_INDEX = 2;
+// Plain bars inside page 3 of the standard score (bars 1 and 2 are the two bars of junction 1: a stop there would leave a single system to play).
+const BREAK_BAR_INDEX = 3; // junction 2
+const STOP_BAR_INDEX = 7; // junction 6
 const SHOW_MORE_CLICKS = 8; // as in slides.spec.ts: clearly taller slides
 const SWEEP_HALF = 30;
 const MIN_POINTS = 2;
@@ -61,7 +62,7 @@ desktopTest('TST-003 SAV-001 SAV-004 SAV-006 SAV-007 ANN-005 a copy with two str
   await draw(page, 'highlighter', HIGHLIGHTER_ROW);
 
   await enterOrganization(page);
-  await expect(page.getByTestId('org-bar')).toHaveCount(SYNTHETIC_BARS, { timeout: DETECTION_TIMEOUT_MS });
+  await expect(page.getByTestId('org-bar')).toHaveCount(SCORE_BARS, { timeout: DETECTION_TIMEOUT_MS });
   await addJumpToStart(page);
   const bars = page.getByTestId('org-bar');
   const chip = page.getByTestId('selection-chip');
@@ -88,7 +89,7 @@ desktopTest('TST-003 SAV-001 SAV-004 SAV-006 SAV-007 ANN-005 a copy with two str
   expect(saved.ink?.map((i) => i.points.length).sort()).toEqual([...facts.inkPoints].sort());
   expect(saved.metadata?.kind).toBe('ok');
   const meta = (saved.metadata as Extract<NonNullable<typeof saved.metadata>, { kind: 'ok' }>).value;
-  expect(meta.detection?.pages.reduce((sum, p) => sum + p.systems.length, 0)).toBe(SYNTHETIC_SYSTEMS);
+  expect(meta.detection?.pages.reduce((sum, p) => sum + p.systems.length, 0)).toBe(SCORE_SYSTEMS);
   expect(meta.marks.jumps).toHaveLength(1);
   expect(meta.marks.breaks).toHaveLength(1);
   expect(meta.marks.stops).toHaveLength(1);
@@ -101,7 +102,7 @@ desktopTest('TST-003 SAV-001 SAV-004 SAV-006 SAV-007 ANN-005 a copy with two str
   await expect(page.getByTestId('detection-progress')).toHaveCount(0);
   await expect.poll(() => inkedPixelsNear(penInk(page), RED, COLOR_TOLERANCE)).toBeGreaterThan(0);
   await enterOrganization(page);
-  await expect(page.getByTestId('org-bar')).toHaveCount(SYNTHETIC_BARS);
+  await expect(page.getByTestId('org-bar')).toHaveCount(SCORE_BARS);
   await expect(page.getByTestId('jump-marker')).toHaveCount(2);
   await expect(page.getByTestId('org-bar').nth(BREAK_BAR_INDEX).getByTestId('org-bar-break-line')).toHaveCount(1);
   await expect(page.getByTestId('org-bar').nth(STOP_BAR_INDEX).getByTestId('org-bar-stop-icon')).toHaveCount(1);
@@ -109,10 +110,12 @@ desktopTest('TST-003 SAV-001 SAV-004 SAV-006 SAV-007 ANN-005 a copy with two str
   // Erasing one stroke and saving again leaves one annotation.
   await enterAnnotation(page);
   await expect.poll(() => inkedPixelsNear(highlighterInk(page), YELLOW, HIGHLIGHTER_TOLERANCE)).toBeGreaterThan(0);
-  // The ratio changed the slide's size: aim at where the pen stroke is now.
+  // The slide canvas keeps its placeholder until the page of the scan is drawn; the ratio also changed the slide's size: aim at where the pen stroke is now.
+  await waitForDrawnSlide(page);
   const pen = await inkBounds(page, 'ink-canvas', RED, COLOR_TOLERANCE);
   expect(pen).not.toBeNull();
-  await sweep(page, pen!.x + pen!.width / 2, pen!.y + pen!.height / 2);
+  // With the standard score the first system is shown twice on this slide (the jump), so the bounds hold two lines: aim at the first one.
+  await sweep(page, pen!.x + pen!.width / 2, pen!.y);
   await expect.poll(() => inkedPixelsNear(penInk(page), RED, COLOR_TOLERANCE)).toBe(0);
   expect(await inkedPixelsNear(highlighterInk(page), YELLOW, HIGHLIGHTER_TOLERANCE)).toBeGreaterThan(0);
   const second = await saveCopyDownload(page);

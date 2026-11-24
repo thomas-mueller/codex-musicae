@@ -1,73 +1,31 @@
-// Generates the deterministic test PDFs in e2e/fixtures/ (M8 S2). Same bytes on every run.
-import { mkdir, writeFile } from 'node:fs/promises';
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+// Generates the failure-case PDFs in e2e/fixtures/ (V2-M2 S4, TST-016, D-22): the only synthetic PDFs that stay, because real scores cannot
+// cover them. Same bytes on every run, except encrypted.pdf (qpdf picks random keys): it is only written when missing or with --force.
+import { spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { PDFDocument } from 'pdf-lib';
 
 const OUT_DIR = 'e2e/fixtures';
 const PAGE_WIDTH = 595;
 const PAGE_HEIGHT = 842;
-const PAGES = 3;
-const SYSTEM_TOPS = [100, 280, 460, 640]; // from the top of the page
-const STAFF_X0 = 50;
-const STAFF_X1 = 545;
-const LINE_COUNT = 5;
-const LINE_SPACING = 5;
-const STAFF_DISTANCE = 40;
-const INNER_BARLINES = 3;
-const NOTE_SIZE = 4;
-const TITLE_SIZE = 18;
-const TITLE_Y_FROM_TOP = 60;
 const FIXED_DATE = new Date(Date.UTC(2024, 0, 1));
 const DAMAGED_BYTES = 2048;
 const DAMAGED_SEED = 0x2f6e2b1;
+const ENCRYPTION_BITS = '256';
+const PASSWORD = 'secret'; // user and owner password of the encrypted fixture (the app must refuse it without asking)
 
-const black = rgb(0, 0, 0);
-const toY = (fromTop) => PAGE_HEIGHT - fromTop;
-
-function drawSystem(page, top) {
-  const staffBottoms = [0, 1].map((s) => top + s * STAFF_DISTANCE + (LINE_COUNT - 1) * LINE_SPACING);
-  for (let s = 0; s < 2; s++) {
-    for (let l = 0; l < LINE_COUNT; l++) {
-      const y = toY(top + s * STAFF_DISTANCE + l * LINE_SPACING);
-      page.drawLine({ start: { x: STAFF_X0, y }, end: { x: STAFF_X1, y }, thickness: 0.5, color: black });
-    }
-  }
-  const barTop = toY(top);
-  const barBottom = toY(staffBottoms[1]);
-  const span = STAFF_X1 - STAFF_X0;
-  for (let b = 0; b <= INNER_BARLINES + 1; b++) {
-    const x = STAFF_X0 + (span * b) / (INNER_BARLINES + 1);
-    page.drawLine({ start: { x, y: barTop }, end: { x, y: barBottom }, thickness: 0.8, color: black });
-  }
-  for (let n = 0; n < 6; n++) {
-    page.drawRectangle({
-      x: STAFF_X0 + 20 + n * 40,
-      y: toY(top + (n % LINE_COUNT) * LINE_SPACING) - NOTE_SIZE / 2,
-      width: NOTE_SIZE,
-      height: NOTE_SIZE,
-      color: black,
-    });
-  }
-}
-
-async function makeScore() {
+async function newDoc(title, pages) {
   const doc = await PDFDocument.create();
-  doc.setTitle('Synthetic score');
+  doc.setTitle(title);
   doc.setProducer('codex-musicae test generator');
   doc.setCreator('codex-musicae test generator');
   doc.setCreationDate(FIXED_DATE);
   doc.setModificationDate(FIXED_DATE);
-  const font = await doc.embedFont(StandardFonts.Helvetica);
-  for (let p = 0; p < PAGES; p++) {
-    const page = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-    if (p === 0) {
-      page.drawText('Synthetic Score', { x: STAFF_X0, y: toY(TITLE_Y_FROM_TOP), size: TITLE_SIZE, font, color: black });
-    }
-    for (const top of SYSTEM_TOPS) {
-      drawSystem(page, top);
-    }
-  }
-  return doc.save({ useObjectStreams: false });
+  for (let p = 0; p < pages; p++) doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  return doc;
 }
+
+const save = (doc) => doc.save({ useObjectStreams: false, addDefaultPage: false }); // pdf-lib would add a page to a document without one
 
 /** mulberry32: fixed seed, so the "random" bytes are the same on every run. */
 function makeDamaged() {
@@ -84,7 +42,19 @@ function makeDamaged() {
   return bytes;
 }
 
+async function makeEncrypted(force) {
+  const target = `${OUT_DIR}/encrypted.pdf`;
+  if (existsSync(target) && !force) return 'kept encrypted.pdf (not byte-reproducible; use --force to rewrite it)';
+  if (spawnSync('qpdf', ['--version']).status !== 0) return 'skipped encrypted.pdf: qpdf is not installed';
+  const plain = `${OUT_DIR}/.encrypted-source.pdf`;
+  await writeFile(plain, await save(await newDoc('Encrypted', 1)));
+  const result = spawnSync('qpdf', ['--encrypt', PASSWORD, PASSWORD, ENCRYPTION_BITS, '--', plain, target], { encoding: 'utf8' });
+  await rm(plain, { force: true });
+  return result.status === 0 ? 'wrote encrypted.pdf' : `failed encrypted.pdf: ${result.stderr}`;
+}
+
 await mkdir(OUT_DIR, { recursive: true });
-await writeFile(`${OUT_DIR}/synthetic-score.pdf`, await makeScore());
 await writeFile(`${OUT_DIR}/damaged.pdf`, makeDamaged());
-console.log(`wrote ${OUT_DIR}/synthetic-score.pdf and ${OUT_DIR}/damaged.pdf`);
+await writeFile(`${OUT_DIR}/zero-pages.pdf`, await save(await newDoc('Zero pages', 0)));
+await writeFile(`${OUT_DIR}/blank-page.pdf`, await save(await newDoc('Blank page', 1)));
+console.log(`wrote damaged.pdf, zero-pages.pdf and blank-page.pdf in ${OUT_DIR}; ${await makeEncrypted(process.argv.includes('--force'))}`);

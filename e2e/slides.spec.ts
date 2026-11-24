@@ -8,6 +8,7 @@ const PAGE1_BOTTOM_BAR_INDEX = 4; // junction 4: end of page 1 (4 systems per pa
 const FIRST_BAR_INDEX = 0;
 const SHOW_MORE_CLICKS = 8; // 1.6 -> 0.8: clearly taller slides
 const CI_JITTER = 2; // the milestone allows x2 for CI
+const WARM_SETTLE_MS = scaled(4_000); // the slide of a 1000 dpi scan is drawn sharp some seconds after the first draw: wait until it is cached
 
 test.use({ viewport: { width: 1280, height: 800 } });
 
@@ -61,7 +62,7 @@ test('SLD-018 zoom in stretches at once, sharp tiles follow; reset and a slide c
   await expect(tiles).toHaveCount(0);
   await button(page, 'zoomIn').click();
   await expect(slide(page)).toHaveCSS('transform', new RegExp(`matrix\\(${TUNABLES.zoom.buttonStep}`));
-  await expect.poll(() => tiles.count(), { timeout: SCROLL_TIMEOUT_MS }).toBeGreaterThan(0);
+  await expect.poll(() => tiles.count(), { timeout: DETECTION_TIMEOUT_MS }).toBeGreaterThan(0); // sharp tiles of a 1000 dpi scan take longer than scroll time
   await button(page, 'zoomOut').click();
   await expect(slide(page)).toHaveCSS('transform', /matrix\(1, 0, 0, 1, 0, 0\)|none/);
   await expect(tiles).toHaveCount(0);
@@ -137,6 +138,7 @@ test.describe('chromium', () => {
       const seen = await draws();
       await button(page, key).click();
       await expect.poll(draws, { timeout: scaled(SCROLL_TIMEOUT_MS) }).toBeGreaterThan(seen);
+      await page.waitForTimeout(WARM_SETTLE_MS);
     }
     const nextLabel = label('next');
     const elapsed = await page.evaluate(

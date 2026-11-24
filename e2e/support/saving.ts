@@ -16,7 +16,7 @@ const STROKE_STEPS = 20;
 const SLIDE_INK_ROW = 0.25;
 const STROKE_FROM = 0.2;
 const STROKE_TO = 0.6;
-const PAGE1_BOTTOM_BAR_INDEX = 4;
+const PAGE1_BOTTOM_BAR_INDEX = 1; // the standard score's page 1 has bars 0 and 1; junction 1 has a second bar on page 3
 const FIRST_BAR_INDEX = 0;
 const JUMP_MARKERS = 2; // one start, one end
 const COPIES = 2;
@@ -88,6 +88,14 @@ export async function enterAnnotation(page: Page): Promise<void> {
 export { enterOrganization };
 
 export const tool = (page: Page, key: 'pen' | 'highlighter' | 'eraser') => page.getByRole('button', { name: label(key), exact: true });
+
+/** Width of the slide canvas before its slide is drawn (the default size of a canvas). */
+const SLIDE_PLACEHOLDER_WIDTH_PX = 300;
+
+/** The slide canvas keeps its placeholder size until the page of a large scan is drawn: waits until it has its final size. */
+export async function waitForDrawnSlide(page: Page): Promise<void> {
+  await expect.poll(async () => (await slideBox(page)).width).toBeGreaterThan(SLIDE_PLACEHOLDER_WIDTH_PX);
+}
 
 export async function slideBox(page: Page) {
   const box = await page.getByTestId('slide-canvas').boundingBox();
@@ -170,11 +178,11 @@ export async function shorterPdfWithMetadata(json: string, pages = COPIES): Prom
 }
 
 // A foreign ink annotation (another app's: no /NM) on page 1 of the score: a horizontal line over the first system.
-const FOREIGN_PAGE_HEIGHT = 842;
-const FOREIGN_INK_FROM_TOP = 130;
+const FOREIGN_PAGE_HEIGHT = 897.912; // the standard score's page height in pt
+const FOREIGN_INK_FROM_TOP = 320; // inside the system detected on page 1 (y 198 to 442 from the top)
 const FOREIGN_INK_Y = FOREIGN_PAGE_HEIGHT - FOREIGN_INK_FROM_TOP;
-const FOREIGN_INK_X0 = 100;
-const FOREIGN_INK_X1 = 400;
+const FOREIGN_INK_X0 = 200; // inside the detected system of page 1 (x 163 to 517)
+const FOREIGN_INK_X1 = 480;
 const FOREIGN_INK_WIDTH = 3;
 const FOREIGN_RECT_PAD = 5;
 const FOREIGN_NOTE_ORIGIN = 5;
@@ -182,7 +190,7 @@ const FOREIGN_NOTE_SIZE = 20;
 const FOREIGN_NOTE_RECT = [FOREIGN_NOTE_ORIGIN, FOREIGN_NOTE_ORIGIN, FOREIGN_NOTE_ORIGIN + FOREIGN_NOTE_SIZE, FOREIGN_NOTE_ORIGIN + FOREIGN_NOTE_SIZE];
 export const FOREIGN_ATTACHMENT = 'foreign.txt';
 export const FOREIGN_ATTACHMENT_TEXT = 'foreign';
-/** Where the foreign line lies on page 1, in fractions of the system's x range (50..545 pt): used to aim the eraser. */
+/** Where the foreign line lies on page 1, in pt: used to aim the eraser. */
 export const FOREIGN_INK_MIDDLE_X_PT = (FOREIGN_INK_X0 + FOREIGN_INK_X1) / 2;
 
 /** The synthetic score with a foreign ink annotation, a foreign text annotation and a foreign attachment (SAV-013). */

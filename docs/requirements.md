@@ -171,6 +171,7 @@ V2 terms (target `v2` entries):
 - **DET-032** [v2·todo·M8] The default parameters are the V1 `standard` values (150 dpi, `minSystemWidthRatio`); the defaults of the new limits are chosen on the real-PDF corpus and make no corpus entry worse than V1.
 - **DET-033** [v2·todo·M8] `fullWidthSystemRatio`, the adaptive block size and the adaptive constant stay tunables and are not in the popup.
 - **DET-034** [v2·todo·M8] The connected-component boxes of each detected page stay in memory until the document closes.
+- **DET-035** [v2·todo·M2] The systems found on a page do not depend on the browser: detection works on the working raster of the page, reduced to the level's size inside the detection engine (area averaging, the same code in every browser), and the same corpus PDF gives the same systems per page in Chromium, Firefox and WebKit.
 
 ## PLY — Junctions and playing order (pure logic)
 
@@ -434,6 +435,9 @@ V2 terms (target `v2` entries):
 - **NFR-022** [v2·todo·M14] Visible pages and tiles are never left blank after scrolling, zooming, page jumps or mode changes.
 - **NFR-023** [v2·todo·M14] Rendering keeps visible-first priority, cancels stale requests and uses a bounded queue.
 - **NFR-024** [v2·todo·M14] A watchdog periodically re-requests any empty visible area at the lowest priority, at most one request per tick.
+- **NFR-025** [v2·todo·M2] Rendering, detection and display work on a working raster whose size depends only on the page size and the view, never on the resolution of the PDF's images; source images larger than `T:pdf.sourceImageMaxBytes` are reduced by pdf.js, and source pixels are decoded for a region only when it is zoomed beyond the working resolution, one request at a time.
+- **NFR-026** [v2·done·M2b] While a page is among the most recently rendered ones (`T:pdf.warmPagesByDeviceMemoryGb`), the renderer keeps pdf.js's parsed page content and decoded source images: regions of the same page rendered one after another decode the page's source images once, not once per region. The state of a page is released when it leaves that set, when its document is destroyed and when its tab becomes inactive (NFR-020).
+- **NFR-027** [v2·done·M2b] Displays up to 4K (3840×2160 physical pixels, `devicePixelRatio` up to `T:resources.devicePixelRatioCap`) show slides at full device resolution: the slide canvas never exceeds `T:resources.maxCanvasPixels`, and prefetching a neighbor never evicts the current slide from the bitmap cache. Where the cache budget of the device cannot hold the current slide and its prefetched neighbors, prefetch is reduced (`prefetchNeighbors` becomes smaller) before the render resolution is lowered.
 
 ## ARC — Architecture rules
 
@@ -466,7 +470,7 @@ V2 terms (target `v2` entries):
 - **PIP-015** [v2·done·M1] A license check in `lint-test` fails when a production dependency has a license outside an allow-list; GPL and AGPL are never allowed.
 - **PIP-016** [v2·done·M1] Coverage is reported per kind of test (unit, integration, E2E and emulator, real-PDF detection, performance) in the CI job summary; a kind without coverage numbers reports its test count.
 - **PIP-017** [v2·done·M1] No coverage threshold fails a build.
-- **PIP-018** [v2·done·M1] Users see only the version `vX.Y.Z` taken from the nearest tag; the full `git describe` string appears only in internal places.
+- **PIP-018** [v2·done·M1] Users see only the version `vX.Y.Z`: X.Y come from the nearest tag and Z is that tag's patch number plus the number of commits since the tag (`v1.1.0-19-g…-dirty` shows `v1.1.19`); no hash, no dirty flag. The full `git describe` string appears only in internal places. *(Z rule changed 2026-11-22, DEC-149.)*
 - **PIP-019** [v2·done·M1] Android `versionName` is `X.Y.Z` (no `v`, no describe suffix).
 - **PIP-020** [v2·done·M1] A build check fails when the web, Android and iOS versions differ; free and paid builds have the same version.
 - **PIP-021** [v2·todo·M19] Store build numbers (Android `versionCode`, iOS build number) are the commit count, set by CI.
@@ -482,18 +486,19 @@ V2 terms (target `v2` entries):
 - **TST-007** [v1·done·M17] A tester checklist for iOS Safari (open, scroll, draw, save a copy, presentation mode, pedal) is delivered with the hosted URL.
 - **TST-008** [v1·done·M17] A performance test on the reference PDF fails the pipeline when a budget in `T:budgets` is exceeded.
 - **TST-009** [v2·done·M1] Playwright projects cover desktop Chrome, Firefox and Safari, a small Android phone (about 360 × 640), a large Android phone, an Android tablet, iPhone and iPad.
-- **TST-010** [v2·todo·M2] The real-PDF corpus consists of a repository folder and a URL list; either may be empty.
-- **TST-011** [v2·todo·M2] URL-list PDFs are downloaded and cached by tests only and checksum-verified; a failed download or a checksum mismatch skips the entry with a warning.
-- **TST-012** [v2·todo·M2] Every corpus PDF has a license note (source, license, date).
-- **TST-013** [v2·todo·M2] An expectation file extending `e2e/corpus/expected.json` gives the number of systems per page for every corpus PDF.
-- **TST-014** [v2·todo·M2] A helper script proposes expectation entries and never overwrites an entry marked as reviewed unless called with `--force`.
-- **TST-015** [v2·todo·M2] The corpus runs as detection regression test, and the largest real PDFs replace the generated reference PDF in the performance test.
-- **TST-016** [v2·todo·M2] Generated synthetic scores and the generated large reference PDF are removed; only the failure-case fixtures damaged, zero pages, blank page and encrypted stay.
+- **TST-010** [v2·done·M2] The real-PDF corpus consists of a repository folder and a plain list of URLs; either may be empty. The owner provides nothing but the PDF files or their URLs.
+- **TST-011** [v2·done·M2] URL-list PDFs are downloaded and cached by a script (run by tests and CI only); the script records each checksum on first download and verifies it afterwards; a failed download or a checksum mismatch skips the entry with a warning.
+- **TST-012** [v2·dropped·M2] Every corpus PDF has a license note (source, license, date). Dropped: licenses are not tracked for the test corpus (owner decision).
+- **TST-013** [v2·done·M2] An expectation file extending `e2e/corpus/expected.json` gives the number of systems per page for every corpus PDF.
+- **TST-014** [v2·done·M2] One easy-to-use script (`npm run corpus`) does all corpus bookkeeping: it downloads the listed URLs, records checksums, and proposes expectation entries; it never overwrites an entry marked as reviewed unless called with `--force`.
+- **TST-015** [v2·done·M2] The corpus runs as detection regression test, except stress files (more than 100 pages), which are not run through detection; real PDFs replace the generated reference PDF in the performance tests: the largest file for the time to the first slide, the regular PDF with the most pages for slide changes, and the stress file for responsiveness while detection runs (scrolling, zooming, large jumps).
+- **TST-016** [v2·done·M2] Generated synthetic scores and the generated large reference PDF are removed; only the failure-case fixtures damaged, zero pages, blank page and encrypted stay.
 - **TST-017** [v2·todo·M14] Seeded random stress tests (page jumps, scrolling, zoom sequences, mode switches, rendering during detection) assert that no visible tile stays blank; the seed is printed on failure and budgets are in `T:budgets`.
 - **TST-018** [v2·todo·M17] The whole E2E suite runs on every Playwright project; a test that cannot run on an engine is skipped explicitly with a reason.
 - **TST-019** [v2·todo·M17] An Android emulator job runs a smoke test (open, detect, draw, save, reopen) of the paid app on at least an Android tablet image, on release tags and manually; it never blocks ordinary pushes.
 - **TST-020** [v2·todo·M17] Every persistence-related feature is tested in both configurations: free and web persist nothing, paid persists.
 - **TST-021** [v2·todo·M17] A low-memory stress test opens 40 real PDFs one after another and switches among them with a reduced heap limit; no crash, no blank tile, memory returns to a bounded level.
+- **TST-022** [v2·done·M2b] A report-only performance profile (`e2e/perf/render-profile.spec.ts`) runs the regular real PDF in annotation and presentation mode at 3840×2160 (devicePixelRatio 1), 2560×1440 (1.5) and 1920×1080 (2) and prints, per run: slide canvas size, source renders split into raster builds and direct region renders, time from key press to repaint (median, 95th percentile), JS heap and bitmap cache bytes against the budget. It asserts nothing about speed; the 4K budgets in `T:budgets` are set by the owner after reading the numbers.
 
 ## STY — Stylus support (v1-optional)
 

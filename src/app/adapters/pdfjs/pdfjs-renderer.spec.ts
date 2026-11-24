@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { TUNABLES } from '../../../config/tunables';
+import { cacheBudgetFor } from '../../core/cache-budget';
 import { PdfJsRenderer } from './pdfjs-renderer';
 import type { PdfjsDocument, PdfjsModule, PdfjsPage } from './pdfjs-renderer';
 
@@ -249,5 +250,127 @@ describe('PdfJsRenderer handle', () => {
       throw new Error('open failed');
     }
     await expect(opened.value.destroy()).resolves.toBeUndefined();
+  });
+});
+
+describe('PdfJsRenderer warm pages', () => {
+  const NO_ABORT = new AbortController().signal;
+
+  /** A document of `pages` fake pages; `getPage(n)` returns the same fake page every time, like pdf.js. */
+  async function openWarm(warmPages: number, pages = 4, overrides: (n: number) => Partial<PdfjsPage> = () => ({})) {
+    const fakes = Array.from({ length: pages }, (_, i) => fakePage(overrides(i + 1)));
+    const doc: PdfjsDocument = { numPages: pages, getPage: vi.fn((n: number) => Promise.resolve(fakes[n - 1]!)), destroy: vi.fn(() => Promise.resolve()) };
+    const bitmap = { close: vi.fn() } as unknown as ImageBitmap;
+    const renderer = new PdfJsRenderer({
+      loadModule: () => Promise.resolve(fakeModule(() => Promise.resolve(doc))),
+      createCanvas: (width, height) => ({ width, height, getContext: () => ({}) }),
+      createBitmap: () => Promise.resolve(bitmap),
+      baseUri: 'http://localhost/app/',
+      warmPages,
+    });
+    const opened = await renderer.open(new Uint8Array([1]));
+    if (!opened.ok) {
+      throw new Error('open failed');
+    }
+    const handle = opened.value as typeof opened.value & { releaseWarmPages(): void };
+    return { handle, fakes, doc };
+  }
+  const render = (handle: { renderRegion: (r: { pageIndex: number; region: typeof region; scale: number }, s: AbortSignal) => Promise<unknown> }, pageIndex: number) =>
+    handle.renderRegion({ pageIndex, region, scale: 1 }, NO_ABORT);
+  const flush = () => new Promise<void>((resolve) => setTimeout(resolve));
+
+  it('NFR-026 does not clean up a page after rendering it while it is warm', async () => {
+    const { handle, fakes } = await openWarm(2);
+    await render(handle, 0);
+    await render(handle, 0);
+    await flush();
+    expect(fakes[0]!.cleanup).not.toHaveBeenCalled();
+  });
+
+  it('NFR-026 cleans up the page that falls out of the warm set', async () => {
+    const { handle, fakes } = await openWarm(1);
+    await render(handle, 0);
+    await render(handle, 1);
+    await flush();
+    expect(fakes[0]!.cleanup).toHaveBeenCalledTimes(1);
+    expect(fakes[1]!.cleanup).not.toHaveBeenCalled();
+  });
+
+  it('NFR-026 a re-rendered page becomes the most recent one', async () => {
+    const { handle, fakes } = await openWarm(2);
+    await render(handle, 0);
+    await render(handle, 1);
+    await render(handle, 0);
+    await render(handle, 2);
+    await flush();
+    expect(fakes[1]!.cleanup).toHaveBeenCalledTimes(1);
+    expect(fakes[0]!.cleanup).not.toHaveBeenCalled();
+  });
+
+  it('NFR-026 destroy cleans up all warm pages before the document is destroyed', async () => {
+    const { handle, fakes, doc } = await openWarm(3);
+    await render(handle, 0);
+    await render(handle, 1);
+    await handle.destroy();
+    expect(fakes[0]!.cleanup).toHaveBeenCalledTimes(1);
+    expect(fakes[1]!.cleanup).toHaveBeenCalledTimes(1);
+    expect((fakes[0]!.cleanup as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0]!).toBeLessThan((doc.destroy as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0]!);
+  });
+
+  it('NFR-026 releaseWarmPages cleans up all warm pages once', async () => {
+    const { handle, fakes } = await openWarm(3);
+    await render(handle, 0);
+    await render(handle, 1);
+    handle.releaseWarmPages();
+    handle.releaseWarmPages();
+    await flush();
+    expect(fakes[0]!.cleanup).toHaveBeenCalledTimes(1);
+    expect(fakes[1]!.cleanup).toHaveBeenCalledTimes(1);
+  });
+
+  it('NFR-026 the number of warm pages follows the device memory bucket', () => {
+    const { warmPagesByDeviceMemoryGb: table, warmPagesDefault: fallback } = TUNABLES.pdf;
+    expect([1, 2, 4, 8, 16].map((gb) => cacheBudgetFor(gb, table, fallback))).toEqual([1, 1, 2, 3, 3]);
+    expect(cacheBudgetFor(undefined, table, fallback)).toBe(fallback);
+  });
+
+  it('NFR-026 a cancelled render is not kept warm and cleans up its cold page', async () => {
+    let rejectRender: (e: Error) => void = () => undefined;
+    const { handle, fakes } = await openWarm(2, 2, (n) =>
+      n === 1
+        ? {
+            render: vi.fn(() => ({
+              promise: new Promise<void>((_resolve, reject) => {
+                rejectRender = reject;
+              }),
+              cancel: vi.fn(() => rejectRender(new NamedError('RenderingCancelledException'))),
+            })),
+          }
+        : {},
+    );
+    const controller = new AbortController();
+    const pending = handle.renderRegion({ pageIndex: 0, region, scale: 1 }, controller.signal);
+    await vi.waitFor(() => expect(fakes[0]!.render).toHaveBeenCalled());
+    controller.abort();
+    expect(await pending).toMatchObject({ ok: false, error: 'cancelled' });
+    expect(fakes[0]!.cleanup).toHaveBeenCalledTimes(1);
+    handle.releaseWarmPages();
+    await flush();
+    expect(fakes[0]!.cleanup).toHaveBeenCalledTimes(1); // was not in the warm set
+  });
+
+  it('NFR-026 getPageInfo cleans up a cold page and keeps a warm one', async () => {
+    const { handle, fakes } = await openWarm(2);
+    await handle.getPageInfo(0);
+    expect(fakes[0]!.cleanup).toHaveBeenCalledTimes(1);
+    await render(handle, 1);
+    await handle.getPageInfo(1);
+    expect(fakes[1]!.cleanup).not.toHaveBeenCalled();
+  });
+
+  it('NFR-026 with no warm pages a render cleans up its page at once', async () => {
+    const { handle, fakes } = await openWarm(0);
+    await render(handle, 0);
+    expect(fakes[0]!.cleanup).toHaveBeenCalledTimes(1);
   });
 });

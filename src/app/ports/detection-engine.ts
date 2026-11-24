@@ -9,6 +9,11 @@ export type DetectionError = 'cancelled' | 'out-of-memory' | 'unknown';
 export interface ExtractionParams {
   readonly blockSize: number;
   readonly c: number;
+  /**
+   * NFR-025: size the gray image is reduced to before the threshold, by area averaging inside the engine (the same code in every browser,
+   * unlike the canvas filters). Absent: the bitmap is used as it is.
+   */
+  readonly target?: { readonly width: number; readonly height: number };
 }
 
 /** The connected components of one bitmap and the size of that bitmap (needed to normalize them). */

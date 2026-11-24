@@ -1,14 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 
-import { enterOrganization } from './support/score';
+import { enterOrganization, SCORE_PAGES, scoreBytes } from './support/score';
 
 const en = JSON.parse(readFileSync('src/assets/i18n/en.json', 'utf8')) as { a11y: Record<string, string> };
 const label = (key: string) => en.a11y[key] as string;
 
-const scoreBytes = readFileSync('e2e/fixtures/synthetic-score.pdf');
 const named = (name: string) => ({ name, mimeType: 'application/pdf', buffer: scoreBytes });
-const PAGES = 3;
+const PAGES = SCORE_PAGES;
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -104,7 +103,7 @@ const pageWidth = (page: Page) => page.getByTestId('org-page-0').evaluate((el) =
 async function openAndEnter(page: Page): Promise<void> {
   await openFile(page, 'a.pdf');
   await enterOrganization(page);
-  await expect(indicator(page)).toHaveText('1 / 3');
+  await expect(indicator(page)).toHaveText(`1 / ${PAGES}`);
 }
 
 async function pageSlider(page: Page) {
@@ -121,7 +120,7 @@ test('ORG-004 the indicator follows scrolling', async ({ page }) => {
   await page.getByTestId('org-viewer').evaluate((el) => {
     el.scrollTop = (el.querySelector('[data-testid="org-page-1"]') as HTMLElement).offsetTop;
   });
-  await expect(indicator(page)).toHaveText('2 / 3');
+  await expect(indicator(page)).toHaveText(`2 / ${PAGES}`);
 });
 
 test('ORG-005 next and previous move one page and are disabled at the ends', async ({ page }) => {
@@ -129,13 +128,13 @@ test('ORG-005 next and previous move one page and are disabled at the ends', asy
   const previous = page.getByRole('button', { name: label('previous'), exact: true });
   const next = page.getByRole('button', { name: label('next'), exact: true });
   await expect(previous).toHaveAttribute('aria-disabled', 'true');
-  await next.click();
-  await expect(indicator(page)).toHaveText('2 / 3');
-  await next.click();
-  await expect(indicator(page)).toHaveText('3 / 3');
+  for (let page_ = 2; page_ <= PAGES; page_++) {
+    await next.click();
+    await expect(indicator(page)).toHaveText(`${page_} / ${PAGES}`);
+  }
   await expect(next).toHaveAttribute('aria-disabled', 'true');
   await previous.click();
-  await expect(indicator(page)).toHaveText('2 / 3');
+  await expect(indicator(page)).toHaveText(`${PAGES - 1} / ${PAGES}`);
 });
 
 test('ORG-005 the page slider scrolls to the chosen page', async ({ page }) => {
@@ -145,7 +144,7 @@ test('ORG-005 the page slider scrolls to the chosen page', async ({ page }) => {
     (el as HTMLInputElement).value = '3';
     el.dispatchEvent(new Event('input', { bubbles: true }));
   });
-  await expect(indicator(page)).toHaveText('3 / 3');
+  await expect(indicator(page)).toHaveText(`3 / ${PAGES}`);
 });
 
 test('ORG-003 ORG-006 zoom buttons step and reset to fit-page; zoom stays when the page changes', async ({ page }) => {
@@ -156,7 +155,7 @@ test('ORG-003 ORG-006 zoom buttons step and reset to fit-page; zoom stays when t
   expect(await pageWidth(page)).toBeLessThan(fitPage * ZOOM_STEP + WIDTH_TOLERANCE_PX);
   const zoomed = await pageWidth(page);
   await page.getByRole('button', { name: label('next'), exact: true }).click();
-  await expect(indicator(page)).toHaveText('2 / 3');
+  await expect(indicator(page)).toHaveText(`2 / ${PAGES}`);
   expect(await pageWidth(page)).toBe(zoomed);
   await page.getByRole('button', { name: label('zoomReset'), exact: true }).click();
   await expect.poll(() => pageWidth(page)).toBe(fitPage);
@@ -231,15 +230,15 @@ test('NFR-008 coming back from another mode and going to the previous page shows
   await openAndEnter(page);
   const next = page.getByRole('button', { name: label('next'), exact: true });
   await next.click();
-  await expect(indicator(page)).toHaveText('2 / 3');
+  await expect(indicator(page)).toHaveText(`2 / ${PAGES}`);
   await next.click();
-  await expect(indicator(page)).toHaveText('3 / 3');
+  await expect(indicator(page)).toHaveText(`3 / ${PAGES}`);
   await page.getByLabel(label('modeAnnotation'), { exact: true }).click();
   await expect(page.getByTestId('org-viewer')).toHaveCount(0);
   await enterOrganization(page);
-  await expect(indicator(page)).toHaveText('3 / 3');
+  await expect(indicator(page)).toHaveText(`3 / ${PAGES}`);
   await page.getByRole('button', { name: label('previous'), exact: true }).click();
-  await expect(indicator(page)).toHaveText('2 / 3');
+  await expect(indicator(page)).toHaveText(`2 / ${PAGES}`);
   await expect.poll(() => page.locator('app-page-tiles canvas[style*="visibility: hidden"]').count()).toBe(0);
   await expect.poll(() => page.locator('app-page-tiles canvas[style*="visibility: visible"]').count()).toBeGreaterThan(0);
 });

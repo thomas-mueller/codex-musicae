@@ -10,6 +10,7 @@ import { InkInput } from '../../input/ink-input';
 import { DEVICE_INFO } from '../../ports/device-info';
 import { CLOCK } from '../../state/clock';
 import type { DocumentStore } from '../../state/document.store';
+import { BitmapCache } from '../../state/bitmap-cache';
 import { RegionRenderer } from '../../state/region-renderer';
 import { ResourceGovernor } from '../../state/resource-governor';
 import { Scheduler } from '../../state/scheduler';
@@ -85,6 +86,7 @@ export class SlideView {
   private cancelInkSettle: (() => void) | null = null;
   private readonly scheduler = inject(Scheduler);
   private readonly regions = inject(RegionRenderer);
+  private readonly bitmaps = inject(BitmapCache);
   private readonly governor = inject(ResourceGovernor);
   private readonly device = inject(DEVICE_INFO);
   private readonly clock = inject(CLOCK);
@@ -273,7 +275,16 @@ export class SlideView {
   private prefetch(doc: DocumentStore, index: number, signal: AbortSignal): void {
     const stage = this.nav.stage();
     const slides = doc.slides();
-    for (let step = 1; step <= this.governor.prefetchNeighbors(); step++) {
+    // NFR-027: only as many neighbors as fit into the cache budget together with the displayed slide, so a prefetch never evicts it.
+    const current = slides[index];
+    const slideBytes = current
+      ? composeSlide(current, doc.geoms(), this.pageSizes()).contents.reduce(
+          (sum, content) => sum + this.regions.estimatedBytes(content.source, fitScale({ width: current.width, height: current.height }, stage, 'contain')),
+          0,
+        )
+      : 0;
+    const neighbors = this.governor.prefetchNeighborsFor(slideBytes, this.bitmaps.budgetBytes);
+    for (let step = 1; step <= neighbors; step++) {
       for (const neighbor of [index - step, index + step]) {
         const plan = slides[neighbor];
         if (!plan) {

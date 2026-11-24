@@ -153,6 +153,8 @@ export class PageTiles {
             const rendered = await this.regions.renderRegionCached(doc, { pageIndex, region, scale }, merged.signal);
             if (rendered.ok && !merged.signal.aborted) {
               this.draw(tile, rendered.value); // owned by the cache: draw at once, never close
+            } else if (!rendered.ok && !merged.signal.aborted) {
+              throw new Error(rendered.error); // a failed render is retried like a preempted one (at most `tileRetryMax` times), not left blank (NFR-008)
             }
           } finally {
             taskSignal.removeEventListener('abort', abort);

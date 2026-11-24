@@ -22,11 +22,22 @@ export interface RenderRequest {
   readonly scale: number;
 }
 
+/** The page at the working resolution of the renderer: `scale` bitmap pixels per display point. */
+export interface WorkingRaster {
+  readonly bitmap: ImageBitmap;
+  readonly scale: number;
+}
+
 export interface PdfDocumentHandle {
   readonly pageCount: number;
   getPageInfo(pageIndex: number): Promise<Result<PdfPageInfo, 'unknown'>>;
   /** Renders `region` at `scale`; the caller owns the bitmap and must `close()` it. Honors `signal`. */
   renderRegion(req: RenderRequest, signal: AbortSignal): Promise<Result<ImageBitmap, PdfRenderError>>;
+  /**
+   * NFR-025: the whole page at the renderer's working resolution, without any resampling by the browser; the caller owns the bitmap.
+   * Optional: a renderer without a working raster does not offer it and callers render the region they need.
+   */
+  renderWorkingRaster?(pageIndex: number, signal: AbortSignal): Promise<Result<WorkingRaster, PdfRenderError>>;
   destroy(): Promise<void>;
 }
 

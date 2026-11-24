@@ -118,6 +118,7 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
+            "runnerConfig": "vitest.config.ts",
             "coverageReporters": ["json-summary", "text-summary"],
             "coverageExclude": ["**/*.spec.ts", "src/testing/**", "**/fixtures/**", "**/testing/**"]
           }
