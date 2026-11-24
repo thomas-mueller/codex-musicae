@@ -351,3 +351,4 @@ From the identifiers of `docs/v2-requirements.md` (`R-xxx`, `D-n`, idea `#n`) to
 | BKL-023 | dropped (limitations.md); see D-27 |
 | Owner decision (V2-M0 S2) | MRK-044 (V2-M10), MRK-045 (V2-M10), MRK-046 (V2-M10), MRK-047 (V2-M10), MRK-048 (V2-M10), MRK-049 (V2-M10), MRK-050 (V2-M10) |
 | Owner decision (V2-M2b, 2026-11-22) | NFR-026 (V2-M2b), NFR-027 (V2-M2b), TST-022 (V2-M2b) |
+| Owner decision (V2-M3b, 2026-11-24) | TST-023 (V2-M3b), TST-024 (V2-M3b), TST-025 (V2-M3b), TST-026 (V2-M3b), TST-027 (V2-M3b); TST-015 becomes `changed` when V2-M3b is done |

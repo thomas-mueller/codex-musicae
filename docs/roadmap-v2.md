@@ -34,6 +34,7 @@ As V1: a **step** is one agent session — one layer or feature area, about 15 r
 | M2 | v1.2.0 | Real-PDF corpus: folder, URL list, checksums, expectation format and helper script, synthetic fixtures reduced to failure cases | R-13, R-14a, D-22 | mid, medium |
 | M2b | v1.2.1 | Large scans on 4K displays: pdf.js page state kept warm per device-memory bucket, prefetch that never evicts the current slide, 4K performance profile (inserted after the M2 analysis, DEC-148) | NFR-026, NFR-027, TST-022 | mid, medium |
 | M3 | v1.3.0 | Editions: feature-configuration files, free and paid builds, persistence behind switches, app IDs, four store variants, tests per configuration | R-22a…l, R-8a…c, D-7, D-9, D-32 | mid, medium |
+| M3b | v1.3.1 | Corpus suites: entries belong to a detection suite (counts per page, true counts, deviations per profile and engine) and/or a load suite (parallel detection and navigation, budgets and cache/canvas invariants, fails the `perf` job); detection profiles for later algorithms; one detection run per entry; engine job time limits (inserted after the WebKit timeout and the Firefox difference found in V2-M3, DEC-152) | TST-023…TST-027 | mid, medium |
 | M4 | v1.4.0 | **Data model v2 (core, contracts first):** marks on systems, new `schemaVersion` and migration, start mark, pass number, labels, cross-file references, deletion rules | D-10…D-13, D-24, D-26, D-31, R-28k, R-30a, R-30e | **strong, high** |
 | M5 | v1.5.0 | Settings mode, Reset all settings, language infrastructure, tooltips at the screen edge, icon registry | R-12a/b, R-6d, R-47 (infrastructure), R-46, R-5 | mid, medium |
 | M6 | v1.6.0 | Top bar and files: file entry and list, "+" and recent files, overwrite dialog, close rules, share-in, memory release, cross-file opening (S1…S4) | R-1a…n, R-54a…k, R-30f…k, D-1, D-5, D-6, D-8, D-20 | mid, medium |
@@ -60,6 +61,7 @@ As V1: a **step** is one agent session — one layer or feature area, about 15 r
 5. **M8 before M9:** refinement needs the detection engine's component boxes and the new parameters.
 6. **M16 after the workflow is frozen:** the hint bubbles describe the finished flow; translations are done once.
 7. **M18 sits right before M19 on purpose.** Owner testing of M1–M17 (real devices, real scores) will produce changes. They are collected in M18; M19 then publishes a frozen state.
+8. **M3b before M4.** M4 migrates existing files and is the riskiest milestone; it needs a corpus that is quick and deterministic enough to run on every engine. M8 changes the detection algorithm and settings; with suites and profiles in place that is a new profile, not a re-review of the corpus. Every later milestone adds E2E tests, so a 1 h 30 WebKit job would grow with each of them.
 
 ### Not in V2 (decided in the review)
 
