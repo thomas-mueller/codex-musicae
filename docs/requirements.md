@@ -512,7 +512,7 @@ V2 terms (target `v2` entries):
 - **EDN-001** [v2·done·M3] The free edition saves nothing: no autosave, no saving, no Send to and no export.
 - **EDN-002** [v2·done·M3] In the free edition annotations, marks and organization changes work in memory and are lost when the file closes.
 - **EDN-003** [v2·done·M3] Actions switched off by the edition stay visible and disabled.
-- **EDN-004** [v2·todo·M3] The web app has exactly the feature set of the free edition.
+- **EDN-004** [v2·done·M3] The web app has exactly the feature set of the free edition.
 - **EDN-005** [v2·done·M3] The free edition persists no app state: no settings, zoom, recent files, session restore or per-file choices.
 - **EDN-006** [v2·done·M3] The free feature set is defined per platform in two feature-configuration files in `src/config/` (`features.web.ts`, `features.native.ts`; the native file holds the free native set), separate from tunables; every feature has an on/off switch with a comment; the paid native build switches every switch of the native file on.
 - **EDN-007** [v2·done·M3] Each build bundles only its own feature configuration; features read their switch through an injection token, never the files.
@@ -522,9 +522,9 @@ V2 terms (target `v2` entries):
 - **EDN-011** [v2·done·M3] Tests prove that in the free configuration every paid feature is unreachable: no save control is enabled and no file write call is made.
 - **EDN-012** [v2·done·M3] Tests prove that the paid configuration enables every feature.
 - **EDN-013** [v2·done·M3] A shared feature switch (every switch except the web-only ones of EDN-009) missing in either configuration file, or a web-only switch present in the native file, fails the build.
-- **EDN-014** [v2·todo·M3] The web build with its default configuration stores no cookies, localStorage, sessionStorage or IndexedDB data; a test on the production web build checks this in Chromium, Firefox and WebKit.
-- **EDN-015** [v2·todo·M3] The PWA service worker may cache the app's own files.
-- **EDN-016** [v2·todo·M3] The web app starts empty on every start: session restore, recent files and permission re-grant are off.
+- **EDN-014** [v2·done·M3] The web build with its default configuration stores no cookies, localStorage, sessionStorage or IndexedDB data; a test on the production web build checks this in Chromium, Firefox and WebKit.
+- **EDN-015** [v2·done·M3] The PWA service worker may cache the app's own files.
+- **EDN-016** [v2·done·M3] The web app starts empty on every start: session restore, recent files and permission re-grant are off.
 
 ## MRK — Marks, labels and bookmarks
 

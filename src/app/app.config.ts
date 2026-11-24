@@ -18,9 +18,10 @@ import { FEATURES } from '../config/features.web';
 import { resolveFeatures } from '../config/edition';
 import type { Edition } from '../config/edition';
 import { FEATURE_FLAGS } from './ports/feature-flags';
+import type { FeatureFlags } from './ports/feature-flags';
 import type { FileAccess } from './ports/file-access';
 import { FeatureFileAccess, persistsFileHandles } from './adapters/feature/feature-file-access';
-import { FeaturePreferences } from './adapters/feature/feature-preferences';
+import { createPreferences } from './adapters/feature/feature-preferences';
 import { MemoryHandleStore } from './adapters/web/memory-handle-store';
 import { cacheBudgetFor } from './core/cache-budget';
 import { tunablesToCssVars } from './state/css-vars';
@@ -199,7 +200,7 @@ export const appConfig: ApplicationConfig = {
     { provide: PDF_WRITER, useFactory: () => new PdfLibWriter() },
     { provide: APP_LIFECYCLE, useFactory: () => new WebAppLifecycle() },
     // EDN-005: the switches decide what is persisted; the web preferences adapter is still the paid configuration's store.
-    { provide: PREFERENCES, useFactory: () => new FeaturePreferences(new WebPreferences(), inject(FEATURE_FLAGS)) },
+    { provide: PREFERENCES, useFactory: () => createPreferences(inject(FEATURE_FLAGS), () => new WebPreferences()) },
     { provide: DEVICE_INFO, useFactory: () => new WebDeviceInfo() },
     // One instance per platform: the open-with adapter hands its files to the same handle store the file access reads from.
     {
@@ -207,7 +208,7 @@ export const appConfig: ApplicationConfig = {
       useFactory: () =>
         Capacitor.isNativePlatform()
           ? new CapFileAccess()
-          : new WebFileAccess(persistsFileHandles(inject(FEATURE_FLAGS)) ? {} : { handleStore: new MemoryHandleStore() }),
+          : createWebFileAccess(inject(FEATURE_FLAGS)),
     },
     // EDN-001, EDN-005: writes, copies and stored handles are gated by the switches.
     { provide: FILE_ACCESS, useFactory: () => new FeatureFileAccess(inject(RAW_FILE_ACCESS), inject(FEATURE_FLAGS)) },
@@ -227,6 +228,11 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
   ]
 };
+
+/** EDN-014: stored file handles (IndexedDB) only when a switch needs them; otherwise they live in memory. */
+export function createWebFileAccess(flags: FeatureFlags): WebFileAccess {
+  return new WebFileAccess(persistsFileHandles(flags) ? {} : { handleStore: new MemoryHandleStore() });
+}
 
 interface CapacitorPlatform {
   isNativePlatform(): boolean;

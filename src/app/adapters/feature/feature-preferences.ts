@@ -1,6 +1,7 @@
 import { TUNABLES } from '../../../config/tunables';
 import type { FeatureFlags } from '../../ports/feature-flags';
 import type { Preferences } from '../../ports/preferences';
+import { NullPreferences } from './null-preferences';
 
 const SWITCH_BY_PREFIX: Readonly<Record<string, string>> = TUNABLES.persistence.switchByKeyPrefix;
 
@@ -31,4 +32,17 @@ export class FeaturePreferences implements Preferences {
   remove(key: string): Promise<void> {
     return this.flags[switchForKey(key)] === true ? this.inner.remove(key) : Promise.resolve();
   }
+}
+
+/** True when any preference key is persisted: recent files, session restore or settings (EDN-005). */
+export function preferencesPersisted(flags: FeatureFlags): boolean {
+  return flags.recentFiles || flags.sessionRestore || flags.persistSettings;
+}
+
+/**
+ * EDN-014, EDN-008: the preferences of a build. When no switch persists anything the store is never created, so the web build
+ * has no localStorage adapter; otherwise `makeStore()` is the platform store behind the switch-aware wrapper.
+ */
+export function createPreferences(flags: FeatureFlags, makeStore: () => Preferences): Preferences {
+  return preferencesPersisted(flags) ? new FeaturePreferences(makeStore(), flags) : new NullPreferences();
 }
