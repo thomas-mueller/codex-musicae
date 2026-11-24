@@ -44,15 +44,15 @@ export function provideTestPorts(fullscreen = fakeFullscreen()): Provider[] {
     { provide: WAKE_LOCK, useValue: fakeWakeLock() },
     ...provideTestDetectionPorts(),
     ...provideTestSavePorts(),
-    { provide: FEATURE_FLAGS, useValue: ALL_FEATURES_ON },
   ];
 }
 
-/** The ports the save pipeline of every tab needs (M15). */
+/** The ports the save pipeline of every tab needs (M15), and the feature switches (all on: V1 behavior; a spec of a configuration overrides FEATURE_FLAGS). */
 export function provideTestSavePorts(): Provider[] {
   return [
     { provide: PDF_WRITER, useValue: fakePdfWriter() },
     { provide: APP_VERSION, useValue: 'v0.0.0-test' },
+    { provide: FEATURE_FLAGS, useValue: ALL_FEATURES_ON },
   ];
 }
 

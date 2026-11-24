@@ -39,6 +39,8 @@ export class SaveService {
     private readonly run: SaveRunner,
     private readonly idleMs: number,
     injector: Injector,
+    /** EDN-001: false in the free edition: changes stay in memory and are never saved (the modified marker still shows). */
+    private readonly saveEnabled = true,
   ) {
     this.subscription = doc.changes.subscribe((change) => this.onDocChange(change));
     this.effects = [
@@ -150,7 +152,7 @@ export class SaveService {
   private evaluate(): void {
     this.cancelTimer?.();
     this.cancelTimer = null;
-    if (this.disposed || this.doc.readOnly() || this.doc.needsWriteAccess()) {
+    if (this.disposed || !this.saveEnabled || this.doc.readOnly() || this.doc.needsWriteAccess()) {
       return;
     }
     const now = this.clock.now();

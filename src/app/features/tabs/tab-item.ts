@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 
+import { FEATURE_FLAGS } from '../../ports/feature-flags';
 import { SessionStore } from '../../state/session.store';
 import type { Tab } from '../../state/session.store';
 import { Icon } from '../shell/icon';
@@ -67,6 +68,8 @@ function markersOf(tab: Tab): TabMarker[] {
         <button
           type="button"
           class="marker"
+          [class.disabled]="!allowed(marker.action)"
+          [attr.aria-disabled]="!allowed(marker.action)"
           [appTooltip]="marker.labelKey"
           [attr.aria-label]="'a11y.' + marker.labelKey | transloco"
           (click)="onMarker(marker.action)"
@@ -91,7 +94,17 @@ export class TabItem {
   readonly active = input(false);
   protected readonly markers = computed(() => markersOf(this.tab()));
 
+  private readonly flags = inject(FEATURE_FLAGS);
+
+  /** EDN-003: a marker that offers a blocked action stays visible but does nothing. */
+  protected allowed(action: TabMarker['action']): boolean {
+    return action === 'grantAccess' ? this.flags.autosave : this.flags.saveCopy;
+  }
+
   protected onMarker(action: TabMarker['action']): void {
+    if (!this.allowed(action)) {
+      return;
+    }
     if (action === 'grantAccess') {
       void this.session.grantWriteAccess(this.tab().id);
     } else {

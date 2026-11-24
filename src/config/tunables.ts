@@ -361,6 +361,12 @@ export const TUNABLES = {
     keyPrefix: 'cm.v1.', // FIL-015 (Preferences store: UI state and file references only)
     sessionDebounceMs: 500, // FIL-011: delay before the session snapshot is written
     sessionKey: 'session', // FIL-011: preference key of the session snapshot
+    // EDN-005: which feature switch (config/features.*.ts) guards a preference key; a key is matched by `name` or `name.` prefix.
+    switchByKeyPrefix: {
+      recent: 'recentFiles', // EDN-005: the list of recent files
+      session: 'sessionRestore', // EDN-005: the session snapshot (open tabs and positions)
+    },
+    defaultKeySwitch: 'persistSettings', // EDN-005: every other preference key (tool settings, stylus, aspect ratios) is a setting
   },
 
   testing: {

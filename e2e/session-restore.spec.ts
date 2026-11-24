@@ -4,6 +4,9 @@ import { TUNABLES } from '../src/config/tunables';
 import { desktopTest } from './support/desktop';
 import { forceFileInput, label, scoreBytes, slideCount, waitForFinalSlideCount } from './support/score';
 import { DOCUMENT_OPEN_TIMEOUT_MS, FILE_CHOOSER_TIMEOUT_MS } from './support/timing';
+import { PAID_URL } from './support/editions';
+// V2-M3 S2: these specs need saving, restoring or persisted settings, which the free build switches off.
+test.use({ baseURL: PAID_URL });
 
 test.use({ viewport: { width: 1280, height: 800 } });
 

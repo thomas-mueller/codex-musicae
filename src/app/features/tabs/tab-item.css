@@ -66,3 +66,9 @@ button[appIconButton] {
     display: none;
   }
 }
+
+/* EDN-003: a marker whose action the edition blocks stays visible but disabled. */
+.marker.disabled {
+  opacity: var(--cm-disabled-opacity);
+  cursor: default;
+}

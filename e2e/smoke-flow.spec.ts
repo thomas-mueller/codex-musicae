@@ -3,6 +3,9 @@ import { expect, test, type Page } from '@playwright/test';
 import { inkedPixelsNear } from './support/pixels';
 import { COLOR_TOLERANCE, forceFilePaths, inspect, openPdf, qpdfCheck, RED, saveCopyDownload, strokeLine, tool } from './support/saving';
 import { label, scoreBytes, waitForFinalSlideCount } from './support/score';
+import { PAID_URL } from './support/editions';
+// V2-M3 S2: these specs need saving, restoring or persisted settings, which the free build switches off.
+test.use({ baseURL: PAID_URL });
 
 const bottomButton = (page: Page, key: 'next' | 'previous') =>
   page.locator('app-bottom-bar').getByRole('button', { name: label(key), exact: true });
