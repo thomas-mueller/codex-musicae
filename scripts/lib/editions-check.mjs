@@ -35,7 +35,7 @@ export function checkEditionFiles(tunables, buildGradle, xcconfig) {
   }
   if (!/edition\.properties/.test(buildGradle) || !/applicationId appId\b/.test(buildGradle)) findings.push('build.gradle: applicationId must come from edition.properties');
   if (!buildGradle.includes(`getProperty('appId', '${ids.free}')`)) findings.push(`build.gradle: the default applicationId must be ${ids.free} (the free app)`);
-  if (!/#include\?\s+"edition\.xcconfig"/.test(xcconfig)) findings.push('debug.xcconfig: must include edition.xcconfig');
+  if (!/#include\?\s+"edition\.xcconfig"/.test(xcconfig)) findings.push('app-id.xcconfig: must include edition.xcconfig');
   return findings;
 }
 

@@ -2,7 +2,7 @@
 // native workflows agree on free and paid, and a build starts from the right feature file.
 //   node scripts/check-editions.mjs                          static check of the repository
 //   node scripts/check-editions.mjs --built <dir> web|native  checks a built bundle (dist/...)
-// Optional further arguments of the static check (used by the lint self-test): angular.json, tunables.ts, build.gradle, debug.xcconfig,
+// Optional further arguments of the static check (used by the lint self-test): angular.json, tunables.ts, build.gradle, app-id.xcconfig,
 // android.yml, ios.yml. Exits non-zero with one line per violation.
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -19,7 +19,7 @@ if (args[0] === '--built') {
   const [, dir, kind] = args;
   findings = checkBuiltBundle(kind, await bundleTexts(dir));
 } else {
-  const [angular = 'angular.json', tunablesPath = 'src/config/tunables.ts', gradle = 'android/app/build.gradle', xcconfig = 'ios/debug.xcconfig', android = '.github/workflows/android.yml', ios = '.github/workflows/ios.yml'] = args;
+  const [angular = 'angular.json', tunablesPath = 'src/config/tunables.ts', gradle = 'android/app/build.gradle', xcconfig = 'ios/app-id.xcconfig', android = '.github/workflows/android.yml', ios = '.github/workflows/ios.yml'] = args;
   const tunables = await readFile(tunablesPath, 'utf8');
   findings = [
     ...checkAngularConfigurations(JSON.parse(await readFile(angular, 'utf8'))),

@@ -83,10 +83,11 @@ try {
     ['PLT-013 ios-marker', 'App/App/DocumentAccessPlugin.swift', (text) => text.replaceAll('UNVERIFIED(ios)', 'checked')],
     ['PLT-013 ios-unregistered-source', 'App/App.xcodeproj/project.pbxproj', (text) => text.replaceAll('ImmersivePlugin.swift in Sources', 'ImmersivePlugin.swift in Elsewhere')],
     ['GEN-003 ios-bundle-id', 'App/App.xcodeproj/project.pbxproj', (text) => text.replace('= "$(APP_BUNDLE_ID)";', '= com.getcapacitor.App;')],
-    ['GEN-011 ios-default-bundle-id', 'debug.xcconfig', (text) => text.replace('APP_BUNDLE_ID = app.web.codexmusicaefree', 'APP_BUNDLE_ID = app.web.codexmusicae')],
+    ['GEN-011 ios-default-bundle-id', 'app-id.xcconfig', (text) => text.replace('APP_BUNDLE_ID = app.web.codexmusicaefree', 'APP_BUNDLE_ID = app.web.codexmusicae')],
+    ['GEN-011 ios-release-without-bundle-id', 'App/App.xcodeproj/project.pbxproj', (text) => text.replace(/(\/\* Release \*\/ = \{\s*isa = XCBuildConfiguration;\s*)baseConfigurationReference = [0-9A-F]+ \/\* app-id\.xcconfig \*\/;\s*/, '$1')],
   ];
   const swiftSources = (await readdir(join(repositoryRoot, 'ios/App/App'))).filter((name) => name.endsWith('.swift'));
-  const iosFiles = ['App/App/Info.plist', 'App/App.xcodeproj/project.pbxproj', 'debug.xcconfig', ...swiftSources.map((name) => `App/App/${name}`)];
+  const iosFiles = ['App/App/Info.plist', 'App/App.xcodeproj/project.pbxproj', 'debug.xcconfig', 'app-id.xcconfig', ...swiftSources.map((name) => `App/App/${name}`)];
   for (const [name, broken, change] of iosBroken) {
     const copy = join(fixtureRoot, 'ios-copy');
     for (const file of iosFiles) {
@@ -241,7 +242,7 @@ try {
     ['workflow-wrong-app-id', { ios: iosText.replace('appId: app.web.codexmusicae\n', 'appId: app.web.other\n') }],
   ];
   for (const [name, change] of editionDefects) {
-    const files = { angular: angularText, tunables: tunablesReal, gradle: gradleText, xcconfig: await real('ios/debug.xcconfig'), android: androidText, ios: iosText, ...change };
+    const files = { angular: angularText, tunables: tunablesReal, gradle: gradleText, xcconfig: await real('ios/app-id.xcconfig'), android: androidText, ios: iosText, ...change };
     const paths = Object.fromEntries(Object.keys(files).map((key) => [key, join(editionsRoot, `${name}.${key}`)]));
     for (const key of Object.keys(files)) await writeFile(paths[key], files[key], 'utf8');
     const result = await runNode('scripts/check-editions.mjs', ...['angular', 'tunables', 'gradle', 'xcconfig', 'android', 'ios'].map((key) => relative(repositoryRoot, paths[key])));

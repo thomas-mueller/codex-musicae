@@ -1,4 +1,2 @@
 CAPACITOR_DEBUG = true
-// GEN-011: bundle ID of the edition; the default is the free app, ios/edition.xcconfig (scripts/apply-edition.mjs) overrides it.
-APP_BUNDLE_ID = app.web.codexmusicaefree
-#include? "edition.xcconfig"
+#include "app-id.xcconfig"

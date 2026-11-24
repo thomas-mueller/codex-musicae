@@ -93,7 +93,13 @@ if (project !== null) {
   for (const id of new Set(ids)) {
     if (id !== '"$(APP_BUNDLE_ID)"') violations.push(`project.pbxproj: PRODUCT_BUNDLE_IDENTIFIER ${id} must be "$(APP_BUNDLE_ID)"`);
   }
-  const defaults = await readFile(join(iosDir, 'debug.xcconfig'), 'utf8').catch(() => '');
+  const defaults = await readFile(join(iosDir, 'app-id.xcconfig'), 'utf8').catch(() => '');
+  if (defaults.match(/^APP_BUNDLE_ID = (\S+)/m)?.[1] !== expected.appId) violations.push(`app-id.xcconfig: the default APP_BUNDLE_ID must be ${expected.appId} (the free app)`);
+  // The Release configuration has no debug.xcconfig: it must read the bundle ID itself, or an archive has no bundle ID.
+  const debugConfig = await readFile(join(iosDir, 'debug.xcconfig'), 'utf8').catch(() => '');
+  if (!/^#include\s+"app-id\.xcconfig"/m.test(debugConfig)) violations.push('debug.xcconfig: must include app-id.xcconfig');
+  const release = project.match(/\/\* Release \*\/ = \{\s*isa = XCBuildConfiguration;\s*baseConfigurationReference = [0-9A-F]+ \/\* app-id\.xcconfig \*\/;/);
+  if (!release) violations.push('project.pbxproj: the project-level Release configuration must use app-id.xcconfig (APP_BUNDLE_ID)');
   if (defaults.match(/^APP_BUNDLE_ID = (\S+)/m)?.[1] !== expected.appId) violations.push(`debug.xcconfig: the default APP_BUNDLE_ID must be ${expected.appId} (the free app)`);
 }
 
