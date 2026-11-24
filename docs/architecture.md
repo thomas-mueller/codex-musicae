@@ -134,6 +134,7 @@ Port methods return `Result<T, E>` with a closed set of error codes per port; ad
 - **Component tests:** shell, toolbar, tabs with fake ports.
 - **E2E (Playwright, Chromium/Firefox/WebKit):** open a PDF, navigate, switch modes, draw, save a copy.
 - **Golden detection corpus** and **PDF round trip** (M17); **performance budgets** against a large reference PDF (M17).
+- **Corpus suites (V2-M3b, DEC-152):** every real PDF of `e2e/corpus/` belongs to the `detection` suite (systems per page against the owner's reviewed counts, run under the profiles of `profiles.json` on each engine of the entry, differences recorded as `deviations`), the `load` suite (Chromium: detection and navigation in parallel, `T:budgets`, cache and canvas invariants, fails the `perf` job) or both. A change of detection algorithm or settings is a new profile.
 - Tests carry requirement IDs in their names.
 
 ## Version 2

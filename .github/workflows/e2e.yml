@@ -54,6 +54,8 @@ jobs:
           - { project: webkit-ipad, browser: webkit, dev: '0', grep: '@smoke' }
     env:
       E2E_DEV_BUILD: ${{ matrix.dev }}
+      # V2-M3 S2: the specs of saving, restoring and persisted settings run against the paid edition (the web build is the free one).
+      E2E_PAID_BUILD: '1'
       # WebKit uses about 5 GB per worker on the corpus and drawing specs; two workers exhaust the 16 GB runner and detection stalls. Empty = the default of playwright.config.ts.
       E2E_WORKERS: ${{ matrix.workers }}
     steps:
@@ -86,9 +88,13 @@ jobs:
       - name: Production build
         run: npm run build
 
+      - name: Paid edition build
+        run: npm run build:native-paid -- --output-path dist/codexmusicae-paid
+
+      # The development build is the paid edition too: the saving specs that use its debug hook need saving switched on.
       - name: Development build
         if: ${{ matrix.dev == '1' }}
-        run: npm run build -- --configuration development --output-path dist/codexmusicae-dev
+        run: npm run build -- --configuration development,native-paid --output-path dist/codexmusicae-dev
 
       # TST-011: the PDFs of e2e/corpus/urls.txt; a failed download or a changed checksum is a warning, the entry is skipped.
       - name: Fetch the corpus PDFs
@@ -140,7 +146,7 @@ jobs:
         run: npm run build
 
       - name: Development build (debug hook for the memory test)
-        run: npm run build -- --configuration development --output-path dist/codexmusicae-dev
+        run: npm run build -- --configuration development,native-paid --output-path dist/codexmusicae-dev
 
       - name: Performance tests
         run: npx playwright test --project=perf

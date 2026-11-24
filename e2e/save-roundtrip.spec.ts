@@ -11,6 +11,9 @@ import {
 } from './support/saving';
 
 import type { Page } from '@playwright/test';
+import { PAID_URL } from './support/editions';
+// V2-M3 S2: these specs need saving, restoring or persisted settings, which the free build switches off.
+test.use({ baseURL: PAID_URL });
 
 const PEN_ROW = 0.25;
 const HIGHLIGHTER_ROW = 0.6;

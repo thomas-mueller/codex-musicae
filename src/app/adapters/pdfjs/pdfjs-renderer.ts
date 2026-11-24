@@ -186,6 +186,11 @@ class PdfJsDocumentHandle implements PdfDocumentHandle {
       if (signal.aborted) {
         return err('cancelled');
       }
+      if (req.fresh) {
+        // NFR-028: a repeated render of a warm page can draw nothing (pdf.js reuses images it already handed to the canvas): start cold.
+        page.cleanup();
+        this.warm = this.warm.filter((n) => n !== pageNumber);
+      }
       canvas = this.createCanvas(width, height);
       const context = canvas.getContext('2d');
       if (!context) {

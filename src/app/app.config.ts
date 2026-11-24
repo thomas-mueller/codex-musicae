@@ -4,6 +4,7 @@ import {
   provideEnvironmentInitializer,
   provideZonelessChangeDetection,
   inject,
+  InjectionToken,
   isDevMode,
 } from '@angular/core';
 import { provideServiceWorker } from '@angular/service-worker';
@@ -12,6 +13,16 @@ import { Capacitor } from '@capacitor/core';
 import { provideTransloco } from '@jsverse/transloco';
 import { provideRouter } from '@angular/router';
 import { TUNABLES } from '../config/tunables';
+// EDN-007: the build replaces this file with features.native.ts for the native editions (angular.json fileReplacements).
+import { FEATURES } from '../config/features.web';
+import { resolveFeatures } from '../config/edition';
+import type { Edition } from '../config/edition';
+import { FEATURE_FLAGS } from './ports/feature-flags';
+import type { FeatureFlags } from './ports/feature-flags';
+import type { FileAccess } from './ports/file-access';
+import { FeatureFileAccess, persistsFileHandles } from './adapters/feature/feature-file-access';
+import { createPreferences } from './adapters/feature/feature-preferences';
+import { MemoryHandleStore } from './adapters/web/memory-handle-store';
 import { cacheBudgetFor } from './core/cache-budget';
 import { tunablesToCssVars } from './state/css-vars';
 import { DetectionService } from './state/detection.service';
@@ -58,7 +69,12 @@ import { KeyboardInput } from './input/keyboard-input';
 import { NavigationHandler } from './input/navigation-handler';
 import { routes } from './app.routes';
 
+/** The platform file access before the feature switches are applied; only the OPEN_WITH adapter needs the concrete class. */
+const RAW_FILE_ACCESS = new InjectionToken<FileAccess>('RAW_FILE_ACCESS');
+
 declare const ngDevMode: boolean | object | undefined;
+/** EDN-010: build constant set by the build configuration (angular.json `define`): 'paid' only for native-paid. */
+declare const EDITION: Edition;
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -67,6 +83,7 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(),
     { provide: APP_VERSION, useValue: APP_VERSION_DISPLAY },
     { provide: APP_VERSION_FULL, useValue: APP_VERSION_FULL_VALUE },
+    { provide: FEATURE_FLAGS, useValue: resolveFeatures(FEATURES, typeof EDITION === 'undefined' ? 'free' : EDITION) },
     provideServiceWorker('ngsw-worker.js', {
       enabled: shouldRegisterServiceWorker(isDevMode(), Capacitor),
       registrationStrategy: 'registerWhenStable:30000',
@@ -132,6 +149,10 @@ export const appConfig: ApplicationConfig = {
           detect,
           sourceRenders: () => (renderer instanceof WorkingResolutionRenderer ? renderer.stats.sourceRenders : 0),
           directRenders: () => (renderer instanceof WorkingResolutionRenderer ? renderer.stats.directRenders : 0),
+          rasterFaults: () => {
+            const stats = renderer instanceof WorkingResolutionRenderer ? renderer.stats : null;
+            return { lost: stats?.lostRasters ?? 0, flat: stats?.flatRasters ?? 0, retries: stats?.rasterRetries ?? 0 };
+          },
           startedOrder: () => session.activeDocument()?.detection.startedOrder ?? [],
           detectionState: () => {
             const doc = session.activeDocument();
@@ -182,14 +203,23 @@ export const appConfig: ApplicationConfig = {
     { provide: DETECTION_ENGINE, useFactory: () => new OpenCvDetectionEngine() },
     { provide: PDF_WRITER, useFactory: () => new PdfLibWriter() },
     { provide: APP_LIFECYCLE, useFactory: () => new WebAppLifecycle() },
-    { provide: PREFERENCES, useFactory: () => new WebPreferences() },
+    // EDN-005: the switches decide what is persisted; the web preferences adapter is still the paid configuration's store.
+    { provide: PREFERENCES, useFactory: () => createPreferences(inject(FEATURE_FLAGS), () => new WebPreferences()) },
     { provide: DEVICE_INFO, useFactory: () => new WebDeviceInfo() },
     // One instance per platform: the open-with adapter hands its files to the same handle store the file access reads from.
-    { provide: FILE_ACCESS, useFactory: () => (Capacitor.isNativePlatform() ? new CapFileAccess() : new WebFileAccess()) },
+    {
+      provide: RAW_FILE_ACCESS,
+      useFactory: () =>
+        Capacitor.isNativePlatform()
+          ? new CapFileAccess()
+          : createWebFileAccess(inject(FEATURE_FLAGS)),
+    },
+    // EDN-001, EDN-005: writes, copies and stored handles are gated by the switches.
+    { provide: FILE_ACCESS, useFactory: () => new FeatureFileAccess(inject(RAW_FILE_ACCESS), inject(FEATURE_FLAGS)) },
     {
       provide: OPEN_WITH,
       useFactory: () => {
-        const access = inject(FILE_ACCESS);
+        const access = inject(RAW_FILE_ACCESS);
         return access instanceof CapFileAccess
           ? new CapOpenWith((file) => access.openIncoming(file))
           : new WebOpenWith((handle) => (access as WebFileAccess).adoptHandle(handle));
@@ -202,6 +232,11 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
   ]
 };
+
+/** EDN-014: stored file handles (IndexedDB) only when a switch needs them; otherwise they live in memory. */
+export function createWebFileAccess(flags: FeatureFlags): WebFileAccess {
+  return new WebFileAccess(persistsFileHandles(flags) ? {} : { handleStore: new MemoryHandleStore() });
+}
 
 interface CapacitorPlatform {
   isNativePlatform(): boolean;

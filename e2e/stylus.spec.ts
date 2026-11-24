@@ -3,6 +3,9 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { TUNABLES } from '../src/config/tunables';
 import { desktopTest } from './support/desktop';
 import { label, openScoreInAnnotation } from './support/score';
+import { PAID_URL } from './support/editions';
+// V2-M3 S2: these specs need saving, restoring or persisted settings, which the free build switches off.
+test.use({ baseURL: PAID_URL });
 
 test.use({ viewport: { width: 1600, height: 700 } });
 

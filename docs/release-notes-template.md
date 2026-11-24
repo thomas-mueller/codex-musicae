@@ -4,7 +4,7 @@ Copy this file into the GitHub release (or a note next to the tag) and fill it i
 
 ## Version
 
-- Version string: `____` (`git describe --tags --always --long`; the info icon of the app shows the display form `vX.Y.Z`, Z = tag patch + commits since the tag)
+- Version string: `____` (`git describe --tags --always --long`; the info icon of the app shows the same text)
 - Tag: `v0.<n>.0` (milestone) or `v0.<n>.<p>` (fix); for the release of v1 additionally the annotated tag `v1.0.0` on the same commit
 - Date: ____
 

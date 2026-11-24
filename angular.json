@@ -71,6 +71,9 @@
                 "output": "assets/opencv"
               }
             ],
+            "define": {
+              "EDITION": "'free'"
+            },
             "styles": [
               "src/styles.css"
             ],
@@ -99,6 +102,26 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "web": {},
+            "native-free": {
+              "fileReplacements": [
+                {
+                  "replace": "src/config/features.web.ts",
+                  "with": "src/config/features.native.ts"
+                }
+              ]
+            },
+            "native-paid": {
+              "fileReplacements": [
+                {
+                  "replace": "src/config/features.web.ts",
+                  "with": "src/config/features.native.ts"
+                }
+              ],
+              "define": {
+                "EDITION": "'paid'"
+              }
             }
           },
           "defaultConfiguration": "production"

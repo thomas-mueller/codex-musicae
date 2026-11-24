@@ -18,6 +18,14 @@ jobs:
   android:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - edition: free
+            appId: app.web.codexmusicaefree
+          - edition: paid
+            appId: app.web.codexmusicae
     steps:
       - name: Checkout validated commit
         uses: actions/checkout@v4
@@ -26,8 +34,14 @@ jobs:
           fetch-depth: 0
           lfs: true
 
+      # GEN-011, EDN-010: one run per edition (free app, paid app): the same sequence on Android and iOS.
+      - name: Apply the edition
+        run: node scripts/apply-edition.mjs ${{ matrix.edition }}
+
       - name: Build web app
         uses: ./.github/actions/build-web
+        with:
+          script: build:native-${{ matrix.edition }}
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -43,6 +57,8 @@ jobs:
         run: sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Sync Capacitor Android project
+        env:
+          CAP_EDITION: ${{ matrix.edition }}
         run: npx cap sync android
 
       - name: Compute Android version
@@ -92,7 +108,7 @@ jobs:
         id: validate-apk
         shell: bash
         env:
-          EXPECTED_PACKAGE: app.web.codexmusicae
+          EXPECTED_PACKAGE: ${{ matrix.appId }}
         run: |
           apk_path="$(find android/app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print -quit)"
           if [ -z "$apk_path" ]; then
@@ -130,7 +146,7 @@ jobs:
 
       - name: Upload APK to Firebase App Distribution
         env:
-          FIREBASE_ANDROID_APP_ID: ${{ vars.FIREBASE_ANDROID_APP_ID }}
+          FIREBASE_ANDROID_APP_ID: ${{ matrix.edition == 'paid' && vars.FIREBASE_ANDROID_APP_ID || vars.FIREBASE_ANDROID_APP_ID_FREE }}
           FIREBASE_ANDROID_TESTER_GROUPS: ${{ vars.FIREBASE_ANDROID_TESTER_GROUPS }}
           FIREBASE_OWNERS_TESTER_GROUPS: ${{ vars.FIREBASE_OWNERS_TESTER_GROUPS }}
           BRANCH: ${{ github.event.workflow_run.head_branch || github.ref_name }}

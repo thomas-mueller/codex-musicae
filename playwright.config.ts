@@ -2,10 +2,14 @@ import { defineConfig, devices } from '@playwright/test';
 
 const E2E_BASE_URL = 'http://127.0.0.1:4173';
 export const E2E_DEV_BASE_URL = 'http://127.0.0.1:4174';
+// V2-M3 S2: the paid edition (all feature switches on) as a web build; specs of saving, restoring and recent files run against it.
+const E2E_PAID_BASE_URL = 'http://127.0.0.1:4175';
 const IN_CI = Boolean(process.env['CI']);
 // Locally both builds are made and served. In CI only the job that built the development output serves it (E2E_DEV_BUILD=1);
 // the specs that need it run on desktop Chromium only.
 const WITH_DEV_SERVER = !IN_CI || process.env['E2E_DEV_BUILD'] === '1';
+// The paid build is served the same way: locally always, in CI only where the job built it (E2E_PAID_BUILD=1).
+const WITH_PAID_SERVER = !IN_CI || process.env['E2E_PAID_BUILD'] === '1';
 
 // Timeouts are generous on purpose: OpenCV and pdf.js are CPU-bound and the CI runners are small (PIP-001).
 const TEST_TIMEOUT_MS = 120_000;
@@ -105,9 +109,20 @@ export default defineConfig({
     ...(WITH_DEV_SERVER
       ? [
           {
-            // Development build (ngDevMode): the only one that carries the `window.__cm` debug hook, used by e2e/resource.spec.ts.
-            command: `${buildFirst('npm run build -- --configuration development --output-path dist/codexmusicae-dev')}node scripts/serve-static.mjs dist/codexmusicae-dev/browser 4174`,
+            // Development build of the paid edition (ngDevMode): the only one that carries the `window.__cm` debug hook, used by e2e/resource.spec.ts.
+            command: `${buildFirst('npm run build -- --configuration development,native-paid --output-path dist/codexmusicae-dev')}node scripts/serve-static.mjs dist/codexmusicae-dev/browser 4174`,
             url: E2E_DEV_BASE_URL,
+            timeout: WEB_SERVER_TIMEOUT_MS,
+            reuseExistingServer: !IN_CI,
+          },
+        ]
+      : []),
+    ...(WITH_PAID_SERVER
+      ? [
+          {
+            // Paid edition (EDITION 'paid', features.native.ts forced on): V1 saving, restore and recent files (EDN-008).
+            command: `${buildFirst('npm run build:native-paid -- --output-path dist/codexmusicae-paid')}node scripts/serve-static.mjs dist/codexmusicae-paid/browser 4175`,
+            url: E2E_PAID_BASE_URL,
             timeout: WEB_SERVER_TIMEOUT_MS,
             reuseExistingServer: !IN_CI,
           },

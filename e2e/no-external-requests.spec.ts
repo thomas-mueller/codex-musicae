@@ -1,10 +1,13 @@
-import { expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 import { desktopTest } from './support/desktop';
 import { inkedPixelsNear } from './support/pixels';
 import { foreignRequests, recordRequests } from './support/requests';
 import { openScore, waitForBars, waitForFinalSlideCount } from './support/score';
 import { COLOR_TOLERANCE, drag, enterAnnotation, enterOrganization, forceFilePaths, inspect, qpdfCheck, RED, saveCopyDownload, strokeLine, tool } from './support/saving';
+import { PAID_URL } from './support/editions';
+// V2-M3 S2: these specs need saving, restoring or persisted settings, which the free build switches off.
+test.use({ baseURL: PAID_URL });
 
 // The production build (the default base URL) makes no request that leaves the app's own origin (NFR-017, NFR-018, R-8d): the whole
 // working flow is recorded, not just the start page.

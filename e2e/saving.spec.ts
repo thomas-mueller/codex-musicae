@@ -8,6 +8,9 @@ import {
   addJumpToStart, COLOR_TOLERANCE, drag, enterAnnotation, enterOrganization, forceFilePaths, inspect, openPdf, qpdfCheck, RED,
   redPixelsOnSlide, saveCopyDownload, shorterPdfWithMetadata, strokeLine, tool, waitForDrawnSlide,
 } from './support/saving';
+import { PAID_URL } from './support/editions';
+// V2-M3 S2: these specs need saving, restoring or persisted settings, which the free build switches off.
+test.use({ baseURL: PAID_URL });
 
 test.use({ viewport: { width: 1600, height: 700 } });
 

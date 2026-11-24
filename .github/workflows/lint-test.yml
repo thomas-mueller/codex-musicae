@@ -61,3 +61,12 @@ jobs:
 
       - name: Version and build output check
         run: node scripts/check-versions.mjs --built
+
+      # EDN-013, GEN-011: each native build starts from features.native.ts, the web build from features.web.ts.
+      - name: Edition builds and consistency check
+        run: |
+          node scripts/check-editions.mjs --built dist/codexmusicae/browser web
+          for edition in free paid; do
+            npm run "build:native-$edition" -- --output-path "dist/native-$edition"
+            node scripts/check-editions.mjs --built "dist/native-$edition/browser" native
+          done

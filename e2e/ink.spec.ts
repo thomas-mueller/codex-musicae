@@ -5,6 +5,9 @@ import { desktopTest } from './support/desktop';
 import { findWhiteRun, inkedPixelsNear, pixelAt, readPixels } from './support/pixels';
 import { label, openScore, openScoreInAnnotation } from './support/score';
 import { scaled, SCROLL_TIMEOUT_MS } from './support/timing';
+import { PAID_URL } from './support/editions';
+// V2-M3 S2: these specs need saving, restoring or persisted settings, which the free build switches off.
+test.use({ baseURL: PAID_URL });
 
 
 test.use({ viewport: { width: 1600, height: 700 } });

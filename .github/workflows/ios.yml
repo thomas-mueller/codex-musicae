@@ -27,6 +27,14 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: macos-latest
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - edition: free
+            appId: app.web.codexmusicaefree
+          - edition: paid
+            appId: app.web.codexmusicae
     steps:
       - name: Checkout validated commit
         uses: actions/checkout@v4
@@ -35,10 +43,18 @@ jobs:
           fetch-depth: 0
           lfs: true
 
+      # GEN-011, EDN-010: one run per edition (free app, paid app): the same sequence on Android and iOS.
+      - name: Apply the edition
+        run: node scripts/apply-edition.mjs ${{ matrix.edition }}
+
       - name: Build web app
         uses: ./.github/actions/build-web
+        with:
+          script: build:native-${{ matrix.edition }}
 
       - name: Sync Capacitor iOS project
+        env:
+          CAP_EDITION: ${{ matrix.edition }}
         run: npx cap sync ios
 
       - name: Show tool versions
@@ -57,9 +73,9 @@ jobs:
         env:
           IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
           IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
-          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          IOS_PROVISIONING_PROFILE_BASE64: ${{ matrix.edition == 'paid' && secrets.IOS_PROVISIONING_PROFILE_BASE64 || secrets.IOS_PROVISIONING_PROFILE_BASE64_FREE }}
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_CODEX_MUSICAE }}
-          FIREBASE_IOS_APP_ID: ${{ vars.FIREBASE_IOS_APP_ID }}
+          FIREBASE_IOS_APP_ID: ${{ matrix.edition == 'paid' && vars.FIREBASE_IOS_APP_ID || vars.FIREBASE_IOS_APP_ID_FREE }}
         run: |
           if [ -n "$IOS_CERTIFICATE_BASE64" ] && [ -n "$IOS_CERTIFICATE_PASSWORD" ] && [ -n "$IOS_PROVISIONING_PROFILE_BASE64" ] \
             && [ -n "$FIREBASE_SERVICE_ACCOUNT" ] && [ -n "$FIREBASE_IOS_APP_ID" ]; then
@@ -91,7 +107,7 @@ jobs:
         env:
           IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
           IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
-          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          IOS_PROVISIONING_PROFILE_BASE64: ${{ matrix.edition == 'paid' && secrets.IOS_PROVISIONING_PROFILE_BASE64 || secrets.IOS_PROVISIONING_PROFILE_BASE64_FREE }}
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_CODEX_MUSICAE }}
         run: |
           set -euo pipefail
@@ -143,7 +159,7 @@ jobs:
         if: ${{ steps.gate.outputs.available == 'true' }}
         shell: bash
         env:
-          EXPECTED_BUNDLE_ID: app.web.codexmusicae
+          EXPECTED_BUNDLE_ID: ${{ matrix.appId }}
         run: |
           set -euo pipefail
           archive_path="$RUNNER_TEMP/App.xcarchive"
@@ -177,7 +193,7 @@ jobs:
         if: ${{ steps.gate.outputs.available == 'true' }}
         shell: bash
         env:
-          EXPECTED_BUNDLE_ID: app.web.codexmusicae
+          EXPECTED_BUNDLE_ID: ${{ matrix.appId }}
           EXPECTED_MIN_OS: '16.4'
         run: |
           set -euo pipefail
@@ -206,7 +222,7 @@ jobs:
       - name: Upload IPA to Firebase App Distribution
         if: ${{ steps.gate.outputs.available == 'true' }}
         env:
-          FIREBASE_IOS_APP_ID: ${{ vars.FIREBASE_IOS_APP_ID }}
+          FIREBASE_IOS_APP_ID: ${{ matrix.edition == 'paid' && vars.FIREBASE_IOS_APP_ID || vars.FIREBASE_IOS_APP_ID_FREE }}
           FIREBASE_IOS_TESTER_GROUPS: ${{ vars.FIREBASE_IOS_TESTER_GROUPS }}
           FIREBASE_OWNERS_TESTER_GROUPS: ${{ vars.FIREBASE_OWNERS_TESTER_GROUPS }}
           BRANCH: ${{ github.event.workflow_run.head_branch || github.ref_name }}
@@ -260,7 +276,7 @@ jobs:
         if: ${{ steps.gate.outputs.available != 'true' }}
         uses: actions/upload-artifact@v4
         with:
-          name: codexmusicae-unsigned-ipa
+          name: codexmusicae-${{ matrix.edition }}-unsigned-ipa
           path: ${{ steps.unsigned-ipa.outputs.ipa_path }}
           retention-days: 14
           if-no-files-found: error
@@ -270,10 +286,11 @@ jobs:
         shell: bash
         env:
           VERSION: ${{ steps.unsigned-ipa.outputs.version }}
+          EDITION: ${{ matrix.edition }}
         run: |
           {
             echo '### Unsigned iOS build'
-            echo "Version $VERSION, artifact codexmusicae-unsigned-ipa (kept 14 days). It cannot be installed as it is: re-sign it with Sideloadly or AltStore and a free Apple ID (the app then runs for 7 days). Firebase App Distribution does not accept unsigned builds (docs/ios-distribution.md)."
+            echo "Version $VERSION, artifact codexmusicae-$EDITION-unsigned-ipa (kept 14 days). It cannot be installed as it is: re-sign it with Sideloadly or AltStore and a free Apple ID (the app then runs for 7 days). Firebase App Distribution does not accept unsigned builds (docs/ios-distribution.md)."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Remove temporary credentials
@@ -289,7 +306,7 @@ jobs:
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4
         with:
-          name: ios-build-log
+          name: ios-build-log-${{ matrix.edition }}
           path: ios-*.log
           retention-days: 7
           if-no-files-found: ignore

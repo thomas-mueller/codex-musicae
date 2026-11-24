@@ -49,8 +49,8 @@ V2 terms (target `v2` entries):
 - **GEN-008** [v1·done·M7] Every area not covered by PDF content (around the slide, filler outside the page, the empty state) uses `T:colors.canvasGrey`.
 - **GEN-009** [v1·changed·M7] Every control is an icon from the icon set; visible text is limited to numbers, the version string and error codes. *(Changed in V2 → GEN-013, V2-M5.)*
 - **GEN-010** [v1·done·M7] Every icon-only control has an accessible label from the translation files.
-- **GEN-011** [v2·todo·M3] The free and the paid app have distinct application IDs (Android `applicationId`, Capacitor `appId`, iOS bundle ID), both in `src/config/tunables.ts` (`T:identity.appId` for free plus one value for paid).
-- **GEN-012** [v2·todo·M3] A static check fails when an analytics or crash-reporting package is a dependency.
+- **GEN-011** [v2·done·M3] The free and the paid app have distinct application IDs (Android `applicationId`, Capacitor `appId`, iOS bundle ID), both in `src/config/tunables.ts` (`T:identity.appId` for free plus one value for paid).
+- **GEN-012** [v2·done·M3] A static check fails when an analytics or crash-reporting package is a dependency.
 - **GEN-013** [v2·todo·M5] Controls stay icons; visible text is limited to numbers, the version string, error codes, file names, mark labels and user texts, text annotations, the settings mode, dialogs and hint bubbles.
 
 ## I18 — Localization
@@ -435,9 +435,10 @@ V2 terms (target `v2` entries):
 - **NFR-022** [v2·todo·M14] Visible pages and tiles are never left blank after scrolling, zooming, page jumps or mode changes.
 - **NFR-023** [v2·todo·M14] Rendering keeps visible-first priority, cancels stale requests and uses a bounded queue.
 - **NFR-024** [v2·todo·M14] A watchdog periodically re-requests any empty visible area at the lowest priority, at most one request per tick.
-- **NFR-025** [v2·todo·M2] Rendering, detection and display work on a working raster whose size depends only on the page size and the view, never on the resolution of the PDF's images; source images larger than `T:pdf.sourceImageMaxBytes` are reduced by pdf.js, and source pixels are decoded for a region only when it is zoomed beyond the working resolution, one request at a time.
+- **NFR-025** [v2·todo·M2] Rendering, detection and display work on a working raster whose size depends only on the page size and the view (rebuilt only after a lost raster, NFR-028), never on the resolution of the PDF's images; source images larger than `T:pdf.sourceImageMaxBytes` are reduced by pdf.js, and source pixels are decoded for a region only when it is zoomed beyond the working resolution, one request at a time.
 - **NFR-026** [v2·done·M2b] While a page is among the most recently rendered ones (`T:pdf.warmPagesByDeviceMemoryGb`), the renderer keeps pdf.js's parsed page content and decoded source images: regions of the same page rendered one after another decode the page's source images once, not once per region. The state of a page is released when it leaves that set, when its document is destroyed and when its tab becomes inactive (NFR-020).
 - **NFR-027** [v2·done·M2b] Displays up to 4K (3840×2160 physical pixels, `devicePixelRatio` up to `T:resources.devicePixelRatioCap`) show slides at full device resolution: the slide canvas never exceeds `T:resources.maxCanvasPixels`, and prefetching a neighbor never evicts the current slide from the bitmap cache. Where the cache budget of the device cannot hold the current slide and its prefetched neighbors, prefetch is reduced (`prefetchNeighbors` becomes smaller) before the render resolution is lowered.
+- **NFR-028** [v2·done·M3] A working raster that comes back transparent (the browser dropped the canvas, seen in WebKit on large scans) is never used: pdf.js paints every rendered page opaque, so a small copy of the finished raster is read back (`T:resources.rasterProbeSize`) and a transparent sample means lost. A lost raster is rebuilt up to `T:resources.rasterLostRetries` times (the oldest other working raster is freed first) and then fails with `out-of-memory`, so detection reports the page as failed instead of 0 systems. An opaque flat raster may be a really white page and is accepted as it is (counted for diagnosis). Rebuilds are not counted as renders of the page in NFR-025.
 
 ## ARC — Architecture rules
 
@@ -449,7 +450,7 @@ V2 terms (target `v2` entries):
 - **ARC-006** [v1·done·M13] A single place in the input layer decides whether a pointer draws or navigates.
 - **ARC-007** [v2·done·M1] V2 keeps the V1 layers, ports and import matrix; a change to them needs a decision entry in `docs/decisions.md` first.
 - **ARC-008** [v2·done·M1] Every value in `src/config/tunables.ts` has a comment with unit and meaning; a check fails on a numeric value without one.
-- **ARC-009** [v2·todo·M3] Tunables and the feature configuration are bundled at build time; nothing of them is loaded at runtime.
+- **ARC-009** [v2·done·M3] Tunables and the feature configuration are bundled at build time; nothing of them is loaded at runtime.
 
 ## PIP — Pipelines and versioning
 
@@ -470,7 +471,7 @@ V2 terms (target `v2` entries):
 - **PIP-015** [v2·done·M1] A license check in `lint-test` fails when a production dependency has a license outside an allow-list; GPL and AGPL are never allowed.
 - **PIP-016** [v2·done·M1] Coverage is reported per kind of test (unit, integration, E2E and emulator, real-PDF detection, performance) in the CI job summary; a kind without coverage numbers reports its test count.
 - **PIP-017** [v2·done·M1] No coverage threshold fails a build.
-- **PIP-018** [v2·done·M1] Users see only the version `vX.Y.Z`: X.Y come from the nearest tag and Z is that tag's patch number plus the number of commits since the tag (`v1.1.0-19-g…-dirty` shows `v1.1.19`); no hash, no dirty flag. The full `git describe` string appears only in internal places. *(Z rule changed 2026-11-22, DEC-149.)*
+- **PIP-018** [v2·done·M1] Users see only the version `vX.Y.Z` taken from the nearest tag; the full `git describe` string appears only in internal places.
 - **PIP-019** [v2·done·M1] Android `versionName` is `X.Y.Z` (no `v`, no describe suffix).
 - **PIP-020** [v2·done·M1] A build check fails when the web, Android and iOS versions differ; free and paid builds have the same version.
 - **PIP-021** [v2·todo·M19] Store build numbers (Android `versionCode`, iOS build number) are the commit count, set by CI.
@@ -499,6 +500,11 @@ V2 terms (target `v2` entries):
 - **TST-020** [v2·todo·M17] Every persistence-related feature is tested in both configurations: free and web persist nothing, paid persists.
 - **TST-021** [v2·todo·M17] A low-memory stress test opens 40 real PDFs one after another and switches among them with a reduced heap limit; no crash, no blank tile, memory returns to a bounded level.
 - **TST-022** [v2·done·M2b] A report-only performance profile (`e2e/perf/render-profile.spec.ts`) runs the regular real PDF in annotation and presentation mode at 3840×2160 (devicePixelRatio 1), 2560×1440 (1.5) and 1920×1080 (2) and prints, per run: slide canvas size, source renders split into raster builds and direct region renders, time from key press to repaint (median, 95th percentile), JS heap and bitmap cache bytes against the budget. It asserts nothing about speed; the 4K budgets in `T:budgets` are set by the owner after reading the numbers.
+- **TST-023** [v2·todo·M3b] Every corpus entry in `e2e/corpus/expected.json` names the suites it belongs to (`detection`, `load` or both) and may carry tags and an `engines` list; a validator (`scripts/lib/corpus-schema.mjs`) rejects an unknown suite, profile or engine, a `detection` entry without counts, a `load`-only entry with counts and a narrowed `engines` list without a note. The detection profiles (named ways to run detection, today the V1 levels, later parameter sets) are listed in `e2e/corpus/profiles.json`.
+- **TST-024** [v2·todo·M3b] The detection suite runs each reviewed `detection` entry once per profile (the default profiles plus the entry's own) on each engine of its `engines` list and compares the systems per page with the owner's reviewed counts. What a profile or an engine gives differently is recorded as a `deviation` with the exact numbers, which the run asserts; a change of detection algorithm or settings is a new profile, not a change of the reviewed counts.
+- **TST-025** [v2·todo·M3b] The load suite runs every `load` entry on Chromium: open until the first slide, then detection of the whole file in parallel with slide stepping, large jumps, scrolling, zooming and a pen stroke. It asserts that the requested page is displayed and drawn after each action, that the budgets of `T:budgets` hold (slide change, longest main-thread task, stroke latency, heap, first slide), and that the bitmap cache stays within its budget, no canvas exceeds `T:resources.maxCanvasPixels` and no more than `T:resources.schedulerMaxPerClass` tasks of a class run at once. Under CPU throttling it asserts correctness and these invariants only. It does not check detection results.
+- **TST-026** [v2·todo·M3b] A breach of a load-suite assertion fails the `perf` job (no retries); every measured value is written as a row to the job summary (entry, scenario, value, limit with tolerance, result), without an artifact.
+- **TST-027** [v2·todo·M3b] Each end-to-end engine job has a time limit derived from the measured run time of its detection suite, and each detection run has its own timeout scaled by the page count; a run that does not finish fails its test with the engine and the file, not only the job.
 
 ## STY — Stylus support (v1-optional)
 
@@ -509,22 +515,22 @@ V2 terms (target `v2` entries):
 
 ## EDN — Editions and feature switches
 
-- **EDN-001** [v2·todo·M3] The free edition saves nothing: no autosave, no saving, no Send to and no export.
-- **EDN-002** [v2·todo·M3] In the free edition annotations, marks and organization changes work in memory and are lost when the file closes.
-- **EDN-003** [v2·todo·M3] Actions switched off by the edition stay visible and disabled.
-- **EDN-004** [v2·todo·M3] The web app has exactly the feature set of the free edition.
-- **EDN-005** [v2·todo·M3] The free edition persists no app state: no settings, zoom, recent files, session restore or per-file choices.
-- **EDN-006** [v2·todo·M3] The free feature set is defined per platform in two feature-configuration files in `src/config/` (`features.web.ts`, `features.native.ts`; the native file holds the free native set), separate from tunables; every feature has an on/off switch with a comment; the paid native build switches every switch of the native file on.
-- **EDN-007** [v2·todo·M3] Each build bundles only its own feature configuration; features read their switch through an injection token, never the files.
-- **EDN-008** [v2·todo·M3] Every feature stays in the code base, including persistence, saving, recent files and session restore; free and web only switch it off.
-- **EDN-009** [v2·todo·M3] Switches of web-only organizational features exist in `features.web.ts` only; the native file does not contain them.
-- **EDN-010** [v2·todo·M3] One code base builds a free and a paid app for Android and for iOS; the feature set is chosen at build time.
-- **EDN-011** [v2·todo·M3] Tests prove that in the free configuration every paid feature is unreachable: no save control is enabled and no file write call is made.
-- **EDN-012** [v2·todo·M3] Tests prove that the paid configuration enables every feature.
-- **EDN-013** [v2·todo·M3] A shared feature switch (every switch except the web-only ones of EDN-009) missing in either configuration file, or a web-only switch present in the native file, fails the build.
-- **EDN-014** [v2·todo·M3] The web build with its default configuration stores no cookies, localStorage, sessionStorage or IndexedDB data; a test on the production web build checks this in Chromium, Firefox and WebKit.
-- **EDN-015** [v2·todo·M3] The PWA service worker may cache the app's own files.
-- **EDN-016** [v2·todo·M3] The web app starts empty on every start: session restore, recent files and permission re-grant are off.
+- **EDN-001** [v2·done·M3] The free edition saves nothing: no autosave, no saving, no Send to and no export.
+- **EDN-002** [v2·done·M3] In the free edition annotations, marks and organization changes work in memory and are lost when the file closes.
+- **EDN-003** [v2·done·M3] Actions switched off by the edition stay visible and disabled.
+- **EDN-004** [v2·done·M3] The web app has exactly the feature set of the free edition.
+- **EDN-005** [v2·done·M3] The free edition persists no app state: no settings, zoom, recent files, session restore or per-file choices.
+- **EDN-006** [v2·done·M3] The free feature set is defined per platform in two feature-configuration files in `src/config/` (`features.web.ts`, `features.native.ts`; the native file holds the free native set), separate from tunables; every feature has an on/off switch with a comment; the paid native build switches every switch of the native file on.
+- **EDN-007** [v2·done·M3] Each build bundles only its own feature configuration; features read their switch through an injection token, never the files.
+- **EDN-008** [v2·done·M3] Every feature stays in the code base, including persistence, saving, recent files and session restore; free and web only switch it off.
+- **EDN-009** [v2·done·M3] Switches of web-only organizational features exist in `features.web.ts` only; the native file does not contain them.
+- **EDN-010** [v2·done·M3] One code base builds a free and a paid app for Android and for iOS; the feature set is chosen at build time.
+- **EDN-011** [v2·done·M3] Tests prove that in the free configuration every paid feature is unreachable: no save control is enabled and no file write call is made.
+- **EDN-012** [v2·done·M3] Tests prove that the paid configuration enables every feature.
+- **EDN-013** [v2·done·M3] A shared feature switch (every switch except the web-only ones of EDN-009) missing in either configuration file, or a web-only switch present in the native file, fails the build.
+- **EDN-014** [v2·done·M3] The web build with its default configuration stores no cookies, localStorage, sessionStorage or IndexedDB data; a test on the production web build checks this in Chromium, Firefox and WebKit.
+- **EDN-015** [v2·done·M3] The PWA service worker may cache the app's own files.
+- **EDN-016** [v2·done·M3] The web app starts empty on every start: session restore, recent files and permission re-grant are off.
 
 ## MRK — Marks, labels and bookmarks
 

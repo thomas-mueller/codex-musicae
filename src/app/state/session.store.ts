@@ -5,6 +5,7 @@ import { TUNABLES } from '../../config/tunables';
 import { parseMetadata, parseSession, reconcileMetadata } from '../core';
 import { APP_LIFECYCLE } from '../ports/app-lifecycle';
 import { APP_VERSION_FULL } from '../ports/app-version';
+import { FEATURE_FLAGS } from '../ports/feature-flags';
 import { FILE_ACCESS } from '../ports/file-access';
 import type { FileAccessError, FileRef, OpenedFile } from '../ports/file-access';
 import { PDF_RENDERER } from '../ports/pdf-renderer';
@@ -80,6 +81,7 @@ export class SessionStore {
   private readonly scheduler = inject(Scheduler);
   private readonly appVersion = inject(APP_VERSION_FULL);
   private readonly prefs = inject(PREFERENCES);
+  private readonly flags = inject(FEATURE_FLAGS);
   private readonly entries = signal<readonly TabEntry[]>([]);
   private readonly activeIdSignal = signal<string | null>(null);
   private readonly repickSignal = signal<ReadonlySet<string>>(new Set());
@@ -212,6 +214,9 @@ export class SessionStore {
     if (!entry.saver) {
       return Promise.resolve(false);
     }
+    if (!this.flags.autosave) {
+      return Promise.resolve(false); // EDN-001: nothing is written, so there is no access to ask for
+    }
     const saver = entry.saver;
     return this.files.requestWriteAccess(entry.ref()).then((result) => {
       if (result.ok) {
@@ -229,6 +234,9 @@ export class SessionStore {
   /** SAV-011, PLT-010: saves a copy of a tab (default: the active one) as "<name> (annotated).pdf". */
   saveCopy(id: string | null = this.activeIdSignal()): Promise<Result<void, FileAccessError | 'failed'>> {
     const entry = this.entries().find((e) => e.id === id);
+    if (!this.flags.saveCopy) {
+      return Promise.resolve(err('failed')); // EDN-001: no copy in the free edition
+    }
     return entry?.pipeline ? entry.pipeline.saveCopy(new AbortController().signal) : Promise.resolve(err('failed'));
   }
 
@@ -368,7 +376,7 @@ export class SessionStore {
     const { document } = entry;
     document.readOnly.set(!file.writable);
     entry.pipeline = new SavePipeline(document, file.ref, file.bytes, this.files, this.writer, this.scheduler, this.appVersion);
-    entry.saver = new SaveService(document, this.clock, entry.pipeline.run, TUNABLES.saving.autosaveIdleMs, this.injector);
+    entry.saver = new SaveService(document, this.clock, entry.pipeline.run, TUNABLES.saving.autosaveIdleMs, this.injector, this.flags.autosave);
     this.applyPendingPosition(entry);
     void document.load(file.bytes).then(() => {
       if (document.status() === 'ready') {
@@ -385,6 +393,9 @@ export class SessionStore {
    */
   async restore(): Promise<void> {
     try {
+      if (!this.flags.sessionRestore) {
+        return; // EDN-005: nothing is read, the app starts empty
+      }
       const snapshot = parseSession(await this.prefs.get(TUNABLES.persistence.sessionKey));
       if (!snapshot || snapshot.tabs.length === 0) {
         return;

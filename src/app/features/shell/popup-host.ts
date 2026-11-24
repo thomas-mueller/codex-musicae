@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 
+import { FEATURE_FLAGS } from '../../ports/feature-flags';
 import { APP_VERSION } from '../../ports/app-version';
 import type { FileRef } from '../../ports/file-access';
 import { AspectRatioService } from '../../state/aspect-ratio.service';
@@ -44,6 +45,7 @@ export class PopupHost {
   protected readonly version = inject(APP_VERSION);
   protected readonly session = inject(SessionStore);
   protected readonly preferences = inject(PreferencesStore);
+  protected readonly flags = inject(FEATURE_FLAGS);
   protected readonly levels = LEVEL_ENTRIES;
   protected readonly ids = {
     overflowTop: POPUP_OVERFLOW_TOP,

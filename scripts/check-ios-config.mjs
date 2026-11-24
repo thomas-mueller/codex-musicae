@@ -13,6 +13,7 @@ const value = (key) => tunables.match(new RegExp(`\\b${key}:\\s*'([^']*)'`))?.[1
 const expected = {
   appName: value('appName'),
   appId: value('appId'),
+  appIdPaid: value('appIdPaid'),
   deploymentTarget: value('deploymentTarget'),
   contentType: value('pdfContentType'),
   role: value('pdfTypeRole'),
@@ -86,11 +87,20 @@ if (project !== null) {
       violations.push(`project.pbxproj: IPHONEOS_DEPLOYMENT_TARGET ${target} must be ${expected.deploymentTarget}`);
     }
   }
+  // GEN-011: the bundle ID of the edition comes from ios/edition.xcconfig (scripts/apply-edition.mjs); the project reads $(APP_BUNDLE_ID).
   const ids = [...project.matchAll(/PRODUCT_BUNDLE_IDENTIFIER = ([^;]+);/g)].map((m) => m[1]);
   if (ids.length === 0) violations.push('project.pbxproj: no PRODUCT_BUNDLE_IDENTIFIER');
   for (const id of new Set(ids)) {
-    if (id !== expected.appId) violations.push(`project.pbxproj: PRODUCT_BUNDLE_IDENTIFIER ${id} must be ${expected.appId}`);
+    if (id !== '"$(APP_BUNDLE_ID)"') violations.push(`project.pbxproj: PRODUCT_BUNDLE_IDENTIFIER ${id} must be "$(APP_BUNDLE_ID)"`);
   }
+  const defaults = await readFile(join(iosDir, 'app-id.xcconfig'), 'utf8').catch(() => '');
+  if (defaults.match(/^APP_BUNDLE_ID = (\S+)/m)?.[1] !== expected.appId) violations.push(`app-id.xcconfig: the default APP_BUNDLE_ID must be ${expected.appId} (the free app)`);
+  // The Release configuration has no debug.xcconfig: it must read the bundle ID itself, or an archive has no bundle ID.
+  const debugConfig = await readFile(join(iosDir, 'debug.xcconfig'), 'utf8').catch(() => '');
+  if (!/^#include\s+"app-id\.xcconfig"/m.test(debugConfig)) violations.push('debug.xcconfig: must include app-id.xcconfig');
+  const release = project.match(/\/\* Release \*\/ = \{\s*isa = XCBuildConfiguration;\s*baseConfigurationReference = [0-9A-F]+ \/\* app-id\.xcconfig \*\/;/);
+  if (!release) violations.push('project.pbxproj: the project-level Release configuration must use app-id.xcconfig (APP_BUNDLE_ID)');
+  if (defaults.match(/^APP_BUNDLE_ID = (\S+)/m)?.[1] !== expected.appId) violations.push(`debug.xcconfig: the default APP_BUNDLE_ID must be ${expected.appId} (the free app)`);
 }
 
 const handover = await readFile(handoverPath, 'utf8').catch(() => null);
@@ -107,7 +117,7 @@ for (const name of swiftFiles) {
 
 // The ios workflow (PIP-004, PIP-010): unsigned simulator build on a macOS runner after lint-test, then signed steps that only run
 // when the Apple secrets exist and never leak them.
-const SECRETS = ['IOS_CERTIFICATE_BASE64', 'IOS_CERTIFICATE_PASSWORD', 'IOS_PROVISIONING_PROFILE_BASE64', 'FIREBASE_SERVICE_ACCOUNT_CODEX_MUSICAE'];
+const SECRETS = ['IOS_CERTIFICATE_BASE64', 'IOS_CERTIFICATE_PASSWORD', 'IOS_PROVISIONING_PROFILE_BASE64', 'IOS_PROVISIONING_PROFILE_BASE64_FREE', 'FIREBASE_SERVICE_ACCOUNT_CODEX_MUSICAE'];
 const GATE = "steps.gate.outputs.available == 'true'";
 // DEC-127: without the signing secrets the unsigned device IPA is kept as a GitHub artifact (Firebase rejects unsigned builds).
 const UNSIGNED_GATE = "steps.gate.outputs.available != 'true'";
@@ -148,8 +158,11 @@ if (workflow === null) {
     violations.push('ios.yml: the Firebase upload must send to the owners group and decide the iOS group by the branch');
   }
   if (/--groups\s+"\$FIREBASE_IOS_TESTER_GROUPS"/.test(upload)) violations.push('ios.yml: the iOS tester group must not be passed unconditionally');
-  const expectedBundleId = [...code.matchAll(/EXPECTED_BUNDLE_ID:\s*(\S+)/g)].map((m) => m[1]);
-  if (expectedBundleId.length === 0 || expectedBundleId.some((id) => id !== expected.appId)) violations.push(`ios.yml: EXPECTED_BUNDLE_ID must be ${expected.appId}`);
+  // GEN-011: one run per edition; EXPECTED_BUNDLE_ID is the matrix value and the matrix holds exactly the free and the paid ID.
+  const expectedBundleId = [...code.matchAll(/EXPECTED_BUNDLE_ID:\s*(.+)/g)].map((m) => m[1].trim());
+  if (expectedBundleId.length === 0 || expectedBundleId.some((id) => id !== '${{ matrix.appId }}')) violations.push('ios.yml: EXPECTED_BUNDLE_ID must be ${{ matrix.appId }}');
+  const matrixIds = [...code.matchAll(/^\s+appId:\s*(\S+)/gm)].map((m) => m[1]).sort();
+  if (matrixIds.join() !== [expected.appId, expected.appIdPaid].sort().join()) violations.push(`ios.yml: the matrix must build ${expected.appId} and ${expected.appIdPaid}`);
   if (!new RegExp(`EXPECTED_MIN_OS:\\s*'${expected.deploymentTarget}'`).test(code)) violations.push(`ios.yml: EXPECTED_MIN_OS must be ${expected.deploymentTarget}`);
 }
 

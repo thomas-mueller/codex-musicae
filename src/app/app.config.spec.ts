@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { hasBackButton, shouldRegisterServiceWorker } from './app.config';
+import { appConfig, hasBackButton, shouldRegisterServiceWorker } from './app.config';
+import { FEATURE_FLAGS } from './ports/feature-flags';
 
 describe('composition-root service-worker guard', () => {
   it('PLT-009 skips registration for a native Capacitor platform', () => {
@@ -36,5 +37,13 @@ describe('composition-root back-button guard', () => {
 
   it('PLT-007 registers no back button on the web', () => {
     expect(hasBackButton({ getPlatform: () => 'web' })).toBe(false);
+  });
+});
+
+describe('composition-root feature flags', () => {
+  it('EDN-007 provides the read-only FEATURE_FLAGS token from the feature file', () => {
+    const provider = (appConfig.providers as { provide?: unknown; useValue?: unknown }[]).find((entry) => entry.provide === FEATURE_FLAGS);
+    expect(provider).toBeDefined();
+    expect(Object.isFrozen(provider?.useValue)).toBe(true);
   });
 });

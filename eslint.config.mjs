@@ -89,6 +89,7 @@ export default tseslint.config(
         {
           patterns: [
             { group: ['@capacitor/*'], message: 'Capacitor APIs belong in adapters or the composition root.' },
+            { group: ['**/config/features.*'], message: 'EDN-007: feature files are imported by the composition root only; read FEATURE_FLAGS.' },
           ],
         },
       ],
@@ -152,6 +153,7 @@ export default tseslint.config(
             '../ports/**', '../adapters/**', '../state/**', '../input/**', '../features/**',
             '../../ports/**', '../../adapters/**', '../../state/**', '../../input/**', '../../features/**',
             '@angular/**', '@capacitor/**',
+            '**/config/features.*',
           ],
         },
       ],
@@ -162,7 +164,7 @@ export default tseslint.config(
     rules: {
       'no-restricted-imports': [
         'error',
-        { patterns: ['../adapters/**', '../state/**', '../input/**', '../features/**', '@capacitor/**'] },
+        { patterns: ['../adapters/**', '../state/**', '../input/**', '../features/**', '@capacitor/**', '**/config/features.*'] },
       ],
     },
   },
@@ -171,7 +173,7 @@ export default tseslint.config(
     rules: {
       'no-restricted-imports': [
         'error',
-        { patterns: ['../adapters/**', '../input/**', '../features/**', '@capacitor/**'] },
+        { patterns: ['../adapters/**', '../input/**', '../features/**', '@capacitor/**', '**/config/features.*'] },
       ],
     },
   },
@@ -180,7 +182,7 @@ export default tseslint.config(
     rules: {
       'no-restricted-imports': [
         'error',
-        { patterns: ['../ports/**', '../adapters/**', '../features/**', '@capacitor/**'] },
+        { patterns: ['../ports/**', '../adapters/**', '../features/**', '@capacitor/**', '**/config/features.*'] },
       ],
     },
   },
@@ -189,7 +191,7 @@ export default tseslint.config(
     rules: {
       'no-restricted-imports': [
         'error',
-        { patterns: ['../adapters/**', '../../adapters/**', '@capacitor/**'] },
+        { patterns: ['../adapters/**', '../../adapters/**', '@capacitor/**', '**/config/features.*'] },
       ],
     },
   },

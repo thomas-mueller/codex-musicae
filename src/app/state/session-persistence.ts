@@ -3,6 +3,7 @@ import { computed, effect, inject, Injectable, untracked } from '@angular/core';
 import { TUNABLES } from '../../config/tunables';
 import type { SessionSnapshot, TabSnapshot } from '../core';
 import { APP_LIFECYCLE } from '../ports/app-lifecycle';
+import { FEATURE_FLAGS } from '../ports/feature-flags';
 import { PREFERENCES } from '../ports/preferences';
 import { CLOCK } from './clock';
 import { OrgViewStore } from './org-view.store';
@@ -21,6 +22,7 @@ export class SessionPersistence {
   private readonly orgView = inject(OrgViewStore);
   private readonly prefs = inject(PREFERENCES);
   private readonly clock = inject(CLOCK);
+  private readonly enabled = inject(FEATURE_FLAGS).sessionRestore;
   private cancelTimer: (() => void) | null = null;
 
   /** Plain data: file references (never bytes) and positions. */
@@ -39,7 +41,7 @@ export class SessionPersistence {
     inject(APP_LIFECYCLE).onPause(() => this.flush());
     effect(() => {
       this.snapshot();
-      if (this.session.restored()) {
+      if (this.enabled && this.session.restored()) {
         untracked(() => this.schedule());
       }
     });
@@ -55,7 +57,7 @@ export class SessionPersistence {
 
   /** Writes the current snapshot now (pause, hide). */
   flush(): Promise<void> {
-    if (!this.session.restored()) {
+    if (!this.enabled || !this.session.restored()) {
       return Promise.resolve();
     }
     this.cancelTimer?.();

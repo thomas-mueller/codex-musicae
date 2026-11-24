@@ -9,7 +9,8 @@
 export const TUNABLES = {
   identity: {
     appName: 'CodexMusicae', // GEN-001
-    appId: 'app.web.codexmusicae', // GEN-002, GEN-003
+    appId: 'app.web.codexmusicaefree', // GEN-002, GEN-003, GEN-011: Capacitor appId, Android applicationId and iOS bundle ID of the FREE app
+    appIdPaid: 'app.web.codexmusicae', // GEN-011: the same three IDs of the PAID app (the ID of V1)
   },
 
   colors: {
@@ -298,6 +299,11 @@ export const TUNABLES = {
     workingLongSidePx: 3600, // NFR-025: long side in pixels of the working raster of a page; views up to this scale never decode the source images
     workingPagesKept: 3, // NFR-025: working rasters kept per document (about 40 MB each at the canvas cap)
     sourceDecodeSlots: 1, // NFR-025: source renders (pdf.js decodes the page's images) running at once per document
+    rasterProbeSize: 32, // NFR-028: px (square) of the small copy of a finished working raster that is read back to check it
+    rasterMinAlpha: 250, // NFR-028: alpha (0..255) below which a probe pixel counts as transparent; a rendered page is opaque, a dropped canvas is not
+    rasterFlatTolerance: 2, // NFR-028: gray levels per channel within which the probe counts as one flat colour
+    rasterLostRetries: 2, // NFR-028: rebuilds of a working raster that came back transparent before the build fails with out-of-memory
+    rasterRetryDelayMs: 300, // NFR-028 (ms): wait before a rebuild of a lost raster, times the number of the rebuild
   },
 
   files: {
@@ -361,6 +367,12 @@ export const TUNABLES = {
     keyPrefix: 'cm.v1.', // FIL-015 (Preferences store: UI state and file references only)
     sessionDebounceMs: 500, // FIL-011: delay before the session snapshot is written
     sessionKey: 'session', // FIL-011: preference key of the session snapshot
+    // EDN-005: which feature switch (config/features.*.ts) guards a preference key; a key is matched by `name` or `name.` prefix.
+    switchByKeyPrefix: {
+      recent: 'recentFiles', // EDN-005: the list of recent files
+      session: 'sessionRestore', // EDN-005: the session snapshot (open tabs and positions)
+    },
+    defaultKeySwitch: 'persistSettings', // EDN-005: every other preference key (tool settings, stylus, aspect ratios) is a setting
   },
 
   testing: {
