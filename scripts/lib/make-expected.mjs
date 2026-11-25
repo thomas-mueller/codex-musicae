@@ -1,8 +1,11 @@
 // Expectation helper logic (V2-M2 S2, TST-013, TST-014). Decides which corpus PDFs to measure and merges the measured system counts into
 // e2e/corpus/expected.json. Pure: the measuring itself is done by e2e/tools/propose-expected.spec.ts, called from scripts/make-expected.mjs.
 
-/** Detection level of the proposals (the V1 level; V2-M8 replaces it by the parameter set). */
-export const PROPOSAL_LEVEL = 'standard';
+import { validateEntry } from './corpus-schema.mjs';
+
+/** Profile of the proposals (a name from e2e/corpus/profiles.json; V2-M8 adds parameter-set profiles). */
+export const PROPOSAL_PROFILE = 'v1-standard';
+const LOAD_NOTE = 'load file: only the load suite uses it';
 
 /** The PDFs of the corpus: those of the folder and those of the download cache; a name in both is taken from the folder. */
 export function listCorpusPdfs({ realFiles, cacheFiles }) {
@@ -32,52 +35,70 @@ export function selectToMeasure({ pdfs, entries, force = false }) {
   });
 }
 
+/** Page-count rule of the suite proposal: a file with more pages is a load file (V2-M3b, DEC-152); the owner may add the other suite. */
+export function proposeSuites(measurement) {
+  return Array.isArray(measurement) ? ['detection'] : ['load'];
+}
+
 /**
- * Merges measured counts (`measured[file]` = system count per page, `null` for a page that failed; or `{ stress: true, pages }` for a stress file,
- * which is not run through detection) into the entries.
- * A new PDF gets an unreviewed entry; an unreviewed entry is refreshed and keeps note and known limitation; a reviewed entry stays as it is
- * unless `force`, which replaces its counts, keeps note and limitation and marks it unreviewed again. Entries of other files stay.
+ * Merges measured counts (`measured[file]` = system count per page, `null` for a page that failed; or `{ load: true, pages }` for a file above
+ * STRESS_MIN_PAGES, which is not run through detection) into the entries (V2 format, V2-M3b S2).
+ * A new PDF gets an unreviewed entry (reviewed for a load file: it has no counts to review). An unreviewed entry is refreshed (suites proposed
+ * anew, everything else kept). A reviewed entry stays as it is unless `force`, which replaces its counts, keeps suites, tags, engines, profiles,
+ * deviations and note, and marks it unreviewed again. Entries of other files stay. With `profiles` (the content of profiles.json) every added or
+ * refreshed entry is validated; the problems come back as `file: problem` lines and the caller writes nothing when there are any.
  */
-export function mergeProposals({ entries, pdfs, measured, force = false }) {
+export function mergeProposals({ entries, pdfs, measured, force = false, profiles }) {
   const result = entries.map((entry) => ({ ...entry }));
-  const report = { added: [], refreshed: [], kept: [], warnings: [] };
+  const report = { added: [], refreshed: [], kept: [], warnings: [], problems: [] };
   const added = [];
+  const touched = [];
   for (const { file, source } of pdfs) {
     const measurement = measured[file];
     if (measurement === undefined) continue;
-    const stress = !Array.isArray(measurement);
-    const counts = stress ? [] : measurement;
-    const extra = stress ? { pages: measurement.pages, stress: true } : {};
+    const load = !Array.isArray(measurement);
+    const counts = load ? [] : measurement;
+    const pages = load ? { pages: measurement.pages } : {};
     if (counts.some((count) => count === null)) report.warnings.push(`${file}: detection did not finish for every page (null in the proposal)`);
     const index = result.findIndex((entry) => entry.file === file);
     if (index < 0) {
-      added.push({
+      const entry = {
         file,
         source,
-        level: PROPOSAL_LEVEL,
+        suites: proposeSuites(measurement),
+        profiles: [],
         systemsPerPage: counts,
-        ...extra,
-        note: stress ? 'stress file: only the responsiveness tests use it' : '',
-        knownLimitation: null,
-        reviewed: stress, // a stress file has no expectation to review
-      });
+        deviations: [],
+        ...pages,
+        note: load ? LOAD_NOTE : '',
+        reviewed: load, // a load file has no expectation to review
+      };
+      added.push(entry);
+      touched.push(entry);
       report.added.push(file);
     } else if (isReviewed(result[index]) && !force) {
       report.kept.push(file);
     } else {
-      const { note, knownLimitation } = result[index];
-      result[index] = {
+      const old = result[index];
+      const keepSuites = isReviewed(old) && old.suites !== undefined;
+      const entry = {
+        ...old,
         file,
         source,
-        level: PROPOSAL_LEVEL,
+        suites: keepSuites ? old.suites : proposeSuites(measurement),
         systemsPerPage: counts,
-        ...extra,
-        note: stress && note === '' ? 'stress file: only the responsiveness tests use it' : note,
-        knownLimitation,
-        reviewed: stress,
+        ...pages,
+        note: load && old.note === '' ? LOAD_NOTE : old.note,
+        reviewed: load,
       };
+      if (!load) delete entry.pages;
+      result[index] = entry;
+      touched.push(entry);
       report.refreshed.push(file);
     }
+  }
+  if (profiles !== undefined) {
+    for (const entry of touched) for (const problem of validateEntry(entry, profiles)) report.problems.push(`${entry.file}: ${problem}`);
   }
   added.sort((a, b) => a.file.localeCompare(b.file));
   return { entries: [...result, ...added], ...report };

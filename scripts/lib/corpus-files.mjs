@@ -1,9 +1,9 @@
-// Which corpus files the tests use (V2-M2 S3, TST-015). Pure: the callers hand in what exists on disk.
+// Which corpus files the tests use (V2-M2 S3, TST-015; V2-M3b S2, TST-024). Pure: the callers hand in what exists on disk.
+
+import { ENGINES } from './corpus-schema.mjs';
 
 /** Folders searched for an entry's file, in this order. */
 export const CORPUS_FOLDERS = ['e2e/corpus/real', 'e2e/corpus/cache'];
-/** Entries run by the Firefox and WebKit smoke projects. */
-export const SMOKE_ENTRY_COUNT = 3;
 /** A PDF with more pages than this is a stress file: it gets no detection regression run, only the responsiveness tests (V2-M2, owner decision). */
 export const STRESS_MIN_PAGES = 100;
 /** Smallest number of slide changes the performance test accepts as a measurement. */
@@ -18,9 +18,41 @@ export function resolveCorpusEntry({ entry, exists }) {
   return { path: null, reason: `${entry.file} is not present (put it in e2e/corpus/real/ or list its URL in e2e/corpus/urls.txt, then run npm run corpus)` };
 }
 
-/** The first `count` entries. */
-export function smokeEntries(entries, count = SMOKE_ENTRY_COUNT) {
-  return entries.slice(0, count);
+/** The entries that belong to `suite` (`detection` or `load`); an entry can be in both. */
+export function entriesOf(entries, suite) {
+  return entries.filter((entry) => Array.isArray(entry.suites) && entry.suites.includes(suite));
+}
+
+/** The engines the `detection` suite runs an entry on: its `engines` list, or all desktop engines. */
+export function enginesOf(entry) {
+  return entry.engines === undefined ? [...ENGINES] : [...entry.engines];
+}
+
+/** The profiles an entry is asserted under: the defaults of profiles.json (`{ name: { default } }`) plus the entry's own, each once, in a stable order. */
+export function profilesOf(entry, profiles) {
+  const defaults = Object.keys(profiles).filter((name) => profiles[name].default === true);
+  return [...new Set([...defaults, ...(entry.profiles ?? [])])];
+}
+
+/**
+ * The counts a run of `profile` on `engine` must give: the matching deviation, else the reviewed `systemsPerPage`.
+ * A deviation applies to its profile, on the named engine or (without `engine`) on every engine; one that names the engine wins over one that does not.
+ */
+export function expectedFor(entry, profile, engine) {
+  const matching = (entry.deviations ?? []).filter((deviation) => deviation.profile === profile && (deviation.engine === undefined || deviation.engine === engine));
+  const chosen = matching.find((deviation) => deviation.engine === engine) ?? matching[0];
+  return chosen === undefined ? entry.systemsPerPage : chosen.systemsPerPage;
+}
+
+/**
+ * The files of the `load` suite as the performance tests see them (V2-M3b S3, TST-025): `{ file, source, pages, stress }`. A file with more pages
+ * than STRESS_MIN_PAGES is a stress file (the `heavy` file of `pickPerfPdfs`). The caller adds path and size from disk.
+ */
+export function loadFiles(entries) {
+  return entriesOf(entries, 'load').map((entry) => {
+    const pages = entry.pages ?? entry.systemsPerPage.length;
+    return { file: entry.file, source: entry.source, pages, stress: pages > STRESS_MIN_PAGES };
+  });
 }
 
 /**

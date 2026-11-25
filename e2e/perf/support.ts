@@ -1,7 +1,8 @@
-import { existsSync, readFileSync, statSync } from 'node:fs';
-import { expect, type Page, type TestInfo } from '@playwright/test';
+import { appendFileSync, existsSync, readFileSync, statSync } from 'node:fs';
+import { expect, test, type Page, type TestInfo } from '@playwright/test';
 
-import { pickPerfPdfs, resolveCorpusEntry, type PerfPdf } from '../../scripts/lib/corpus-files.mjs';
+import { SUMMARY_HEADER, SUMMARY_MARKER, summaryRow } from '../../scripts/lib/load-checks.mjs';
+import { loadFiles, pickPerfPdfs, resolveCorpusEntry, type PerfPdf } from '../../scripts/lib/corpus-files.mjs';
 import { TUNABLES } from '../../src/config/tunables';
 import { detectionRunTimeoutMs, FILE_CHOOSER_TIMEOUT_MS } from '../support/timing';
 import { forceFileInput, label } from '../support/score';
@@ -39,6 +40,16 @@ export function report(info: TestInfo, name: string, values: Record<string, numb
   const line = `${name}: ${text}${limit === undefined ? '' : ` (limit ${limit.toFixed(DECIMALS)})`}`;
   process.stdout.write(`PERF ${line}\n`);
   info.annotations.push({ type: 'perf', description: line });
+  appendSummaryRow(info, name, values, limit);
+}
+
+/** TST-026: one row per measured value in the job summary of the `perf` job (GitHub sets the file; nothing is uploaded). */
+function appendSummaryRow(info: TestInfo, name: string, values: Record<string, number>, limit?: number): void {
+  const file = process.env['GITHUB_STEP_SUMMARY'];
+  if (!file) return;
+  const entry = info.annotations.findLast((annotation) => annotation.type === 'entry')?.description;
+  const present = existsSync(file) && readFileSync(file, 'utf8').includes(SUMMARY_MARKER);
+  appendFileSync(file, `${present ? '' : SUMMARY_HEADER}${summaryRow({ entry, name, values, limit })}`);
 }
 
 export const summary = (values: readonly number[]): Record<string, number> => ({
@@ -50,32 +61,26 @@ export const summary = (values: readonly number[]): Record<string, number> => ({
 
 const NO_REAL_PDF_REASON = 'no real PDF in the corpus: put PDFs in e2e/corpus/real/ or URLs in e2e/corpus/urls.txt and run npm run corpus';
 
-/** The real PDFs of the corpus (entries with a source) that exist, and from them the ones the tests use (TST-015, see `pickPerfPdfs`). */
-export function realPdfs(): { largest: PerfPdf | null; regular: PerfPdf | null; heavy: PerfPdf | null } {
-  const entries = JSON.parse(readFileSync(EXPECTED_PATH, 'utf8')) as {
-    file: string;
-    source?: 'folder' | 'url';
-    systemsPerPage: unknown[];
-    pages?: number;
-    stress?: boolean;
-  }[];
+/** The PDFs of the `load` suite that exist on disk (V2-M3b S3: a `detection`-only entry is no perf file). */
+export function loadPdfs(): PerfPdf[] {
+  const entries = JSON.parse(readFileSync(EXPECTED_PATH, 'utf8')) as Parameters<typeof loadFiles>[0];
   const files: PerfPdf[] = [];
-  for (const entry of entries) {
+  for (const entry of loadFiles(entries)) {
     const { path } = resolveCorpusEntry({ entry, exists: existsSync });
-    if (path !== null && entry.source !== undefined) {
-      files.push({ file: entry.file, path, source: entry.source, bytes: statSync(path).size, pages: entry.pages ?? entry.systemsPerPage.length, stress: entry.stress === true });
-    }
+    if (path !== null && entry.source !== undefined) files.push({ ...entry, path, bytes: statSync(path).size });
   }
-  return pickPerfPdfs(files);
+  return files;
 }
 
-/** Opens a real corpus PDF through the file chooser: the largest one, the regular one with the most pages or the heavy (stress) one. Returns the time when the file was handed over. */
-export async function openReference(page: Page, url: string, kind: 'largest' | 'regular' | 'heavy'): Promise<number> {
-  const pdf = realPdfs()[kind];
-  if (pdf === null) {
-    throw new Error(NO_REAL_PDF_REASON);
-  }
+/** From the load files the ones the tests use (TST-015, see `pickPerfPdfs`). */
+export function realPdfs(): { largest: PerfPdf | null; regular: PerfPdf | null; heavy: PerfPdf | null } {
+  return pickPerfPdfs(loadPdfs());
+}
+
+/** Opens a load PDF through the file chooser. Returns the time when the file was handed over. */
+export async function openLoadPdf(page: Page, url: string, pdf: PerfPdf): Promise<number> {
   const bytes = readFileSync(pdf.path);
+  test.info().annotations.push({ type: 'entry', description: pdf.file });
   await forceFileInput(page);
   await page.goto(url);
   const chooser = page.waitForEvent('filechooser', { timeout: FILE_CHOOSER_TIMEOUT_MS });
@@ -84,6 +89,15 @@ export async function openReference(page: Page, url: string, kind: 'largest' | '
   const started = Date.now();
   await chosen.setFiles({ name: pdf.file, mimeType: 'application/pdf', buffer: bytes });
   return started;
+}
+
+/** Opens a real corpus PDF: the largest one, the regular one with the most pages or the heavy (stress) one. Returns the time when the file was handed over. */
+export async function openReference(page: Page, url: string, kind: 'largest' | 'regular' | 'heavy'): Promise<number> {
+  const pdf = realPdfs()[kind];
+  if (pdf === null) {
+    throw new Error(NO_REAL_PDF_REASON);
+  }
+  return openLoadPdf(page, url, pdf);
 }
 
 /** Waits until the first slide shows paper and ink: visible canvas, nothing processing, at least one dark pixel. */
@@ -113,9 +127,9 @@ export async function waitForFirstSlideDrawn(page: Page): Promise<void> {
     .toBe(true);
 }
 
-/** Detection is complete when the indicator no longer shows the trailing "+". */
-export async function waitForDetectionComplete(page: Page): Promise<void> {
-  await expect(page.locator('app-bottom-bar .indicator')).toHaveText(/^\d+ \/ \d+$/, { timeout: detectionTimeoutMs() });
+/** Detection is complete when the indicator no longer shows the trailing "+". `pages` scales the wait (default: the regular PDF). */
+export async function waitForDetectionComplete(page: Page, pages?: number): Promise<void> {
+  await expect(page.locator('app-bottom-bar .indicator')).toHaveText(/^\d+ \/ \d+$/, { timeout: pages === undefined ? detectionTimeoutMs() : detectionRunTimeoutMs(pages) });
 }
 
 type Timings = { __frameMs?: number[]; __pending?: number | null };

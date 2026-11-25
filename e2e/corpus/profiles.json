@@ -1,0 +1,5 @@
+{
+  "v1-fast": { "default": false },
+  "v1-standard": { "default": true },
+  "v1-fine": { "default": false }
+}

@@ -26,6 +26,7 @@ import { MemoryHandleStore } from './adapters/web/memory-handle-store';
 import { cacheBudgetFor } from './core/cache-budget';
 import { tunablesToCssVars } from './state/css-vars';
 import { DetectionService } from './state/detection.service';
+import { Scheduler } from './state/scheduler';
 import { APP_VERSION_DISPLAY, APP_VERSION_FULL as APP_VERSION_FULL_VALUE } from '../config/version.generated';
 import { APP_VERSION, APP_VERSION_FULL } from './ports/app-version';
 
@@ -117,6 +118,7 @@ export const appConfig: ApplicationConfig = {
         const engine = inject(DETECTION_ENGINE);
         const session = inject(SessionStore);
         const detection = inject(DetectionService);
+        const scheduler = inject(Scheduler);
         const detect = async (pdf: Uint8Array, pageIndex: number, scale: number) => {
           const signal = new AbortController().signal;
           const doc = await renderer.open(pdf);
@@ -153,6 +155,7 @@ export const appConfig: ApplicationConfig = {
             const stats = renderer instanceof WorkingResolutionRenderer ? renderer.stats : null;
             return { lost: stats?.lostRasters ?? 0, flat: stats?.flatRasters ?? 0, retries: stats?.rasterRetries ?? 0 };
           },
+          schedulerPeak: () => scheduler.maxRunningPerClass(),
           startedOrder: () => session.activeDocument()?.detection.startedOrder ?? [],
           detectionState: () => {
             const doc = session.activeDocument();

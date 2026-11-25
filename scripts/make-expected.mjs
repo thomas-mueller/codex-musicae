@@ -1,6 +1,7 @@
 // Expectation helper (V2-M2 S2, TST-013, TST-014): `npm run corpus:expected [-- --force] [--root <dir>]` (also run by `npm run corpus`).
 // Measures the corpus PDFs that have no reviewed entry in e2e/corpus/expected.json (headless, through the detection debug hook, driven by
-// e2e/tools/propose-expected.spec.ts) and writes proposed entries with "reviewed": false. A reviewed entry is never overwritten without --force.
+// e2e/tools/propose-expected.spec.ts) and writes proposed entries in the V2 format with "reviewed": false (suite from the page count, default
+// profile). A reviewed entry is never overwritten without --force, and keeps its suites, tags, engines, profiles and deviations when it is.
 import { spawnSync } from 'node:child_process';
 import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -24,6 +25,7 @@ if (todo.length === 0) {
   process.exit(0);
 }
 
+const profiles = JSON.parse(await readFile(join(root, 'profiles.json'), 'utf8'));
 const work = await mkdtemp(join(tmpdir(), 'corpus-expected-'));
 try {
   const input = join(work, 'in.json');
@@ -40,7 +42,12 @@ try {
     console.error('expectations: the measurement failed (see the output above)');
     process.exit(1);
   }
-  const merged = mergeProposals({ entries, pdfs: todo, measured, force });
+  const merged = mergeProposals({ entries, pdfs: todo, measured, force, profiles });
+  if (merged.problems.length > 0) {
+    for (const problem of merged.problems) console.error(`expectations: ${problem}`);
+    console.error('expectations: nothing written');
+    process.exit(1);
+  }
   for (const warning of merged.warnings) console.warn(`warning: ${warning}`);
   for (const { file } of todo.filter(({ file }) => measured[file] === undefined)) console.warn(`warning: ${file} could not be measured and has no entry`);
   const text = serializeExpected(merged.entries);

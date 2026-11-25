@@ -1,18 +1,18 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { test } from '@playwright/test';
 
-import { openPdfBytes, pageCountOf, systemCountsAt } from '../support/corpus';
+import { openPdfBytes, pageCountOf, runProfile } from '../support/corpus';
+import { PROPOSAL_PROFILE } from '../../scripts/lib/make-expected.mjs';
 import { STRESS_MIN_PAGES } from '../../scripts/lib/corpus-files.mjs';
 import { forceFileInput } from '../support/score';
 import { detectionRunTimeoutMs } from '../support/timing';
 
 // Measuring tool of `npm run corpus` (scripts/make-expected.mjs, V2-M2 S2, TST-013), not a test of the app: it only runs when the script
-// hands it a list of PDFs, measures the system count per page at the V1 level and writes the numbers. All decisions are made by the script.
+// hands it a list of PDFs, measures the system count per page under the proposal profile and writes the numbers. All decisions are made by the script.
 const DEV_URL = 'http://127.0.0.1:4174';
 /** Opening, start-up and writing; the detection runs come on top, scaled by the page count (real scores can have hundreds of pages). */
 const PER_PDF_BASE_TIMEOUT_MS = 60_000;
-const DETECTION_RUNS = 2; // a new document starts at the default level; the proposal is made at LEVEL
-const LEVEL = 'standard';
+const DETECTION_RUNS = 2; // a new document starts with its own fast run; the proposal is made under PROPOSAL_PROFILE
 const inputPath = process.env['CORPUS_PROPOSE_IN'];
 const outputPath = process.env['CORPUS_PROPOSE_OUT'];
 
@@ -37,14 +37,14 @@ for (const { path, file } of files) {
     // A new document starts at the default level and a re-run request before it is open is dropped: wait for the first run, then re-run.
     const pages = await pageCountOf(page);
     if (pages > STRESS_MIN_PAGES) {
-      // A stress file is not run through detection here: only its page count is needed.
-      record(file, { stress: true, pages });
+      // A load file is not run through detection here: only its page count is needed.
+      record(file, { load: true, pages });
       return;
     }
     const wait = detectionRunTimeoutMs(pages);
     test.setTimeout(PER_PDF_BASE_TIMEOUT_MS + DETECTION_RUNS * wait);
-    await systemCountsAt(page, 'fast', false, wait);
-    const counts = await systemCountsAt(page, LEVEL, true, wait);
+    await runProfile(page, 'v1-fast', false, wait);
+    const counts = await runProfile(page, PROPOSAL_PROFILE, true, wait);
     record(file, counts);
   });
 }

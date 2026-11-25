@@ -1,64 +1,58 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { test, expect } from '@playwright/test';
 
-import { resolveCorpusEntry, smokeEntries, STRESS_MIN_PAGES } from '../scripts/lib/corpus-files.mjs';
+import { enginesOf, entriesOf, expectedFor, profilesOf, resolveCorpusEntry } from '../scripts/lib/corpus-files.mjs';
+import type { CorpusEntry } from '../scripts/lib/corpus-schema.mjs';
 
-import { CORPUS_LEVELS, openPdfBytes, systemCountsAt, type CorpusLevel } from './support/corpus';
+import { openPdfBytes, pageCountOf, runProfile } from './support/corpus';
 import { detectionRunTimeoutMs } from './support/timing';
 import { forceFileInput } from './support/score';
 
+// The detection suite (V2-M3b S2, TST-024): every reviewed `detection` entry of expected.json is detected once per profile on every engine of
+// its `engines` list (desktop Chromium, Firefox and WebKit; the development build carries the debug hook) and must give the owner's counts,
+// or the numbers of the deviation that matches the profile and engine. Detection must not depend on the browser (NFR-025, DET-013, DET-035).
 const DEV_URL = 'http://127.0.0.1:4174';
 const CORPUS_DIR = 'e2e/corpus';
-const TEST_BASE_TIMEOUT_MS = 240_000; // plus one scaled detection run per level, see below
+const DESKTOP_PROJECTS = ['chromium', 'firefox', 'webkit'];
+const TEST_BASE_TIMEOUT_MS = 120_000; // opening and start-up; the detection runs come on top, scaled by the page count (TST-027)
+/** A new document always starts its own `fast` run; the profile run follows it. */
+const INITIAL_PROFILE = 'v1-fast';
 
-interface Entry {
-  file: string;
-  source?: 'folder' | 'url';
-  reviewed?: boolean;
-  stress?: boolean;
-  level: CorpusLevel;
-  systemsPerPage: number[];
-  note: string;
-  knownLimitation: string | null;
-}
-
-const entries = JSON.parse(readFileSync(`${CORPUS_DIR}/expected.json`, 'utf8')) as Entry[];
-// Desktop Chromium runs every entry, desktop Firefox and WebKit the first three (TST-015). The debug hook is in the development build.
-const SMOKE = new Set(smokeEntries(entries).map((entry) => entry.file));
-const SMOKE_PROJECTS = ['firefox', 'webkit'];
-
+const entries = entriesOf(JSON.parse(readFileSync(`${CORPUS_DIR}/expected.json`, 'utf8')) as CorpusEntry[], 'detection');
+const profiles = JSON.parse(readFileSync(`${CORPUS_DIR}/profiles.json`, 'utf8')) as Record<string, { default?: boolean }>;
 
 for (const entry of entries) {
-  test(`TST-002 TST-015 DET-013 corpus ${entry.file}${entry.knownLimitation ? ` (${entry.knownLimitation})` : ''}`, async ({
-    page,
-  }, testInfo) => {
-    const project = testInfo.project.name;
-    test.skip(
-      project !== 'chromium' && !(SMOKE_PROJECTS.includes(project) && SMOKE.has(entry.file)),
-      'the corpus runs on desktop Chromium (all entries) and on desktop Firefox and WebKit (the first three)',
-    );
-    test.skip(entry.stress === true, `${entry.file} is a stress file (more than ${STRESS_MIN_PAGES} pages): the performance tests check scrolling, zooming and responsiveness`);
-    test.skip(entry.reviewed === false, `${entry.file} is not reviewed yet: check its entry in expected.json and set "reviewed": true`);
-    const found = resolveCorpusEntry({ entry, exists: existsSync });
-    test.skip(found.path === null, `file missing: ${found.reason}`);
-    // Every level is one full run: a real score with hundreds of pages needs the time per page, not a fixed minute.
-    const wait = detectionRunTimeoutMs(entry.systemsPerPage.length);
-    test.setTimeout(TEST_BASE_TIMEOUT_MS + CORPUS_LEVELS.length * wait);
-    await forceFileInput(page);
-    await page.goto(DEV_URL);
-    await openPdfBytes(page, entry.file, readFileSync(found.path as string));
+  for (const profile of profilesOf(entry, profiles)) {
+    test(`TST-002 TST-015 DET-013 DET-035 NFR-025 TST-024 corpus ${entry.file} (${profile})`, async ({ page }, testInfo) => {
+      const engine = testInfo.project.name;
+      test.skip(!DESKTOP_PROJECTS.includes(engine), 'the detection suite runs on the three desktop engines');
+      test.skip(!enginesOf(entry).includes(engine), `${entry.file} is not asserted on ${engine}: ${entry.note}`);
+      test.skip(entry.reviewed === false, `${entry.file} is not reviewed yet: check its entry in expected.json and set "reviewed": true`);
+      const found = resolveCorpusEntry({ entry, exists: existsSync });
+      test.skip(found.path === null, `file missing: ${found.reason}`);
+      const expected = expectedFor(entry, profile, engine);
+      // TST-027: the time of the test is the opening plus the initial run and one run of the profile, each scaled by the page count.
+      const wait = detectionRunTimeoutMs(expected.length);
+      test.setTimeout(TEST_BASE_TIMEOUT_MS + 2 * wait);
+      await forceFileInput(page);
+      await page.goto(DEV_URL);
+      await openPdfBytes(page, entry.file, readFileSync(found.path as string));
 
-    // A new document starts at the default level (fast); the other levels are reached by a re-run.
-    const table: Record<string, (number | null)[]> = {};
-    table['fast'] = await systemCountsAt(page, 'fast', false, wait);
-    for (const level of CORPUS_LEVELS.filter((l) => l !== 'fast')) {
-      table[level] = await systemCountsAt(page, level, true, wait);
-    }
-    console.log(
-      `corpus ${entry.file} ${JSON.stringify(table)} expected(${entry.level})=${JSON.stringify(entry.systemsPerPage)}`,
-    );
-    test.info().annotations.push({ type: 'systems per page', description: JSON.stringify(table) });
+      const started = Date.now();
+      let counts: (number | null)[];
+      try {
+        // A re-run request before the document is open is dropped: wait for the initial run, then ask for the profile.
+        await pageCountOf(page);
+        await runProfile(page, INITIAL_PROFILE, false, wait);
+        counts = profile === INITIAL_PROFILE ? await runProfile(page, profile, false, wait) : await runProfile(page, profile, true, wait);
+      } catch (error) {
+        throw new Error(`detection did not finish on ${engine} for ${entry.file} (${profile}): ${(error as Error).message}`, { cause: error });
+      }
+      const seconds = ((Date.now() - started) / 1000).toFixed(1);
+      console.log(`corpus ${engine} ${entry.file} ${profile} ${seconds}s ${JSON.stringify(counts)} expected=${JSON.stringify(expected)}`);
+      test.info().annotations.push({ type: 'systems per page', description: JSON.stringify(counts) });
 
-    expect(table[entry.level], entry.note).toEqual(entry.systemsPerPage);
-  });
+      expect(counts, `${engine} ${entry.file} ${profile}: ${entry.note}`).toEqual(expected);
+    });
+  }
 }

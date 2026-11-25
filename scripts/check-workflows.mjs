@@ -40,6 +40,20 @@ if (code.e2e) {
   if (pullRequest === undefined || !/branches:\s*\n\s*-\s*main\b/.test(pullRequest)) violations.push('e2e.yml: must run on pull requests to main (PIP-012)');
 }
 
+// The perf job (TST-008, TST-026): the performance and load tests run the `perf` project without retries, a breach fails the job (no
+// continue-on-error) and a time limit ends a stuck run.
+if (code.e2e) {
+  const perf = code.e2e.match(/^ {2}perf:\n((?: {4}.*\n|\s*\n)+)/m)?.[1];
+  if (perf === undefined) {
+    violations.push('e2e.yml: the perf job is missing (TST-026)');
+  } else {
+    if (!/npx playwright test --project=perf\b/.test(perf)) violations.push('e2e.yml: the perf job must run the perf project (TST-026)');
+    if (/--retries(=|\s+)[1-9]/.test(perf)) violations.push('e2e.yml: the perf job must run without retries (TST-026)');
+    if (!/^ {4}timeout-minutes:\s*\d+/m.test(perf)) violations.push('e2e.yml: the perf job needs a timeout-minutes (TST-026)');
+    if (/continue-on-error:\s*true/.test(perf)) violations.push('e2e.yml: a breach must fail the perf job: no continue-on-error (TST-026)');
+  }
+}
+
 // Coverage in lint-test (PIP-016, PIP-017): unit tests with coverage, the table in the job summary, the summary file as an artifact, no threshold.
 if (code['lint-test']) {
   const text = code['lint-test'];

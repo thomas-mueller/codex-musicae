@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 
-import { MIN_PERF_SLIDE_CHANGES, pickPerfPdfs, STRESS_MIN_PAGES, resolveCorpusEntry, smokeEntries, type PerfPdf } from '../../scripts/lib/corpus-files.mjs';
+import { MIN_PERF_SLIDE_CHANGES, pickPerfPdfs, STRESS_MIN_PAGES, resolveCorpusEntry, type PerfPdf } from '../../scripts/lib/corpus-files.mjs';
 
 const pdf = (file: string, bytes: number, pages: number, source: 'folder' | 'url' | null = 'folder'): PerfPdf => ({
   file,
@@ -24,11 +24,6 @@ describe('corpus file selection', () => {
     expect(result.path).toBeNull();
     expect(result.reason).toContain('gone.pdf');
     expect(result.reason).toContain('npm run corpus');
-  });
-
-  it('TST-015 the smoke run takes the first three entries, fewer when fewer exist', () => {
-    expect(smokeEntries([1, 2, 3, 4, 5])).toEqual([1, 2, 3]);
-    expect(smokeEntries([1, 2])).toEqual([1, 2]);
   });
 
   it('TST-015 the performance PDFs: the largest file, the regular PDF with the most pages and the heavy stress file', () => {

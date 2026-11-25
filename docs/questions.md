@@ -108,6 +108,8 @@ Possible fixes (outside detection code, tunables and budgets; they touch `adapte
 
 ## V2-M02 — Firefox finds 14 systems on page 2 of the Bassoon part, Chromium 15 (DET-035, DET-013, NFR-025)
 
+*Status after V2-M3b: still open, left for V2-M8 by the owner; the Firefox run of this entry is red in the detection suite and no deviation is recorded.*
+
 Investigated 2026-11-22. `e2e/detection-engines.spec.ts` (`… IMSLP35620-PMLP01586-Beethoven-Op067.Bassoon.pdf …`) fails in Firefox (CI and locally, 3 of 3 runs; expected `[14, 15, 15, …]`, received `[14, 14, 15, …]`). Chromium and WebKit pass; all other corpus files pass in Firefox.
 
 Finding: dumping the wide components of page index 1 (`__cm.detect`, scale 150/72) shows one staff row (y = 842) that is one 1263-px component in Chromium and, in Firefox, a 733-px piece (x 654 to 1387) plus a short left piece. The working raster of this scan differs by a pixel-level amount between the engines (pdf.js draws the scan image with the browser's own scaling), a staff line breaks after the adaptive threshold, and the long piece falls under `minSystemWidthRatio`. The area averaging in the detection engine is identical in every browser, so it cannot remove this difference.
@@ -115,6 +117,8 @@ Finding: dumping the wide components of page index 1 (`__cm.detect`, scale 150/7
 Not changed: the test and `expected.json` are reviewed and must not be edited to make code pass; every code fix changes detection results (owner decision). Options: (1) a horizontal morphological closing of the binary image (a few pixels, `T:detection`) before the connected components, so one-pixel breaks in a staff line are bridged; it can change other corpus counts, so all `reviewed` entries would need a new review; (2) make the working raster less engine-dependent (for example render the page at the detection scale in one pdf.js call instead of down-scaling a larger canvas) at the cost of the NFR-025 render count; (3) accept a one-system tolerance per page in this test for Firefox, documented as a limit in `docs/limitations.md`.
 
 ## V2-M03 — WebKit corpus run is not deterministic on the large tiff2pdf scan (DET-013, NFR-025, TST-015)
+
+*Status after V2-M3b: still open. The entry keeps all engines (owner decision 2026-11-25); the run passed in the V2-M3b S2 measurement and failed in earlier ones, so it stays intermittent. A second WebKit difference (`bs5fp.pdf`, page 7) is recorded at the end of this section.*
 
 Investigated 2026-11-24 after the `e2e` workflow failed in WebKit (`detection-corpus.spec.ts`, `IMSLP799145-PMLP14377-tiff2pdf_-2.pdf`, "Target page, context or browser has been closed" at the detection poll in `support/corpus.ts`; that message is what Playwright reports when the test timeout closes the page, so detection did not finish in time in CI).
 
@@ -127,3 +131,9 @@ Not changed: a fix touches `adapters/pdfjs` (detect a blank or failed working ra
 Update (2026-11-24, same section) — reproduction and what does not work. Reproduction on a 4-core machine: run four busy loops (`node -e 'while(true){}'` x 4) and then the WebKit corpus test for `IMSLP799145-PMLP14377-tiff2pdf_-2.pdf` (development build): every page of the scan comes back as an opaque white raster (0 systems), 3 of 3 runs; without the load it passes. `__cm.rasterFaults()` shows `lost: 0`, `flat` = every page: the raster is not a dropped (transparent) canvas but an opaque page without its image. NFR-028 / DEC-151 therefore only catch the transparent case (never seen so far). Rebuilding flat pages does not help: three cold rebuilds (`fresh`) with 300/600/900 ms back-off stay blank under the load, so it is not a short race. Next steps for the owner to choose: (1) find why pdf.js finishes without drawing the scan image in WebKit under CPU load (image decode, `requestAnimationFrame` throttling, worker starvation), probably with a pdf.js/WebKit minimal case; (2) give the WebKit corpus job its own runner/concurrency so it is not starved; (3) have detection refuse a document whose every page is flat instead of storing 0 systems (a score with only white pages is not a use case).
 
 **Decision (2026-11-24, owner), V2-M02 Firefox difference:** left for V2-M8. V2-M3b records no deviation for it; the Firefox run of the Bassoon part stays red until M8 changes detection or the working raster (options 1 and 2 above).
+
+**Question for the owner (V2-M3b S1 step 5b, blocks S2):** for the entry `IMSLP799145-PMLP14377-tiff2pdf_-2.pdf`, should the detection suite narrow `engines` to `["chromium", "firefox"]` (with a `note` that WebKit is excluded until the blank-raster cause above is fixed), or keep all three engines (and rely on the job time cap and `workers: '1'`; the measured WebKit run times are in the S1 report)? The Firefox difference on the Bassoon part needs no answer (decided above: left for V2-M8).
+
+**Decision (2026-11-25, owner), V2-M3b S1 step 5b:** keep all three engines for `IMSLP799145-PMLP14377-tiff2pdf_-2.pdf`; `engines` is not narrowed. The WebKit run of this scan may stay red until the blank-raster cause above is fixed; the time cap and `workers: '1'` are the mitigation (V2-M3b S2).
+
+**Known failing run (V2-M3b S2, owner decision 2026-11-25):** on WebKit, `IMSLP30601-PMLP01586-bs5fp.pdf` gives 11 systems on page 7 where the reviewed count is 12 (seen in the S1 measurement of `detection-engines.spec.ts`, local, deterministic). No deviation is recorded; the WebKit run stays red, like the Firefox run of the Bassoon part, until detection or the working raster is changed (V2-M8).
