@@ -1,6 +1,7 @@
-import { existsSync, readFileSync, statSync } from 'node:fs';
-import { expect, type Page, type TestInfo } from '@playwright/test';
+import { appendFileSync, existsSync, readFileSync, statSync } from 'node:fs';
+import { expect, test, type Page, type TestInfo } from '@playwright/test';
 
+import { SUMMARY_HEADER, SUMMARY_MARKER, summaryRow } from '../../scripts/lib/load-checks.mjs';
 import { loadFiles, pickPerfPdfs, resolveCorpusEntry, type PerfPdf } from '../../scripts/lib/corpus-files.mjs';
 import { TUNABLES } from '../../src/config/tunables';
 import { detectionRunTimeoutMs, FILE_CHOOSER_TIMEOUT_MS } from '../support/timing';
@@ -39,6 +40,16 @@ export function report(info: TestInfo, name: string, values: Record<string, numb
   const line = `${name}: ${text}${limit === undefined ? '' : ` (limit ${limit.toFixed(DECIMALS)})`}`;
   process.stdout.write(`PERF ${line}\n`);
   info.annotations.push({ type: 'perf', description: line });
+  appendSummaryRow(info, name, values, limit);
+}
+
+/** TST-026: one row per measured value in the job summary of the `perf` job (GitHub sets the file; nothing is uploaded). */
+function appendSummaryRow(info: TestInfo, name: string, values: Record<string, number>, limit?: number): void {
+  const file = process.env['GITHUB_STEP_SUMMARY'];
+  if (!file) return;
+  const entry = info.annotations.findLast((annotation) => annotation.type === 'entry')?.description;
+  const present = existsSync(file) && readFileSync(file, 'utf8').includes(SUMMARY_MARKER);
+  appendFileSync(file, `${present ? '' : SUMMARY_HEADER}${summaryRow({ entry, name, values, limit })}`);
 }
 
 export const summary = (values: readonly number[]): Record<string, number> => ({
@@ -69,6 +80,7 @@ export function realPdfs(): { largest: PerfPdf | null; regular: PerfPdf | null; 
 /** Opens a load PDF through the file chooser. Returns the time when the file was handed over. */
 export async function openLoadPdf(page: Page, url: string, pdf: PerfPdf): Promise<number> {
   const bytes = readFileSync(pdf.path);
+  test.info().annotations.push({ type: 'entry', description: pdf.file });
   await forceFileInput(page);
   await page.goto(url);
   const chooser = page.waitForEvent('filechooser', { timeout: FILE_CHOOSER_TIMEOUT_MS });

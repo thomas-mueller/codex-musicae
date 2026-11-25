@@ -11,3 +11,8 @@ export interface Invariants {
   maxPerClass: number;
 }
 export function invariantProblems(values: Invariants): string[];
+export const COMPARED_KEYS: readonly string[];
+export const SUMMARY_MARKER: string;
+export const SUMMARY_HEADER: string;
+export function comparedValue(values: Readonly<Record<string, number>>): number | undefined;
+export function summaryRow(row: { entry?: string; name: string; values: Readonly<Record<string, number>>; limit?: number }): string;

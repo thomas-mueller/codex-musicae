@@ -108,6 +108,8 @@ Possible fixes (outside detection code, tunables and budgets; they touch `adapte
 
 ## V2-M02 — Firefox finds 14 systems on page 2 of the Bassoon part, Chromium 15 (DET-035, DET-013, NFR-025)
 
+*Status after V2-M3b: still open, left for V2-M8 by the owner; the Firefox run of this entry is red in the detection suite and no deviation is recorded.*
+
 Investigated 2026-11-22. `e2e/detection-engines.spec.ts` (`… IMSLP35620-PMLP01586-Beethoven-Op067.Bassoon.pdf …`) fails in Firefox (CI and locally, 3 of 3 runs; expected `[14, 15, 15, …]`, received `[14, 14, 15, …]`). Chromium and WebKit pass; all other corpus files pass in Firefox.
 
 Finding: dumping the wide components of page index 1 (`__cm.detect`, scale 150/72) shows one staff row (y = 842) that is one 1263-px component in Chromium and, in Firefox, a 733-px piece (x 654 to 1387) plus a short left piece. The working raster of this scan differs by a pixel-level amount between the engines (pdf.js draws the scan image with the browser's own scaling), a staff line breaks after the adaptive threshold, and the long piece falls under `minSystemWidthRatio`. The area averaging in the detection engine is identical in every browser, so it cannot remove this difference.
@@ -115,6 +117,8 @@ Finding: dumping the wide components of page index 1 (`__cm.detect`, scale 150/7
 Not changed: the test and `expected.json` are reviewed and must not be edited to make code pass; every code fix changes detection results (owner decision). Options: (1) a horizontal morphological closing of the binary image (a few pixels, `T:detection`) before the connected components, so one-pixel breaks in a staff line are bridged; it can change other corpus counts, so all `reviewed` entries would need a new review; (2) make the working raster less engine-dependent (for example render the page at the detection scale in one pdf.js call instead of down-scaling a larger canvas) at the cost of the NFR-025 render count; (3) accept a one-system tolerance per page in this test for Firefox, documented as a limit in `docs/limitations.md`.
 
 ## V2-M03 — WebKit corpus run is not deterministic on the large tiff2pdf scan (DET-013, NFR-025, TST-015)
+
+*Status after V2-M3b: still open. The entry keeps all engines (owner decision 2026-11-25); the run passed in the V2-M3b S2 measurement and failed in earlier ones, so it stays intermittent. A second WebKit difference (`bs5fp.pdf`, page 7) is recorded at the end of this section.*
 
 Investigated 2026-11-24 after the `e2e` workflow failed in WebKit (`detection-corpus.spec.ts`, `IMSLP799145-PMLP14377-tiff2pdf_-2.pdf`, "Target page, context or browser has been closed" at the detection poll in `support/corpus.ts`; that message is what Playwright reports when the test timeout closes the page, so detection did not finish in time in CI).
 

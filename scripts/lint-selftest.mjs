@@ -145,6 +145,9 @@ try {
     ['PIP-012 e2e-on-every-push', 'e2e', (text) => text.replace(/^ {2}push:\n/m, "  push:\n    branches:\n      - '**'\n")],
     ['PIP-012 e2e-no-pull-request', 'e2e', (text) => text.replace(/^ {2}pull_request:\n(?: {4}.*\n)+/m, '')],
     ['PIP-012 e2e-no-tag-trigger', 'e2e', (text) => text.replace("      - 'v*'", "      - 'x*'")],
+    ['TST-026 perf-job-no-timeout', 'e2e', (text) => text.replace(/(\n {2}perf:\n(?: {4}.*\n)*? {4})timeout-minutes: \d+\n {4}/, '$1')],
+    ['TST-026 perf-job-with-retries', 'e2e', (text) => text.replace('npx playwright test --project=perf', 'npx playwright test --project=perf --retries=2')],
+    ['TST-026 perf-job-continue-on-error', 'e2e', (text) => text.replace(/(\n {2}perf:\n)/, '$1    continue-on-error: true\n')],
     ['PIP-012 lint-test-not-every-push', 'lint-test', (text) => text.replace("      - '**'\n    tags-ignore", "      - main\n    tags-ignore")],
   ];
   for (const [name, workflowName, change] of triggerBroken) {

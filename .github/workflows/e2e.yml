@@ -106,8 +106,10 @@ jobs:
       - name: End-to-end tests
         run: npx playwright test --project=${{ matrix.project }} ${{ matrix.grep && format('--grep {0}', matrix.grep) || '' }}
 
-  # TST-008: the performance budgets of T:budgets on the largest real PDFs of the corpus (Chromium only, no retries). Runs after the
-  # e2e matrix (also when it failed); like the rest of this workflow a breach never blocks a deployment or an APK.
+  # TST-008, TST-025, TST-026: the performance budgets of T:budgets and the load suite (detection and navigation in parallel, cache, canvas and
+  # task invariants) on the real PDFs of the corpus (Chromium only, no retries). Runs after the e2e matrix (also when it failed). A breach fails
+  # this job and every measured value is a row of its job summary; deploy-web and android do not depend on this workflow, so a red run never
+  # blocks a deployment or an APK.
   perf:
     runs-on: ubuntu-latest
     needs: e2e
@@ -147,7 +149,7 @@ jobs:
       - name: Production build
         run: npm run build
 
-      - name: Development build (debug hook for the memory test)
+      - name: Development build (debug hook for the memory test and the load suite)
         run: npm run build -- --configuration development,native-paid --output-path dist/codexmusicae-dev
 
       - name: Performance tests
