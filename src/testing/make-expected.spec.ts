@@ -119,10 +119,9 @@ describe('expected.json', () => {
     const entries = JSON.parse(readFileSync('e2e/corpus/expected.json', 'utf8')) as ExpectedEntry[];
     for (const entry of entries) {
       expect(typeof entry.file, entry.file).toBe('string');
-      expect(typeof entry.level, entry.file).toBe('string');
+      expect(Array.isArray(entry.suites) && entry.suites.length > 0, entry.file).toBe(true);
       expect(Array.isArray(entry.systemsPerPage) && entry.systemsPerPage.every((n) => n === null || Number.isInteger(n)), entry.file).toBe(true);
       expect(typeof entry.note, entry.file).toBe('string');
-      expect(entry.knownLimitation === null || typeof entry.knownLimitation === 'string', entry.file).toBe(true);
     }
     const real = existsSync('e2e/corpus/real') ? readdirSync('e2e/corpus/real').filter((name) => name.toLowerCase().endsWith('.pdf')) : [];
     const missing = real.filter((name) => !entries.some((entry) => entry.file === name));

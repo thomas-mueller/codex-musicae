@@ -18,6 +18,11 @@ export function resolveCorpusEntry({ entry, exists }) {
   return { path: null, reason: `${entry.file} is not present (put it in e2e/corpus/real/ or list its URL in e2e/corpus/urls.txt, then run npm run corpus)` };
 }
 
+/** The entries that belong to `suite` (`detection` or `load`); an entry can be in both. */
+export function entriesOf(entries, suite) {
+  return entries.filter((entry) => Array.isArray(entry.suites) && entry.suites.includes(suite));
+}
+
 /** The first `count` entries. */
 export function smokeEntries(entries, count = SMOKE_ENTRY_COUNT) {
   return entries.slice(0, count);

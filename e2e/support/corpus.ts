@@ -27,6 +27,16 @@ export async function pageCountOf(page: Page): Promise<number> {
   return page.evaluate(() => (globalThis as unknown as { __cm: CorpusHook }).__cm.systemCounts().counts.length);
 }
 
+/**
+ * The one place that turns a profile of e2e/corpus/profiles.json into a call of the debug hook. Today a profile is a V1 level (`v1-<level>`);
+ * V2-M8 replaces this function by the parameter-set call.
+ */
+export function runProfile(page: Page, profile: string, rerun: boolean, timeoutMs: number = RERUN_TIMEOUT_MS): Promise<(number | null)[]> {
+  const level = profile.replace(/^v1-/, '');
+  if (!(CORPUS_LEVELS as readonly string[]).includes(level)) throw new Error(`unknown corpus profile "${profile}"`);
+  return systemCountsAt(page, level as CorpusLevel, rerun, timeoutMs);
+}
+
 /** Waits until detection of the active document is complete at `level` and returns the system count per page. */
 export async function systemCountsAt(
   page: Page,

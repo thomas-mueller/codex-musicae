@@ -6,6 +6,7 @@ export interface ExpectedEntry {
   file: string;
   source?: 'folder' | 'url';
   level: string;
+  suites?: string[];
   systemsPerPage: (number | null)[];
   pages?: number;
   stress?: boolean;
