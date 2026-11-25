@@ -57,13 +57,13 @@ export function realPdfs(): { largest: PerfPdf | null; regular: PerfPdf | null; 
     source?: 'folder' | 'url';
     systemsPerPage: unknown[];
     pages?: number;
-    stress?: boolean;
+    suites?: string[];
   }[];
   const files: PerfPdf[] = [];
   for (const entry of entries) {
     const { path } = resolveCorpusEntry({ entry, exists: existsSync });
     if (path !== null && entry.source !== undefined) {
-      files.push({ file: entry.file, path, source: entry.source, bytes: statSync(path).size, pages: entry.pages ?? entry.systemsPerPage.length, stress: entry.stress === true });
+      files.push({ file: entry.file, path, source: entry.source, bytes: statSync(path).size, pages: entry.pages ?? entry.systemsPerPage.length, stress: entry.suites?.includes('load') === true && entry.suites.includes('detection') === false }); // a load-only entry is the heavy file; replaced by the load-suite selection in S3
     }
   }
   return pickPerfPdfs(files);
