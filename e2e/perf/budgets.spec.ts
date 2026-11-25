@@ -5,9 +5,10 @@ import { longestLongTaskMs, startLongTaskObserver, throttleCpu } from '../suppor
 import { enterOrganization, label } from '../support/score';
 import { enterAnnotation, strokeLine, tool } from '../support/saving';
 import { MIN_PERF_SLIDE_CHANGES } from '../../scripts/lib/corpus-files.mjs';
+import { BYTES_PER_MIB, drawStroke, indicator, NEXT_KEY, pressNext, SETTLE_MS } from './actions';
 import { displayedShare } from './viewer';
 import {
-  budget, DEV_URL, installSlideChangeTimer, installStrokeLatencyTimer, detectionTimeoutMs, openReference, p95, PERF_WAIT_MS, realPdfs, recordedSlideChanges, report,
+  budget, DEV_URL, installStrokeLatencyTimer, detectionTimeoutMs, openReference, p95, PERF_WAIT_MS, realPdfs, report,
   summary, takeStrokeLatencies, waitForDetectionComplete, waitForFirstSlideDrawn,
 } from './support';
 
@@ -19,46 +20,18 @@ test.setTimeout(PERF_BASE_TEST_TIMEOUT_MS + 2 * detectionTimeoutMs());
 test.skip(realPdfs().regular === null && realPdfs().heavy === null, 'no real PDF in the corpus (put PDFs in e2e/corpus/real/ or URLs in e2e/corpus/urls.txt, then run npm run corpus)');
 
 const SLIDE_CHANGES = 50; // at most; fewer when the PDF has fewer slides (skipped below MIN_PERF_SLIDE_CHANGES)
-const SETTLE_MS = 300; // the neighbors are prefetched before the next command (NFR-001 "with neighbors prefetched")
 const CPU_THROTTLE = 4; // estimates a small tablet; reported only
 const IMPACT_SLIDE_CHANGES = 20;
 const IMPACT_BURST = 5;
 const STROKE_ROW = 0.5;
-const BYTES_PER_MIB = 1024 * 1024;
 const SCROLL_STEP_FRACTION = 0.8;
 const SCROLL_WAIT_MS = 60;
 const MAX_ZOOM_CLICKS = 12;
 const ZOOM_WAIT_MS = 1_500;
-const NEXT_KEY = 'PageDown';
-const STROKE_POINTS = 200;
 const DISPLAYED_SHARE = 0.9; // share of the visible page area that shows drawn tiles
 const JUMP_FRACTIONS = [0.5, 0.97, 0.1, 0.75, 0.0, 1.0, 0.3];
 const SCROLL_STEPS = 25;
 const PIXEL_POLL_MS = 100;
-
-/** A stroke of `STROKE_POINTS` pointer moves. */
-async function drawStroke(page: Page, from: { x: number; y: number }, to: { x: number; y: number }): Promise<void> {
-  await page.mouse.move(from.x, from.y);
-  await page.mouse.down();
-  await page.mouse.move(to.x, to.y, { steps: STROKE_POINTS });
-  await page.mouse.up();
-}
-
-const indicator = (page: Page) => page.locator('app-bottom-bar .indicator');
-const currentSlide = async (page: Page): Promise<number> => Number(/^(\d+)/.exec((await indicator(page).textContent()) ?? '')?.[1]);
-
-/** Presses Next `count` times, waiting for each change and for the neighbors to be prefetched; returns the page's timings. */
-async function pressNext(page: Page, count: number): Promise<number[]> {
-  await installSlideChangeTimer(page);
-  for (let i = 0; i < count; i++) {
-    const before = await currentSlide(page);
-    await page.keyboard.press(NEXT_KEY);
-    await expect.poll(() => currentSlide(page), { timeout: PERF_WAIT_MS }).toBe(before + 1);
-    await page.waitForTimeout(SETTLE_MS);
-  }
-  await expect.poll(async () => (await recordedSlideChanges(page)).length, { timeout: PERF_WAIT_MS }).toBeGreaterThanOrEqual(count);
-  return recordedSlideChanges(page);
-}
 
 async function openAndSettle(page: Page): Promise<void> {
   test.skip(realPdfs().regular === null, 'no regular real PDF (not a stress file) in the corpus');

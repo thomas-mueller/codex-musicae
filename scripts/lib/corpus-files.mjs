@@ -4,8 +4,6 @@ import { ENGINES } from './corpus-schema.mjs';
 
 /** Folders searched for an entry's file, in this order. */
 export const CORPUS_FOLDERS = ['e2e/corpus/real', 'e2e/corpus/cache'];
-/** Entries run by the Firefox and WebKit smoke projects. */
-export const SMOKE_ENTRY_COUNT = 3;
 /** A PDF with more pages than this is a stress file: it gets no detection regression run, only the responsiveness tests (V2-M2, owner decision). */
 export const STRESS_MIN_PAGES = 100;
 /** Smallest number of slide changes the performance test accepts as a measurement. */
@@ -46,9 +44,15 @@ export function expectedFor(entry, profile, engine) {
   return chosen === undefined ? entry.systemsPerPage : chosen.systemsPerPage;
 }
 
-/** The first `count` entries. */
-export function smokeEntries(entries, count = SMOKE_ENTRY_COUNT) {
-  return entries.slice(0, count);
+/**
+ * The files of the `load` suite as the performance tests see them (V2-M3b S3, TST-025): `{ file, source, pages, stress }`. A file with more pages
+ * than STRESS_MIN_PAGES is a stress file (the `heavy` file of `pickPerfPdfs`). The caller adds path and size from disk.
+ */
+export function loadFiles(entries) {
+  return entriesOf(entries, 'load').map((entry) => {
+    const pages = entry.pages ?? entry.systemsPerPage.length;
+    return { file: entry.file, source: entry.source, pages, stress: pages > STRESS_MIN_PAGES };
+  });
 }
 
 /**

@@ -29,6 +29,8 @@ interface DebugHook {
   readonly directRenders?: () => number;
   /** What the raster probe found and did (NFR-028): transparent and flat rasters seen, rebuilds made. */
   readonly rasterFaults?: () => { readonly lost: number; readonly flat: number; readonly retries: number };
+  /** The most scheduler tasks that ran at once per class since the page loaded (TST-025 load suite). */
+  readonly schedulerPeak?: () => Readonly<Record<string, number>>;
   /** The strokes of the active document, in model order (TST-003 property test). */
   readonly strokes?: () => readonly InkStroke[];
   /** Applies ink edits to the active document through the store, in order (TST-003 property test). */

@@ -7,7 +7,6 @@ export interface PerfPdf {
   stress?: boolean;
 }
 export const CORPUS_FOLDERS: string[];
-export const SMOKE_ENTRY_COUNT: number;
 export const STRESS_MIN_PAGES: number;
 export const MIN_PERF_SLIDE_CHANGES: number;
 export function resolveCorpusEntry(options: { entry: { file: string }; exists: (path: string) => boolean }): { path: string | null; reason: string | null };
@@ -19,5 +18,5 @@ export function expectedFor<T extends (number | null)[]>(
   profile: string,
   engine: string,
 ): T;
-export function smokeEntries<T>(entries: readonly T[], count?: number): T[];
+export function loadFiles(entries: readonly { file: string; source?: 'folder' | 'url'; pages?: number; systemsPerPage: readonly unknown[]; suites?: readonly string[] }[]): { file: string; source?: 'folder' | 'url'; pages: number; stress: boolean }[];
 export function pickPerfPdfs(files: readonly PerfPdf[]): { largest: PerfPdf | null; regular: PerfPdf | null; heavy: PerfPdf | null };

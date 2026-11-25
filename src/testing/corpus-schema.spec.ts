@@ -97,6 +97,9 @@ const BEFORE: Record<string, { counts: number[]; reviewed: boolean; note: string
   "IMSLP35623-PMLP01586-Beethoven-Op067.Timpani.pdf": { counts: [14,15,15,15], reviewed: true, note: "" },
 };
 
+/** Owner decision of V2-M3b S3: these detection entries are also load files. */
+const LOAD_TOO = ['IMSLP1022763-PMLP01586-91257-mu.98.pdf', 'IMSLP799145-PMLP14377-tiff2pdf_-2.pdf'];
+
 describe('expected.json after the migration', () => {
   const entries = JSON.parse(readFileSync('e2e/corpus/expected.json', 'utf8')) as CorpusEntry[];
   const profiles = JSON.parse(readFileSync('e2e/corpus/profiles.json', 'utf8')) as Record<string, { default?: boolean }>;
@@ -121,7 +124,7 @@ describe('expected.json after the migration', () => {
       expect(entry.reviewed, entry.file).toBe(before.reviewed);
       expect(entry.note, entry.file).toBe(before.note);
       expect(entry.pages, entry.file).toBe(before.pages);
-      expect(entry.suites, entry.file).toEqual(before.load === true ? ['load'] : ['detection']);
+      expect(entry.suites, entry.file).toEqual(before.load === true ? ['load'] : LOAD_TOO.includes(entry.file) ? ['detection', 'load'] : ['detection']);
     }
   });
 });

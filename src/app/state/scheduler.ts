@@ -37,6 +37,7 @@ export class Scheduler {
   private seq = 0;
   private context: SchedulerContext = IDLE_CONTEXT;
   private viewKey: string | undefined;
+  private readonly peaks = new Map<TaskClass, number>();
 
   /** Resolves ok(value), or err('cancelled') when the task was aborted or dropped. */
   submit<T>(cls: TaskClass, run: (signal: AbortSignal) => Promise<T>, options: SubmitOptions = {}): Promise<Result<T, 'cancelled'>> {
@@ -104,8 +105,15 @@ export class Scheduler {
     }
   }
 
+  /** The most tasks that ran at once per class since the scheduler was created (TST-025 resource check through the debug hook). */
+  maxRunningPerClass(): Readonly<Record<string, number>> {
+    return Object.fromEntries(this.peaks);
+  }
+
   private start(task: Task): void {
     this.running.add(task);
+    const sameClass = [...this.running].filter((t) => t.info.cls === task.info.cls).length;
+    this.peaks.set(task.info.cls, Math.max(this.peaks.get(task.info.cls) ?? 0, sameClass));
     const finish = (result: Result<unknown, 'cancelled'>): void => {
       this.running.delete(task);
       task.resolve(task.controller.signal.aborted ? err('cancelled') : result);

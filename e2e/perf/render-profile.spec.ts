@@ -4,9 +4,10 @@ import { TUNABLES } from '../../src/config/tunables';
 import { label } from '../support/score';
 import { MIN_PERF_SLIDE_CHANGES } from '../../scripts/lib/corpus-files.mjs';
 import {
-  DEV_URL, detectionTimeoutMs, installSlideChangeTimer, openReference, PERF_WAIT_MS, realPdfs, recordedSlideChanges, report, summary, waitForDetectionComplete,
+  DEV_URL, detectionTimeoutMs, openReference, PERF_WAIT_MS, realPdfs, report, summary, waitForDetectionComplete,
   waitForFirstSlideDrawn,
 } from './support';
+import { BYTES_PER_MIB, heapMib, indicator, NEXT_KEY, press, PREVIOUS_KEY, SETTLE_MS } from './actions';
 
 /**
  * Report-only measurements that show where loading time and memory go (NFR-001, NFR-004, NFR-016, NFR-025).
@@ -15,49 +16,15 @@ import {
  */
 const PERF_BASE_TEST_TIMEOUT_MS = 300_000;
 const MAX_SLIDES = 50;
-const SETTLE_MS = 300;
-const GC_SETTLE_MS = 200;
-const BYTES_PER_MIB = 1024 * 1024;
-const NEXT_KEY = 'PageDown';
-const PREVIOUS_KEY = 'PageUp';
 
 test.use({ viewport: { width: 1280, height: 800 } });
 test.setTimeout(PERF_BASE_TEST_TIMEOUT_MS + 2 * detectionTimeoutMs());
 
 type Probe = { __cm: { cache: { totalBytes: number; budgetBytes: number }; sourceRenders?: () => number } };
 
-const indicator = (page: Page) => page.locator('app-bottom-bar .indicator');
-const currentSlide = async (page: Page): Promise<number> => Number(/^(\d+)/.exec((await indicator(page).textContent()) ?? '')?.[1]);
 const directRenders = (page: Page): Promise<number> => page.evaluate(() => (globalThis as unknown as Probe).__cm.directRenders?.() ?? -1);
 const sourceRenders = (page: Page): Promise<number> => page.evaluate(() => (globalThis as unknown as Probe).__cm.sourceRenders?.() ?? -1);
 const cacheMib = (page: Page): Promise<number> => page.evaluate((mib) => (globalThis as unknown as Probe).__cm.cache.totalBytes / mib, BYTES_PER_MIB);
-
-/** JS heap in MiB after a garbage collection (decoded bitmaps live outside the JS heap and are not included). */
-async function heapMib(page: Page): Promise<number> {
-  const session = await page.context().newCDPSession(page);
-  try {
-    await session.send('HeapProfiler.collectGarbage');
-    await session.send('Performance.enable');
-    await page.waitForTimeout(GC_SETTLE_MS);
-    const { metrics } = (await session.send('Performance.getMetrics')) as { metrics: { name: string; value: number }[] };
-    return (metrics.find((m) => m.name === 'JSHeapUsedSize')?.value ?? Number.NaN) / BYTES_PER_MIB;
-  } finally {
-    await session.detach();
-  }
-}
-
-/** Presses `key` `count` times, waiting for each change; returns the key-to-frame time of every change. */
-async function press(page: Page, key: string, step: 1 | -1, count: number): Promise<number[]> {
-  await installSlideChangeTimer(page);
-  for (let i = 0; i < count; i++) {
-    const before = await currentSlide(page);
-    await page.keyboard.press(key);
-    await expect.poll(() => currentSlide(page), { timeout: PERF_WAIT_MS }).toBe(before + step);
-    await page.waitForTimeout(SETTLE_MS);
-  }
-  await expect.poll(async () => (await recordedSlideChanges(page)).length, { timeout: PERF_WAIT_MS }).toBeGreaterThanOrEqual(count);
-  return recordedSlideChanges(page);
-}
 
 test('NFR-001 NFR-025 TST-008 profile: source renders and slide-change times going forward and back through the regular PDF (report only)', async ({ page }, testInfo) => {
   test.skip(realPdfs().regular === null, 'no regular real PDF in the corpus');
