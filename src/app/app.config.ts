@@ -6,11 +6,13 @@ import {
   inject,
   InjectionToken,
   isDevMode,
+  effect,
+  untracked,
 } from '@angular/core';
 import { provideServiceWorker } from '@angular/service-worker';
 import { provideHttpClient } from '@angular/common/http';
 import { Capacitor } from '@capacitor/core';
-import { provideTransloco } from '@jsverse/transloco';
+import { provideTransloco, TranslocoService } from '@jsverse/transloco';
 import { provideRouter } from '@angular/router';
 import { TUNABLES } from '../config/tunables';
 // EDN-007: the build replaces this file with features.native.ts for the native editions (angular.json fileReplacements).
@@ -23,6 +25,10 @@ import type { FileAccess } from './ports/file-access';
 import { FeatureFileAccess, persistsFileHandles } from './adapters/feature/feature-file-access';
 import { createPreferences } from './adapters/feature/feature-preferences';
 import { installIconSprite } from './adapters/web/icon-sprite';
+import { showLanguage } from './adapters/web/ui-language';
+import { webSystemLanguages } from './adapters/web/web-system-languages';
+import { LanguageStore } from './state/language.store';
+import { SYSTEM_LANGUAGES } from './ports/system-languages';
 import { MemoryHandleStore } from './adapters/web/memory-handle-store';
 import { cacheBudgetFor } from './core/cache-budget';
 import { tunablesToCssVars } from './state/css-vars';
@@ -190,14 +196,24 @@ export const appConfig: ApplicationConfig = {
     }),
     ...provideTransloco({
       config: {
-        availableLangs: ['en'],
-        defaultLang: 'en',
-        fallbackLang: 'en',
-        reRenderOnLangChange: false,
+        availableLangs: [...TUNABLES.i18n.languages],
+        defaultLang: TUNABLES.i18n.fallback,
+        fallbackLang: TUNABLES.i18n.fallback,
+        reRenderOnLangChange: true, // I18-004: the language can change while the app runs
       },
       loader: AppTranslocoLoader,
     }),
     provideAppIdentity(),
+    { provide: SYSTEM_LANGUAGES, useValue: webSystemLanguages },
+    // I18-004: creating the store registers the language setting; the shown language follows it.
+    provideEnvironmentInitializer(() => {
+      const language = inject(LanguageStore);
+      const translation = inject(TranslocoService);
+      effect(() => {
+        const active = language.active();
+        untracked(() => showLanguage(translation, document, active));
+      });
+    }),
     {
       provide: PDF_RENDERER,
       useFactory: () => {

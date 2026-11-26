@@ -39,6 +39,10 @@ select {
   font: inherit;
 }
 
+select {
+  max-width: 100%;
+}
+
 input[type='checkbox'] {
   width: var(--cm-touch-target);
   margin: 0;

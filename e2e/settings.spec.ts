@@ -2,12 +2,15 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { TUNABLES } from '../src/config/tunables';
 import { desktopTest } from './support/desktop';
 import { PAID_URL } from './support/editions';
+import { readTranslations } from './support/fit';
 import { label, openScore, openScoreInAnnotation, waitForFinalSlideCount } from './support/score';
 
 const shell = (page: Page): Locator => page.locator('app-shell');
 const button = (page: Page, key: string): Locator => page.getByRole('button', { name: label(key), exact: true });
 const GROUPS = ['general', 'display', 'slideMode', 'files'];
 const LONG_PRESS_MARGIN_MS = 200;
+/** Far below the seconds a request took while a first visit's service worker was installing. */
+const SWITCH_TIMEOUT_MS = 2_000;
 const PICKED_COLOR = 3;
 const DEFAULT_COLOR = (TUNABLES.colors.penPresets as readonly string[]).indexOf(TUNABLES.annotation.defaultPen.color);
 
@@ -184,3 +187,86 @@ for (const viewport of [
     });
   });
 }
+
+const translations = (language: string) => readTranslations(language) as unknown as {
+  a11y: Record<string, string>;
+  settings: { groups: Record<string, string> };
+};
+const en = translations('en');
+const de = translations('de');
+const headings = (page: Page) => page.locator('app-settings-view h2');
+const languageSelect = (page: Page) => page.locator('[data-setting="language"] select');
+const german = (page: Page, key: string) => page.getByRole('button', { name: de.a11y[key], exact: true });
+
+async function expectLanguage(page: Page, texts: typeof en, language: string): Promise<void> {
+  await expect(headings(page)).toHaveText(Object.values(texts.settings.groups));
+  await expect(page.locator('html')).toHaveAttribute('lang', language);
+}
+
+for (const [locale, texts, language] of [
+  ['de-AT', de, 'de'],
+  ['sv-SE', en, 'en'],
+] as const) {
+  test.describe(`system language ${locale}`, () => {
+    test.use({ locale });
+
+    test(`I18-004 a ${locale} system starts in ${language}`, async ({ page }) => {
+      await page.goto('/');
+      await page.getByRole('button', { name: texts.a11y['settings'], exact: true }).click();
+      await expectLanguage(page, texts, language);
+      await expect(languageSelect(page)).toHaveValue('system');
+    });
+  });
+}
+
+test('I18-004 EDN-005 free web: a chosen language applies at once and is gone after a reload', { tag: '@smoke' }, async ({ page }) => {
+  await page.goto('/');
+  await button(page, 'settings').click();
+  await expectLanguage(page, en, 'en');
+  await languageSelect(page).selectOption('de');
+  await expectLanguage(page, de, 'de');
+  await expect(german(page, 'openFile')).toBeVisible();
+  await page.reload();
+  await button(page, 'settings').click();
+  await expectLanguage(page, en, 'en');
+});
+
+// the service worker is on and nothing waits for it: on a first visit it is still installing
+test('I18-004 on a first visit a chosen language applies at once, without a request', { tag: '@smoke' }, async ({ page, context }) => {
+  await page.goto('/');
+  await button(page, 'settings').click();
+  await expectLanguage(page, en, 'en');
+  const requests: string[] = [];
+  // requests of the page only: Chromium also reports the service worker filling its cache
+  context.on('request', (request) => {
+    if (request.url().includes('/assets/i18n/') && request.serviceWorker() === null) {
+      requests.push(request.url());
+    }
+  });
+  await languageSelect(page).selectOption('de');
+  await expect(headings(page).first()).toHaveText(de.settings.groups['general']!, { timeout: SWITCH_TIMEOUT_MS });
+  expect(requests).toEqual([]);
+});
+
+test.describe('paid build, language', () => {
+  test.use({ baseURL: PAID_URL });
+
+  test('I18-004 UIX-023 EDN-008 paid: German survives a reload until "Reset all settings"', async ({ page }) => {
+    await page.goto('/');
+    await button(page, 'settings').click();
+    await languageSelect(page).selectOption('de');
+    await expectLanguage(page, de, 'de');
+    await page.reload();
+    await german(page, 'settings').click();
+    await expectLanguage(page, de, 'de');
+    await expect(languageSelect(page)).toHaveValue('de');
+    await german(page, 'resetSettings').click();
+    await page.getByTestId('reset-confirm').click();
+    await expectLanguage(page, en, 'en');
+    await expect(languageSelect(page)).toHaveValue('system');
+    await page.reload();
+    await button(page, 'settings').click();
+    await expectLanguage(page, en, 'en');
+  });
+});
+

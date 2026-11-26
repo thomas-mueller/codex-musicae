@@ -29,3 +29,4 @@ export * from './autosave';
 export * from './session';
 export * from './palm';
 export * from './raster-check';
+export * from './language';

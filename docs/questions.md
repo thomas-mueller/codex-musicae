@@ -192,3 +192,11 @@ Update (2026-11-24, same section) — reproduction and what does not work. Repro
 
 1. *Default aspect ratio per orientation* (captured at the first presentation, not named in UIX-023): reset keeps it.
 2. *Stylus values* (finger-drawing toggle and "pen was seen", removed in V2-M11): reset leaves both.
+
+## V2-M05 S3 — Languages (I18-003, I18-004)
+
+**Decided (2026-11-26, owner), asked during planning; recorded as DEC-162:**
+
+1. *Who writes German:* the agent drafts it, formal "Sie" (infinitives on buttons), and the owner reviews it. This amends DEC-134.
+2. *The picker:* "System language" (the default) and the seven languages under their own names.
+3. *The five untranslated languages* are offered now and show English until V2-M16.

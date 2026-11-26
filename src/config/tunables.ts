@@ -109,6 +109,13 @@ export const TUNABLES = {
     settingsGapPx: 8, // UIX-026: padding and spacing in the settings view
   },
 
+  i18n: {
+    // I18-003: one translation file per language in src/assets/i18n/
+    languages: ['en', 'de', 'es', 'fr', 'it', 'pt-BR', 'nl'],
+    fallback: 'en', // I18-004: when no language of the system is available
+    systemChoice: 'system', // I18-004: the value of the language setting that follows the system
+  },
+
   /** The sprite of the icons below: loaded once and put into the document (UIX-010). */
   iconSprite: {
     url: 'assets/icons/sprite.svg',
@@ -387,6 +394,7 @@ export const TUNABLES = {
   },
 
   testing: {
+    longTextExtraRatio: 0.4, // I18-006: the fit tests lengthen every German text by this share
     unitTestTimeoutMs: 10_000, // TST-008 (ms): Vitest timeout for tests and hooks; real-PDF specs are heavy in the parallel run (Vitest default 5000)
   },
 

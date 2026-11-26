@@ -164,6 +164,19 @@
     "reset": {
       "button": "Reset all settings",
       "question": "Reset all settings? Your files are not changed."
+    },
+    "language": {
+      "label": "Language",
+      "system": "System language",
+      "names": {
+        "en": "English",
+        "de": "Deutsch",
+        "es": "Español",
+        "fr": "Français",
+        "it": "Italiano",
+        "pt-BR": "Português (Brasil)",
+        "nl": "Nederlands"
+      }
     }
   }
 }

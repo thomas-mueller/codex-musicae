@@ -6,6 +6,7 @@ import { FEATURE_FLAGS } from '../app/ports/feature-flags';
 import type { FeatureFlags } from '../app/ports/feature-flags';
 import { PREFERENCES } from '../app/ports/preferences';
 import { SettingsRegistry } from '../app/state/settings-registry';
+import { LanguageStore } from '../app/state/language.store';
 import { memoryPreferences } from '../app/state/testing/fake-ports';
 import { ALL_FEATURES_ON } from './provide-test-ports';
 import { provideTestTransloco } from './transloco';
@@ -66,5 +67,22 @@ describe('settings per edition', () => {
     await first.setting.set(true);
     await TestBed.inject(SettingsRegistry).resetAll();
     expect((await run(ALL_FEATURES_ON, store)).box.checked).toBe(false);
+  });
+
+  it('EDN-005 I18-004 free and web keep a chosen language for the session only; paid keeps it', async () => {
+    for (const [flags, expected] of [[FREE, 'en'], [ALL_FEATURES_ON, 'fr']] as const) {
+      const store = memoryPreferences();
+      const start = async () => {
+        await run(flags, store);
+        const language = TestBed.inject(LanguageStore);
+        const setting = TestBed.inject(SettingsRegistry).entries().find((entry) => entry.definition.id === 'language')!;
+        await setting.ready;
+        return { language, setting };
+      };
+      const first = await start();
+      await first.setting.set('fr');
+      expect(first.language.active()).toBe('fr');
+      expect((await start()).language.active()).toBe(expected);
+    }
   });
 });
