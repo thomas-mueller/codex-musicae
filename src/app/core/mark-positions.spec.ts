@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { EMPTY_MARKS } from './edits';
+import { EMPTY_MARKS, junctionView } from './edits';
 import type { DocMarks } from './edits';
 import { generatePlayingOrderCases } from './fixtures/playing-order.cases';
+import { startOrderCases } from './fixtures/playing-order-start.cases';
 import { markPositions, replayArrivals } from './mark-positions';
+import { derivePlayingOrderInput } from './playing-order';
 
 const MAX = 20000;
 const marks = (over: Partial<DocMarks>): DocMarks => ({ ...EMPTY_MARKS, ...over, nextJumpId: (over.jumps?.length ?? 0) + 1 });
@@ -73,5 +75,21 @@ describe('markPositions', () => {
   it('ORG-021 the arrival index orders the marks as they are played', () => {
     const positions = markPositions(marks({ jumps: [{ origin: 4, target: 0, pass: 1, id: 1 }], breaks: [3], stops: [] }), 4, MAX);
     expect(positions.breaks.get(3)!.index).toBeLessThan(positions.jumps.get(1)!.index);
+  });
+});
+
+describe('with a start mark', () => {
+  for (const c of startOrderCases) {
+    it(`PLY-015 ${c.id}: the replay keeps as many systems as the playing order (${c.name})`, () => {
+      const { systemCount, startJunction } = derivePlayingOrderInput(c.marks, c.counts, c.maxLength);
+      const replay = replayArrivals(junctionView(c.marks, c.counts), systemCount, c.maxLength, startJunction);
+      expect(replay.entryCount).toBe(c.expected.entries.length);
+      expect(replay.arrivals[0]?.junction).toBe(startJunction);
+    });
+  }
+
+  it('PLY-015 the first mark met after the start has no system played before it', () => {
+    const positions = markPositions({ ...EMPTY_MARKS, breaks: [2] }, 4, MAX, 2);
+    expect(positions.breaks.get(2)).toMatchObject({ previous: null, next: 1 });
   });
 });

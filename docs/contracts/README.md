@@ -35,7 +35,7 @@ M4 copies and tests the first set (`geometry`, `model`, `system-selection`, `det
 | M15 | `metadata.ts`, `autosave.ts` (+ `metadata.cases.ts`, `autosave.cases.ts`) |
 | M16 | `session.ts` (+ `session.cases.ts`) |
 | M19 | `palm.ts` (+ `palm.cases.ts`); the stylus rows PP09–PP16 of `gestures.cases.ts` are already covered by M13 |
-| V2-M4 | `marks.ts`, `labels.ts`, `migrate-v1.ts` (+ `marks`, `labels`, `migrate-v1`, `playing-order-start` cases); `startJunction` and `derivePlayingOrderInput` added to the implemented `playing-order.ts`; in S2 `metadata-v2.ts` (+ `metadata-v2` cases), a temporary file that S3 merges into `metadata.ts` (DEC-155) |
+| V2-M4 | `marks.ts`, `labels.ts`, `migrate-v1.ts` (+ `marks`, `labels`, `migrate-v1`, `playing-order-start` cases); `startJunction` and `derivePlayingOrderInput` added to the implemented `playing-order.ts`; since S3 `metadata.ts` (+ `metadata.cases.ts`) is the schema 2 contract, which also reads schema 1. `edits.ts` here is the V1 contract (superseded: the implemented `core/edits.ts` is the temporary chip layer over `SystemMarks`, DEC-156) |
 
 Never overwrite a file in `src/` that already contains implementations; when a milestone needs a function whose stub already exists (`findEntryForSystem`), only copy its fixtures and implement the stub. Each milestone adds the exports of the files it copied to `src/app/core/index.ts`.
 

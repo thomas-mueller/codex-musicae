@@ -97,6 +97,18 @@ export function printIndex(ref: SystemRef, pageSystemCounts: readonly number[]):
   return pageSystemCounts.slice(0, pageIndex).reduce((sum, n) => sum + n, system);
 }
 
+/** The system with this 1-based print index, or null when the layout has none (the inverse of `printIndex`). */
+export function refAt(index: number, pageSystemCounts: readonly number[]): SystemRef | null {
+  let before = 0;
+  for (const [pageIndex, count] of pageSystemCounts.entries()) {
+    if (Number.isInteger(index) && index > before && index <= before + count) {
+      return { pageIndex, system: index - before };
+    }
+    before += count;
+  }
+  return null;
+}
+
 /** MRK-008: the number of existing jumps with the same start system, plus one. */
 export function defaultPass(marks: SystemMarks, from: SystemRef): number {
   return marks.jumps.filter((jump) => sameSystem(jump.from, from)).length + 1;

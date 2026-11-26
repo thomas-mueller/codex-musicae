@@ -158,6 +158,18 @@ export interface DerivedOrderInput extends PlayingOrderInput {
 }
 
 /**
+ * The jumps that take part in the replay, as junctions, in creation order and with their ids: a jump with a missing system, a
+ * cross-file target or the same junction at both ends is left out.
+ */
+export function junctionJumps(marks: SystemMarks, pageSystemCounts: readonly number[]): (Jump & { readonly id: number })[] {
+  return marks.jumps.flatMap(({ id, from, to, pass }) => {
+    const origin = printIndex(from, pageSystemCounts);
+    const after = isCrossFile(to) ? null : printIndex(to, pageSystemCounts);
+    return origin === null || after === null || origin === after - 1 ? [] : [{ id, origin, target: after - 1, pass }];
+  });
+}
+
+/**
  * PLY-014..PLY-016: the junction input of the replay, derived from marks on system sides. The right side of system k (global
  * print index, 1..N, N = sum of pageSystemCounts) is junction k, the left side of system k is junction k-1.
  *  - systemCount = N, maxLength as given.
@@ -172,11 +184,7 @@ export interface DerivedOrderInput extends PlayingOrderInput {
 export function derivePlayingOrderInput(marks: SystemMarks, pageSystemCounts: readonly number[], maxLength: number): DerivedOrderInput {
   const systemCount = pageSystemCounts.reduce((sum, n) => sum + n, 0);
   const index = (ref: SystemRef): number | null => printIndex(ref, pageSystemCounts);
-  const jumps = marks.jumps.flatMap(({ from, to, pass }) => {
-    const origin = index(from);
-    const after = isCrossFile(to) ? null : index(to);
-    return origin === null || after === null || origin === after - 1 ? [] : [{ origin, target: after - 1, pass }];
-  });
+  const jumps = junctionJumps(marks, pageSystemCounts).map(({ origin, target, pass }) => ({ origin, target, pass }));
   const junctions = (list: readonly { readonly at: SystemRef }[]): number[] =>
     list
       .flatMap((mark) => {

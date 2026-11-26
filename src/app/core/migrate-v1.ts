@@ -2,7 +2,7 @@
  * core/migrate-v1 — V1 marks (junction form) to V2 marks (system form). Requirements: SAV-016, SAV-003.
  */
 import { replayArrivals } from './mark-positions';
-import { EMPTY_SYSTEM_MARKS } from './marks';
+import { EMPTY_SYSTEM_MARKS, refAt } from './marks';
 import type { SystemMarks, SystemRef } from './marks';
 import type { Jump } from './model';
 import { derivePlayingOrderInput, forcedBreaks, generatePlayingOrder, isValidJump, isValidMarkJunction } from './playing-order';
@@ -43,8 +43,7 @@ export interface V1Marks {
  * `nextJumpId` is kept; there are no bookmarks (`nextBookmarkId` 1); without a start candidate `start` is null.
  */
 export function migrateMarksV1(v1: V1Marks, pageSystemCounts: readonly number[], maxLength: number): SystemMarks {
-  const systems = pageSystemCounts.flatMap((count, pageIndex) => Array.from({ length: count }, (_, i) => ({ pageIndex, system: i + 1 })));
-  const systemCount = systems.length;
+  const systemCount = pageSystemCounts.reduce((sum, n) => sum + n, 0);
   const valid: V1Marks = {
     jumps: v1.jumps.filter((jump) => isValidJump(jump, systemCount)),
     breaks: markJunctions(v1.breaks, systemCount),
@@ -52,7 +51,7 @@ export function migrateMarksV1(v1: V1Marks, pageSystemCounts: readonly number[],
     nextJumpId: v1.nextJumpId,
   };
   /** system(k), k in 1..N; only called with junctions that the filters above let through. */
-  const system = (k: number): SystemRef => systems[k - 1] as SystemRef;
+  const system = (k: number): SystemRef => refAt(k, pageSystemCounts) as SystemRef;
   const isEdge = (jump: Jump): boolean => jump.origin === 0 || jump.target === systemCount;
   const build = (startSystem: number | null, stops: readonly number[]): SystemMarks => ({
     ...EMPTY_SYSTEM_MARKS,

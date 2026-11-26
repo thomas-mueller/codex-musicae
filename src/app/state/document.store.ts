@@ -4,11 +4,15 @@ import type { Observable } from 'rxjs';
 
 import { TUNABLES } from '../../config/tunables';
 import {
-  EMPTY_MARKS, EMPTY_UNDO, FIT_VIEW, addJump, clearJunction, computeBars, computePaddings, findEntryForSystem, flattenSystems, forcedBreaks,
-  CURRENT_SCHEMA_VERSION, applyAction, generatePlayingOrder, isComplete, isProvisional, junctionCount, markPositions, packSlides, paddedArea,
-  pushAction, redoStep, referenceWidth, removeJump, slideIndexOfEntry, systemNumbers, toggleBreak, toggleStop, undoStep, updateJump, usablePrefix,
+  EMPTY_SYSTEM_MARKS, EMPTY_UNDO, FIT_VIEW, addJump, clearJunction, computeBars, computePaddings, derivePlayingOrderInput, findEntryForSystem,
+  flattenSystems, forcedBreaks, CURRENT_SCHEMA_VERSION, applyAction, generatePlayingOrder, isComplete, isProvisional, junctionCount,
+  junctionView, markPositions, migrateMarksV1, packSlides, paddedArea, pushAction, redoStep, referenceWidth, removeJump, slideIndexOfEntry, systemNumbers,
+  toggleBreak, toggleStop, undoStep, updateJump, usablePrefix,
 } from '../core';
-import type { DetectedPage, DocMarks, EmbeddedMetadata, InkStroke, MetadataPage, Jump, Orientation, Point, SlidePlan, SystemGeom, UndoAction, UndoState, ViewState } from '../core';
+import type {
+  DetectedPage, EmbeddedMetadata, InkStroke, MetadataPage, Jump, Orientation, Point, SlidePlan, SystemGeom, SystemMarks, UndoAction,
+  UndoState, V1Marks, ViewState,
+} from '../core';
 import type { PdfDocumentHandle, PdfOpenError, PdfPageInfo, PdfRenderer } from '../ports/pdf-renderer';
 import { DetectionRun } from './detection-run';
 import { NO_RATIO_DEFAULTS } from './ratio-defaults';
@@ -89,26 +93,54 @@ export class DocumentStore {
   });
   readonly detectionComplete = computed(() => this.candidate() === null && isComplete(this.detection.states()));
 
-  /** ORG-017: jumps, breaks and stops of this tab; in memory only (saving comes in M15). */
-  private readonly marksSignal = signal<DocMarks>(EMPTY_MARKS);
-  readonly marks = this.marksSignal.asReadonly();
+  /** Systems per page of the usable prefix, indexed by page: the layout the marks are read against. */
+  private readonly pageSystemCounts = computed<readonly number[]>(
+    () => {
+      const counts = new Array<number>(this.detection.states().length).fill(0);
+      for (const page of this.pagesUsable()) {
+        counts[page.pageIndex] = page.systems.length;
+      }
+      return counts;
+    },
+    // A re-run that finds the same layout changes nothing that depends on it.
+    { equal: (a, b) => a.length === b.length && a.every((n, i) => n === b[i]) },
+  );
+
+  private readonly marksSignal = signal<SystemMarks>(EMPTY_SYSTEM_MARKS);
+  private readonly pendingV1Signal = signal<V1Marks | null>(null);
+  /**
+   * DEC-154: waiting V1 marks, migrated once the active detection run is complete (a re-run in the background does not
+   * matter). A run without any system would drop them all, so they keep waiting and the file keeps its data (DEC-156).
+   */
+  private readonly migratedV1Marks = computed<SystemMarks | null>(() => {
+    const pending = this.pendingV1Signal();
+    if (pending === null || !this.activeRunComplete()) {
+      return null;
+    }
+    const counts = this.pageSystemCounts();
+    return counts.every((n) => n === 0) ? null : migrateMarksV1(pending, counts, TUNABLES.playingOrder.maxLength);
+  });
+  /** SAV-015: the marks of this tab on their systems; this is what is saved. */
+  readonly systemMarks = computed(() => this.migratedV1Marks() ?? this.marksSignal());
+  /** V1 marks are still waiting: mark edits are rejected, and a save leaves the embedded data as it is (DEC-155). */
+  readonly marksPending = computed(() => this.pendingV1Signal() !== null && this.migratedV1Marks() === null);
+  /** What the V1 organization chips show: the marks as junctions (until V2-M10). */
+  readonly marks = computed(() => junctionView(this.systemMarks(), this.pageSystemCounts()));
+  private readonly orderInput = computed(() =>
+    derivePlayingOrderInput(this.systemMarks(), this.pageSystemCounts(), TUNABLES.playingOrder.maxLength),
+  );
   /** Transient: set to a fresh object on every rejected edit so the UI can flash an error icon; no text. */
   private readonly lastRejectedSignal = signal<{ readonly seq: number } | null>(null);
   readonly lastRejected = this.lastRejectedSignal.asReadonly();
   private rejectedSeq = 0;
 
-  readonly playingOrder = computed(() =>
-    generatePlayingOrder({
-      systemCount: this.junctionCount(),
-      jumps: this.marks().jumps,
-      stops: this.marks().stops,
-      maxLength: TUNABLES.playingOrder.maxLength,
-    }),
-  );
+  readonly playingOrder = computed(() => generatePlayingOrder(this.orderInput()));
   readonly numbers = computed(() => systemNumbers(this.playingOrder(), this.junctionCount()));
-  readonly forcedBreakAfter = computed(() => forcedBreaks(this.playingOrder(), new Set(this.marks().breaks)));
+  readonly forcedBreakAfter = computed(() => forcedBreaks(this.playingOrder(), new Set(this.orderInput().breaks)));
   /** ORG-018, ORG-021: where jumps, breaks and stops are met in the playing order (playing-order numbers, never print numbers). */
-  readonly markPositions = computed(() => markPositions(this.marks(), this.junctionCount(), TUNABLES.playingOrder.maxLength));
+  readonly markPositions = computed(() =>
+    markPositions(this.marks(), this.junctionCount(), TUNABLES.playingOrder.maxLength, this.orderInput().startJunction),
+  );
 
   /** DET-010: padding per usable page, in the order of `pagesUsable`. */
   readonly paddings = computed(() => computePaddings(this.pagesUsable(), TUNABLES.detection.fallbackPaddingPageHeightRatio));
@@ -322,45 +354,39 @@ export class DocumentStore {
 
   /** Returns the id of the new jump, or null if it was rejected. */
   addJump(jump: Jump): number | null {
-    const before = this.marks().nextJumpId;
-    return this.apply(addJump(this.marks(), jump, this.junctionCount())) ? before : null;
+    const before = this.systemMarks().nextJumpId;
+    return this.apply(addJump(this.systemMarks(), jump, this.pageSystemCounts())) ? before : null;
   }
 
   removeJump(id: number): void {
-    this.apply(removeJump(this.marks(), id));
+    this.apply(removeJump(this.systemMarks(), id));
   }
 
   updateJump(id: number, patch: Partial<Jump>): void {
-    this.apply(updateJump(this.marks(), id, patch, this.junctionCount()));
+    this.apply(updateJump(this.systemMarks(), id, patch, this.pageSystemCounts()));
   }
 
   toggleBreak(junction: number): void {
-    this.apply(toggleBreak(this.marks(), junction, this.junctionCount()));
+    this.apply(toggleBreak(this.systemMarks(), junction, this.pageSystemCounts()));
   }
 
   toggleStop(junction: number): void {
-    this.apply(toggleStop(this.marks(), junction, this.junctionCount()));
+    this.apply(toggleStop(this.systemMarks(), junction, this.pageSystemCounts()));
   }
 
   clearJunction(junction: number): void {
-    this.apply(clearJunction(this.marks(), junction));
+    this.apply(clearJunction(this.systemMarks(), junction, this.pageSystemCounts()));
   }
 
   /** SAV-004: this tab as the JSON embedded in the PDF; `detection` only for the active, complete run. */
   buildMetadata(appVersion: string): EmbeddedMetadata {
-    const marks = this.marks();
     const override = this.ratioOverride();
     return {
       schemaVersion: CURRENT_SCHEMA_VERSION,
       appVersion,
       pageCount: this.pageInfos().length,
       detection: this.hasCompleteDetection() ? { level: this.detection.level(), pages: this.metadataPages() } : null,
-      marks: {
-        jumps: marks.jumps.map((j) => ({ id: j.id, origin: j.origin, target: j.target, pass: j.pass })),
-        breaks: [...marks.breaks],
-        stops: [...marks.stops],
-        nextJumpId: marks.nextJumpId,
-      },
+      marks: this.systemMarks(),
       aspectRatio: {
         ...(override.portrait === undefined ? {} : { portrait: override.portrait }),
         ...(override.landscape === undefined ? {} : { landscape: override.landscape }),
@@ -369,13 +395,9 @@ export class DocumentStore {
   }
 
   /** SAV-005, DET-023: restores marks, ratios and (when stored) the finished detection; no detection run is started. True when detection was restored. */
-  hydrateFromMetadata(meta: EmbeddedMetadata): boolean {
-    this.marksSignal.set({
-      jumps: meta.marks.jumps.map((j) => ({ ...j })),
-      breaks: [...meta.marks.breaks],
-      stops: [...meta.marks.stops],
-      nextJumpId: meta.marks.nextJumpId,
-    });
+  hydrateFromMetadata(meta: EmbeddedMetadata, pendingV1Marks: V1Marks | null = null): boolean {
+    this.marksSignal.set(meta.marks);
+    this.pendingV1Signal.set(pendingV1Marks);
     this.ratioOverride.set({ ...meta.aspectRatio });
     if (meta.detection !== null) {
       this.detection.reset(meta.pageCount);
@@ -390,8 +412,12 @@ export class DocumentStore {
 
   /** Complete means every page of the file has a final state; before detection starts the state list is still empty. */
   private hasCompleteDetection(): boolean {
+    return this.candidate() === null && this.activeRunComplete();
+  }
+
+  private activeRunComplete(): boolean {
     const count = this.pageInfos().length;
-    return count > 0 && this.detection.states().length === count && this.detectionComplete();
+    return count > 0 && this.detection.states().length === count && isComplete(this.detection.states());
   }
 
   private metadataPages(): MetadataPage[] {
@@ -414,8 +440,9 @@ export class DocumentStore {
     });
   }
 
-  /** DET-015: marks after a re-run (kept or cleared by `reconcileAfterRedetection`); not an edit, so never "rejected". */
-  replaceMarks(marks: DocMarks): void {
+  /** Sets the marks and ends any wait for V1 marks: for accepted edits, and the page rules of a re-run (MRK-014), which are never "rejected". */
+  replaceMarks(marks: SystemMarks): void {
+    this.pendingV1Signal.set(null);
     this.marksSignal.set(marks);
   }
 
@@ -452,13 +479,13 @@ export class DocumentStore {
     this.changeSubject.next({ type, t: this.now() });
   }
 
-  /** A null result (invalid edit) leaves the marks unchanged and flags the rejection. */
-  private apply(next: DocMarks | null): boolean {
-    if (next === null) {
+  /** A null result (invalid edit), or any edit while V1 marks wait, leaves the marks unchanged and flags the rejection. */
+  private apply(next: SystemMarks | null): boolean {
+    if (next === null || this.marksPending()) {
       this.lastRejectedSignal.set({ seq: ++this.rejectedSeq });
       return false;
     }
-    this.marksSignal.set(next);
+    this.replaceMarks(next);
     return true;
   }
 

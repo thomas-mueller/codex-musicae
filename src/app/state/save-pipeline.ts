@@ -116,7 +116,9 @@ export class SavePipeline {
       edits: {
         addInk: added,
         removeInk: gone.map(([, saved]) => ({ pageIndex: saved.pageIndex, annotationRef: saved.annotationRef })),
-        embeddedJson: this.metadataNewer ? null : serializeMetadata(this.doc.buildMetadata(this.appVersion)),
+        // newer data is never overwritten (SAV-003); waiting V1 marks only exist in the data already in the file (DEC-155)
+        embeddedJson:
+          this.metadataNewer || this.doc.marksPending() ? null : serializeMetadata(this.doc.buildMetadata(this.appVersion)),
       },
     };
   }

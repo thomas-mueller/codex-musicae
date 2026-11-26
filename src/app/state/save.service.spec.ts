@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 
 import { TUNABLES } from '../../config/tunables';
+import { EMPTY_SYSTEM_MARKS } from '../core';
 import type { InkStroke } from '../core';
 import { DocumentStore } from './document.store';
 import { SaveService } from './save.service';
@@ -25,7 +26,7 @@ async function setup(results: boolean[] = []) {
 let breakSeq = 0;
 /** A valid marks edit without detection: toggleBreak would be rejected with no systems. */
 const editMarks = (doc: DocumentStore) =>
-  doc.replaceMarks({ jumps: [], breaks: [++breakSeq], stops: [], nextJumpId: 1 });
+  doc.replaceMarks({ ...EMPTY_SYSTEM_MARKS, breaks: [{ at: { pageIndex: 0, system: ++breakSeq } }] });
 const settle = () => new Promise((r) => setTimeout(r, 0));
 
 describe('SaveService (M15 S1)', () => {
@@ -158,14 +159,14 @@ describe('SaveService (M15 S1)', () => {
     const { doc, clock, run, saver } = await setup();
     // the restore happens after the watchers' first run: marks, ratios and a finished detection arrive
     doc.hydrateFromMetadata({
-      schemaVersion: 1,
+      schemaVersion: 2,
       appVersion: 'v',
       pageCount: 2,
       detection: {
         level: 'standard',
         pages: [0, 1].map((pageIndex) => ({ pageIndex, width: 1, height: 1, state: 'done' as const, systems: [] })),
       },
-      marks: { jumps: [], breaks: [1], stops: [], nextJumpId: 1 },
+      marks: { ...EMPTY_SYSTEM_MARKS, breaks: [{ at: { pageIndex: 0, system: 1 } }] },
       aspectRatio: { landscape: 1.4 },
     });
     saver.rebaseline();

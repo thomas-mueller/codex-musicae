@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { addMarkCases, defaultPassCases, removeSystemCases, rerunPageCases } from './fixtures/marks.cases';
-import { addMark, defaultPass, removeMarksOfSystem, rerunPage } from './marks';
+import { addMark, defaultPass, printIndex, refAt, removeMarksOfSystem, rerunPage } from './marks';
 import { frozen } from '../../testing/deep-freeze';
 import { caseTitle } from '../../testing/expect-close-deep';
 
@@ -36,4 +36,22 @@ describe('rerunPage', () => {
       expect(rerunPage(frozen(c.marks), c.pageIndex, c.oldCount, c.newCount)).toStrictEqual(c.expected);
     });
   }
+});
+
+describe('refAt', () => {
+  const counts = [3, 0, 2];
+
+  it('MRK-001 is the inverse of printIndex across a page without systems', () => {
+    expect([1, 3, 4, 5].map((k) => refAt(k, counts))).toEqual([
+      { pageIndex: 0, system: 1 }, { pageIndex: 0, system: 3 }, { pageIndex: 2, system: 1 }, { pageIndex: 2, system: 2 },
+    ]);
+    for (let k = 1; k <= 5; k++) {
+      const ref = refAt(k, counts);
+      expect(ref === null ? null : printIndex(ref, counts)).toBe(k);
+    }
+  });
+
+  it('MRK-001 has no system outside 1..N or for a fraction', () => {
+    expect([0, 6, -1, 1.5].map((k) => refAt(k, counts))).toEqual([null, null, null, null]);
+  });
 });

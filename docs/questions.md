@@ -163,3 +163,12 @@ Update (2026-11-24, same section) — reproduction and what does not work. Repro
 - While `pendingV1Marks` is set: save without embedded data and migrate when detection has finished. To decide: what happens to marks the user adds during that wait.
 - The schema 1 reader does not require unique jump ids, schema 2 does. The app never wrote a duplicate; a hand-edited schema 1 file with one would be migrated, and the schema 2 data saved from it would then be ignored as invalid on the next open.
 - `core/mark-positions.ts` must start its replay at `startJunction`; the migration also uses `replayArrivals` and needs it to start at junction 0 for V1 data.
+
+## V2-M04 S3 — state and callers (SAV-015…SAV-017, MRK-014)
+
+**Decided (2026-11-26, owner, DEC-156):** the two points left for S3. Mark edits are rejected while V1 marks wait; a start mark stays hidden until V2-M10.
+
+**Test change found during S3 (owner approved):** the S3 plan expected `state/document.store.spec` to stay unchanged. Nine of its tests added V1 edge jumps through the store; they are filtered, and a rejection test was added (`docs/changelog.md`).
+
+**Still open, no change made:**
+- A hand-edited schema 1 file with duplicate jump ids is upgraded; the schema 2 data saved from it is then rejected on the next open (S2 note). The app never wrote duplicates.

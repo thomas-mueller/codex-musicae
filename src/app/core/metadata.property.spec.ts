@@ -2,14 +2,14 @@ import { describe, expect, it } from 'vitest';
 
 import { addMark, EMPTY_SYSTEM_MARKS, removeMarksOfSystem, rerunPage } from './marks';
 import type { FileRef, NewMark, SystemMarks, SystemRef } from './marks';
-import { serializeMetadata as serializeSchema1 } from './metadata';
-import { parseMetadata, serializeMetadata } from './metadata-v2';
-import type { EmbeddedMetadata } from './metadata-v2';
+import { parseMetadata, serializeMetadata } from './metadata';
+import type { EmbeddedMetadata } from './metadata';
 import type { V1Marks } from './migrate-v1';
 import { derivePlayingOrderInput, forcedBreaks, generatePlayingOrder, isValidJump } from './playing-order';
 import type { PlayingOrderInput } from './playing-order';
 import { seededRandom } from '../../testing/seeded-random';
 import type { SeededRandom } from '../../testing/seeded-random';
+import { schema1Pages, schema1Text } from '../../testing/schema1-text';
 
 const MAX_LENGTH = 20000;
 const RUNS = 400;
@@ -122,13 +122,7 @@ describe('schema 1 to schema 2 over random V1 marks', () => {
       const counts = layout(random);
       const n = counts.reduce((sum, count) => sum + count, 0);
       const old = v1Marks(random, n);
-      const pages = counts.map((count, pageIndex) => ({
-        pageIndex, width: 595, height: 842, state: 'done' as const,
-        systems: Array.from({ length: count }, (_, i) => ({ x: 40, y: 10 + 50 * i, width: 500, height: 40 })),
-      }));
-      const first = reread(serializeSchema1({
-        schemaVersion: 1, appVersion: 'v', pageCount: counts.length, detection: { level: 'standard', pages }, marks: old, aspectRatio: {},
-      }));
+      const first = reread(schema1Text({ pageCount: counts.length, detection: { level: 'standard', pages: schema1Pages(counts) }, marks: old }));
       const second = reread(serializeMetadata(first.value));
       expect(second.value, `seed ${seed}`).toStrictEqual(first.value);
       expect(playedFrom(second.value.marks, counts), `seed ${seed}`).toEqual(playedFrom(first.value.marks, counts));

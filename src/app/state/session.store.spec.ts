@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 
 import { TUNABLES } from '../../config/tunables';
-import { serializeMetadata } from '../core';
+import { EMPTY_SYSTEM_MARKS, serializeMetadata } from '../core';
 import type { EmbeddedMetadata } from '../core';
 import { provideTestDetectionPorts, provideTestSavePorts } from '../../testing/provide-test-ports';
 import { APP_LIFECYCLE } from '../ports/app-lifecycle';
@@ -26,6 +26,7 @@ import { FakeClock } from './testing/fake-clock';
 import { fakeFileAccess, memoryPreferences } from './testing/fake-ports';
 import type { FakePdfWriter } from './testing/fake-ports';
 import { fakeRenderer } from './testing/fake-renderer';
+import { schema1Text } from '../../testing/schema1-text';
 
 const GOOD = 1;
 const BAD = 0;
@@ -402,14 +403,14 @@ describe('SessionStore picker and recents', () => {
 
   describe('reading existing data on open (M15 S4)', () => {
     const META: EmbeddedMetadata = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       appVersion: 'v-old',
       pageCount: 2,
       detection: {
         level: 'standard',
         pages: [0, 1].map((pageIndex) => ({ pageIndex, width: 600, height: 800, state: 'done' as const, systems: [{ x: 10, y: 20, width: 500, height: 100 }] })),
       },
-      marks: { jumps: [{ id: 1, origin: 2, target: 0, pass: 1 }], breaks: [], stops: [], nextJumpId: 2 },
+      marks: { ...EMPTY_SYSTEM_MARKS, jumps: [{ id: 1, from: { pageIndex: 1, system: 1 }, to: { pageIndex: 0, system: 1 }, pass: 1 }], nextJumpId: 2 },
       aspectRatio: { landscape: 1.5 },
     };
     const INK: ExistingInk[] = [
@@ -469,7 +470,8 @@ describe('SessionStore picker and recents', () => {
 
     it('SAV-003 metadata of a newer version is never overwritten, the ink still is saved', async () => {
       const { session, writer, start, doc } = await openWith(({ writer: w }) =>
-        w.readEmbeddedJson.mockResolvedValue(ok(serializeMetadata({ ...META, schemaVersion: 2 }))),
+        // the writer always writes the current version, so the newer one is made from its text
+        w.readEmbeddedJson.mockResolvedValue(ok(serializeMetadata(META).replace('"schemaVersion":2', '"schemaVersion":3'))),
       );
       expect(start).toHaveBeenCalledTimes(1);
       doc.addStroke({ id: 'n', pageIndex: 0, points: [{ x: 1, y: 1 }], color: '#000000', widthPt: 1, opacity: 1, multiply: false });
@@ -546,6 +548,39 @@ describe('SessionStore picker and recents', () => {
       session.setActive(a?.id ?? '');
       expect(session.activeDocument()?.strokes().map((s) => s.id)).toEqual(['s1']);
       expect(session.tabs()[0]).toMatchObject({ saveFailed: true });
+    });
+
+    const V1_MARKS = { jumps: [{ id: 1, origin: 2, target: 0, pass: 1 }], breaks: [], stops: [], nextJumpId: 2 };
+    const MIGRATED_JUMP = { id: 1, from: { pageIndex: 1, system: 1 }, to: { pageIndex: 0, system: 1 }, pass: 1 };
+
+    it('SAV-003 SAV-016 a schema 1 file with its detection opens migrated, runs no detection and is not written', async () => {
+      const text = schema1Text({ pageCount: 2, detection: META.detection, marks: V1_MARKS });
+      const { doc, start, files, clock } = await openWith(({ writer }) => writer.readEmbeddedJson.mockResolvedValue(ok(text)));
+      expect(start).not.toHaveBeenCalled();
+      expect(doc.systemMarks().jumps).toStrictEqual([MIGRATED_JUMP]);
+      TestBed.tick();
+      clock.advance(TUNABLES.saving.autosaveIdleMs * 2);
+      await settle();
+      expect(files.write).not.toHaveBeenCalled();
+    });
+
+    it('SAV-016 SAV-017 a schema 1 file without detection is detected, then written in schema 2', async () => {
+      const text = schema1Text({ pageCount: 2, detection: null, marks: V1_MARKS });
+      const { doc, start, files, clock, writer } = await openWith(({ writer: w }) => w.readEmbeddedJson.mockResolvedValue(ok(text)));
+      expect(start).toHaveBeenCalledTimes(1);
+      expect(doc.marksPending()).toBe(true);
+      doc.detection.reset(2);
+      TestBed.tick();
+      for (const page of META.detection?.pages ?? []) {
+        doc.detection.finish(page.pageIndex, 'done', { ...page, systems: [...page.systems] });
+      }
+      TestBed.tick();
+      clock.advance(TUNABLES.saving.autosaveIdleMs);
+      await settle();
+      expect(files.write).toHaveBeenCalledTimes(1);
+      const written = JSON.parse(writer.apply.mock.calls.at(-1)?.[1].embeddedJson ?? '{}') as { schemaVersion: number; marks: { jumps: unknown[] } };
+      expect(written.schemaVersion).toBe(2);
+      expect(written.marks.jumps).toEqual([MIGRATED_JUMP]);
     });
 
     it('SAV-005 closing a tab while its data is read starts no detection', async () => {

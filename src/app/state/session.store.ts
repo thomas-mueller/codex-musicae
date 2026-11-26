@@ -325,12 +325,12 @@ export class SessionStore {
         return;
       }
       if (json.ok && json.value !== null) {
-        const parsed = parseMetadata(json.value);
+        const parsed = parseMetadata(json.value, TUNABLES.playingOrder.maxLength);
         if (parsed.kind === 'newer') {
           pipeline.metadataNewer = true;
         } else if (parsed.kind === 'ok') {
           const meta = reconcileMetadata(parsed.value, document.pageInfos().length);
-          detectionRestored = meta !== null && document.hydrateFromMetadata(meta);
+          detectionRestored = meta !== null && document.hydrateFromMetadata(meta, parsed.pendingV1Marks);
         }
       }
       if (ink.ok) {

@@ -130,9 +130,9 @@ V2 terms (target `v2` entries):
 - **SAV-012** [v1·done·M15] After detection completes on a writable file, a save is scheduled so that later opens find embedded detection data and skip detection.
 - **SAV-013** [v1·done·M15] Existing annotations of other apps and existing attachments are preserved on save, except ink removed by the eraser (ANN-005).
 - **SAV-014** [v1·done·M15] Ink annotation edits made in a tab persist across tab switches within the session even if saving failed.
-- **SAV-015** [v2·todo·M4] A new `schemaVersion` stores marks per system and side, the start mark, bookmarks, user texts of marks and cross-file references.
-- **SAV-016** [v2·todo·M4] V1 data is migrated on read: a jump origin at junction k goes to the right side of system k, a jump target at junction k to the left side of system k+1, a break or stop at junction k to the right side of system k; V1 files keep opening. A V1 jump with origin junction 0 or target junction N has no system side: a reached pass-1 jump from junction 0 becomes the start mark and a reached jump to junction N becomes a stop, only if all such conversions together keep the V1 playing order and slide breaks; every other such jump is dropped.
-- **SAV-017** [v2·todo·M4] Saving writes the new schema only.
+- **SAV-015** [v2·done·M4] A new `schemaVersion` stores marks per system and side, the start mark, bookmarks, user texts of marks and cross-file references.
+- **SAV-016** [v2·done·M4] V1 data is migrated on read: a jump origin at junction k goes to the right side of system k, a jump target at junction k to the left side of system k+1, a break or stop at junction k to the right side of system k; V1 files keep opening. A V1 jump with origin junction 0 or target junction N has no system side: a reached pass-1 jump from junction 0 becomes the start mark and a reached jump to junction N becomes a stop, only if all such conversions together keep the V1 playing order and slide breaks; every other such jump is dropped.
+- **SAV-017** [v2·done·M4] Saving writes the new schema only.
 - **SAV-018** [v2·todo·M12] Text and stamp annotations are saved as standard PDF annotations with appearance streams, so that other viewers display them, and the app reads them back as editable text and stamps.
 
 ## DET — Detection
@@ -151,7 +151,7 @@ V2 terms (target `v2` entries):
 - **DET-012** [v1·done·M10] Pages without systems take no part in junctions, slides or the playing order; organization mode shows them as plain PDF pages.
 - **DET-013** [v1·changed·M10] Three levels `fast`, `standard`, `fine` each define `minSystemWidthRatio`, `fullWidthSystemRatio`, `renderScale`, `adaptiveBlockSize` and `adaptiveC` (`T:detection.levels`); the default is `T:detection.defaultLevel`. `renderScale` is bitmap pixels per PDF point, written as dpi / 72: `fast` 100 dpi, `standard` 150 dpi, `fine` 200 dpi (ASM-09). *(Changed in V2 → DET-030, V2-M8.)*
 - **DET-014** [v1·changed·M11] Organization mode offers a level selector (three icon steps); choosing a level asks for confirmation and then re-runs detection. *(Changed in V2 → DET-030, V2-M8.)*
-- **DET-015** [v1·done·M11] During a re-run the previous results stay active; at completion they are swapped in, and jumps, breaks and stops are kept only if the total system count is unchanged, else cleared.
+- **DET-015** [v1·changed·M11] During a re-run the previous results stay active; at completion they are swapped in, and jumps, breaks and stops are kept only if the total system count is unchanged, else cleared. *(Changed in V2 → MRK-014, V2-M4.)*
 - **DET-016** [v1·changed·M10] Organization mode shows detection progress (processing icon, processed/total pages); slide modes show the slide count as "n+" until detection is complete. *(Changed in V2 → ORG-032, V2-M8.)*
 - **DET-017** [v1·changed·M10] Detection pauses while the user interacts (resumes after `T:detection.idleBeforeResumeMs` without input), while the app is hidden, and under battery saver where detectable. *(Changed in V2 → DET-027, V2-M8.)*
 - **DET-018** [v1·done·M10] If a page fails (error or out of memory), it is retried once at `renderScale` × `T:detection.retryScaleFactor`; if it fails again the page is marked not detected and processing continues.

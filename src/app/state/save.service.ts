@@ -44,7 +44,7 @@ export class SaveService {
   ) {
     this.subscription = doc.changes.subscribe((change) => this.onDocChange(change));
     this.effects = [
-      this.watch(() => doc.marks(), injector),
+      this.watch(() => doc.systemMarks(), injector),
       this.watch(() => doc.ratioOverride(), injector),
       this.watchDetectionCompletion(injector),
     ];
