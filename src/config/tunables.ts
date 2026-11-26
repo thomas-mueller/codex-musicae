@@ -253,7 +253,7 @@ export const TUNABLES = {
   saving: {
     autosaveIdleMs: 3000, // SAV-008
     metadataFileName: 'codexmusicae.json', // SAV-001
-    schemaVersion: 1, // SAV-002
+    schemaVersion: 2, // SAV-002, SAV-015
   },
 
   /** SAV-006, SAV-010: how ink and the metadata attachment are written into the PDF (adapters/pdflib). */

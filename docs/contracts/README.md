@@ -1,6 +1,6 @@
 # Contracts and fixtures
 
-Verified inputs for milestones M4, M5 and M6. Everything here compiles under `strict` TypeScript and every fixture value was checked against the independent reference implementation in `docs/reference/core-reference.mjs`.
+Verified inputs for milestones M4, M5 and M6. Everything here compiles under `strict` TypeScript and every fixture value was checked against the independent reference implementation in `docs/reference/core-reference.mjs`. V2-M4 adds the data model v2 contracts (`marks`, `labels`, `migrate-v1`, the derivation in `playing-order`).
 
 ## Layout (mirrors the target layout)
 
@@ -35,7 +35,8 @@ M4 copies and tests the first set (`geometry`, `model`, `system-selection`, `det
 | M15 | `metadata.ts`, `autosave.ts` (+ `metadata.cases.ts`, `autosave.cases.ts`) |
 | M16 | `session.ts` (+ `session.cases.ts`) |
 | M19 | `palm.ts` (+ `palm.cases.ts`); the stylus rows PP09–PP16 of `gestures.cases.ts` are already covered by M13 |
+| V2-M4 | `marks.ts`, `labels.ts`, `migrate-v1.ts` (+ `marks`, `labels`, `migrate-v1`, `playing-order-start` cases); `startJunction` and `derivePlayingOrderInput` added to the implemented `playing-order.ts`; since S3 `metadata.ts` (+ `metadata.cases.ts`) is the schema 2 contract, which also reads schema 1. `edits.ts` here is the V1 contract (superseded: the implemented `core/edits.ts` is the temporary chip layer over `SystemMarks`, DEC-156) |
 
 Never overwrite a file in `src/` that already contains implementations; when a milestone needs a function whose stub already exists (`findEntryForSystem`), only copy its fixtures and implement the stub. Each milestone adds the exports of the files it copied to `src/app/core/index.ts`.
 
-Reference implementations: `docs/reference/core-reference.mjs` (first set), `core-reference-2.mjs` (second), `core-reference-3.mjs` (third: annotation, metadata, autosave, session, palm).
+Reference implementations: `docs/reference/core-reference.mjs` (first set), `core-reference-2.mjs` (second), `core-reference-3.mjs` (third: annotation, metadata, autosave, session, palm), `core-reference-4.mjs` (fourth: V2 marks, labels, start mark, V1 migration).

@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 
-import { parseMetadata } from '../core';
+import { EMPTY_SYSTEM_MARKS, parseMetadata } from '../core';
 import type { InkStroke } from '../core';
 import type { FileRef } from '../ports/file-access';
 import { err, ok } from '../ports/result';
@@ -38,7 +38,7 @@ describe('SavePipeline (M15 S3)', () => {
     expect(edits?.addInk.map((i) => i.strokeId)).toEqual(['a']);
     expect(edits?.addInk[0]).toMatchObject({ pageIndex: 0, color: '#112233', widthPt: 2, points: [{ x: 1, y: 2 }, { x: 3, y: 4 }] });
     expect(edits?.removeInk).toEqual([]);
-    expect(parseMetadata(edits?.embeddedJson ?? '').kind).toBe('ok');
+    expect(parseMetadata(edits?.embeddedJson ?? '', 20000).kind).toBe('ok');
   });
 
   it('SAV-009 only the difference is sent next time; an erased saved stroke is removed by its nm: reference', async () => {
@@ -176,5 +176,30 @@ describe('SavePipeline (M15 S3)', () => {
     files.saveCopy.mockResolvedValueOnce(err('cancelled'));
     expect(await pipeline.saveCopy(signal)).toMatchObject({ ok: false, error: 'cancelled' });
     expect(vi.isMockFunction(files.saveCopy)).toBe(true);
+  });
+});
+
+describe('SavePipeline while V1 marks wait for detection', () => {
+  it('SAV-016 SAV-017 saves the ink without embedded data, and schema 2 once the marks are migrated', async () => {
+    const { doc, pipeline, signal, lastEdits } = await setup();
+    const pageCount = doc.pageInfos().length;
+    doc.hydrateFromMetadata(
+      { schemaVersion: 2, appVersion: 'v', pageCount, detection: null, marks: EMPTY_SYSTEM_MARKS, aspectRatio: {} },
+      { jumps: [], breaks: [1], stops: [], nextJumpId: 1 },
+    );
+    doc.addStroke(stroke('a'));
+    expect(await pipeline.run(signal)).toBe(true);
+    expect(lastEdits()?.embeddedJson).toBeNull();
+    expect(lastEdits()?.addInk.map((i) => i.strokeId)).toEqual(['a']);
+
+    doc.detection.reset(pageCount);
+    const systems = [{ x: 1, y: 10, width: 90, height: 20 }, { x: 1, y: 50, width: 90, height: 20 }];
+    for (let i = 0; i < pageCount; i++) {
+      doc.detection.finish(i, 'done', { pageIndex: i, width: 100, height: 100, systems });
+    }
+    await pipeline.run(signal);
+    const written = JSON.parse(lastEdits()?.embeddedJson ?? '{}') as { schemaVersion: number; marks: { breaks: unknown[] } };
+    expect(written.schemaVersion).toBe(2);
+    expect(written.marks.breaks).toEqual([{ at: { pageIndex: 0, system: 1 } }]);
   });
 });

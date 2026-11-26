@@ -150,7 +150,7 @@ export async function inspect(bytes: Uint8Array) {
   const json = await api.readEmbeddedJson(bytes, KEY);
   return {
     ink: ink.ok ? ink.value : null,
-    metadata: json.ok && json.value !== null ? parseMetadata(json.value) : null,
+    metadata: json.ok && json.value !== null ? parseMetadata(json.value, TUNABLES.playingOrder.maxLength) : null,
     json: json.ok ? json.value : null,
   };
 }

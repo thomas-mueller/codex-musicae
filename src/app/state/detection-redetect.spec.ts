@@ -2,6 +2,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
 import { TUNABLES } from '../../config/tunables';
+import { EMPTY_SYSTEM_MARKS } from '../core';
 import type { Rect } from '../core';
 import { APP_LIFECYCLE } from '../ports/app-lifecycle';
 import { DETECTION_ENGINE } from '../ports/detection-engine';
@@ -27,8 +28,12 @@ const until = async (condition: () => boolean): Promise<void> => {
   expect(condition()).toBe(true);
 };
 
-/** The engine finds one system per page at the active level and `candidateSystems` per page at the new level. */
-function setup(candidateSystems: 1 | 2 | 'fail') {
+/**
+ * The engine finds one system per page at the active level and `candidateSystems` per page at the new level (a list gives the
+ * number page by page).
+ */
+function setup(candidateSystems: 1 | 2 | 'fail' | readonly (1 | 2)[]) {
+  let candidatePage = 0;
   const renderer = fakeRenderer('invalid', PAGES);
   const lifecycle = { visible: signal(true), userActive: signal(false), batterySaver: signal<boolean | null>(null), onPause: () => () => undefined };
   let lastScale = 1;
@@ -46,7 +51,8 @@ function setup(candidateSystems: 1 | 2 | 'fail') {
       if (candidate && candidateSystems === 'fail') {
         return err('unknown' as const);
       }
-      const rects = candidate && candidateSystems === 2 ? [FIRST, SECOND] : [FIRST];
+      const perPage = typeof candidateSystems === 'object' ? candidateSystems[candidatePage++ % PAGES] : candidateSystems;
+      const rects = candidate && perPage === 2 ? [FIRST, SECOND] : [FIRST];
       const components = rects.map((r) => ({
         rect: { x: r.x * lastScale, y: r.y * lastScale, width: r.width * lastScale, height: r.height * lastScale },
         area: Math.round(r.width * r.height * lastScale * lastScale * SYSTEM_INK),
@@ -183,5 +189,59 @@ describe('DetectionService re-run', () => {
     await until(() => doc.candidate() !== null);
     service.redetect(doc, ACTIVE_LEVEL);
     expect(doc.candidate()).toBeNull();
+  });
+});
+
+describe('DetectionService re-run: marks page by page', () => {
+  const page = (pageIndex: number, systems: readonly Rect[]) => ({ pageIndex, width: 600, height: 800, systems: [...systems] });
+  const rerun = async (service: DetectionService, doc: DocumentStore): Promise<void> => {
+    service.redetect(doc, NEW_LEVEL);
+    await until(() => doc.candidate() === null);
+  };
+
+  it('MRK-014 a page with another system count loses its marks, the other page keeps them', async () => {
+    const { service, open } = setup([1, 2]);
+    const doc = await open();
+    doc.addJump({ origin: 2, target: 0, pass: 1 }); // from the system of page 1
+    doc.toggleStop(1); // on the system of page 0
+    await rerun(service, doc);
+    expect(doc.junctionCount()).toBe(3);
+    expect(doc.marks()).toMatchObject({ jumps: [], stops: [1] });
+  });
+
+  it('MRK-014 the same total with another distribution clears the marks of the changed pages', async () => {
+    const { service, open } = setup([1, 2]);
+    const doc = await open();
+    doc.detection.finish(0, 'done', page(0, [FIRST, SECOND])); // two systems on page 0, one on page 1
+    doc.toggleStop(1);
+    doc.toggleBreak(2);
+    await rerun(service, doc);
+    expect(doc.junctionCount()).toBe(3);
+    expect(doc.marks()).toMatchObject({ stops: [], breaks: [] });
+  });
+
+  it('MRK-014 a page the old run had not finished keeps its marks: its old count is unknown', async () => {
+    const { service, open } = setup(2);
+    const doc = await open();
+    doc.replaceMarks({ ...doc.systemMarks(), bookmarks: [{ id: 1, at: { pageIndex: 1, system: 1 } }], nextBookmarkId: 2 });
+    doc.detection.reset(PAGES);
+    doc.detection.finish(0, 'done', page(0, [FIRST]));
+    await rerun(service, doc);
+    expect(doc.systemMarks().bookmarks).toHaveLength(1);
+  });
+
+  it('MRK-014 SAV-016 a re-run while V1 marks wait deletes nothing; they are migrated against its result', async () => {
+    const { service, open } = setup(2);
+    const doc = await open();
+    doc.hydrateFromMetadata(
+      { schemaVersion: 2, appVersion: 'v', pageCount: PAGES, detection: null, marks: EMPTY_SYSTEM_MARKS, aspectRatio: {} },
+      { jumps: [], breaks: [], stops: [3], nextJumpId: 1 },
+    );
+    doc.detection.reset(PAGES);
+    doc.detection.finish(0, 'done', page(0, [FIRST]));
+    expect(doc.marksPending()).toBe(true);
+    await rerun(service, doc);
+    expect(doc.marksPending()).toBe(false);
+    expect(doc.systemMarks().stops).toStrictEqual([{ at: { pageIndex: 1, system: 1 } }]);
   });
 });

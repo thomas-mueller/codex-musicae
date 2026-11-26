@@ -3,9 +3,9 @@ import { effect, inject, Injectable } from '@angular/core';
 import { TUNABLES } from '../../config/tunables';
 import type { DetectionLevelName } from '../../config/tunables';
 import {
-  fitScaleToPixelCap, flattenSystems, nextPageToProcess, pickNext, reconcileAfterRedetection, selectSystems,
+  fitScaleToPixelCap, nextPageToProcess, pickNext, rerunPage, selectSystems,
 } from '../core';
-import type { DetectedPage, SchedulerContext } from '../core';
+import type { DetectedPage, SchedulerContext, SystemMarks } from '../core';
 import { APP_LIFECYCLE } from '../ports/app-lifecycle';
 import { DETECTION_ENGINE } from '../ports/detection-engine';
 import type { ExtractionParams } from '../ports/detection-engine';
@@ -62,8 +62,8 @@ export class DetectionService {
 
   /**
    * DET-014, DET-015: re-runs detection at `level` as a candidate in the background. The active run stays displayed and
-   * usable; when the candidate completes its results are swapped in, and the marks are kept only if the system count is
-   * unchanged. A newer request supersedes an older candidate; asking for the active level drops a pending candidate.
+   * usable; when the candidate completes its results are swapped in, and each page keeps its marks only with an unchanged
+   * system count (MRK-014). A newer request supersedes an older candidate; asking for the active level drops a pending candidate.
    */
   redetect(doc: DocumentStore, level: DetectionLevelName): void {
     this.cancelCandidate(doc);
@@ -90,14 +90,23 @@ export class DetectionService {
     doc.candidate.set(null);
   }
 
-  /** DET-015: failed pages count as pages without systems. */
-  private systemCount(run: DetectionRun): number {
-    return flattenSystems(run.pages().filter((page) => page !== null)).length;
+  /**
+   * MRK-014: a page keeps its marks only with an unchanged system count (failed pages count 0). A page the active run had
+   * not finished keeps them, its old count being unknown.
+   */
+  private marksAfterRerun(marks: SystemMarks, active: DetectionRun, candidate: DetectionRun): SystemMarks {
+    const count = (run: DetectionRun, i: number): number => run.pages()[i]?.systems.length ?? 0;
+    return active.states().reduce(
+      (kept, state, i) => (state === 'done' || state === 'failed' ? rerunPage(kept, i, count(active, i), count(candidate, i)) : kept),
+      marks,
+    );
   }
 
   private swap(doc: DocumentStore, candidate: DetectionRun): void {
-    const marks = reconcileAfterRedetection(doc.marks(), this.systemCount(doc.detection), this.systemCount(candidate));
-    doc.replaceMarks(marks);
+    // waiting V1 marks have no pages yet: they are migrated against whatever run completes
+    if (!doc.marksPending()) {
+      doc.replaceMarks(this.marksAfterRerun(doc.systemMarks(), doc.detection, candidate));
+    }
     doc.detection.adopt(candidate);
     this.candidates.delete(doc);
     doc.candidate.set(null);

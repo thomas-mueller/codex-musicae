@@ -1,4 +1,4 @@
-import { parseMetadata, serializeMetadata } from '../core';
+import { EMPTY_SYSTEM_MARKS, parseMetadata, serializeMetadata } from '../core';
 import { DocumentStore } from './document.store';
 import { fakeRenderer } from './testing/fake-renderer';
 
@@ -15,11 +15,11 @@ describe('DocumentStore metadata (M15 S1)', () => {
   it('SAV-004 a fresh document has no detection, no marks and no ratios', async () => {
     const doc = await readyDoc();
     expect(doc.buildMetadata(VERSION)).toEqual({
-      schemaVersion: 1,
+      schemaVersion: 2,
       appVersion: VERSION,
       pageCount: 2,
       detection: null,
-      marks: { jumps: [], breaks: [], stops: [], nextJumpId: 1 },
+      marks: EMPTY_SYSTEM_MARKS,
       aspectRatio: {},
     });
   });
@@ -54,11 +54,12 @@ describe('DocumentStore metadata (M15 S1)', () => {
     source.detection.finish(0, 'done', { pageIndex: 0, ...PAGE, systems: [{ x: 10, y: 20, width: 300, height: 100 }] });
     source.detection.finish(1, 'failed', null);
     source.detection.level.set('fine');
-    source.replaceMarks({ jumps: [{ id: 2, origin: 1, target: 0, pass: 1 }], breaks: [1], stops: [1], nextJumpId: 3 });
+    const first = { pageIndex: 0, system: 1 };
+    source.replaceMarks({ ...EMPTY_SYSTEM_MARKS, jumps: [{ id: 2, from: first, to: first, pass: 1 }], breaks: [{ at: first }], stops: [{ at: first }], nextJumpId: 3 });
     source.ratioOverride.set({ landscape: 1.5 });
     const meta = source.buildMetadata(VERSION);
 
-    const parsed = parseMetadata(serializeMetadata(meta));
+    const parsed = parseMetadata(serializeMetadata(meta), 20000);
     expect(parsed.kind).toBe('ok');
     if (parsed.kind !== 'ok') {
       return;
@@ -74,15 +75,15 @@ describe('DocumentStore metadata (M15 S1)', () => {
   it('DET-023 hydrating without detection leaves detection untouched', async () => {
     const doc = await readyDoc();
     doc.hydrateFromMetadata({
-      schemaVersion: 1,
+      schemaVersion: 2,
       appVersion: VERSION,
       pageCount: 2,
       detection: null,
-      marks: { jumps: [], breaks: [2], stops: [], nextJumpId: 1 },
+      marks: { ...EMPTY_SYSTEM_MARKS, breaks: [{ at: { pageIndex: 1, system: 1 } }] },
       aspectRatio: { portrait: 0.7 },
     });
     expect(doc.detection.states()).toEqual([]);
-    expect(doc.marks().breaks).toEqual([2]);
+    expect(doc.systemMarks().breaks).toEqual([{ at: { pageIndex: 1, system: 1 } }]); // no junction view without systems
     expect(doc.ratioOverride()).toEqual({ portrait: 0.7 });
   });
 });

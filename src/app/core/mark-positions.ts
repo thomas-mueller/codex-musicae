@@ -1,6 +1,6 @@
 /**
  * core/mark-positions — where in the playing order the jumps, slide breaks and stops of a document are met.
- * Requirements: ORG-018, ORG-021, PLY-002, PLY-006, PLY-008.
+ * Requirements: ORG-018, ORG-021, PLY-002, PLY-006, PLY-008, PLY-015.
  *
  * The playing-order contract (`playing-order.ts`) returns the systems and the junctions between them, but not the arrivals
  * after the last system, so this module replays the same rules itself; a test checks both against the playing-order fixtures.
@@ -27,11 +27,11 @@ interface Replay {
  * The arrival events of the replay documented in `playing-order.ts`: which jump fires where, and where a stop ends the order
  * (the stop with the smallest cut length, acting at its LAST arrival).
  */
-export function replayArrivals(marks: DocMarks, systemCount: number, maxLength: number): Replay {
+export function replayArrivals(marks: DocMarks, systemCount: number, maxLength: number, startJunction = 0): Replay {
   const arrivals: Arrival[] = [];
   const firedAt = new Map<number, number>();
   const counts = new Array<number>(systemCount + 1).fill(0);
-  let position = 0;
+  let position = startJunction;
   let entries = 0;
   for (;;) {
     counts[position] = (counts[position] ?? 0) + 1;
@@ -78,8 +78,8 @@ export interface MarkPositions {
   readonly stops: ReadonlyMap<number, MarkPosition>;
 }
 
-export function markPositions(marks: DocMarks, systemCount: number, maxLength: number): MarkPositions {
-  const { arrivals, firedAt, endArrival, entryCount } = replayArrivals(marks, systemCount, maxLength);
+export function markPositions(marks: DocMarks, systemCount: number, maxLength: number, startJunction = 0): MarkPositions {
+  const { arrivals, firedAt, endArrival, entryCount } = replayArrivals(marks, systemCount, maxLength, startJunction);
   const at = (index: number): MarkPosition | null => {
     const arrival = arrivals[index];
     if (arrival === undefined || index > endArrival) {

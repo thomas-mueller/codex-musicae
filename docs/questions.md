@@ -137,3 +137,38 @@ Update (2026-11-24, same section) — reproduction and what does not work. Repro
 **Decision (2026-11-25, owner), V2-M3b S1 step 5b:** keep all three engines for `IMSLP799145-PMLP14377-tiff2pdf_-2.pdf`; `engines` is not narrowed. The WebKit run of this scan may stay red until the blank-raster cause above is fixed; the time cap and `workers: '1'` are the mitigation (V2-M3b S2).
 
 **Known failing run (V2-M3b S2, owner decision 2026-11-25):** on WebKit, `IMSLP30601-PMLP01586-bs5fp.pdf` gives 11 systems on page 7 where the reviewed count is 12 (seen in the S1 measurement of `detection-engines.spec.ts`, local, deterministic). No deviation is recorded; the WebKit run stays red, like the Firefox run of the Bassoon part, until detection or the working raster is changed (V2-M8).
+
+## V2-M04 S1 — Data model v2 (SAV-016, PLY-015, MRK-012)
+
+**Decided (2026-11-26, owner), asked during planning; recorded as DEC-153:**
+
+1. *V1 jumps from gap 0 or to gap N* have no system side. Owner: they are covered by the start and stop marks, so drop them if that is right. It is right only in the usual cases, so the owner chose: convert where the playing order stays identical, else drop. The cases that cannot be converted: a pass-2+ jump from gap 0; a jump to gap N where a stop would act differently, for example jumps 2→end and 3→start in 4 systems (V1 plays 1 2; a stop at 2 plays 1 2 3 1 2; fixture E05). Correction: the example shown in the question (2→end and 4→start, "V1 plays 1,2") was wrong, because the jump to the end counts as an arrival there and fires 4→start (PLY-004), so V1 plays 1 2 1 2 3 4. A stop at 2 plays 1 2 3 4 1 2, so that case is not convertible either (fixture E06); the choice is unaffected.
+2. *Start mark:* only the start of the replay moves (PLY-015 as written). A stop on the right side of the system before the start mark therefore acts at the start; without a later arrival there the order is empty (fixture S07).
+3. *Cross-file bookmark:* a bookmark on a system of its own file with an optional target in another file.
+4. *Migration cases from "the real corpus's marks":* the corpus has no marks. The cases are hand-written on the page and system counts of reviewed corpus files.
+
+**Second read of the 10 hardest cases** (same session, from the milestone text and the decisions above, before the reference implementation was written): migration E04, E05, E06, E10, E12; start mark S06, S07, S11, S14; deletion R09. No disagreements. This is weaker than a fresh session; the owner may repeat it with these IDs.
+
+**Decided (2026-11-26, owner), for S2 (SAV-016; DEC-154):** V1 writes marks also when `detection` is `null` (detection not finished at save time). Then there are no system counts per page, so the marks cannot be migrated on read. The parser hands such V1 marks on unchanged, and they are migrated when detection has finished (`migrateMarksV1` takes the counts as a parameter).
+
+**To settle in the S2 plan:** what a save writes while such marks are still waiting (for example an autosave of new ink during detection). The write path writes the new schema only (SAV-017), which cannot express junction marks, and they must not be lost.
+
+## V2-M04 S2 — core implementation and schema 2 (SAV-015, SAV-016, SAV-017)
+
+**Decided (2026-11-26, owner, DEC-155)**, which also answers the point left open for the S2 plan above: the app switches to schema 2 in S3 (the milestone file puts the new write path in S2); while V1 marks wait for detection, a save leaves the embedded data untouched.
+
+**Requirement statuses:** the pure rules are `done` (MRK-001…MRK-014, PLY-014…PLY-016), although the app uses them only from S3 on. SAV-015…SAV-017 wait for S3. MRK-015 stays `todo`: its tests show that cross-file references are kept and never modified, but nothing yet decides that a reference counts as unresolved (resolution is V2-M6).
+
+**For S3:**
+- While `pendingV1Marks` is set: save without embedded data and migrate when detection has finished. To decide: what happens to marks the user adds during that wait.
+- The schema 1 reader does not require unique jump ids, schema 2 does. The app never wrote a duplicate; a hand-edited schema 1 file with one would be migrated, and the schema 2 data saved from it would then be ignored as invalid on the next open.
+- `core/mark-positions.ts` must start its replay at `startJunction`; the migration also uses `replayArrivals` and needs it to start at junction 0 for V1 data.
+
+## V2-M04 S3 — state and callers (SAV-015…SAV-017, MRK-014)
+
+**Decided (2026-11-26, owner, DEC-156):** the two points left for S3. Mark edits are rejected while V1 marks wait; a start mark stays hidden until V2-M10.
+
+**Test change found during S3 (owner approved):** the S3 plan expected `state/document.store.spec` to stay unchanged. Nine of its tests added V1 edge jumps through the store; they are filtered, and a rejection test was added (`docs/changelog.md`).
+
+**Still open, no change made:**
+- A hand-edited schema 1 file with duplicate jump ids is upgraded; the schema 2 data saved from it is then rejected on the next open (S2 note). The app never wrote duplicates.

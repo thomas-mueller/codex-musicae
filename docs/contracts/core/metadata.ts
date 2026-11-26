@@ -1,13 +1,11 @@
 /**
- * core/metadata — the JSON embedded in the PDF (schema v1), validation and migration.
- * Requirements: SAV-002, SAV-003, SAV-004, SAV-005, DET-023.
- * No third-party schema library: the validator is hand-written, pure and covered by fixtures.
+ * core/metadata — the JSON embedded in the PDF (schema 2: marks on systems), validation, and the upgrade of schema 1.
+ * Requirements: SAV-002, SAV-003, SAV-004, SAV-005, SAV-015, SAV-016, SAV-017, DET-023.
+ * No third-party schema library: the validators are hand-written, pure and covered by fixtures.
  */
 import type { Rect } from './geometry';
-
-export const CURRENT_SCHEMA_VERSION = 1;
-
-export type DetectionLevelId = 'fast' | 'standard' | 'fine';
+import type { SystemMarks } from './marks';
+import type { V1Marks } from './migrate-v1';
 
 export interface MetadataPage {
   readonly pageIndex: number;
@@ -18,68 +16,78 @@ export interface MetadataPage {
   readonly systems: readonly Rect[];
 }
 
-export interface MetadataJump {
-  readonly id: number;
-  readonly origin: number;
-  readonly target: number;
-  readonly pass: number;
-}
+export const CURRENT_SCHEMA_VERSION = 2;
 
 export interface EmbeddedMetadata {
   readonly schemaVersion: number;
   readonly appVersion: string;
   readonly pageCount: number;
   /** null when detection had not completed at save time (then detection runs again on the next open). */
-  readonly detection: { readonly level: DetectionLevelId; readonly pages: readonly MetadataPage[] } | null;
-  readonly marks: {
-    readonly jumps: readonly MetadataJump[];
-    readonly breaks: readonly number[];
-    readonly stops: readonly number[];
-    readonly nextJumpId: number;
-  };
+  readonly detection: { readonly level: 'fast' | 'standard' | 'fine'; readonly pages: readonly MetadataPage[] } | null;
+  readonly marks: SystemMarks;
   /** Per-PDF aspect-ratio overrides (SLD-015). */
   readonly aspectRatio: { readonly portrait?: number; readonly landscape?: number };
 }
 
+export type ParseResult =
+  | {
+      readonly kind: 'ok';
+      readonly value: EmbeddedMetadata;
+      /**
+       * Schema 1 marks that cannot be migrated yet because the file holds no detection result (DEC-154); else null. While it
+       * is not null, `value.marks` is empty and the caller must not write `value` over the data in the file (DEC-155); it
+       * migrates these marks with `migrateMarksV1` when detection has finished.
+       */
+      readonly pendingV1Marks: V1Marks | null;
+    }
+  | { readonly kind: 'newer'; readonly version: number }
+  | { readonly kind: 'invalid'; readonly reason: string };
+
 /**
- * Stable JSON text. Key order exactly as in `EmbeddedMetadata` (and as in the fixtures); rectangles are written as
- * [x, y, width, height] arrays with every number rounded to 2 decimals; `undefined` optional fields are omitted;
- * no whitespace (JSON.stringify without indentation).
+ * Stable JSON text without whitespace. `schemaVersion` is ALWAYS written as CURRENT_SCHEMA_VERSION, whatever `m` says
+ * (SAV-017). Key order: schemaVersion, appVersion, pageCount, detection, marks, aspectRatio; `detection` and `aspectRatio` as
+ * in schema 1 (rectangles as arrays, 2 decimals). marks: jumps {id, from, to, pass, text}, bookmarks {id, at, ref, text},
+ * stops {at, text}, breaks {at, text}, start (null or {at, text}), nextJumpId, nextBookmarkId. A system of this file is
+ * {pageIndex, system}; a cross-file reference is {file, pageIndex, system}. Absent `text` and `ref` keys are omitted.
  */
 export function serializeMetadata(_m: EmbeddedMetadata): string {
   throw new Error('not implemented');
 }
 
-export type ParseResult =
-  | { readonly kind: 'ok'; readonly value: EmbeddedMetadata }
-  | { readonly kind: 'newer'; readonly version: number }
-  | { readonly kind: 'invalid'; readonly reason: string };
-
 /**
- * Parses and validates text produced by serializeMetadata (or by an older version after migration).
- *  - not valid JSON, not an object, or `schemaVersion` missing / not a positive integer -> invalid
- *  - schemaVersion > CURRENT_SCHEMA_VERSION -> { kind: 'newer', version } (the caller must not overwrite it)
- *  - otherwise every field is validated: pageCount integer >= 0; detection null or { level in the 3 ids, pages: array of
- *    { pageIndex integer >= 0 and < pageCount, width > 0, height > 0, state 'done'|'failed', systems: array of 4-number arrays
- *    with width > 0 and height > 0 } }; marks.jumps entries with integer id >= 1, origin, target >= 0, pass >= 1;
- *    breaks and stops arrays of integers >= 1, ascending, unique; nextJumpId integer greater than every jump id;
- *    aspectRatio numbers within 0.5..2.0 when present. Any violation -> invalid with reason = the JSON path of the FIRST violation,
- *    e.g. 'marks.jumps[0].pass'. Checks run in the order of the interface declaration (schemaVersion, appVersion, pageCount,
- *    detection [level, then pages in order, each with pageIndex, width, height, state, systems], marks [jumps, breaks, stops, nextJumpId],
- *    aspectRatio [portrait, landscape]); inside a jump: id, origin, target, pass. Reasons for the first checks: not JSON -> 'json',
- *    not a plain object -> 'root', schemaVersion missing or not a positive integer -> 'schemaVersion'. A missing section -> its name.
- *    A rectangle that is not an array of 4 finite numbers or has width/height <= 0 -> the path of that rectangle ('detection.pages[0].systems[1]').
- *  - rectangles are converted back to `Rect` objects.
- * Migrations: a table `version -> function` upgrades older versions step by step (v1 has none); an unknown older version is invalid.
+ * Not JSON -> invalid 'json'; not a plain object -> 'root'; `schemaVersion` missing or not a positive integer ->
+ * 'schemaVersion'. A version above CURRENT_SCHEMA_VERSION -> newer (the caller must not overwrite it, SAV-003).
+ *
+ * Version 1 (SAV-003, SAV-016): validated as the V1 app did (same reasons), then upgraded; the value has
+ * schemaVersion 2.
+ *  - detection present and its page list as long as pageCount: marks = migrateMarksV1(v1 marks, counts, maxLength), where
+ *    counts[i] is the number of systems of the page with pageIndex i (0 without an entry);
+ *  - detection present with another page list length: empty marks (`reconcileMetadata` discards such data);
+ *  - detection null with at least one jump, break or stop: empty marks (EMPTY_SYSTEM_MARKS), pendingV1Marks = the V1 marks;
+ *  - detection null without any: empty marks that keep the V1 nextJumpId.
+ *  pendingV1Marks is null in every other case. `maxLength` is the playing-order cap used by the migration.
+ *
+ * Version 2: every field is validated; any violation -> invalid, reason = JSON path of the FIRST violation. Order: appVersion,
+ * pageCount, detection (as schema 1), marks (jumps, bookmarks, stops, breaks, start, nextJumpId, nextBookmarkId), aspectRatio.
+ * A section that is missing or of the wrong type gives its own path ('marks', 'marks.jumps', 'marks.start').
+ *  - A system of this file: integer pageIndex in 0..pageCount-1 ('….pageIndex') and integer system >= 1 ('….system'). It is
+ *    NOT compared with the system counts: marks without effect are legal.
+ *  - A cross-file reference: non-empty string file, integer pageIndex >= 0, integer system >= 1. A jump target (`to`) is
+ *    cross-file when it has the key `file`; a bookmark `ref`, when present, is always cross-file.
+ *  - jump, in this order: id (integer >= 1, not used by an earlier jump), from, to, pass (integer >= 1), text.
+ *  - bookmark: id (as for jumps, among bookmarks), at, ref, text. Point marks: at, text.
+ *  - text, when present, is a non-empty string.
+ *  - stops and breaks are strictly in print order, one per system: else the path of the list.
+ *  - start is null or one point mark.
+ *  - nextJumpId / nextBookmarkId: integers >= 1, greater than every id of their kind.
+ *  - A jump whose two ends became the same junction (after a deletion) is valid.
+ * Unknown keys are ignored. Absent `text` and `ref` give objects without these keys. Rectangles become `Rect` objects.
  */
-export function parseMetadata(_text: string): ParseResult {
+export function parseMetadata(_text: string, _maxLength: number): ParseResult {
   throw new Error('not implemented');
 }
 
-/**
- * SAV-005: returns `m` unchanged if m.pageCount === actualPageCount, else null (discard and detect again).
- * Also null if m.detection is not null and its page list length !== pageCount.
- */
+/** SAV-005, as in schema 1: `m` if m.pageCount === actualPageCount and a present detection lists every page, else null. */
 export function reconcileMetadata(_m: EmbeddedMetadata, _actualPageCount: number): EmbeddedMetadata | null {
   throw new Error('not implemented');
 }

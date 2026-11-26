@@ -1,7 +1,9 @@
 /**
  * core/playing-order — playing-order replay, stops, numbering, forced slide breaks.
- * Requirements: PLY-002..PLY-013.
+ * Requirements: PLY-002..PLY-016.
  */
+import { isCrossFile, printIndex } from './marks';
+import type { SystemMarks, SystemRef } from './marks';
 import type { Jump } from './model';
 
 export interface PlayingOrderInput {
@@ -13,6 +15,8 @@ export interface PlayingOrderInput {
   readonly stops: readonly number[];
   /** Safety cap on the number of entries (PLY-005). */
   readonly maxLength: number;
+  /** PLY-015: the junction 0..N at which the replay starts (this start is the first arrival there); absent = 0. */
+  readonly startJunction?: number;
 }
 
 export interface PlayingOrder {
@@ -29,8 +33,8 @@ export interface PlayingOrder {
 }
 
 /**
- * Replay (PLY-002):
- *   position = 0; arrivals[0..N] = 0; entries = []
+ * Replay (PLY-002, PLY-015):
+ *   position = startJunction (0 when absent); arrivals[0..N] = 0; entries = []
  *   loop:
  *     arrivals[position] += 1; record the arrival event (junction = position, entriesSoFar = entries.length)
  *     if a jump has origin == position and pass == arrivals[position] (first in array order wins):
@@ -60,7 +64,7 @@ export function generatePlayingOrder(input: PlayingOrderInput): PlayingOrder {
   const arrivals = new Map<number, number>();
   let entries: number[] = [];
   const events: { readonly junction: number; readonly len: number }[] = [];
-  let position = 0;
+  let position = input.startJunction ?? 0;
   let truncatedByCap = false;
 
   for (;;) {
@@ -145,4 +149,56 @@ export function isValidJump(jump: Jump, systemCount: number): boolean {
 /** PLY-009, PLY-013: breaks and stops are valid at integer junctions 1..systemCount-1 only. */
 export function isValidMarkJunction(junction: number, systemCount: number): boolean {
   return Number.isInteger(junction) && junction >= 1 && junction <= systemCount - 1;
+}
+
+export interface DerivedOrderInput extends PlayingOrderInput {
+  readonly startJunction: number;
+  /** Junctions of the slide breaks, for `forcedBreaks`. */
+  readonly breaks: readonly number[];
+}
+
+/**
+ * The jumps that take part in the replay, as junctions, in creation order and with their ids: a jump with a missing system, a
+ * cross-file target or the same junction at both ends is left out.
+ */
+export function junctionJumps(marks: SystemMarks, pageSystemCounts: readonly number[]): (Jump & { readonly id: number })[] {
+  return marks.jumps.flatMap(({ id, from, to, pass }) => {
+    const origin = printIndex(from, pageSystemCounts);
+    const after = isCrossFile(to) ? null : printIndex(to, pageSystemCounts);
+    return origin === null || after === null || origin === after - 1 ? [] : [{ id, origin, target: after - 1, pass }];
+  });
+}
+
+/**
+ * PLY-014..PLY-016: the junction input of the replay, derived from marks on system sides. The right side of system k (global
+ * print index, 1..N, N = sum of pageSystemCounts) is junction k, the left side of system k is junction k-1.
+ *  - systemCount = N, maxLength as given.
+ *  - startJunction = k-1 for the system k of the start mark, 0 without one. Only the start moves: later jumps may go to any
+ *    junction, also before it. Stops, breaks and jumps on the right side of system k-1 are at the start junction and act
+ *    like those of every other arrival.
+ *  - jumps, in array order, as { origin: k(from), target: k(to) - 1, pass }.
+ *  - stops, breaks: junction k of each mark, ascending, only 1..N-1 (a mark left on the last system has no effect, MRK-005).
+ * Ignored: every mark whose system does not exist in the layout (a start mark then counts as absent), jumps with a cross-file
+ * target (defined in M6), and jumps whose origin equals their target (possible after a system between them was deleted).
+ */
+export function derivePlayingOrderInput(marks: SystemMarks, pageSystemCounts: readonly number[], maxLength: number): DerivedOrderInput {
+  const systemCount = pageSystemCounts.reduce((sum, n) => sum + n, 0);
+  const index = (ref: SystemRef): number | null => printIndex(ref, pageSystemCounts);
+  const jumps = junctionJumps(marks, pageSystemCounts).map(({ origin, target, pass }) => ({ origin, target, pass }));
+  const junctions = (list: readonly { readonly at: SystemRef }[]): number[] =>
+    list
+      .flatMap((mark) => {
+        const junction = index(mark.at);
+        return junction === null || !isValidMarkJunction(junction, systemCount) ? [] : [junction];
+      })
+      .sort((a, b) => a - b);
+  const start = marks.start === null ? null : index(marks.start.at);
+  return {
+    systemCount,
+    startJunction: start === null ? 0 : start - 1,
+    jumps,
+    stops: junctions(marks.stops),
+    breaks: junctions(marks.breaks),
+    maxLength,
+  };
 }

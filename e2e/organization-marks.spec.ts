@@ -12,7 +12,8 @@ const SYSTEMS = SCORE_SYSTEMS;
 const FIRST_BAR_INDEX = 0; // junction 0
 const PAGE_BOTTOM_BAR_INDEX = 8; // the bottom bar of page 3: junction 7, which has a second bar (index 9) on page 4
 const PAGE_BOTTOM_JUNCTION = 7;
-const LAST_BAR_INDEX = SCORE_BARS - 1; // junction 19
+const PAGE1_BOTTOM_BAR_INDEX = 1; // junction 1, below the only system of page 1
+const BEFORE_LAST_SYSTEM_BAR_INDEX = SCORE_BARS - 2; // junction 18, above the last system
 const LONG_PRESS_MARGIN_MS = 200;
 const MIDDLE_BAR_INDEX = 3; // a bar inside page 3: junction 2
 const EMPTY_SPACE = { x: 5, y: 300 }; // the grey canvas left of the centered page
@@ -132,18 +133,18 @@ test('ORG-019 a long press on a marker scrolls to the other end of the jump', as
   await openScoreInOrganization(page);
   const viewer = page.getByTestId('org-viewer');
   const bars = page.getByTestId('org-bar');
-  await bars.nth(FIRST_BAR_INDEX).click();
+  await bars.nth(PAGE1_BOTTOM_BAR_INDEX).click();
   await page.getByTestId('selection-chip').getByTestId('chip-jump').click();
   await viewer.evaluate((element) => {
     element.scrollTop = element.scrollHeight;
   });
-  await bars.nth(LAST_BAR_INDEX).click(); // picking works across pages
+  await bars.nth(BEFORE_LAST_SYSTEM_BAR_INDEX).click(); // picking works across pages
   await expect(page.getByTestId('stepper-value')).toHaveText('1');
   await page.keyboard.press('Escape');
   await viewer.evaluate((element) => {
     element.scrollTop = 0;
   });
-  // Junctions 0 and N have no system: the start sits on bar 0, the end on bar N.
+  // The start sits on system 1 at the top of the score, the end on the last system.
   const start = marker(page, 'origin');
   // Dispatched pointer events: Playwright's mouse API sends none on emulated-touch Firefox.
   await start.dispatchEvent('pointerdown');

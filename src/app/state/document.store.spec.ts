@@ -1,6 +1,7 @@
 import { TUNABLES } from '../../config/tunables';
 import { EMPTY_MARKS } from '../core';
 import { generatePlayingOrderCases, systemNumbersCases, forcedBreaksCases } from '../core/fixtures/playing-order.cases';
+import type { PlayingOrderInput } from '../core';
 import { DocumentStore } from './document.store';
 import { fakeRenderer } from './testing/fake-renderer';
 
@@ -109,8 +110,25 @@ describe('DocumentStore', () => {
       expect(doc.lastRejected()).toBeNull();
     });
 
+    // A jump from junction 0 or to junction N has no form on systems (PLY-016, DEC-153): the chips cannot create one. Such
+    // cases are covered as V1 data by the migration cases of `core/migrate-v1`.
+    const hasSystemForm = ({ input }: { input: PlayingOrderInput }): boolean =>
+      input.jumps.every((j) => j.origin > 0 && j.target < input.systemCount);
+
+    const edgeJumps = [...generatePlayingOrderCases, ...systemNumbersCases].flatMap(({ id, input }) =>
+      input.jumps.filter((jump) => !hasSystemForm({ input: { ...input, jumps: [jump] } })).map((jump) => ({ id, jump, input })),
+    );
+    for (const { id, jump, input } of edgeJumps) {
+      it(`PLY-016 ${id}: the jump ${jump.origin} -> ${jump.target} of ${input.systemCount} systems is rejected`, () => {
+        const doc = docWithSystems(input.systemCount);
+        expect(doc.addJump(jump)).toBeNull();
+        expect(doc.lastRejected()).not.toBeNull();
+        expect(doc.marks()).toEqual(EMPTY_MARKS);
+      });
+    }
+
     // The store uses the tunable cap, so fixtures with a smaller cap are covered by the core spec only.
-    for (const c of generatePlayingOrderCases.filter((f) => f.input.maxLength === TUNABLES.playingOrder.maxLength)) {
+    for (const c of generatePlayingOrderCases.filter((f) => f.input.maxLength === TUNABLES.playingOrder.maxLength && hasSystemForm(f))) {
       it(`PLY-002 ${c.id}: playingOrder from marks equal to the fixture input`, () => {
         const doc = docWithSystems(c.input.systemCount);
         c.input.jumps.forEach((j) => expect(doc.addJump(j)).not.toBeNull());
@@ -119,7 +137,7 @@ describe('DocumentStore', () => {
       });
     }
 
-    for (const c of systemNumbersCases) {
+    for (const c of systemNumbersCases.filter(hasSystemForm)) {
       it(`PLY-010 ${c.id}: numbers from marks equal to the fixture input`, () => {
         const doc = docWithSystems(c.input.systemCount);
         c.input.jumps.forEach((j) => doc.addJump(j));
