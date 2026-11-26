@@ -82,9 +82,24 @@ export type NewMark =
   | { readonly kind: 'bookmark'; readonly at: SystemRef; readonly ref?: FileRef; readonly text?: string }
   | { readonly kind: 'start' | 'stop' | 'break'; readonly at: SystemRef; readonly text?: string };
 
+/** A reference with a file name points into another file (MRK-012). */
+export function isCrossFile(ref: SystemRef | FileRef): ref is FileRef {
+  return 'file' in ref;
+}
+
+/** The 1-based print index of a system of this file, or null when the layout has no such system. */
+export function printIndex(ref: SystemRef, pageSystemCounts: readonly number[]): number | null {
+  const { pageIndex, system } = ref;
+  const count = Number.isInteger(pageIndex) ? pageSystemCounts[pageIndex] : undefined;
+  if (count === undefined || !Number.isInteger(system) || system < 1 || system > count) {
+    return null;
+  }
+  return pageSystemCounts.slice(0, pageIndex).reduce((sum, n) => sum + n, system);
+}
+
 /** MRK-008: the number of existing jumps with the same start system, plus one. */
-export function defaultPass(_marks: SystemMarks, _from: SystemRef): number {
-  throw new Error('not implemented');
+export function defaultPass(marks: SystemMarks, from: SystemRef): number {
+  return marks.jumps.filter((jump) => sameSystem(jump.from, from)).length + 1;
 }
 
 /**
@@ -108,8 +123,21 @@ export function defaultPass(_marks: SystemMarks, _from: SystemRef): number {
  *    works on the last system. Otherwise the mark is rejected on the last system of the file (MRK-005), else inserted so
  *    that the list stays in print order.
  */
-export function addMark(_marks: SystemMarks, _mark: NewMark, _pageSystemCounts: readonly number[]): SystemMarks | null {
-  throw new Error('not implemented');
+export function addMark(marks: SystemMarks, mark: NewMark, pageSystemCounts: readonly number[]): SystemMarks | null {
+  switch (mark.kind) {
+    case 'jump':
+      return addJumpMark(marks, mark, pageSystemCounts);
+    case 'bookmark':
+      return addBookmark(marks, mark, pageSystemCounts);
+    case 'start':
+      return printIndex(mark.at, pageSystemCounts) === null ? null : { ...marks, start: withText({ at: mark.at }, mark.text) };
+    case 'stop':
+    case 'break': {
+      const key = mark.kind === 'stop' ? 'stops' : 'breaks';
+      const list = togglePoint(marks[key], withText({ at: mark.at }, mark.text), pageSystemCounts);
+      return list === null ? null : { ...marks, [key]: list };
+    }
+  }
 }
 
 /**
@@ -122,8 +150,19 @@ export function addMark(_marks: SystemMarks, _mark: NewMark, _pageSystemCounts: 
  *     removed only because of its own system in this file.
  * The next ids are unchanged. A stop or break that is now on the last system stays stored (the derivation ignores it).
  */
-export function removeMarksOfSystem(_marks: SystemMarks, _deleted: SystemRef): SystemMarks {
-  throw new Error('not implemented');
+export function removeMarksOfSystem(marks: SystemMarks, deleted: SystemRef): SystemMarks {
+  const kept = removeWhere(marks, (ref) => sameSystem(ref, deleted));
+  const moved = <T extends SystemRef>(ref: T): T =>
+    ref.pageIndex === deleted.pageIndex && ref.system > deleted.system ? { ...ref, system: ref.system - 1 } : ref;
+  const movedMark = <T extends { readonly at: SystemRef }>(mark: T): T => ({ ...mark, at: moved(mark.at) });
+  return {
+    ...kept,
+    jumps: kept.jumps.map((jump) => ({ ...jump, from: moved(jump.from), to: isCrossFile(jump.to) ? jump.to : moved(jump.to) })),
+    bookmarks: kept.bookmarks.map(movedMark),
+    stops: kept.stops.map(movedMark),
+    breaks: kept.breaks.map(movedMark),
+    start: kept.start === null ? null : movedMark(kept.start),
+  };
 }
 
 /**
@@ -131,6 +170,81 @@ export function removeMarksOfSystem(_marks: SystemMarks, _deleted: SystemRef): S
  * page is removed: start, stops, breaks and bookmarks on it, and every jump whose `from` or whose target in this file is on
  * it. Cross-file references do not count as being on the page. The next ids are unchanged.
  */
-export function rerunPage(_marks: SystemMarks, _pageIndex: number, _oldCount: number, _newCount: number): SystemMarks {
-  throw new Error('not implemented');
+export function rerunPage(marks: SystemMarks, pageIndex: number, oldCount: number, newCount: number): SystemMarks {
+  return oldCount === newCount ? marks : removeWhere(marks, (ref) => ref.pageIndex === pageIndex);
 }
+
+function sameSystem(a: SystemRef, b: SystemRef): boolean {
+  return a.pageIndex === b.pageIndex && a.system === b.system;
+}
+
+function printOrder(a: PointMark, b: PointMark): number {
+  return a.at.pageIndex - b.at.pageIndex || a.at.system - b.at.system;
+}
+
+/** An absent or empty user text is stored without the key. */
+function withText<T extends object>(mark: T, text: string | undefined): T & { readonly text?: string } {
+  return text === undefined || text === '' ? mark : { ...mark, text };
+}
+
+function isValidFileRef({ file, pageIndex, system }: FileRef): boolean {
+  return file !== '' && Number.isInteger(pageIndex) && pageIndex >= 0 && Number.isInteger(system) && system >= 1;
+}
+
+function addJumpMark(marks: SystemMarks, mark: Extract<NewMark, { kind: 'jump' }>, counts: readonly number[]): SystemMarks | null {
+  const { from, to, pass, text } = mark;
+  const origin = printIndex(from, counts);
+  if (origin === null || !Number.isInteger(pass) || pass < 1) {
+    return null;
+  }
+  if (isCrossFile(to)) {
+    if (!isValidFileRef(to)) {
+      return null;
+    }
+  } else {
+    const target = printIndex(to, counts);
+    // The system directly after the start is the same place in the playing order.
+    if (target === null || target === origin + 1) {
+      return null;
+    }
+  }
+  const jump = withText({ id: marks.nextJumpId, from, to, pass }, text);
+  return { ...marks, jumps: [...marks.jumps, jump], nextJumpId: marks.nextJumpId + 1 };
+}
+
+function addBookmark(marks: SystemMarks, mark: Extract<NewMark, { kind: 'bookmark' }>, counts: readonly number[]): SystemMarks | null {
+  const { at, ref, text } = mark;
+  if (printIndex(at, counts) === null || (ref !== undefined && !isValidFileRef(ref))) {
+    return null;
+  }
+  const bookmark = withText({ id: marks.nextBookmarkId, at, ...(ref === undefined ? {} : { ref }) }, text);
+  return { ...marks, bookmarks: [...marks.bookmarks, bookmark], nextBookmarkId: marks.nextBookmarkId + 1 };
+}
+
+/** MRK-003..MRK-005: removes the mark of that system if there is one, else adds it (never on the last system). */
+function togglePoint(list: readonly PointMark[], mark: PointMark, counts: readonly number[]): readonly PointMark[] | null {
+  const index = printIndex(mark.at, counts);
+  if (index === null) {
+    return null;
+  }
+  const others = list.filter((existing) => !sameSystem(existing.at, mark.at));
+  if (others.length < list.length) {
+    return others;
+  }
+  const systemCount = counts.reduce((sum, n) => sum + n, 0);
+  return index === systemCount ? null : [...list, mark].sort(printOrder);
+}
+
+/** Removes every mark with an end in this file that `gone` matches; cross-file references are not ends in this file. */
+function removeWhere(marks: SystemMarks, gone: (ref: SystemRef) => boolean): SystemMarks {
+  const kept = (mark: { readonly at: SystemRef }): boolean => !gone(mark.at);
+  return {
+    ...marks,
+    jumps: marks.jumps.filter((jump) => !gone(jump.from) && (isCrossFile(jump.to) || !gone(jump.to))),
+    bookmarks: marks.bookmarks.filter(kept),
+    stops: marks.stops.filter(kept),
+    breaks: marks.breaks.filter(kept),
+    start: marks.start !== null && kept(marks.start) ? marks.start : null,
+  };
+}
+

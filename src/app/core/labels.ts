@@ -34,6 +34,19 @@ export interface LabelInput {
  *   + (text not blank:         ' ' + text)              // the automatic part comes first; text is appended unchanged
  * `currentFile` is the file the viewer looks at; the name is omitted per place, so one label may name one file only.
  */
-export function formatLabel(_input: LabelInput, _currentFile: string, _format: LabelFormat): string {
-  throw new Error('not implemented');
+export function formatLabel(input: LabelInput, currentFile: string, format: LabelFormat): string {
+  const place = ({ file, pageIndex, system }: FileRef): string =>
+    [...(file === currentFile ? [] : [file]), pageIndex + 1, system].join(format.separator);
+  const { from, to, pass, text } = input;
+  const parts = [place(from)];
+  if (to !== undefined) {
+    parts.push(format.jumpArrow, place(to));
+    if (pass !== undefined && pass > 1) {
+      parts.push(`${format.passPrefix}${pass}`);
+    }
+  }
+  if (text !== undefined && text.trim() !== '') {
+    parts.push(text);
+  }
+  return parts.join(' ');
 }

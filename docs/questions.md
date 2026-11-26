@@ -152,3 +152,14 @@ Update (2026-11-24, same section) — reproduction and what does not work. Repro
 **Decided (2026-11-26, owner), for S2 (SAV-016; DEC-154):** V1 writes marks also when `detection` is `null` (detection not finished at save time). Then there are no system counts per page, so the marks cannot be migrated on read. The parser hands such V1 marks on unchanged, and they are migrated when detection has finished (`migrateMarksV1` takes the counts as a parameter).
 
 **To settle in the S2 plan:** what a save writes while such marks are still waiting (for example an autosave of new ink during detection). The write path writes the new schema only (SAV-017), which cannot express junction marks, and they must not be lost.
+
+## V2-M04 S2 — core implementation and schema 2 (SAV-015, SAV-016, SAV-017)
+
+**Decided (2026-11-26, owner, DEC-155)**, which also answers the point left open for the S2 plan above: the app switches to schema 2 in S3 (the milestone file puts the new write path in S2); while V1 marks wait for detection, a save leaves the embedded data untouched.
+
+**Requirement statuses:** the pure rules are `done` (MRK-001…MRK-014, PLY-014…PLY-016), although the app uses them only from S3 on. SAV-015…SAV-017 wait for S3. MRK-015 stays `todo`: its tests show that cross-file references are kept and never modified, but nothing yet decides that a reference counts as unresolved (resolution is V2-M6).
+
+**For S3:**
+- While `pendingV1Marks` is set: save without embedded data and migrate when detection has finished. To decide: what happens to marks the user adds during that wait.
+- The schema 1 reader does not require unique jump ids, schema 2 does. The app never wrote a duplicate; a hand-edited schema 1 file with one would be migrated, and the schema 2 data saved from it would then be ignored as invalid on the next open.
+- `core/mark-positions.ts` must start its replay at `startJunction`; the migration also uses `replayArrivals` and needs it to start at junction 0 for V1 data.

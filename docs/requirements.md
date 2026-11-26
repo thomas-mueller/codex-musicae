@@ -188,9 +188,9 @@ V2 terms (target `v2` entries):
 - **PLY-011** [v1·done·M6] A break at junction k forces a slide boundary between two consecutive entries whenever the playing position visited k between them (straight step, jump origin, jump target or chained jump), on every pass.
 - **PLY-012** [v1·changed·M6] With no jumps, breaks or stops, the playing order is systems 1..N in print order. *(Changed in V2 → PLY-015, V2-M4.)*
 - **PLY-013** [v1·done·M6] A break may be set at any junction 1..N-1.
-- **PLY-014** [v2·todo·M4] Junctions are derived from system sides: the right side of system k is junction k and the left side of system k is junction k−1; the replay of PLY-002…PLY-008 runs on these junctions.
-- **PLY-015** [v2·todo·M4] The replay starts at the left side of the system holding the start mark; this start counts as the first arrival there, and systems before it are not played. Without a start mark it starts at junction 0.
-- **PLY-016** [v2·todo·M4] A jump starts on the right side of a system and targets the left side of a system; it may start on the right side of the last system and target the left side of the first system.
+- **PLY-014** [v2·done·M4] Junctions are derived from system sides: the right side of system k is junction k and the left side of system k is junction k−1; the replay of PLY-002…PLY-008 runs on these junctions.
+- **PLY-015** [v2·done·M4] The replay starts at the left side of the system holding the start mark; this start counts as the first arrival there, and systems before it are not played. Without a start mark it starts at junction 0.
+- **PLY-016** [v2·done·M4] A jump starts on the right side of a system and targets the left side of a system; it may start on the right side of the last system and target the left side of the first system.
 
 ## ORG — Organization mode
 
@@ -534,20 +534,20 @@ V2 terms (target `v2` entries):
 
 ## MRK — Marks, labels and bookmarks
 
-- **MRK-001** [v2·todo·M4] Every mark is stored on one system and one side: the left side holds start marks, jump targets and bookmarks; the right side holds jump starts, stops and slide breaks.
-- **MRK-002** [v2·todo·M4] Several jumps may start on the same system side; there are no plausibility checks.
-- **MRK-003** [v2·todo·M4] Setting a slide break or a stop where one exists removes it (toggle).
-- **MRK-004** [v2·todo·M4] A system holds at most one stop.
-- **MRK-005** [v2·todo·M4] Stops and slide breaks cannot be set on the last system.
-- **MRK-006** [v2·todo·M4] A file has at most one start mark; setting a new one removes the previous one.
-- **MRK-007** [v2·todo·M4] A system side may hold several bookmarks.
-- **MRK-008** [v2·todo·M4] A new jump's pass number defaults to the number of existing jumps from the same start side plus one.
-- **MRK-009** [v2·todo·M4] Every mark has the automatic label `<file name>:<page>:<system on page>`; for a mark within the same file the file name is omitted (`<page>:<system on page>`).
-- **MRK-010** [v2·todo·M4] A jump's label is `<start label> -> <target label>`, followed by `×n` when its pass number n is greater than 1.
-- **MRK-011** [v2·todo·M4] Every mark may carry an optional user text, shown after the automatic label.
-- **MRK-012** [v2·todo·M4] A cross-file reference is stored in the source file and holds the target file name, page and system on page; the file name is the only file identity. A jump target may be such a reference; a bookmark sits on a system of its own file and may hold one as its target.
-- **MRK-013** [v2·todo·M4] Deleting a system deletes the marks stored on both its sides; marks on other systems stay.
-- **MRK-014** [v2·todo·M4] A page rerun keeps that page's marks only if the page's system count is unchanged; otherwise the marks of that page are deleted.
+- **MRK-001** [v2·done·M4] Every mark is stored on one system and one side: the left side holds start marks, jump targets and bookmarks; the right side holds jump starts, stops and slide breaks.
+- **MRK-002** [v2·done·M4] Several jumps may start on the same system side; there are no plausibility checks.
+- **MRK-003** [v2·done·M4] Setting a slide break or a stop where one exists removes it (toggle).
+- **MRK-004** [v2·done·M4] A system holds at most one stop.
+- **MRK-005** [v2·done·M4] Stops and slide breaks cannot be set on the last system.
+- **MRK-006** [v2·done·M4] A file has at most one start mark; setting a new one removes the previous one.
+- **MRK-007** [v2·done·M4] A system side may hold several bookmarks.
+- **MRK-008** [v2·done·M4] A new jump's pass number defaults to the number of existing jumps from the same start side plus one.
+- **MRK-009** [v2·done·M4] Every mark has the automatic label `<file name>:<page>:<system on page>`; for a mark within the same file the file name is omitted (`<page>:<system on page>`).
+- **MRK-010** [v2·done·M4] A jump's label is `<start label> -> <target label>`, followed by `×n` when its pass number n is greater than 1.
+- **MRK-011** [v2·done·M4] Every mark may carry an optional user text, shown after the automatic label.
+- **MRK-012** [v2·done·M4] A cross-file reference is stored in the source file and holds the target file name, page and system on page; the file name is the only file identity. A jump target may be such a reference; a bookmark sits on a system of its own file and may hold one as its target.
+- **MRK-013** [v2·done·M4] Deleting a system deletes the marks stored on both its sides; marks on other systems stay.
+- **MRK-014** [v2·done·M4] A page rerun keeps that page's marks only if the page's system count is unchanged; otherwise the marks of that page are deleted.
 - **MRK-015** [v2·todo·M4] A cross-file reference whose target system no longer exists is kept and counts as unresolved; edits in the target file never modify the source file.
 - **MRK-016** [v2·todo·M6] In slide mode an unresolved cross-file jump ends the presentation at that position.
 - **MRK-017** [v2·todo·M6] Cross-file marks exist in every edition; in free and web they live only in the session.

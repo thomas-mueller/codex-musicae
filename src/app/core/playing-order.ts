@@ -1,8 +1,9 @@
 /**
  * core/playing-order — playing-order replay, stops, numbering, forced slide breaks.
- * Requirements: PLY-002..PLY-013.
+ * Requirements: PLY-002..PLY-016.
  */
-import type { SystemMarks } from './marks';
+import { isCrossFile, printIndex } from './marks';
+import type { SystemMarks, SystemRef } from './marks';
 import type { Jump } from './model';
 
 export interface PlayingOrderInput {
@@ -14,7 +15,7 @@ export interface PlayingOrderInput {
   readonly stops: readonly number[];
   /** Safety cap on the number of entries (PLY-005). */
   readonly maxLength: number;
-  /** PLY-015: the junction 0..N at which the replay starts (this start is the first arrival there); absent = 0. Ignored by `generatePlayingOrder` until V2-M4 S2. */
+  /** PLY-015: the junction 0..N at which the replay starts (this start is the first arrival there); absent = 0. */
   readonly startJunction?: number;
 }
 
@@ -32,8 +33,8 @@ export interface PlayingOrder {
 }
 
 /**
- * Replay (PLY-002):
- *   position = 0; arrivals[0..N] = 0; entries = []
+ * Replay (PLY-002, PLY-015):
+ *   position = startJunction (0 when absent); arrivals[0..N] = 0; entries = []
  *   loop:
  *     arrivals[position] += 1; record the arrival event (junction = position, entriesSoFar = entries.length)
  *     if a jump has origin == position and pass == arrivals[position] (first in array order wins):
@@ -63,7 +64,7 @@ export function generatePlayingOrder(input: PlayingOrderInput): PlayingOrder {
   const arrivals = new Map<number, number>();
   let entries: number[] = [];
   const events: { readonly junction: number; readonly len: number }[] = [];
-  let position = 0;
+  let position = input.startJunction ?? 0;
   let truncatedByCap = false;
 
   for (;;) {
@@ -168,6 +169,28 @@ export interface DerivedOrderInput extends PlayingOrderInput {
  * Ignored: every mark whose system does not exist in the layout (a start mark then counts as absent), jumps with a cross-file
  * target (defined in M6), and jumps whose origin equals their target (possible after a system between them was deleted).
  */
-export function derivePlayingOrderInput(_marks: SystemMarks, _pageSystemCounts: readonly number[], _maxLength: number): DerivedOrderInput {
-  throw new Error('not implemented');
+export function derivePlayingOrderInput(marks: SystemMarks, pageSystemCounts: readonly number[], maxLength: number): DerivedOrderInput {
+  const systemCount = pageSystemCounts.reduce((sum, n) => sum + n, 0);
+  const index = (ref: SystemRef): number | null => printIndex(ref, pageSystemCounts);
+  const jumps = marks.jumps.flatMap(({ from, to, pass }) => {
+    const origin = index(from);
+    const after = isCrossFile(to) ? null : index(to);
+    return origin === null || after === null || origin === after - 1 ? [] : [{ origin, target: after - 1, pass }];
+  });
+  const junctions = (list: readonly { readonly at: SystemRef }[]): number[] =>
+    list
+      .flatMap((mark) => {
+        const junction = index(mark.at);
+        return junction === null || !isValidMarkJunction(junction, systemCount) ? [] : [junction];
+      })
+      .sort((a, b) => a - b);
+  const start = marks.start === null ? null : index(marks.start.at);
+  return {
+    systemCount,
+    startJunction: start === null ? 0 : start - 1,
+    jumps,
+    stops: junctions(marks.stops),
+    breaks: junctions(marks.breaks),
+    maxLength,
+  };
 }

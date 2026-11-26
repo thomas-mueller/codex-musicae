@@ -61,43 +61,48 @@ export interface EmbeddedMetadata {
  * no whitespace (JSON.stringify without indentation).
  */
 export function serializeMetadata(m: EmbeddedMetadata): string {
-  const aspectRatio: { portrait?: number; landscape?: number } = {};
-  if (m.aspectRatio.portrait !== undefined) {
-    aspectRatio.portrait = m.aspectRatio.portrait;
-  }
-  if (m.aspectRatio.landscape !== undefined) {
-    aspectRatio.landscape = m.aspectRatio.landscape;
-  }
   return JSON.stringify({
     schemaVersion: m.schemaVersion,
     appVersion: m.appVersion,
     pageCount: m.pageCount,
-    detection:
-      m.detection === null
-        ? null
-        : {
-            level: m.detection.level,
-            pages: m.detection.pages.map((p) => ({
-              pageIndex: p.pageIndex,
-              width: roundDecimals(p.width),
-              height: roundDecimals(p.height),
-              state: p.state,
-              systems: p.systems.map((r) => [
-                roundDecimals(r.x),
-                roundDecimals(r.y),
-                roundDecimals(r.width),
-                roundDecimals(r.height),
-              ]),
-            })),
-          },
+    detection: detectionJson(m.detection),
     marks: {
       jumps: m.marks.jumps.map((j) => ({ id: j.id, origin: j.origin, target: j.target, pass: j.pass })),
       breaks: [...m.marks.breaks],
       stops: [...m.marks.stops],
       nextJumpId: m.marks.nextJumpId,
     },
-    aspectRatio,
+    aspectRatio: aspectRatioJson(m.aspectRatio),
   });
+}
+
+/** The `detection` section as it is written: fixed key order, rectangles as arrays, every number rounded. */
+export function detectionJson(detection: EmbeddedMetadata['detection']): unknown {
+  return detection === null
+    ? null
+    : {
+        level: detection.level,
+        pages: detection.pages.map((p) => ({
+          pageIndex: p.pageIndex,
+          width: roundDecimals(p.width),
+          height: roundDecimals(p.height),
+          state: p.state,
+          systems: p.systems.map((r) => [
+            roundDecimals(r.x),
+            roundDecimals(r.y),
+            roundDecimals(r.width),
+            roundDecimals(r.height),
+          ]),
+        })),
+      };
+}
+
+/** The `aspectRatio` section as it is written: portrait first, absent ratios omitted. */
+export function aspectRatioJson({ portrait, landscape }: EmbeddedMetadata['aspectRatio']): EmbeddedMetadata['aspectRatio'] {
+  return {
+    ...(portrait === undefined ? {} : { portrait }),
+    ...(landscape === undefined ? {} : { landscape }),
+  };
 }
 
 export type ParseResult =
@@ -157,7 +162,7 @@ export function reconcileMetadata(m: EmbeddedMetadata, actualPageCount: number):
   return m;
 }
 
-type Raw = Record<string, unknown>;
+export type Raw = Record<string, unknown>;
 type Invalid = { readonly kind: 'invalid'; readonly reason: string };
 
 /** Upgrades older schema versions step by step; v1 is the first, so the table is empty. */
@@ -175,15 +180,15 @@ function migrate(raw: Raw, version: number): Raw | null {
   return current;
 }
 
-function invalid(reason: string): Invalid {
+export function invalid(reason: string): Invalid {
   return { kind: 'invalid', reason };
 }
 
-function isRecord(v: unknown): v is Raw {
+export function isRecord(v: unknown): v is Raw {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
-function isInt(v: unknown): v is number {
+export function isInt(v: unknown): v is number {
   return typeof v === 'number' && Number.isInteger(v);
 }
 
@@ -192,13 +197,13 @@ function isFiniteNumber(v: unknown): v is number {
 }
 
 /** Result of a section parser: the value or the path of the first violation. */
-type Parsed<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly path: string };
+export type Parsed<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly path: string };
 
-function good<T>(value: T): Parsed<T> {
+export function good<T>(value: T): Parsed<T> {
   return { ok: true, value };
 }
 
-function bad<T>(path: string): Parsed<T> {
+export function bad<T>(path: string): Parsed<T> {
   return { ok: false, path };
 }
 
@@ -241,7 +246,7 @@ function parsePage(v: unknown, path: string, pageCount: number): Parsed<Metadata
   return good({ pageIndex, width, height, state: state as MetadataPage['state'], systems: rects });
 }
 
-function parseDetection(v: unknown, pageCount: number): Parsed<EmbeddedMetadata['detection']> {
+export function parseDetection(v: unknown, pageCount: number): Parsed<EmbeddedMetadata['detection']> {
   if (v === null) {
     return good(null);
   }
@@ -330,7 +335,7 @@ function parseMarks(v: unknown): Parsed<EmbeddedMetadata['marks']> {
   return good({ jumps, breaks, stops, nextJumpId });
 }
 
-function parseAspectRatio(v: unknown): Parsed<EmbeddedMetadata['aspectRatio']> {
+export function parseAspectRatio(v: unknown): Parsed<EmbeddedMetadata['aspectRatio']> {
   if (!isRecord(v)) {
     return bad('aspectRatio');
   }
