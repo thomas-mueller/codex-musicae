@@ -1,0 +1,38 @@
+/* The confirmation dialogs (DET-014, UIX-023): a scrim over the whole shell with a centered box. */
+:host {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0 0 0 / 0.4);
+  pointer-events: auto;
+}
+
+.dialog {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--cm-dialog-gap);
+  box-sizing: border-box;
+  max-width: calc(100% - 2 * var(--cm-dialog-gap));
+  padding: var(--cm-dialog-gap);
+  border-radius: var(--cm-dialog-radius);
+  background: var(--cm-bar-bg);
+  color: var(--cm-icon);
+}
+
+/* A question takes a line of its own above the buttons. */
+.question {
+  flex-basis: 100%;
+  margin: 0;
+  text-align: center;
+}

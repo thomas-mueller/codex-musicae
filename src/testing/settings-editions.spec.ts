@@ -50,4 +50,21 @@ describe('settings per edition', () => {
     await first.setting.ready;
     expect((await run(ALL_FEATURES_ON, store)).box.checked).toBe(true);
   });
+
+  it('EDN-005 UIX-023 free and web: reset works for the session and stores nothing', async () => {
+    const store = memoryPreferences();
+    const { setting } = await run(FREE, store);
+    await setting.set(true);
+    await TestBed.inject(SettingsRegistry).resetAll();
+    expect(setting.value()).toBe(false);
+    expect(store.data.size).toBe(0);
+  });
+
+  it('EDN-008 UIX-023 paid: the reset is still in effect in the next run', async () => {
+    const store = memoryPreferences();
+    const first = await run(ALL_FEATURES_ON, store);
+    await first.setting.set(true);
+    await TestBed.inject(SettingsRegistry).resetAll();
+    expect((await run(ALL_FEATURES_ON, store)).box.checked).toBe(false);
+  });
 });

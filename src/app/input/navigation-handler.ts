@@ -161,7 +161,9 @@ export class NavigationHandler {
 
   /** NAV-018: the first applicable step wins. Returns whether one applied (the Android back button minimizes the app otherwise, PLT-007). */
   handleBack(): boolean {
-    if (this.ui.pendingLevel() !== null) {
+    if (this.ui.pendingReset()) {
+      this.ui.cancelReset();
+    } else if (this.ui.pendingLevel() !== null) {
       this.ui.cancelLevel();
     } else if (this.ui.popup() !== null) {
       this.ui.closePopup();

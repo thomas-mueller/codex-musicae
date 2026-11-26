@@ -73,13 +73,14 @@ function isValid(definition: SettingDefinition, value: unknown): value is Settin
 
 /**
  * Every user setting is registered here by the code that owns it; the settings view renders the entries and knows no
- * setting itself. UIX-021, UIX-026
+ * setting itself. "Reset all settings" runs every registered reset handler. UIX-021, UIX-023, UIX-026
  */
 @Injectable({ providedIn: 'root' })
 export class SettingsRegistry {
   private readonly preferences = inject(PREFERENCES);
   private readonly flags = inject(FEATURE_FLAGS);
   private readonly entriesSignal = signal<readonly Setting[]>([]);
+  private readonly resetHandlers: (() => Promise<void>)[] = [];
 
   /** In registration order. */
   readonly entries = this.entriesSignal.asReadonly();
@@ -88,12 +89,26 @@ export class SettingsRegistry {
     if (this.entriesSignal().some((entry) => entry.definition.id === definition.id)) {
       throw new Error(`setting ${definition.id} is registered twice`);
     }
-    const setting = this.create(definition) as Setting<ValueOf<D>>;
+    const { setting, reset } = this.create(definition);
+    this.registerReset(reset);
     this.entriesSignal.update((entries) => [...entries, setting]);
-    return setting;
+    return setting as Setting<ValueOf<D>>;
   }
 
-  private create(definition: SettingDefinition): Setting {
+  /**
+   * For user state that is not a registered setting. A handler only runs when it was registered before the user resets:
+   * whoever owns such state must be created by then.
+   */
+  registerReset(handler: () => Promise<void>): void {
+    this.resetHandlers.push(handler);
+  }
+
+  /** UIX-023: runs every handler; one that fails does not stop the others. */
+  async resetAll(): Promise<void> {
+    await Promise.allSettled(this.resetHandlers.map(async (handler) => handler()));
+  }
+
+  private create(definition: SettingDefinition): { readonly setting: Setting; readonly reset: () => Promise<void> } {
     const enabled = definition.feature === undefined || this.flags[definition.feature] === true;
     const stored = enabled && definition.persist;
     const key = KEY_PREFIX + definition.id;
@@ -107,25 +122,26 @@ export class SettingsRegistry {
           }
         })
       : Promise.resolve();
-    return {
+    /** Takes the new value at once (also over a read still running) and queues the change of the store. */
+    const apply = (next: SettingValue, write: () => Promise<void>): Promise<void> => {
+      changed = true;
+      value.set(next);
+      if (stored) {
+        pending = pending.then(write, write);
+      }
+      return pending;
+    };
+    const setting: Setting = {
       definition,
       enabled,
       value: value.asReadonly(),
-      set: (next) => {
-        if (!enabled || !isValid(definition, next)) {
-          return pending;
-        }
-        changed = true;
-        value.set(next);
-        if (stored) {
-          const write = (): Promise<void> => this.preferences.set(key, next);
-          pending = pending.then(write, write);
-        }
-        return pending;
-      },
+      set: (next) => (enabled && isValid(definition, next) ? apply(next, () => this.preferences.set(key, next)) : pending),
       get ready() {
         return pending;
       },
     };
+    // The key is removed, not overwritten with the default, so a later change of the default applies.
+    const reset = (): Promise<void> => (enabled ? apply(definition.defaultValue, () => this.preferences.remove(key)) : pending);
+    return { setting, reset };
   }
 }

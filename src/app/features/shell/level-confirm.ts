@@ -26,11 +26,7 @@ import { LEVEL_ENTRIES } from './tool-area';
       </div>
     }
   `,
-  styles: `
-    :host { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
-    .scrim { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgb(0 0 0 / 0.4); pointer-events: auto; }
-    .dialog { display: flex; align-items: center; gap: var(--cm-dialog-gap); padding: var(--cm-dialog-gap); border-radius: var(--cm-dialog-radius); background: var(--cm-bar-bg); color: var(--cm-icon); }
-  `,
+  styleUrl: './dialog.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LevelConfirm {

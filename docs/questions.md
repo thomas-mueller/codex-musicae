@@ -185,3 +185,10 @@ Update (2026-11-24, same section) — reproduction and what does not work. Repro
 **Decided during implementation (2026-11-26, owner):** the setup of the ink-control tests in `features/shell/app-shell.spec.ts` may be fixed (`docs/changelog.md`).
 
 **Choices of the approved plan:** the four groups are empty until later work registers settings (the only V1 toggle, finger drawing, stays in the pen popup and is removed in V2-M11); the new strings are in `en.json` only until S3 creates `de.json`.
+
+## V2-M05 S2 — Reset all settings (UIX-023, UIX-024)
+
+**Decided (2026-11-26, owner), asked during planning; recorded as DEC-160:**
+
+1. *Default aspect ratio per orientation* (captured at the first presentation, not named in UIX-023): reset keeps it.
+2. *Stylus values* (finger-drawing toggle and "pen was seen", removed in V2-M11): reset leaves both.

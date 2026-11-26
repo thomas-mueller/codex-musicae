@@ -247,3 +247,16 @@ describe('NavigationHandler in the settings mode', () => {
     expect(ui.mode()).toBe('organization');
   });
 });
+
+describe('NavigationHandler with the reset dialog', () => {
+  it('NAV-018 UIX-023 Back closes the reset dialog first and stays in the settings', async () => {
+    const { ui, send } = await setup();
+    ui.setMode('settings');
+    ui.requestReset();
+    send('Back');
+    expect(ui.pendingReset()).toBe(false);
+    expect(ui.mode()).toBe('settings');
+    send('Back');
+    expect(ui.mode()).toBe('annotation');
+  });
+});

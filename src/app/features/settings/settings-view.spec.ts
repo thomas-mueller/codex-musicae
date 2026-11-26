@@ -4,6 +4,7 @@ import { provideTestPorts, ALL_FEATURES_ON } from '../../../testing/provide-test
 import { provideTestTransloco, translate } from '../../../testing/transloco';
 import { FEATURE_FLAGS } from '../../ports/feature-flags';
 import { SettingsRegistry } from '../../state/settings-registry';
+import { UiStore } from '../../state/ui.store';
 import { SettingsView } from './settings-view';
 
 describe('SettingsView', () => {
@@ -90,5 +91,23 @@ describe('SettingsView', () => {
     setup().register({ id: 'flag', group: 'files', labelKey: 'a11y.settings', feature: 'autosave', persist: true, type: 'boolean', defaultValue: false });
     const { control } = await render();
     expect(control<HTMLInputElement>('flag').disabled).toBe(true);
+  });
+
+  it('UIX-023 General ends with the translated reset button, which asks and resets nothing yet', async () => {
+    const registry = setup();
+    const flag = registry.register({ id: 'flag', group: 'general', labelKey: 'a11y.settings', persist: true, type: 'boolean', defaultValue: false });
+    await flag.set(true);
+    const ui = TestBed.inject(UiStore);
+    ui.setMode('settings');
+    const { el } = await render();
+    expect(el.querySelectorAll('button')).toHaveLength(1);
+    const general = el.querySelector('[data-group="general"]')!;
+    const button = general.lastElementChild as HTMLButtonElement;
+    expect(button.tagName).toBe('BUTTON');
+    expect(button.textContent?.trim()).toBe(translate('settings.reset.button'));
+    expect(button.getAttribute('aria-label')).toBe(translate('a11y.resetSettings'));
+    button.click();
+    expect(ui.pendingReset()).toBe(true);
+    expect(flag.value()).toBe(true);
   });
 });

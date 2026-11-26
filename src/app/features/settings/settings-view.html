@@ -31,6 +31,13 @@
           }
         </label>
       }
+      @if (group.id === 'general') {
+        <!-- UIX-023: an action, not a setting; it stays below whatever is registered here -->
+        <button type="button" class="reset" appTooltip="resetSettings" [attr.aria-label]="'a11y.resetSettings' | transloco" (click)="ui.requestReset()">
+          <app-icon name="resetSettings" />
+          <span>{{ 'settings.reset.button' | transloco }}</span>
+        </button>
+      }
     </section>
   }
 </div>

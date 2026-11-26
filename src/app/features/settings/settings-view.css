@@ -49,3 +49,18 @@ input:disabled,
 select:disabled {
   opacity: var(--cm-disabled-opacity);
 }
+
+.reset {
+  position: relative; /* anchors the tooltip */
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cm-settings-gap);
+  min-height: var(--cm-touch-target);
+  padding: 0 var(--cm-settings-gap);
+  border: 1px solid currentColor;
+  border-radius: var(--cm-popup-radius);
+  background: transparent;
+  color: var(--cm-icon);
+  font: inherit;
+  cursor: pointer;
+}

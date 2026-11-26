@@ -3,11 +3,14 @@ import { TranslocoPipe, translateSignal } from '@jsverse/transloco';
 
 import { SETTINGS_GROUPS, SettingsRegistry } from '../../state/settings-registry';
 import type { Setting } from '../../state/settings-registry';
+import { UiStore } from '../../state/ui.store';
+import { Icon } from '../shell/icon';
+import { TooltipDirective } from '../shell/tooltip.directive';
 
-/** The settings mode: the four groups with whatever is registered in them; no setting is named here. UIX-021, UIX-026 */
+/** The settings mode: the four groups with whatever is registered in them; no setting is named here. General ends with "Reset all settings". UIX-021, UIX-023, UIX-026 */
 @Component({
   selector: 'app-settings-view',
-  imports: [TranslocoPipe],
+  imports: [Icon, TooltipDirective, TranslocoPipe],
   templateUrl: './settings-view.html',
   styleUrl: './settings-view.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -15,6 +18,7 @@ import type { Setting } from '../../state/settings-registry';
 })
 export class SettingsView {
   private readonly registry = inject(SettingsRegistry);
+  protected readonly ui = inject(UiStore);
   protected readonly label = translateSignal('a11y.settingsView');
   protected readonly groups = computed(() =>
     SETTINGS_GROUPS.map((id) => ({ id, settings: this.registry.entries().filter((entry) => entry.definition.group === id) })),

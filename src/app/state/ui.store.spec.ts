@@ -116,4 +116,14 @@ describe('UiStore', () => {
     store.toggleTool('pen');
     expect(store.tool()).toBeNull();
   });
+
+  it('UIX-023 the reset is only asked for in the settings mode, and leaving it drops the question', () => {
+    store.requestReset();
+    expect(store.pendingReset()).toBe(false);
+    store.setMode('settings');
+    store.requestReset();
+    expect(store.pendingReset()).toBe(true);
+    store.setMode('annotation');
+    expect(store.pendingReset()).toBe(false);
+  });
 });

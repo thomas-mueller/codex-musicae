@@ -38,6 +38,8 @@ export class UiStore {
   readonly pickingTarget = signal<PickingTarget | null>(null);
   /** DET-014: the level the user chose and has not yet confirmed (the dialog is open while it is set). */
   readonly pendingLevel = signal<DetectionLevel | null>(null);
+  /** UIX-023: "Reset all settings" was pressed and not yet confirmed (the dialog is open while it is set). */
+  readonly pendingReset = signal(false);
   /** Set by the shell's resize observer; unmeasured (0x0) until its first callback. */
   /** Placeholder until the DocumentStore (M8): no document can be open yet. FIL-007 */
   readonly hasDocument = signal(false);
@@ -68,6 +70,7 @@ export class UiStore {
     this.selection.set(null);
     this.pickingTarget.set(null);
     this.pendingLevel.set(null);
+    this.pendingReset.set(false);
     if (mode !== 'annotation') {
       this.tool.set(null);
     }
@@ -110,6 +113,17 @@ export class UiStore {
 
   cancelLevel(): void {
     this.pendingLevel.set(null);
+  }
+
+  /** UIX-023: asks for confirmation; nothing changes before it. */
+  requestReset(): void {
+    if (this.mode() === 'settings') {
+      this.pendingReset.set(true);
+    }
+  }
+
+  cancelReset(): void {
+    this.pendingReset.set(false);
   }
 
   select(selection: Selection): void {

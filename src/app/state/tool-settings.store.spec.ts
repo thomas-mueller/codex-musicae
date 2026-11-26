@@ -83,4 +83,23 @@ describe('ToolSettingsStore', () => {
       multiply: true,
     });
   });
+
+  it('UIX-023 reset restores the default colors and widths and removes the stored values', async () => {
+    const { store, preferences } = await setup();
+    await store.setColor('pen', TUNABLES.colors.penPresets[1] as string);
+    await store.setWidthIndex('highlighter', 0);
+    await store.reset();
+    expect(store.pen()).toEqual(TUNABLES.annotation.defaultPen);
+    expect(store.highlighter()).toEqual(TUNABLES.annotation.defaultHighlighter);
+    expect(preferences.data.size).toBe(0);
+  });
+
+  it('UIX-023 a reset requested while the stored settings are still being read wins', async () => {
+    const preferences = memoryPreferences({ 'tool.pen': { color: TUNABLES.colors.penPresets[1], widthIndex: 0 } });
+    TestBed.configureTestingModule({ providers: [{ provide: PREFERENCES, useValue: preferences }] });
+    const store = TestBed.inject(ToolSettingsStore);
+    await store.reset();
+    expect(store.pen()).toEqual(TUNABLES.annotation.defaultPen);
+    expect(preferences.data.size).toBe(0);
+  });
 });

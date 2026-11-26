@@ -4,6 +4,7 @@
   },
   "a11y": {
     "settingsView": "Settings",
+    "resetConfirm": "Confirm resetting the settings",
     "modeOrganization": "Organization mode",
     "modeAnnotation": "Annotation mode",
     "modePresentation": "Presentation mode",
@@ -42,6 +43,7 @@
     "markList": "Marks",
     "overflow": "More",
     "settings": "Settings",
+    "resetSettings": "Reset all settings",
     "info": "Info",
     "cancel": "Cancel",
     "confirm": "Confirm",
@@ -116,6 +118,7 @@
     "markList": "Marks",
     "overflow": "More",
     "settings": "Settings",
+    "resetSettings": "Reset all settings",
     "info": "Info",
     "cancel": "Cancel",
     "confirm": "Confirm",
@@ -157,6 +160,10 @@
       "display": "Display",
       "slideMode": "Slide mode",
       "files": "Files"
+    },
+    "reset": {
+      "button": "Reset all settings",
+      "question": "Reset all settings? Your files are not changed."
     }
   }
 }

@@ -97,7 +97,7 @@ All stores use signals; components never mutate them directly.
 - **`UiStore`:** global mode (V2-M5: also the settings mode, with the way back to the mode before it), active tool, popups, selection (junction/jump), jump-target picking, presentation flag.
 - **`PreferencesStore`:** persisted settings (tool colors and widths, ratio defaults per orientation, recent files, stylus flag) through the `Preferences` port.
 
-**V2 changes:** `SessionStore` holds the open files in opening order behind one file entry (no tabs); `DocumentStore` holds marks on system sides (instead of jumps, breaks and stops on junctions), user-edited systems and the per-page component boxes; an `EditHistoryStore` keeps one undo history per document and mode (V2-M7); a `SettingsRegistry` declares every setting with its default, group, feature switch and reset handler (V2-M5); a `HintService` drives the first-run hints (V2-M16).
+**V2 changes:** `SessionStore` holds the open files in opening order behind one file entry (no tabs); `DocumentStore` holds marks on system sides (instead of jumps, breaks and stops on junctions), user-edited systems and the per-page component boxes; an `EditHistoryStore` keeps one undo history per document and mode (V2-M7); a `SettingsRegistry` declares every setting with its default, group, feature switch and reset handler, and `SettingsReset` adds the tool colors and widths to "Reset all settings" (V2-M5); a `HintService` drives the first-run hints (V2-M16).
 
 ## Input layer
 

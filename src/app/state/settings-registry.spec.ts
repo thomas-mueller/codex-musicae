@@ -127,4 +127,64 @@ describe('SettingsRegistry', () => {
   it('UIX-026 a setting whose feature switch is on is enabled', () => {
     expect(create().register({ ...flag, feature: 'autosave' }).enabled).toBe(true);
   });
+
+  it('UIX-023 reset takes every setting back to its default and removes the stored value', async () => {
+    const preferences = memoryPreferences();
+    const registry = create(preferences);
+    const handles = [registry.register(flag), registry.register(choice), registry.register(seconds)] as const;
+    await Promise.all([handles[0].set(false), handles[1].set('b'), handles[2].set(9)]);
+    expect(preferences.data.size).toBe(3);
+    await registry.resetAll();
+    expect(handles.map((handle) => handle.value())).toEqual([true, 'a', 2]);
+    expect(preferences.data.size).toBe(0);
+    const next = create(preferences).register(seconds);
+    await next.ready;
+    expect(next.value()).toBe(2);
+  });
+
+  it('UIX-023 a reset made while the stored value is still being read wins', async () => {
+    let answer: (value: unknown) => void = () => undefined;
+    const preferences = memoryPreferences({ 'setting.wait': 3 });
+    preferences.get = <T>() => new Promise<T>((resolve) => (answer = resolve as (value: unknown) => void));
+    const registry = create(preferences);
+    const setting = registry.register(seconds);
+    const reset = registry.resetAll();
+    answer(3);
+    await reset;
+    expect(setting.value()).toBe(2);
+    expect(preferences.data.size).toBe(0);
+  });
+
+  it('UIX-023 a setting that does not persist is reset without touching the store', async () => {
+    const preferences = memoryPreferences();
+    const remove = vi.spyOn(preferences, 'remove');
+    const registry = create(preferences);
+    const setting = registry.register({ ...flag, persist: false });
+    await setting.set(false);
+    await registry.resetAll();
+    expect(setting.value()).toBe(true);
+    expect(remove).not.toHaveBeenCalled();
+  });
+
+  it('UIX-023 EDN-002 reset leaves what a disabled setting has stored', async () => {
+    const preferences = memoryPreferences({ 'setting.flag': false });
+    const registry = create(preferences, { ...ALL_FEATURES_ON, autosave: false });
+    registry.register({ ...flag, feature: 'autosave' });
+    await registry.resetAll();
+    expect(preferences.data.get('setting.flag')).toBe(false);
+  });
+
+  it('UIX-023 reset runs every registered handler, also when one throws or rejects', async () => {
+    const registry = create();
+    const calls: string[] = [];
+    registry.registerReset(() => {
+      throw new Error('throws');
+    });
+    registry.registerReset(() => Promise.reject(new Error('rejects')));
+    registry.registerReset(async () => {
+      calls.push('last');
+    });
+    await expect(registry.resetAll()).resolves.toBeUndefined();
+    expect(calls).toEqual(['last']);
+  });
 });

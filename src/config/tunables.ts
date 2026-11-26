@@ -115,6 +115,7 @@ export const TUNABLES = {
     modeAnnotation: 'draw',
     modePresentation: 'slideshow',
     settings: 'menu', // UIX-025: three lines
+    resetSettings: 'restart_alt', // UIX-023
     pen: 'edit',
     highlighter: 'ink_highlighter',
     eraser: 'ink_eraser',

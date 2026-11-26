@@ -100,6 +100,16 @@ export class ToolSettingsStore {
     return this.change(tool, { ...this.setting(tool), widthIndex });
   }
 
+  /** UIX-023: colors and widths go back to their defaults and the stored values are removed; queued behind the first read. */
+  reset(): Promise<void> {
+    return this.enqueue(async () => {
+      this.penSignal.set(defaultSetting('pen'));
+      this.highlighterSignal.set(defaultSetting('highlighter'));
+      await this.preferences.remove(KEYS.pen);
+      await this.preferences.remove(KEYS.highlighter);
+    });
+  }
+
   private change(tool: StyledTool, next: ToolSetting): Promise<void> {
     (tool === 'pen' ? this.penSignal : this.highlighterSignal).set(next);
     return this.enqueue(() => this.preferences.set(KEYS[tool], next));

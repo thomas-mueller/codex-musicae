@@ -1,11 +1,96 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { TUNABLES } from '../src/config/tunables';
 import { desktopTest } from './support/desktop';
-import { label, openScoreInAnnotation } from './support/score';
+import { PAID_URL } from './support/editions';
+import { label, openScore, openScoreInAnnotation, waitForFinalSlideCount } from './support/score';
 
 const shell = (page: Page): Locator => page.locator('app-shell');
 const button = (page: Page, key: string): Locator => page.getByRole('button', { name: label(key), exact: true });
 const GROUPS = ['general', 'display', 'slideMode', 'files'];
+const LONG_PRESS_MARGIN_MS = 200;
+const PICKED_COLOR = 3;
+const DEFAULT_COLOR = (TUNABLES.colors.penPresets as readonly string[]).indexOf(TUNABLES.annotation.defaultPen.color);
+
+const swatch = (page: Page, index: number): Locator => page.locator('app-tool-popup .swatch').nth(index);
+
+/** The V1 pen popup, by long press on the pen button of the tool strip (desktop layout). */
+async function openPenPopup(page: Page): Promise<void> {
+  await button(page, 'pen').hover();
+  await page.mouse.down();
+  await page.waitForTimeout(TUNABLES.layout.longPressMs + LONG_PRESS_MARGIN_MS);
+  await page.mouse.up();
+  await expect(page.locator('app-tool-popup')).toBeVisible();
+}
+
+async function expectPenColor(page: Page, index: number): Promise<void> {
+  await openPenPopup(page);
+  await expect(swatch(page, index)).toHaveAttribute('aria-pressed', 'true');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('app-tool-popup')).toHaveCount(0);
+}
+
+async function choosePenColor(page: Page, index: number): Promise<void> {
+  await openPenPopup(page);
+  await swatch(page, index).click();
+  await expect(swatch(page, index)).toHaveAttribute('aria-pressed', 'true');
+  await page.keyboard.press('Escape');
+}
+
+/** Settings button, "Reset all settings", then the dialog's answer, and back to the score. */
+async function resetAllSettings(page: Page, answer: 'cancel' | 'confirm'): Promise<void> {
+  await button(page, 'settings').click();
+  await button(page, 'resetSettings').click();
+  await page.getByTestId(`reset-${answer}`).click();
+  await expect(page.getByTestId('reset-dialog')).toHaveCount(0);
+  await button(page, 'settings').click();
+  await expect(shell(page)).toHaveAttribute('data-mode', 'annotation');
+}
+
+desktopTest('UIX-023 free web: reset asks first and puts the pen color back for the session', async ({ page }) => {
+  await openScoreInAnnotation(page);
+  await choosePenColor(page, PICKED_COLOR);
+  await resetAllSettings(page, 'cancel');
+  await expectPenColor(page, PICKED_COLOR);
+  await resetAllSettings(page, 'confirm');
+  await expectPenColor(page, DEFAULT_COLOR);
+});
+
+test.describe('paid build', () => {
+  test.use({ baseURL: PAID_URL });
+
+  desktopTest('UIX-023 EDN-008 paid: a confirmed reset is still in effect after a reload', async ({ page }) => {
+    await openScoreInAnnotation(page);
+    await choosePenColor(page, PICKED_COLOR);
+    await page.reload();
+    await openScore(page);
+    await waitForFinalSlideCount(page);
+    await expectPenColor(page, PICKED_COLOR); // stored, so there is something to reset
+    await resetAllSettings(page, 'confirm');
+    await expectPenColor(page, DEFAULT_COLOR);
+    await page.reload();
+    await openScore(page);
+    await waitForFinalSlideCount(page);
+    await expectPenColor(page, DEFAULT_COLOR);
+  });
+});
+
+test.describe('reset dialog at the minimum supported width', () => {
+  test.use({ viewport: { width: TUNABLES.layout.minSupportedWidthPx, height: 568 } });
+
+  test('UIX-016 UIX-023 the reset dialog fits the screen and cancel closes it', { tag: '@smoke' }, async ({ page }) => {
+    await page.goto('/');
+    await button(page, 'settings').click();
+    await expect(button(page, 'resetSettings')).toBeInViewport({ ratio: 1 });
+    await button(page, 'resetSettings').click();
+    for (const id of ['reset-dialog', 'reset-cancel', 'reset-confirm']) {
+      await expect(page.getByTestId(id)).toBeInViewport({ ratio: 1 });
+    }
+    expect(await page.getByTestId('reset-dialog').evaluate((e) => e.scrollWidth <= e.clientWidth)).toBe(true);
+    await page.getByTestId('reset-cancel').click();
+    await expect(page.getByTestId('reset-dialog')).toHaveCount(0);
+    await expect(shell(page)).toHaveAttribute('data-mode', 'settings');
+  });
+});
 
 test('UIX-025 UIX-026 the settings button opens the four groups and returns to the previous mode', { tag: '@smoke' }, async ({ page }) => {
   await page.goto('/');
