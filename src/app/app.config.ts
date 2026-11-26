@@ -22,6 +22,7 @@ import type { FeatureFlags } from './ports/feature-flags';
 import type { FileAccess } from './ports/file-access';
 import { FeatureFileAccess, persistsFileHandles } from './adapters/feature/feature-file-access';
 import { createPreferences } from './adapters/feature/feature-preferences';
+import { installIconSprite } from './adapters/web/icon-sprite';
 import { MemoryHandleStore } from './adapters/web/memory-handle-store';
 import { cacheBudgetFor } from './core/cache-budget';
 import { tunablesToCssVars } from './state/css-vars';
@@ -90,6 +91,8 @@ export const appConfig: ApplicationConfig = {
       registrationStrategy: 'registerWhenStable:30000',
     }),
     provideEnvironmentInitializer(() => applyTunablesToCss(document.documentElement)),
+    // UIX-010: the first thing loaded, before a service worker of a first visit takes over the requests.
+    provideEnvironmentInitializer(() => void installIconSprite(document)),
     provideEnvironmentInitializer(() => {
       inject(KeyboardInput);
       inject(NavigationHandler);

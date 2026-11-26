@@ -109,6 +109,13 @@ export const TUNABLES = {
     settingsGapPx: 8, // UIX-026: padding and spacing in the settings view
   },
 
+  /** The sprite of the icons below: loaded once and put into the document (UIX-010). */
+  iconSprite: {
+    url: 'assets/icons/sprite.svg',
+    elementId: 'cm-icon-sprite',
+    idPrefix: 'cm-icon-', // before each symbol id in the document
+  },
+
   /** Material Symbols (Outlined) names. The agent verifies each exists in the bundled set. UIX-010 */
   icons: {
     modeOrganization: 'description',
