@@ -131,7 +131,7 @@ V2 terms (target `v2` entries):
 - **SAV-013** [v1·done·M15] Existing annotations of other apps and existing attachments are preserved on save, except ink removed by the eraser (ANN-005).
 - **SAV-014** [v1·done·M15] Ink annotation edits made in a tab persist across tab switches within the session even if saving failed.
 - **SAV-015** [v2·todo·M4] A new `schemaVersion` stores marks per system and side, the start mark, bookmarks, user texts of marks and cross-file references.
-- **SAV-016** [v2·todo·M4] V1 data is migrated on read: a jump origin at junction k goes to the right side of system k, a jump target at junction k to the left side of system k+1, a break or stop at junction k to the right side of system k; V1 files keep opening.
+- **SAV-016** [v2·todo·M4] V1 data is migrated on read: a jump origin at junction k goes to the right side of system k, a jump target at junction k to the left side of system k+1, a break or stop at junction k to the right side of system k; V1 files keep opening. A V1 jump with origin junction 0 or target junction N has no system side: a reached pass-1 jump from junction 0 becomes the start mark and a reached jump to junction N becomes a stop, only if all such conversions together keep the V1 playing order and slide breaks; every other such jump is dropped.
 - **SAV-017** [v2·todo·M4] Saving writes the new schema only.
 - **SAV-018** [v2·todo·M12] Text and stamp annotations are saved as standard PDF annotations with appearance streams, so that other viewers display them, and the app reads them back as editable text and stamps.
 
@@ -545,7 +545,7 @@ V2 terms (target `v2` entries):
 - **MRK-009** [v2·todo·M4] Every mark has the automatic label `<file name>:<page>:<system on page>`; for a mark within the same file the file name is omitted (`<page>:<system on page>`).
 - **MRK-010** [v2·todo·M4] A jump's label is `<start label> -> <target label>`, followed by `×n` when its pass number n is greater than 1.
 - **MRK-011** [v2·todo·M4] Every mark may carry an optional user text, shown after the automatic label.
-- **MRK-012** [v2·todo·M4] A cross-file reference is stored in the source file and holds the target file name, page and system on page; the file name is the only file identity.
+- **MRK-012** [v2·todo·M4] A cross-file reference is stored in the source file and holds the target file name, page and system on page; the file name is the only file identity. A jump target may be such a reference; a bookmark sits on a system of its own file and may hold one as its target.
 - **MRK-013** [v2·todo·M4] Deleting a system deletes the marks stored on both its sides; marks on other systems stay.
 - **MRK-014** [v2·todo·M4] A page rerun keeps that page's marks only if the page's system count is unchanged; otherwise the marks of that page are deleted.
 - **MRK-015** [v2·todo·M4] A cross-file reference whose target system no longer exists is kept and counts as unresolved; edits in the target file never modify the source file.

@@ -2,6 +2,7 @@
  * core/playing-order — playing-order replay, stops, numbering, forced slide breaks.
  * Requirements: PLY-002..PLY-013.
  */
+import type { SystemMarks } from './marks';
 import type { Jump } from './model';
 
 export interface PlayingOrderInput {
@@ -13,6 +14,8 @@ export interface PlayingOrderInput {
   readonly stops: readonly number[];
   /** Safety cap on the number of entries (PLY-005). */
   readonly maxLength: number;
+  /** PLY-015: the junction 0..N at which the replay starts (this start is the first arrival there); absent = 0. */
+  readonly startJunction?: number;
 }
 
 export interface PlayingOrder {
@@ -29,8 +32,8 @@ export interface PlayingOrder {
 }
 
 /**
- * Replay (PLY-002):
- *   position = 0; arrivals[0..N] = 0; entries = []
+ * Replay (PLY-002, PLY-015):
+ *   position = startJunction (0 when absent); arrivals[0..N] = 0; entries = []
  *   loop:
  *     arrivals[position] += 1; record the arrival event (junction = position, entriesSoFar = entries.length)
  *     if a jump has origin == position and pass == arrivals[position] (first in array order wins):
@@ -70,5 +73,27 @@ export function isValidJump(_jump: Jump, _systemCount: number): boolean {
 
 /** PLY-009, PLY-013: breaks and stops are valid at integer junctions 1..systemCount-1 only. */
 export function isValidMarkJunction(_junction: number, _systemCount: number): boolean {
+  throw new Error('not implemented');
+}
+
+export interface DerivedOrderInput extends PlayingOrderInput {
+  readonly startJunction: number;
+  /** Junctions of the slide breaks, for `forcedBreaks`. */
+  readonly breaks: readonly number[];
+}
+
+/**
+ * PLY-014..PLY-016: the junction input of the replay, derived from marks on system sides. The right side of system k (global
+ * print index, 1..N, N = sum of pageSystemCounts) is junction k, the left side of system k is junction k-1.
+ *  - systemCount = N, maxLength as given.
+ *  - startJunction = k-1 for the system k of the start mark, 0 without one. Only the start moves: later jumps may go to any
+ *    junction, also before it. Stops, breaks and jumps on the right side of system k-1 are at the start junction and act
+ *    like those of every other arrival.
+ *  - jumps, in array order, as { origin: k(from), target: k(to) - 1, pass }.
+ *  - stops, breaks: junction k of each mark, ascending, only 1..N-1 (a mark left on the last system has no effect, MRK-005).
+ * Ignored: every mark whose system does not exist in the layout (a start mark then counts as absent), jumps with a cross-file
+ * target (defined in M6), and jumps whose origin equals their target (possible after a system between them was deleted).
+ */
+export function derivePlayingOrderInput(_marks: SystemMarks, _pageSystemCounts: readonly number[], _maxLength: number): DerivedOrderInput {
   throw new Error('not implemented');
 }
