@@ -172,3 +172,16 @@ Update (2026-11-24, same section) — reproduction and what does not work. Repro
 
 **Still open, no change made:**
 - A hand-edited schema 1 file with duplicate jump ids is upgraded; the schema 2 data saved from it is then rejected on the next open (S2 note). The app never wrote duplicates.
+
+## V2-M05 S1 — Settings mode (UIX-025, UIX-026)
+
+**Decided (2026-11-26, owner), asked during planning; recorded as DEC-158 and DEC-159:**
+
+1. *Compact top bar at 320 to 351 px:* with the settings button the annotation bar needs 352 px. Undo and redo move out of the top bar now (planned for V2-M7).
+2. *Feature switch for the settings mode:* none. The owner also removed the rule that every new feature needs a switch.
+3. *`e2e/shell-controls.spec.ts`:* may be edited.
+4. *UIX-022* (no right-click action) has no step in V2-M5: moved to V2-M6.
+
+**Decided during implementation (2026-11-26, owner):** the setup of the ink-control tests in `features/shell/app-shell.spec.ts` may be fixed (`docs/changelog.md`).
+
+**Choices of the approved plan:** the four groups are empty until later work registers settings (the only V1 toggle, finger drawing, stays in the pen popup and is removed in V2-M11); the new strings are in `en.json` only until S3 creates `de.json`.

@@ -2,9 +2,10 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 
 import { TUNABLES } from '../../config/tunables';
 import { sizeClassOf } from '../core';
+import type { Mode } from '../core';
 import { PresentationPlatform } from './presentation-platform';
 
-export type Mode = 'organization' | 'annotation' | 'presentation';
+export type { Mode };
 export type DetectionLevel = keyof typeof TUNABLES.detection.levels;
 export type Tool = 'pen' | 'highlighter' | 'eraser';
 interface Popup {
@@ -24,10 +25,12 @@ interface Viewport {
   readonly height: number;
 }
 
-/** Global UI state: mode, tool, popup, viewport. UIX-001, UIX-003 */
+/** Global UI state: mode, tool, popup, viewport. UIX-001, UIX-003, UIX-025 */
 @Injectable({ providedIn: 'root' })
 export class UiStore {
   private readonly platform = inject(PresentationPlatform);
+  /** UIX-025: where leaving the settings mode goes back to. */
+  private modeBeforeSettings: Mode = 'annotation';
   readonly mode = signal<Mode>('annotation');
   readonly tool = signal<Tool | null>(null);
   readonly popup = signal<Popup | null>(null);
@@ -51,6 +54,10 @@ export class UiStore {
       return;
     }
     const previous = this.mode();
+    if (mode === 'settings' && previous !== 'settings') {
+      this.modeBeforeSettings = previous;
+      this.popup.set(null);
+    }
     this.mode.set(mode);
     // PLT-004, PLT-005: synchronous, because the browser demands the user gesture that is still running.
     if (mode === 'presentation' && previous !== 'presentation') {
@@ -63,6 +70,22 @@ export class UiStore {
     this.pendingLevel.set(null);
     if (mode !== 'annotation') {
       this.tool.set(null);
+    }
+  }
+
+  /** UIX-025: the top-bar button opens the settings mode and, used again, returns to the previous mode. */
+  toggleSettings(): void {
+    if (this.mode() === 'settings') {
+      this.closeSettings();
+    } else {
+      this.setMode('settings');
+    }
+  }
+
+  closeSettings(): void {
+    if (this.mode() === 'settings') {
+      this.popup.set(null);
+      this.setMode(this.modeBeforeSettings);
     }
   }
 

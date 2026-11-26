@@ -3,6 +3,7 @@
     "placeholder": ""
   },
   "a11y": {
+    "settingsView": "Settings",
     "modeOrganization": "Organization mode",
     "modeAnnotation": "Annotation mode",
     "modePresentation": "Presentation mode",
@@ -40,6 +41,7 @@
     "levelSelector": "Detection level",
     "markList": "Marks",
     "overflow": "More",
+    "settings": "Settings",
     "info": "Info",
     "cancel": "Cancel",
     "confirm": "Confirm",
@@ -113,6 +115,7 @@
     "levelSelector": "Detection level",
     "markList": "Marks",
     "overflow": "More",
+    "settings": "Settings",
     "info": "Info",
     "cancel": "Cancel",
     "confirm": "Confirm",
@@ -147,5 +150,13 @@
     "tabList": "Open tabs",
     "toolColor": "Color",
     "toolWidth": "Line width"
+  },
+  "settings": {
+    "groups": {
+      "general": "General",
+      "display": "Display",
+      "slideMode": "Slide mode",
+      "files": "Files"
+    }
   }
 }

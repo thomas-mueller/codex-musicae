@@ -1,0 +1,36 @@
+<div class="content">
+  @for (group of groups(); track group.id) {
+    <section [attr.data-group]="group.id" [attr.aria-labelledby]="'settings-group-' + group.id">
+      <h2 [id]="'settings-group-' + group.id">{{ 'settings.groups.' + group.id | transloco }}</h2>
+      @for (setting of group.settings; track setting.definition.id) {
+        @let definition = setting.definition;
+        <label [attr.data-setting]="definition.id">
+          <span>{{ definition.labelKey | transloco }}</span>
+          @switch (definition.type) {
+            @case ('boolean') {
+              <input type="checkbox" [checked]="setting.value() === true" [disabled]="!setting.enabled" (change)="onToggle(setting, $event)" />
+            }
+            @case ('choice') {
+              <select [disabled]="!setting.enabled" (change)="onChoose(setting, $event)">
+                @for (option of definition.options; track option.value) {
+                  <option [value]="option.value" [selected]="setting.value() === option.value">{{ option.labelKey | transloco }}</option>
+                }
+              </select>
+            }
+            @case ('seconds') {
+              <input
+                type="number"
+                [min]="definition.min"
+                [max]="definition.max"
+                [step]="definition.step"
+                [value]="setting.value()"
+                [disabled]="!setting.enabled"
+                (change)="onSeconds(setting, $event)"
+              />
+            }
+          }
+        </label>
+      }
+    </section>
+  }
+</div>

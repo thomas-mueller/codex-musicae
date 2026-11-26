@@ -41,6 +41,10 @@ To implement changes, tell the agent: "Implement the requirement changes listed 
 | 2026-11-26 | Tests (V2-M4 S3) | `state/document.store.spec`: the playing-order cases O08, O10, O12, O13, O17, O18, O20, O21 and the numbers case N3 leave the three store loops; a new test checks that each of their edge jumps is rejected (owner approved during S3; not foreseen in the S3 plan) | Same | V2-M4 S3 |
 | 2026-11-26 | Tests (V2-M4 S3) | `state/document.metadata.spec`, `save.service.spec`, `session.store.spec`: schema 1 shaped metadata and `replaceMarks` inputs are schema 2; one assertion reads `systemMarks` because there is no junction view without systems; the "newer" case writes version 3. `save-pipeline.spec` and `e2e/support/saving.ts`: `parseMetadata` takes the length cap. `detection-redetect.spec`: the setup also accepts system counts page by page. `e2e/organization-marks.spec`: ORG-019 jumps from bar 1 to bar 21 instead of the first to the last bar. `marks.spec` and `mark-positions.spec` only gained tests | Schema 2 and DEC-153 | V2-M4 S3 |
 | 2026-11-26 | MRK-015 | Moved from V2-M4 to V2-M6; the text is unchanged and the status stays `todo` (owner decision) | V2-M4 keeps cross-file references, but only the resolution of V2-M6 can decide that one is unresolved | V2-M4, V2-M6 |
+| 2026-11-26 | UIX-025, UIX-026, UIX-034 | Settings mode and settings registry built. UIX-034 moves from V2-M7 to V2-M5: undo and redo leave the compact top bar; the compact annotation tool popup holds them (the compact part of UIX-033, which stays `todo` for V2-M7) | With the settings button the compact top bar needed 352 px, more than the minimum width of 320 px (owner decision, DEC-159) | V2-M5, V2-M7, `features/shell` |
+| 2026-11-26 | UIX-022 | Moved from V2-M5 to V2-M6; the text is unchanged and the status stays `todo` (owner decision) | No V2-M5 step covers it, and V2-M6 replaces the open button, the only control with a right-click action | V2-M5, V2-M6 |
+| 2026-11-26 | EDN-006 | "every feature has an on/off switch with a comment" becomes "every switch has a comment". The rule that every new feature needs a switch and a test per configuration is removed; the existing switches and the EDN-013 check stay (DEC-158) | Owner decision | `AGENTS.md`, `docs/roadmap-v2.md`, V2-M17 |
+| 2026-11-26 | Tests (V2-M5 S1) | Changed existing tests, both approved by the owner. `e2e/shell-controls.spec`: the UIX-004/005 top-bar lists end in the settings button and the compact one has no undo or redo; the compact FIL-007 test opens the tool popup first. `features/shell/app-shell.spec`: the shared setup of the ink controls sets the wide viewport after the first render (before it, the size observer replaced it with 0x0, so the tests ran the compact layout); no assertion changed | Undo and redo left the compact top bar | UIX-004, UIX-005, FIL-007, ANN-006, ANN-013 |
 
 ## V2 changes to V1 requirements
 
@@ -135,7 +139,7 @@ From the identifiers of `docs/v2-requirements.md` (`R-xxx`, `D-n`, idea `#n`) to
 | R-6b | ANN-020 (V2-M11) |
 | R-6c | ARC-004 (V1, unchanged) |
 | R-6d | ANN-019 (V2-M11), UIX-023 (V2-M5), UIX-024 (V2-M5) |
-| R-6e | UIX-022 (V2-M5) |
+| R-6e | UIX-022 (V2-M6) |
 | R-7a | ANN-022 (V2-M11) |
 | R-7b | ANN-023 (V2-M11) |
 | R-7c | ANN-024 (V2-M11) |

@@ -105,6 +105,8 @@ export const TUNABLES = {
     markPanelMaxHeightVh: 70, // ORG-021: the marks list scrolls inside this share of the window height
     scrollbarGapPx: 20, // ORG-021: a panel on a right-hand strip keeps this distance so it never covers the scroll bar
     chipMaxButtons: 4, // ORG-014: jump, slide break, stop, delete (sizes the chip for its placement)
+    settingsMaxWidthPx: 640, // UIX-026: the settings stay a readable column on wide screens
+    settingsGapPx: 8, // UIX-026: padding and spacing in the settings view
   },
 
   /** Material Symbols (Outlined) names. The agent verifies each exists in the bundled set. UIX-010 */
@@ -112,6 +114,7 @@ export const TUNABLES = {
     modeOrganization: 'description',
     modeAnnotation: 'draw',
     modePresentation: 'slideshow',
+    settings: 'menu', // UIX-025: three lines
     pen: 'edit',
     highlighter: 'ink_highlighter',
     eraser: 'ink_eraser',

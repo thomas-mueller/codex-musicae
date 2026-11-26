@@ -19,6 +19,8 @@ export function tunablesToCssVars(t: Tunables): Readonly<Record<string, string>>
     '--cm-popup-duration': `${t.layout.popupAnimationMs}ms`,
     '--cm-popup-radius': `${t.layout.popupRadiusPx}px`,
     '--cm-fab-inset': `${t.layout.fabInsetPx}px`,
+    '--cm-settings-max-width': `${t.layout.settingsMaxWidthPx}px`,
+    '--cm-settings-gap': `${t.layout.settingsGapPx}px`,
     '--cm-touch-target': `${t.layout.minTouchTargetPx}px`,
     '--cm-tab-gap': `${t.layout.tabGapPx}px`,
     '--cm-tab-max-width': `${t.layout.tabMaxWidthPx}px`,

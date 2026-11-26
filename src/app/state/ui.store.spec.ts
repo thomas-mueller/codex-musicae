@@ -81,4 +81,39 @@ describe('UiStore', () => {
     store.togglePopup('b');
     expect(store.popup()).toBeNull();
   });
+
+  it('UIX-025 the settings mode opens without a document and its button returns to the mode before', () => {
+    for (const before of ['annotation', 'organization'] as const) {
+      store.setMode(before);
+      store.toggleSettings();
+      expect(store.mode()).toBe('settings');
+      store.toggleSettings();
+      expect(store.mode()).toBe(before);
+    }
+  });
+
+  it('UIX-025 choosing the settings mode again keeps the way back, and closing outside it does nothing', () => {
+    store.setMode('organization');
+    store.setMode('settings');
+    store.setMode('settings');
+    store.closeSettings();
+    expect(store.mode()).toBe('organization');
+    store.closeSettings();
+    expect(store.mode()).toBe('organization');
+  });
+
+  it('UIX-025 entering the settings mode closes the popup and deactivates tool, selection and picking', () => {
+    store.hasDocument.set(true);
+    store.toggleTool('pen');
+    store.openPopup('info');
+    store.select({ kind: 'junction', junction: 1 });
+    store.startPicking({ originJunction: 1 });
+    store.toggleSettings();
+    expect(store.popup()).toBeNull();
+    expect(store.tool()).toBeNull();
+    expect(store.selection()).toBeNull();
+    expect(store.pickingTarget()).toBeNull();
+    store.toggleTool('pen');
+    expect(store.tool()).toBeNull();
+  });
 });

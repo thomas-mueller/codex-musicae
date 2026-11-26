@@ -119,6 +119,9 @@ export class NavigationHandler {
   /** NAV-003: clamped, no wrap. NAV-005: organization mode moves by page. */
   private step(direction: 1 | -1): void {
     const mode = this.ui.mode();
+    if (mode === 'settings') {
+      return;
+    }
     if (mode === 'organization') {
       return direction === 1 ? this.org.next() : this.org.previous();
     }
@@ -129,6 +132,9 @@ export class NavigationHandler {
   }
 
   private jump(which: 'first' | 'last'): void {
+    if (this.ui.mode() === 'settings') {
+      return;
+    }
     if (this.ui.mode() === 'organization') {
       return this.org.goToPage(which === 'first' ? 0 : this.org.pageCount() - 1, true);
     }
@@ -163,6 +169,8 @@ export class NavigationHandler {
       this.ui.cancelPicking();
     } else if (this.ui.selection() !== null) {
       this.ui.deselect();
+    } else if (this.ui.mode() === 'settings') {
+      this.ui.closeSettings();
     } else if (this.ui.mode() === 'presentation') {
       this.ui.setMode('annotation');
     } else {

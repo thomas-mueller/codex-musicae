@@ -28,13 +28,13 @@ for (const [sizeClass, viewport] of Object.entries(sizes) as [keyof typeof sizes
       const common = [label('next'), label('zoomOut'), label('zoomIn'), label('zoomReset')];
       if (sizeClass === 'compact') {
         expect(await labels(page, 'top')).toEqual([
-          label('tabSwitcher'), label('openFile'), label('modeSwitch'), ...modes, label('undo'), label('redo'),
+          label('tabSwitcher'), label('openFile'), label('modeSwitch'), ...modes, label('settings'),
         ]);
         expect(await labels(page, 'bottom')).toEqual([label('previous'), ...slider, ...common, label('overflow')]);
         expect(await labels(page, 'tools')).toEqual([label('toolFab')]);
       } else {
         expect(await labels(page, 'top')).toEqual([
-          label('openFile'), label('tabBar'), label('modeSwitch'), ...modes, label('overflow'),
+          label('openFile'), label('tabBar'), label('modeSwitch'), ...modes, label('overflow'), label('settings'),
         ]);
         expect(await labels(page, 'bottom')).toEqual([
           label('previous'), ...slider, ...common, label('showMore'), label('showLess'),
@@ -83,6 +83,9 @@ for (const [sizeClass, viewport] of Object.entries(sizes) as [keyof typeof sizes
 
     test(`FIL-007 ${sizeClass} document controls are disabled, always-on controls are enabled`, async ({ page }) => {
       await page.goto('/');
+      if (sizeClass === 'compact') {
+        await page.getByLabel(label('toolFab'), { exact: true }).click(); // UIX-033: undo and redo are in the tool popup
+      }
       const disabled = new Set(
         await page.locator('app-shell [aria-disabled="true"], app-shell input:disabled').evaluateAll(
           (els) => els.map((e) => e.getAttribute('aria-label') ?? ''),

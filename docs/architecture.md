@@ -94,7 +94,7 @@ All stores use signals; components never mutate them directly.
 
 - **`SessionStore`:** list of tabs, active tab, startup restore.
 - **`DocumentStore` (one per tab):** document handle, page geometries, detection results per page and progress, jumps, breaks, stops, aspect-ratio override, ink annotations per page, undo/redo, save status, read-only flag, current position (system index and organization page). Derived with `computed()` from `core/`: junctions and bars, playing order, numbers, slides, slide count.
-- **`UiStore`:** global mode, active tool, popups, selection (junction/jump), jump-target picking, presentation flag.
+- **`UiStore`:** global mode (V2-M5: also the settings mode, with the way back to the mode before it), active tool, popups, selection (junction/jump), jump-target picking, presentation flag.
 - **`PreferencesStore`:** persisted settings (tool colors and widths, ratio defaults per orientation, recent files, stylus flag) through the `Preferences` port.
 
 **V2 changes:** `SessionStore` holds the open files in opening order behind one file entry (no tabs); `DocumentStore` holds marks on system sides (instead of jumps, breaks and stops on junctions), user-edited systems and the per-page component boxes; an `EditHistoryStore` keeps one undo history per document and mode (V2-M7); a `SettingsRegistry` declares every setting with its default, group, feature switch and reset handler (V2-M5); a `HintService` drives the first-run hints (V2-M16).

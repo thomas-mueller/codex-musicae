@@ -1,10 +1,17 @@
 @if (annotation()) {
   @if (compact()) {
     @if (store.popup()?.id === toolsId) {
+      <!-- UIX-033: undo and redo beside the tools; one column of five would not fit a phone in landscape -->
       <div class="fab-tools" data-popup>
-        @for (entry of tools; track entry.tool) {
-          <app-tool-button [entry]="entry" />
-        }
+        <div class="fab-column">
+          @for (entry of tools; track entry.tool) {
+            <app-tool-button [entry]="entry" />
+          }
+        </div>
+        <div class="fab-column">
+          <button appIconButton icon="undo" labelKey="undo" [disabled]="!canUndo()" (pressed)="session.activeDocument()?.undo()"></button>
+          <button appIconButton icon="redo" labelKey="redo" [disabled]="!canRedo()" (pressed)="session.activeDocument()?.redo()"></button>
+        </div>
       </div>
     }
     <button

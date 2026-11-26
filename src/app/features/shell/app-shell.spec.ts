@@ -80,10 +80,12 @@ describe('AppShell', () => {
     async function ready() {
       const session = TestBed.inject(SessionStore);
       const ui = TestBed.inject(UiStore);
-      ui.setViewport(WIDE.width, WIDE.height);
       const fixture = await render();
       await session.openFiles([file('a.pdf')]);
       await settle();
+      await fixture.whenStable();
+      // after the first render: its size observer reports the test DOM's 0x0
+      ui.setViewport(WIDE.width, WIDE.height);
       await fixture.whenStable();
       const button = (label: string) =>
         fixture.nativeElement.querySelector(`button[aria-label="${translate(`a11y.${label}`)}"]`) as HTMLButtonElement;
