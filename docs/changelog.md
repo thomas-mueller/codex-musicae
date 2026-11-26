@@ -40,6 +40,7 @@ To implement changes, tell the agent: "Implement the requirement changes listed 
 | 2026-11-26 | Tests (V2-M4 S3) | `core/edits.spec` runs the fixtures on marks on systems and compares the junction view. Fixtures AJ3, RJ1, RJ2, UJ1–UJ5 and JX1–JX4: the second jump starts at gap 1 instead of gap 0; UJ2 retargets to gap 2 instead of gap N; JX1 expects nothing starting at gap 0; JX4 looks at the empty gap 4. New AJ7, AJ8, UJ6 reject edge jumps. RC1 and RC2 (DET-015 total count) are removed | A jump from gap 0 or to gap N has no system form (DEC-153) | V2-M4 S3 |
 | 2026-11-26 | Tests (V2-M4 S3) | `state/document.store.spec`: the playing-order cases O08, O10, O12, O13, O17, O18, O20, O21 and the numbers case N3 leave the three store loops; a new test checks that each of their edge jumps is rejected (owner approved during S3; not foreseen in the S3 plan) | Same | V2-M4 S3 |
 | 2026-11-26 | Tests (V2-M4 S3) | `state/document.metadata.spec`, `save.service.spec`, `session.store.spec`: schema 1 shaped metadata and `replaceMarks` inputs are schema 2; one assertion reads `systemMarks` because there is no junction view without systems; the "newer" case writes version 3. `save-pipeline.spec` and `e2e/support/saving.ts`: `parseMetadata` takes the length cap. `detection-redetect.spec`: the setup also accepts system counts page by page. `e2e/organization-marks.spec`: ORG-019 jumps from bar 1 to bar 21 instead of the first to the last bar. `marks.spec` and `mark-positions.spec` only gained tests | Schema 2 and DEC-153 | V2-M4 S3 |
+| 2026-11-26 | MRK-015 | Moved from V2-M4 to V2-M6; the text is unchanged and the status stays `todo` (owner decision) | V2-M4 keeps cross-file references, but only the resolution of V2-M6 can decide that one is unresolved | V2-M4, V2-M6 |
 
 ## V2 changes to V1 requirements
 
@@ -334,7 +335,7 @@ From the identifiers of `docs/v2-requirements.md` (`R-xxx`, `D-n`, idea `#n`) to
 | D-21 | ANN-037 (V2-M12), ANN-038 (V2-M12), DEC (M0 S2, Bravura dependency) |
 | D-22 | TST-016 (V2-M2) |
 | D-23 | TST-009 (V2-M1), TST-019 (V2-M17) |
-| D-24 | ANN-017 (V2-M7), MRK-013 (V2-M4), MRK-014 (V2-M4), MRK-015 (V2-M4) |
+| D-24 | ANN-017 (V2-M7), MRK-013 (V2-M4), MRK-014 (V2-M4), MRK-015 (V2-M6) |
 | D-25 | FIL-048 (V2-M16) |
 | D-26 | MRK-011 (V2-M4), MRK-032 (V2-M10) |
 | D-27 | ORG-046 (V2-M12) |

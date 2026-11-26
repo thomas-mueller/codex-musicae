@@ -548,7 +548,7 @@ V2 terms (target `v2` entries):
 - **MRK-012** [v2·done·M4] A cross-file reference is stored in the source file and holds the target file name, page and system on page; the file name is the only file identity. A jump target may be such a reference; a bookmark sits on a system of its own file and may hold one as its target.
 - **MRK-013** [v2·done·M4] Deleting a system deletes the marks stored on both its sides; marks on other systems stay.
 - **MRK-014** [v2·done·M4] A page rerun keeps that page's marks only if the page's system count is unchanged; otherwise the marks of that page are deleted.
-- **MRK-015** [v2·todo·M4] A cross-file reference whose target system no longer exists is kept and counts as unresolved; edits in the target file never modify the source file.
+- **MRK-015** [v2·todo·M6] A cross-file reference whose target system no longer exists is kept and counts as unresolved; edits in the target file never modify the source file.
 - **MRK-016** [v2·todo·M6] In slide mode an unresolved cross-file jump ends the presentation at that position.
 - **MRK-017** [v2·todo·M6] Cross-file marks exist in every edition; in free and web they live only in the session.
 - **MRK-018** [v2·todo·M10] Mark tools act on systems, not on bars.
