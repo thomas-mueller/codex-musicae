@@ -6,6 +6,7 @@ import { FEATURE_FLAGS } from '../../ports/feature-flags';
 import { FILE_ACCESS } from '../../ports/file-access';
 import type { OpenedFile } from '../../ports/file-access';
 import { fakeFileAccess } from '../../state/testing/fake-ports';
+import { FilePrompts } from '../../state/file-prompts';
 import { SessionStore } from '../../state/session.store';
 import { UiStore } from '../../state/ui.store';
 import { PopupHost } from '../shell/popup-host';
@@ -203,15 +204,18 @@ describe('file bar', () => {
     expect(markers()).toEqual(texts('errorInvalid'));
   });
 
-  it('FIL-016 the lock of a read-only file is a control that offers to save a copy', async () => {
+  it('FIL-016 FIL-022 the lock of a read-only file is a control that shows the notice offering a new file', async () => {
     const session = await openAll({ ...file('a.pdf'), writable: false });
     const files = TestBed.inject(FILE_ACCESS) as ReturnType<typeof fakeFileAccess>;
-    const { el } = await render();
+    const { el, ui } = await render();
     const lock = el.querySelector<HTMLElement>('button.marker')!;
     expect(lock.getAttribute('aria-label')).toBe(translate('a11y.readOnly'));
+    ui.openPopup('files');
     lock.click();
     await settle();
-    expect(files.saveCopy).toHaveBeenCalledWith('a (annotated).pdf', expect.any(Uint8Array));
+    expect(TestBed.inject(FilePrompts).notice()).toBe(session.activeTabId());
+    expect(ui.popup()).toBeNull(); // the notice shows where the list opens
+    expect(files.saveCopy).not.toHaveBeenCalled();
     expect(session.tabs()).toHaveLength(1);
   });
 

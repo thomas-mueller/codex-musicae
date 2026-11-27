@@ -36,7 +36,7 @@ for (const [sizeClass, viewport] of Object.entries(sizes) as [keyof typeof sizes
         expect(await labels(page, 'tools')).toEqual([label('toolFab')]);
       } else {
         expect(await labels(page, 'top')).toEqual([
-          label('fileBar'), label('openFile'), label('previousFile'), label('nextFile'), label('modeSwitch'), ...modes, label('saveCopy'), label('settings'),
+          label('fileBar'), label('openFile'), label('previousFile'), label('nextFile'), label('modeSwitch'), ...modes, label('settings'),
         ]);
         expect(await labels(page, 'bottom')).toEqual([
           label('previous'), ...slider, ...common, label('showMore'), label('showLess'),
@@ -96,7 +96,7 @@ for (const [sizeClass, viewport] of Object.entries(sizes) as [keyof typeof sizes
         await page.getByRole('button', { name: label('modeSwitch'), exact: true }).click(); // UIX-037: the modes are in its popup
         for (const name of await disabledControls()) disabled.add(name);
       }
-      const fileKeys = sizeClass === 'expanded' ? ['previousFile', 'nextFile', 'saveCopy'] : []; // narrow: no previous/next
+      const fileKeys = sizeClass === 'expanded' ? ['previousFile', 'nextFile'] : []; // narrow: no previous/next
       for (const key of ['undo', 'redo', 'previous', 'next', 'zoomOut', 'zoomIn', 'zoomReset', 'modePresentation', ...fileKeys]) {
         expect(disabled.has(label(key)), key).toBe(true);
       }

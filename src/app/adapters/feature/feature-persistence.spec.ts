@@ -24,7 +24,8 @@ describe('web persistence', () => {
   });
 
   it('EDN-005 the other switches do not make the preferences persist', () => {
-    expect(preferencesPersisted({ ...OFF, autosave: true, saveCopy: true, persistFileChoices: true })).toBe(false);
+    expect(preferencesPersisted({ ...OFF, autosave: true, saveCopy: true })).toBe(false);
+    expect(preferencesPersisted({ ...OFF, persistFileChoices: true })).toBe(true); // FIL-038: "do not ask again" is stored
     expect(preferencesPersisted(OFF)).toBe(false);
   });
 

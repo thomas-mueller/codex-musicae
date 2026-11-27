@@ -81,12 +81,12 @@ V2 terms (target `v2` entries):
 - **FIL-014** [v1·done·M16] The persisted position per tab is the playing-order system index of the first entry on the current slide plus the organization-mode page and scroll offset.
 - **FIL-015** [v1·done·M8] The preferences store (`T:persistence.keyPrefix`) holds UI state and file references only, never PDF-derived data. _P: web stores file handles in IndexedDB, other values in localStorage; Android uses Capacitor Preferences._
 - **FIL-016** [v1·changed·M15] If a file cannot be written, its tab shows the read-only lock icon and offers "save a copy"; ink, jumps and breaks stay editable in memory. *(Changed in V2 → FIL-039, V2-M6.)*
-- **FIL-017** [v1·todo·M15] "Save a copy" writes the modified PDF to a new file. _P: web download or save picker; Android document-create intent._
+- **FIL-017** [v1·changed·M15] "Save a copy" writes the modified PDF to a new file. _P: web download or save picker; Android document-create intent._ *(Changed in V2 → FIL-037, V2-M6.)*
 - **FIL-018** [v1·todo·M16] The Android app is offered for PDF `VIEW` intents ("Open with…") and opens the file in a tab, requesting write access.
 - **FIL-019** [v1·done·M16] The PWA manifest registers a PDF file handler. _P: effective only in desktop Chromium._
-- **FIL-020** [v2·todo·M6] There is no Save button; files are saved by autosave only (SAV-008 triggers).
+- **FIL-020** [v2·done·M6] There is no Save button; files are saved by autosave only (SAV-008 triggers).
 - **FIL-021** [v2·done·M6] The top bar shows one entry for the current file containing, in this order, the file name, its status markers and a close icon; on narrow screens (UIX-037) the entry has no close icon, and files are closed from the file list, whose rows each have one. The entry lies on a pale blue pill without a border, and so does the current row of the file list.
-- **FIL-022** [v2·done·M6] Unsaved changes show as a red "*" directly at the end of the file name; in free and web it is the only change indicator. A read-only file shows a lock after the name and a space, as tall as the name's text; the lock is a control that saves a copy (disabled where that is switched off). Load error, failed save, "allow saving" and needs-re-open are icons after these, in this order of importance. Every marker that applies is shown, except that the narrow top bar (UIX-037) shows only the most important of these four icons, and a tap on it opens the file list.
+- **FIL-022** [v2·done·M6] Unsaved changes show as a red "*" directly at the end of the file name; in free and web it is the only change indicator. A read-only file shows a lock after the name and a space, as tall as the name's text; the lock is a control that shows the notice offering "save as new file" (disabled where that is switched off). Load error, failed save, "allow saving" and needs-re-open are icons after these, in this order of importance. Every marker that applies is shown, except that the narrow top bar (UIX-037) shows only the most important of these four icons, and a tap on it opens the file list.
 - **FIL-023** [v2·done·M6] A click on the file entry opens the list of all open files; there is no tab bar in any layout.
 - **FIL-024** [v2·done·M6] Previous-file and next-file buttons without labels sit left and right of the file entry; each is disabled at the first or last open file. Narrow screens (UIX-037) have neither; files are switched through the file list.
 - **FIL-025** [v2·done·M6] An open-file button with a file-opening icon, left of the previous-file button, opens the file picker; it replaces the V1 open-file control.
@@ -97,22 +97,24 @@ V2 terms (target `v2` entries):
 - **FIL-030** [v2·todo·M6] The iOS app accepts PDFs from the share sheet and "Open with" through the URL-open event (`UNVERIFIED(ios)`).
 - **FIL-031** [v2·todo·M6] There is no limit on the number of open files and no automatic closing or eviction of open files.
 - **FIL-032** [v2·todo·M6] Files opened because they are referenced look and behave like every other open file.
-- **FIL-033** [v2·todo·M6] Before the first write of a file in a session an overwrite dialog is shown; it appears at most once per file per session.
-- **FIL-034** [v2·todo·M6] Until the overwrite dialog is answered nothing is written; the changes stay in memory and the modified marker stays.
-- **FIL-035** [v2·todo·M6] The save scheduled after detection (SAV-012) also waits for the overwrite dialog.
-- **FIL-036** [v2·todo·M6] The overwrite dialog offers Overwrite, Save as new file and Cancel; Cancel writes nothing.
-- **FIL-037** [v2·todo·M6] "Save as new file" writes to a new location chosen by the user, which then becomes the file of that entry.
-- **FIL-038** [v2·todo·M6] The overwrite dialog can be switched off for the current file or for all files; the choice persists across sessions where persistence is switched on.
-- **FIL-039** [v2·todo·M6] A file that cannot be written shows one warning per file per session offering "Save as new file"; the modified marker stays.
+- **FIL-033** [v2·done·M6] Before the first write of a file in a session an overwrite dialog is shown; it appears at most once per file per session.
+- **FIL-034** [v2·done·M6] Until the overwrite dialog is answered nothing is written; the changes stay in memory and the modified marker stays.
+- **FIL-035** [v2·done·M6] The save scheduled after detection (SAV-012) also waits for the overwrite dialog.
+- **FIL-036** [v2·done·M6] The overwrite dialog offers Overwrite, Save as new file and Cancel; Cancel writes nothing.
+- **FIL-037** [v2·done·M6] "Save as new file" writes to a new location chosen by the user, which then becomes the file of that entry. _P: Safari and Firefox cannot choose a file to keep writing to; there a copy is downloaded and the open file stays as it was._
+- **FIL-038** [v2·done·M6] The overwrite dialog can be switched off for the current file or for all files; the choice persists across sessions where persistence is switched on.
+- **FIL-039** [v2·done·M6] A file that cannot be written shows one notice per file per session, offering "Save as new file": a bar below the top bar, where the file list opens, that blocks nothing (where there is a tool strip it starts beside it); the modified marker stays.
 - **FIL-040** [v2·todo·M6] A shared-in copy without write access opens read-only.
-- **FIL-041** [v2·todo·M6] Per-file choices are identified by the file name only, stored in the local settings and cleared by "Reset all settings".
+- **FIL-041** [v2·done·M6] Per-file choices are identified by the file name only, stored in the local settings and cleared by "Reset all settings".
 - **FIL-042** [v2·todo·M6] Opening a file with cross-file marks tries to open every referenced file, looked up by file name among the open files and the files with persisted access (Android URI permission, iOS bookmark, web handle where persistence is on).
 - **FIL-043** [v2·todo·M6] When a referenced file cannot be opened (no match, several matches or no file access), a warning appears, the metadata stays unchanged and the user can open the file manually.
 - **FIL-044** [v2·todo·M6] Closing a file that is referenced by another open file keeps the marks and shows a warning at once with "Don't show again" (persisted, cleared by "Reset all settings").
 - **FIL-045** [v2·todo·M6] Referenced files open in the background; the current file stays current.
-- **FIL-046** [v2·todo·M6] In free and web, closing a modified file asks for confirmation every time; confirming drops the changes.
-- **FIL-047** [v2·todo·M6] A file without unsaved changes, including a read-only one, closes without asking.
+- **FIL-046** [v2·done·M6] In free and web, closing a modified file asks for confirmation every time; confirming drops the changes.
+- **FIL-047** [v2·done·M6] A file without unsaved changes, including a read-only one, closes without asking.
 - **FIL-048** [v2·todo·M16] A newly opened file without embedded systems opens in organization mode; a file with embedded systems opens in annotation mode.
+- **FIL-049** [v2·done·M6] Whenever closing a file would lose changes (free and web, a read-only file, or after Cancel to the overwrite question), a dialog offers Save as new file, Discard changes and Cancel; where "save as new file" is switched off it is visible and disabled.
+- **FIL-050** [v2·done·M6] No save question and no save notice appears in presentation mode or while a stroke is drawn; they wait.
 
 ## SAV — Saving and embedded data
 
@@ -126,7 +128,7 @@ V2 terms (target `v2` entries):
 - **SAV-008** [v1·done·M15] Saving triggers: `T:saving.autosaveIdleMs` after the last change, tab switch, tab close, app hidden or paused. Saving never starts while a stroke is in progress.
 - **SAV-009** [v1·done·M15] A save builds the complete file bytes in memory first and only then writes; on failure the in-memory state is kept, the tab shows the error icon and the next trigger retries.
 - **SAV-010** [v1·done·M15] Saving runs in a worker and does not block drawing or rendering.
-- **SAV-011** [v1·todo·M15] Where the platform allows, saving writes to the same file. _P: web in-place only in Chromium (File System Access); Safari and Firefox offer "save a copy" only._
+- **SAV-011** [v1·changed·M15] Where the platform allows, saving writes to the same file. _P: web in-place only in Chromium (File System Access); Safari and Firefox offer "save a copy" only._ *(Changed in V2 → FIL-037, V2-M6.)*
 - **SAV-012** [v1·done·M15] After detection completes on a writable file, a save is scheduled so that later opens find embedded detection data and skip detection.
 - **SAV-013** [v1·done·M15] Existing annotations of other apps and existing attachments are preserved on save, except ink removed by the eraser (ANN-005).
 - **SAV-014** [v1·done·M15] Ink annotation edits made in a tab persist across tab switches within the session even if saving failed.
@@ -390,7 +392,7 @@ V2 terms (target `v2` entries):
 - **UIX-033** [v2·todo·M7] Undo and redo buttons belong to the tool area in annotation and organization mode: in the tool strip in expanded layout, in the expanded tool popup (FAB group) next to the tools in compact layout. They are disabled when their history is empty (ANN-016).
 - **UIX-034** [v2·done·M5] The top bar contains no undo or redo button in any layout.
 - **UIX-035** [v2·done·M6] The settings mode shows the version string (PIP-018) below its groups, in every layout; there is no info popover.
-- **UIX-036** [v2·done·M6] The expanded layout has no overflow button in the top bar; "save a copy" is a top-bar button next to the settings button, disabled without a document or when its feature switch is off.
+- **UIX-036** [v2·done·M6] The expanded layout has no overflow button in the top bar, and no layout has a button that saves a copy. The More button of the compact bottom bar shows in annotation mode only (it holds the slide-ratio buttons).
 - **UIX-037** [v2·done·M6] The top bar switches modes with a segmented three-icon control (the active mode filled); below `T:layout.compactMaxWidthPx` width it is one button with the current mode's icon that opens the three. It is hidden in presentation mode.
 - **UIX-038** [v2·done·M6] All text of the app uses one modern sans-serif font of the device (`T:typography.fontFamily`); no font file is loaded.
 
@@ -405,7 +407,7 @@ V2 terms (target `v2` entries):
 - **PLT-007** [v1·todo·M16] The Android back button closes popups first, in presentation mode returns to annotation mode, and otherwise has the default behavior.
 - **PLT-008** [v1·todo·M16] Android opens files through the Storage Access Framework with persistable read-write permission and writes in place; if write access is not granted the file is read-only (FIL-016). _Risk: the write is a truncating write, not atomic._
 - **PLT-009** [v1·done·M2] The web app is a PWA: it works offline after the first load, and a new version activates only at the next app start, never mid-use.
-- **PLT-010** [v1·done·M15] Safari and Firefox have no in-place save; saving offers "save a copy".
+- **PLT-010** [v1·changed·M15] Safari and Firefox have no in-place save; saving offers "save a copy". *(Changed in V2 → FIL-037, V2-M6.)*
 - **PLT-011** [v1·changed·M17] On every push the E2E suite runs on Chromium, Firefox and WebKit, including Android and iPad/iPhone device profiles. *(Changed in V2 → TST-018, V2-M17.)*
 - **PLT-012** [v1-optional·todo·M18] The `ios` Capacitor shell is committed; deployment target iOS 16.4; Info.plist declares PDF as a supported document type with open-in-place.
 - **PLT-013** [v1-optional·todo·M18] iOS adapters provide: status bar and home indicator hidden in presentation, keep-awake, document picker with write access, "open with" via the URL-open event, safe-area insets.
@@ -488,7 +490,7 @@ V2 terms (target `v2` entries):
 - **TST-004** [v1·done·M1] Playwright is configured with Chromium, Firefox and WebKit projects and phone and tablet device profiles.
 - **TST-005** [v1·done·M1] Code that exists only for Safari/WebKit changes only together with a Playwright WebKit test.
 - **TST-006** [v1·done·M17] A manual device checklist covers pedals, full screen, wake lock, "open with", in-place save and performance on a real Android tablet.
-- **TST-007** [v1·done·M17] A tester checklist for iOS Safari (open, scroll, draw, save a copy, presentation mode, pedal) is delivered with the hosted URL.
+- **TST-007** [v1·done·M17] A tester checklist for iOS Safari (open, scroll, draw, save as a new file, presentation mode, pedal) is delivered with the hosted URL.
 - **TST-008** [v1·done·M17] A performance test on the reference PDF fails the pipeline when a budget in `T:budgets` is exceeded.
 - **TST-009** [v2·done·M1] Playwright projects cover desktop Chrome, Firefox and Safari, a small Android phone (about 360 × 640), a large Android phone, an Android tablet, iPhone and iPad.
 - **TST-010** [v2·done·M2] The real-PDF corpus consists of a repository folder and a plain list of URLs; either may be empty. The owner provides nothing but the PDF files or their URLs.

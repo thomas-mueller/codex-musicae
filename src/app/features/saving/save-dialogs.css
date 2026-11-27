@@ -1,0 +1,57 @@
+/* The save questions (FIL-036, FIL-049) and the notice (FIL-039): text buttons that wrap on narrow screens. */
+/* Wins over the width rule of dialog.css, which comes before this file. */
+.dialog {
+  width: min(var(--cm-save-dialog-width), calc(100% - 2 * var(--cm-dialog-gap)));
+}
+
+.file {
+  flex-basis: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-align: center;
+  font-weight: 500;
+}
+
+.choices {
+  display: flex;
+  flex-basis: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+label {
+  display: flex;
+  align-items: center;
+  gap: var(--cm-dialog-gap);
+  min-height: var(--cm-touch-target);
+}
+
+input {
+  width: var(--cm-icon-size);
+  height: var(--cm-icon-size);
+  margin: 0;
+  flex: none;
+  accent-color: var(--cm-accent);
+}
+
+.action {
+  min-height: var(--cm-touch-target);
+  padding: 0 var(--cm-dialog-gap);
+  border: 1px solid currentColor;
+  border-radius: var(--cm-popup-radius);
+  background: transparent;
+  color: var(--cm-icon);
+  font: inherit;
+  cursor: pointer;
+}
+
+.action.primary {
+  border-color: var(--cm-accent);
+  background: var(--cm-accent);
+  color: var(--cm-on-accent);
+}
+
+.action[aria-disabled='true'] {
+  opacity: var(--cm-disabled-opacity);
+  cursor: default;
+}

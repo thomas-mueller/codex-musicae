@@ -41,6 +41,11 @@ export interface FileAccess {
    * 'needs-user-gesture'. 'denied' when the user refuses, 'unsupported' when the file has no handle.
    */
   requestWriteAccess(ref: FileRef): Promise<Result<void, FileAccessError>>;
+  /**
+   * FIL-037: lets the user create a new PDF file and returns its reference, with write access that can be kept; its content
+   * follows through `write`. Must be called inside a user gesture. 'unsupported' where no place can be chosen.
+   */
+  createFile(suggestedName: string): Promise<Result<FileRef, FileAccessError>>;
   /** Saves as a new file (download or document-create). */
   saveCopy(suggestedName: string, bytes: Uint8Array): Promise<Result<void, FileAccessError>>;
   /** FIL-002: true if both refer to the same underlying file. */

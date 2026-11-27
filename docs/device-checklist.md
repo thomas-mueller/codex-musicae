@@ -29,12 +29,15 @@ PLT-006 and PLT-007 stay `todo` in `docs/requirements.md` until every item above
 | S3-3 | Edit in place: after the autosave, open the same file in another viewer (for example the system PDF viewer) and check that the ink is in it. | PLT-008 | todo |
 | S3-4 | Restart the app (swipe it away): the reopen of a picked file works without a new permission prompt (`isPersisted`). | PLT-008 | todo |
 | S3-5 | "Open with" from the Files app, from a provider that grants write access: the file opens in a tab, read-write, and saves in place. | FIL-018 | todo |
-| S3-6 | "Open with" from a source that grants read access only (for example a mail attachment): the file opens read-only (lock icon); "save a copy" writes a new file through the system dialog. | FIL-018, FIL-016 | todo |
+| S3-6 | "Open with" from a source that grants read access only (for example a mail attachment): the file opens read-only (lock icon); tapping the lock and "Save as new file" writes a new file through the system dialog. | FIL-018, FIL-016 | todo |
 | S3-7 | "Open with" while the app is already running: the file opens as a further tab, no second instance. Cold start with "Open with" also opens the file. | FIL-018 | todo |
-| S3-8 | Save a copy: the system "create document" dialog appears; cancelling it changes nothing; accepting writes a valid PDF. | PLT-008 | todo |
+| S3-8 | Save as new file (V2-M6): the system "create document" dialog appears; cancelling it changes nothing; accepting writes a valid PDF that becomes the open file, is saved to again after a further change, and still opens read-write after an app restart. | PLT-008, FIL-037 | todo |
 | S3-9 | A 30 MB PDF opens in at most 10 s and the app stays responsive (scrolling, toolbar) during the read and during a save. | PLT-008, NFR | todo |
-| S3-10 | Kill the app (force stop) during a save of a large file, then reopen: the file still opens, or the original can be recovered from "save a copy" (LIM-011, the truncating write is not atomic). | LIM-011 | todo |
+| S3-10 | Kill the app (force stop) during a save of a large file, then reopen: the file still opens, or at least is not silently empty (LIM-011, the truncating write is not atomic). | LIM-011 | todo |
 | S3-11 | Web, desktop Chromium with the installed PWA: right-click a PDF, "Open with" CodexMusicae: it opens in a tab; a second file goes to the running window. | FIL-019 | todo |
+| V2-6.1 | Overwrite question (paid build): draw in a picked file and wait; the question appears and the file is unchanged until it is answered. Overwrite writes into the same file; Cancel writes nothing, and closing then asks. | FIL-033, FIL-034, FIL-036, FIL-049 | todo |
+| V2-6.2 | "Do not ask again", force-stop, start again: the stored choice still holds; "Reset all settings" brings the question back. | FIL-038, FIL-041 | todo |
+| V2-6.3 | A read-only file ("Open with" from a mail attachment): after drawing, the notice shows below the top bar; "Save as new file" continues in the new file. | FIL-039, FIL-040 | todo |
 
 PLT-008 and FIL-018 stay `todo` in `docs/requirements.md` until every Android item above is `ok`.
 
@@ -68,7 +71,7 @@ Device: ______  Android: ____  WebView/Chrome: ____  App version (info icon): __
 - [ ] Presentation: system bars hidden, content under the cutout, screen stays on 5 min, back button leaves, back in annotation minimizes. _PLT-005, PLT-006, PLT-007_
 - [ ] Rotate the device in all three modes: layout and slide recomputed, position kept. _FIL-014_
 - [ ] In-place save: edit, close, reopen; open the file in another viewer: ink visible. _PLT-008, SAV-011_
-- [ ] "Open with" from the Files app (and read-only case: lock icon, save a copy works). _FIL-018, FIL-016_
+- [ ] "Open with" from the Files app (and read-only case: lock icon, "save as new file" works). _FIL-018, FIL-016_
 - [ ] Kill the app while drawing: restart restores tabs and positions; unsaved loss only since the last autosave. _FIL-011, FIL-013, NFR-015_
 - [ ] Large file (30 MB) opens < 10 s; app responsive. _PLT-008_
 - [ ] Memory: open 3 large PDFs in tabs, switch tabs: no crash. _NFR-004, NFR-016_

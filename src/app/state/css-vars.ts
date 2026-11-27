@@ -28,6 +28,7 @@ export function tunablesToCssVars(t: Tunables): Readonly<Record<string, string>>
     '--cm-file-entry-gap': `${t.layout.fileEntryGapPx}px`,
     '--cm-file-pill-height': `${t.layout.filePillHeightPx}px`,
     '--cm-current-file': t.colors.currentFile,
+    '--cm-save-dialog-width': `${t.layout.saveDialogWidthPx}px`,
     '--cm-unsaved-mark': t.colors.unsavedMark,
     '--cm-org-bar-tint': t.colors.orgBar.tint,
     '--cm-org-bar-opacity': String(t.colors.orgBar.opacity),

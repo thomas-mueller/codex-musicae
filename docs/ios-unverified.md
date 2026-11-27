@@ -38,7 +38,8 @@ Every Swift file carries the marker `// UNVERIFIED(ios)` in its first line. The 
 | `DocumentAccessPlugin.swift` — chunked read | Reads the file in chunks through the bridge, every access balanced with start/stop of the security scope. | 2, 10 | file does not open; memory kill with a big file |
 | `DocumentAccessPlugin.swift` — write back | Saving writes a temp file and then replaces the original in one coordinated step (copy fallback if the provider refuses a replace). | 2 | "save failed" icon; ink missing after reopening the file elsewhere |
 | `DocumentAccessPlugin.swift` — references | A file picked once can be reopened later without the picker (bookmark); a moved or deleted file reports "needs re-open". | 3, 11 | picker asked every time; stale file opens empty |
-| `DocumentAccessPlugin.swift` — "save a copy" | Shows the export dialog (an empty file is exported first, then filled); cancelling changes nothing. | 5 | no dialog; empty or damaged PDF |
+| `DocumentAccessPlugin.swift` — "save as new file" | Shows the export dialog (an empty file is exported first, then filled); cancelling changes nothing. | 5 | no dialog; empty or damaged PDF |
+| `DocumentAccessPlugin.swift` — new file as open file (FIL-037) | `createDocument` also answers the file name; the new file stays open, is saved to again after a further change and reopens after a restart. | 5 | the entry keeps the old name; later saves fail |
 | `DocumentAccessPlugin.swift` — "Open in…" queue | Files handed to the app are queued, the web side is told, and read-only sources open read-only. | 4 | nothing opens; wrong lock state |
 | `ios/App/App/AppDelegate.swift` | Passes every URL the system hands to the app to the plugin above (and still to Capacitor). | 4 | "Open in…" does nothing |
 | `ios/App/App/BridgeViewController.swift` | Registers the two native plugins; hides the status bar and the home indicator while presenting. | 1, 6 | picker never appears (plugins not registered); bars stay visible |
@@ -70,7 +71,7 @@ Answer each with **OK / problem / not tested**; for a problem write what you saw
 | 2 | Pick a PDF: it opens in a tab. Draw a few strokes in pen mode and wait for the save (the save icon settles). Open the same file in the Files app or another PDF app: is your writing in it? | |
 | 3 | Close the app completely (swipe it away), start it again: your tab is back, and the file saves again without asking you to pick it. | |
 | 4 | In the Files app open a PDF with "Open in… / Share → CodexMusicae" (or tap it): it opens as a tab, read-write, while the app is running **and** when the app was closed. Do the same with a PDF from a mail attachment: it opens with the lock icon (read-only). | |
-| 5 | Tap the three-dots icon, then the download icon ("save a copy"): the system save dialog appears. Cancel it: nothing happens. Do it again and confirm: open the new file in another app — is it a valid PDF with your writing? | |
+| 5 | Tap the lock next to the file name (or draw and answer the overwrite question), then "Save as new file": the system save dialog appears. Cancel it: nothing happens. Do it again and confirm: open the new file in another app — is it a valid PDF with your writing? | |
 | 6 | Tap the middle of the page: presentation mode. Are the status bar and the home indicator hidden? Leave it with the middle tap: are they back and the layout as before? | |
 | 7 | In presentation mode leave the device alone for about 3 minutes: the screen stays on. After leaving presentation mode, does it sleep normally again? | |
 | 8 | Rotate the device (and, on an iPad, use full screen/split view if you like): does the layout adapt? Is nothing hidden behind the notch or the home indicator? | |

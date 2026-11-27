@@ -34,7 +34,7 @@ export class SavePipeline {
 
   constructor(
     private readonly doc: DocumentStore,
-    private readonly ref: FileRef,
+    private ref: FileRef,
     bytes: Uint8Array,
     private readonly files: FileAccess,
     private readonly writer: PdfWriter,
@@ -85,14 +85,31 @@ export class SavePipeline {
     return applied.ok ? ok(applied.value) : err('failed');
   }
 
-  /** SAV-011, PLT-010: "<name> (annotated).pdf" through the platform's save-as. */
+  /** The name proposed for a copy or a new file: "<name> (annotated).pdf". */
+  suggestedName(): string {
+    return `${this.ref.name.replace(PDF_EXTENSION, '')}${TUNABLES.files.copySuffix}${TUNABLES.files.pdfExtension}`;
+  }
+
+  /** FIL-037: writes the document to another file; only when that worked does it become the file of this pipeline. */
+  async writeTo(ref: FileRef, signal: AbortSignal): Promise<boolean> {
+    const snapshot = this.snapshot();
+    const applied = await this.apply(snapshot.edits, signal);
+    if (!applied.ok || !(await this.files.write(ref, applied.value)).ok) {
+      return false;
+    }
+    this.ref = ref;
+    this.bytes = applied.value;
+    this.commit(snapshot);
+    return true;
+  }
+
+  /** FIL-037: what "save as new file" does where no file can be chosen to continue in: a download (Safari, Firefox). */
   async saveCopy(signal: AbortSignal): Promise<Result<void, FileAccessError | 'failed'>> {
     const built = await this.buildCopy(signal);
     if (!built.ok) {
       return built;
     }
-    const base = this.ref.name.replace(PDF_EXTENSION, '');
-    return this.files.saveCopy(`${base}${TUNABLES.files.copySuffix}${TUNABLES.files.pdfExtension}`, built.value);
+    return this.files.saveCopy(this.suggestedName(), built.value);
   }
 
   private snapshot(): Snapshot {

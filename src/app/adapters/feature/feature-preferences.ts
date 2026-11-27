@@ -34,9 +34,9 @@ export class FeaturePreferences implements Preferences {
   }
 }
 
-/** True when any preference key is persisted: recent files, session restore or settings (EDN-005). */
+/** True when any preference key is persisted: recent files, session restore, per-file choices or settings (EDN-005). */
 export function preferencesPersisted(flags: FeatureFlags): boolean {
-  return flags.recentFiles || flags.sessionRestore || flags.persistSettings;
+  return flags.recentFiles || flags.sessionRestore || flags.persistSettings || flags.persistFileChoices;
 }
 
 /**

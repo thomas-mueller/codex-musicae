@@ -20,6 +20,8 @@ import { CLOCK } from './clock';
 import { DetectionService } from './detection.service';
 import { PreferencesStore } from './preferences.store';
 import { ResourceGovernor } from './resource-governor';
+import { FilePrompts } from './file-prompts';
+import type { FilePrompt } from './file-prompts';
 import { SessionStore } from './session.store';
 import { fakeBitmap } from './testing/fake-bitmap';
 import { FakeClock } from './testing/fake-clock';
@@ -61,7 +63,8 @@ function setup(lifecycle = pausableLifecycle()) {
     providers: [
       { provide: PDF_RENDERER, useValue: fakeRenderer('invalid') },
       { provide: FILE_ACCESS, useValue: files },
-      { provide: PREFERENCES, useValue: memoryPreferences() },
+      // FIL-038: these specs are not about the overwrite question, so it is switched off for all files
+      { provide: PREFERENCES, useValue: memoryPreferences({ overwrite: { all: true, names: [] } }) },
       ...provideTestDetectionPorts(),
       ...provideTestSavePorts(),
       { provide: APP_LIFECYCLE, useValue: lifecycle.value },
@@ -313,7 +316,12 @@ describe('SessionStore picker and recents', () => {
       await session.openFiles([{ ...file('a.pdf'), writable: false }]);
       await settle();
       session.activeDocument()?.addStroke(STROKE);
-      expect(await session.closeTab(session.activeTabId() ?? '')).toBe(true);
+      // FIL-049: closing would lose the stroke, so the user is asked
+      expect(await session.closeTab(session.activeTabId() ?? '')).toBe(false);
+      const prompts = TestBed.inject(FilePrompts);
+      expect(prompts.current()?.kind).toBe('close');
+      await session.answerClose(prompts.current() as FilePrompt & { kind: 'close' }, 'discard');
+      expect(session.tabs()).toHaveLength(0);
       expect(files.write).not.toHaveBeenCalled();
     });
 
@@ -331,17 +339,17 @@ describe('SessionStore picker and recents', () => {
       expect(files.write).toHaveBeenCalledTimes(1);
     });
 
-    it('SAV-011 PLT-010 save a copy works for writable and read-only tabs and keeps the changes unsaved', async () => {
+    it('FIL-037 PLT-010 without a file chooser "save as new file" downloads a copy of writable and read-only files and keeps the changes unsaved', async () => {
       const { session, files } = setup();
+      files.createFile.mockResolvedValue(err('unsupported'));
       await session.openFiles([file('a.pdf'), { ...file('b.pdf'), writable: false }]);
       await settle();
       session.activeDocument()?.addStroke(STROKE);
-      expect((await session.saveCopy()).ok).toBe(true);
+      expect(await session.saveAsNewFile()).toBe('copied');
       expect(files.saveCopy).toHaveBeenLastCalledWith('b (annotated).pdf', expect.any(Uint8Array));
-      expect((await session.saveCopy(session.tabs()[0]?.id)).ok).toBe(true);
+      expect(await session.saveAsNewFile(session.tabs()[0]!.id)).toBe('copied');
       expect(files.saveCopy).toHaveBeenLastCalledWith('a (annotated).pdf', expect.any(Uint8Array));
-      expect(session.tabs()[1]?.unsaved).toBe(true);
-      expect(files.write).not.toHaveBeenCalled();
+      expect(session.activeTab()?.unsaved).toBe(true);
     });
   });
 

@@ -1,0 +1,36 @@
+:host {
+  position: absolute;
+  top: calc(var(--cm-bar-height) + env(safe-area-inset-top));
+  left: 0;
+  right: 0;
+  z-index: 1; /* below the popups: an open file list covers it */
+}
+
+/* The tool strip is one button wide. */
+:host([data-strip='left']) {
+  left: calc(var(--cm-touch-target) + env(safe-area-inset-left));
+}
+
+:host([data-strip='right']) {
+  right: calc(var(--cm-touch-target) + env(safe-area-inset-right));
+}
+
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--cm-dialog-gap);
+  padding: calc(var(--cm-dialog-gap) / 2) var(--cm-dialog-gap);
+  border-radius: 0 0 var(--cm-popup-radius) var(--cm-popup-radius);
+  background: var(--cm-bar-bg);
+  border-bottom: 1px solid var(--cm-canvas-grey);
+  color: var(--cm-icon);
+}
+
+/* The text takes the free width; on narrow screens the buttons wrap to a second line. */
+p {
+  flex: 1 1 12em;
+  margin: 0;
+  overflow-wrap: anywhere;
+}

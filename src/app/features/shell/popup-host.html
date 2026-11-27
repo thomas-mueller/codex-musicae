@@ -2,11 +2,8 @@
   <div class="popup" [class.sheet]="compact() && !below()" [class.top]="below()" [class.panel]="!compact() && !below()" data-popup>
     @switch (id) {
       @case (ids.overflowBottom) {
-        @if (annotation() && compact()) {
-          <button appIconButton icon="showMore" labelKey="showMore" [disabled]="showMoreDisabled()" (pressed)="aspect.showMore()"></button>
-          <button appIconButton icon="showLess" labelKey="showLess" [disabled]="showLessDisabled()" (pressed)="aspect.showLess()"></button>
-        }
-        <button appIconButton icon="saveCopy" labelKey="saveCopy" [disabled]="noDocument() || !flags.saveCopy" (pressed)="saveCopy()"></button>
+        <button appIconButton icon="showMore" labelKey="showMore" [disabled]="showMoreDisabled()" (pressed)="aspect.showMore()"></button>
+        <button appIconButton icon="showLess" labelKey="showLess" [disabled]="showLessDisabled()" (pressed)="aspect.showLess()"></button>
       }
       @case (ids.slider) {
         <input

@@ -43,7 +43,7 @@ const api = createPdfWriterApi();
 const TMP = mkdtempSync(join(tmpdir(), 'e2e-saving-'));
 let fileSeq = 0;
 
-/** Forces the <input type="file"> open path and the <a download> save-a-copy path in every engine. Call before `page.goto`. */
+/** Forces the <input type="file"> open path and the <a download> path of "save as new file" in every engine. Call before `page.goto`. */
 export async function forceFilePaths(page: Page): Promise<void> {
   await forceFileInput(page);
   await page.addInitScript(() => {
@@ -58,7 +58,7 @@ export async function openPdf(page: Page, bytes: Uint8Array | Buffer, name: stri
   await (await chooser).setFiles({ name, mimeType: 'application/pdf', buffer: Buffer.from(bytes) });
 }
 
-/** UIX-036: only compact layouts have a More button (in the bottom bar). */
+/** UIX-036: only the compact annotation layout has a More button (in the bottom bar). */
 export async function openMoreIfCompact(page: Page): Promise<void> {
   await expect(page.locator('app-shell')).toHaveAttribute('data-size-class', /compact|expanded/);
   if ((await page.locator('app-shell').getAttribute('data-size-class')) === 'compact') {
@@ -66,12 +66,15 @@ export async function openMoreIfCompact(page: Page): Promise<void> {
   }
 }
 
-/** "Save a copy" (compact layouts: in the More menu); returns the downloaded file's name and bytes. */
+/**
+ * The saved bytes as a download: "save as new file" of the read-only file's notice (the lock shows it). Needs the paid
+ * build and `forceFilePaths`, whose files are read-only and which has no save picker (FIL-037). Returns name and bytes.
+ */
 export async function saveCopyDownload(page: Page): Promise<{ name: string; bytes: Buffer }> {
-  await openMoreIfCompact(page);
+  await page.locator('[data-area="top"] app-file-item button.lock').click();
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    page.getByRole('button', { name: label('saveCopy'), exact: true }).click(),
+    page.getByTestId('notice-save-as').click(),
   ]);
   const path = await download.path();
   return { name: download.suggestedFilename(), bytes: readFileSync(path) };

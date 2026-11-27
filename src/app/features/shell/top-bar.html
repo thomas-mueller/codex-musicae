@@ -1,6 +1,3 @@
 <app-file-bar class="grow" />
 <app-mode-switch [collapsed]="store.narrow()" />
-@if (store.sizeClass() === 'expanded') {
-  <button appIconButton icon="saveCopy" labelKey="saveCopy" [disabled]="saveCopyDisabled()" (pressed)="saveCopy()"></button>
-}
 <button appIconButton icon="settings" labelKey="settings" [toggled]="store.mode() === 'settings'" (pressed)="store.toggleSettings()"></button>

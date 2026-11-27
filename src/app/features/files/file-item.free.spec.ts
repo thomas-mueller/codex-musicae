@@ -5,6 +5,7 @@ import { provideTestTransloco, translate } from '../../../testing/transloco';
 import { FEATURE_FLAGS } from '../../ports/feature-flags';
 import type { FeatureFlags } from '../../ports/feature-flags';
 import { FILE_ACCESS } from '../../ports/file-access';
+import { FilePrompts } from '../../state/file-prompts';
 import { SessionStore } from '../../state/session.store';
 import type { fakeFileAccess } from '../../state/testing/fake-ports';
 import { FileItem } from './file-item';
@@ -31,13 +32,16 @@ describe('FileItem in the free edition', () => {
     marker.click();
     await settle();
     expect(files.saveCopy).not.toHaveBeenCalled();
+    expect(TestBed.inject(FilePrompts).notice()).toBeNull();
   });
 
-  it('EDN-008 with saveCopy on the marker saves a copy', async () => {
+  it('EDN-008 FIL-022 with saveCopy on the marker shows the notice that offers a new file', async () => {
     const { marker, files } = await lockMarker({ ...FREE, saveCopy: true });
     expect(marker.getAttribute('aria-disabled')).toBe('false');
     marker.click();
     await settle();
-    expect(files.saveCopy).toHaveBeenCalled();
+    expect(TestBed.inject(FilePrompts).notice()).not.toBeNull();
+    expect(files.saveCopy).not.toHaveBeenCalled();
+    expect(files.createFile).not.toHaveBeenCalled();
   });
 });

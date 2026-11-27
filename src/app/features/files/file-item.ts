@@ -5,6 +5,7 @@ import { TUNABLES } from '../../../config/tunables';
 import { fileMarkers } from '../../core';
 import type { FileMarker } from '../../core';
 import { FEATURE_FLAGS } from '../../ports/feature-flags';
+import { FilePrompts } from '../../state/file-prompts';
 import { SessionStore } from '../../state/session.store';
 import type { Tab } from '../../state/session.store';
 import { UiStore } from '../../state/ui.store';
@@ -19,8 +20,8 @@ interface MarkerView {
   readonly icon: IconKey;
   /** Translation key under `a11y.` and `tooltip.`. */
   readonly labelKey: string;
-  /** Present when the marker is a control: FIL-016 the lock offers "save a copy". */
-  readonly action?: 'saveCopy' | 'grantAccess' | 'reopen';
+  /** Present when the marker is a control. */
+  readonly action?: 'grantAccess' | 'reopen';
 }
 
 /** The markers drawn as icons behind the name; unsaved changes and the lock belong to the name itself. */
@@ -74,11 +75,11 @@ function viewOf(marker: IconMarker, tab: Tab): MarkerView {
       <button
         type="button"
         class="marker lock"
-        [class.disabled]="!allowed('saveCopy')"
-        [attr.aria-disabled]="!allowed('saveCopy')"
+        [class.disabled]="!allowed('saveAs')"
+        [attr.aria-disabled]="!allowed('saveAs')"
         appTooltip="readOnly"
         [attr.aria-label]="'a11y.readOnly' | transloco"
-        (click)="onMarker('saveCopy')"
+        (click)="onMarker('saveAs')"
       >
         <app-icon name="readOnly" />
       </button>
@@ -129,6 +130,7 @@ export class FileItem {
   protected readonly session = inject(SessionStore);
   protected readonly ui = inject(UiStore);
   private readonly flags = inject(FEATURE_FLAGS);
+  private readonly prompts = inject(FilePrompts);
   protected readonly popupId = POPUP_FILES;
   readonly tab = input.required<Tab>();
   readonly active = input(false);
@@ -171,14 +173,15 @@ export class FileItem {
   }
 
   /** EDN-003: a marker that offers a blocked action stays visible but does nothing. */
-  protected allowed(action: MarkerView['action']): boolean {
+  protected allowed(action: MarkerView['action'] | 'saveAs'): boolean {
     if (action === 'reopen') {
       return true;
     }
     return action === 'grantAccess' ? this.flags.autosave : this.flags.saveCopy;
   }
 
-  protected onMarker(action: MarkerView['action']): void {
+  /** FIL-022: the lock shows the notice that offers "save as new file". */
+  protected onMarker(action: MarkerView['action'] | 'saveAs'): void {
     if (!this.allowed(action)) {
       return;
     }
@@ -187,7 +190,8 @@ export class FileItem {
     } else if (action === 'reopen') {
       this.session.setActive(this.tab().id);
     } else {
-      void this.session.saveCopy(this.tab().id);
+      this.prompts.showNotice(this.tab().id, true);
+      this.ui.closePopup(); // the notice shows where the file list is
     }
   }
 }

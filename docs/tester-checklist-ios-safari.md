@@ -12,7 +12,7 @@ Tester device (iPad/iPhone model): ____  iOS version: ____  Version text from th
 2. Wait ~1 minute. Switch to the first mode (page icon): do you see thin colored bars between the music lines?   OK / problem
 3. Switch to the pen mode (pencil icon). Tap the left/right side of the page: does it turn the slide? Swipe left/right?   OK / problem
 4. Choose the pen, write on the page with finger (or Apple Pencil). Is the line smooth? Undo works?   OK / problem
-5. Tap the three-dots icon, then the download icon ("save a copy"): it downloads/shares a PDF. Open that PDF in another app: is your writing visible?   OK / problem
+5. Tap the lock next to the file name, then "Save as new file": it downloads/shares a PDF. Open that PDF in another app: is your writing visible?   OK / problem
 6. Tap the middle of the page: presentation mode. On iPad: is it full screen? Leave with the middle tap.   OK / problem
 7. Pedal (if you have one): next/previous works?   OK / problem / not tested
 8. Rotate the device: does the layout adapt?   OK / problem

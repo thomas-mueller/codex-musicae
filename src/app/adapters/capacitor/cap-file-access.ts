@@ -74,6 +74,16 @@ export class CapFileAccess implements FileAccess {
     return Promise.resolve(err('unsupported'));
   }
 
+  /** FIL-037: a new document of the system's "create" dialog; the plugin keeps read and write access to it. */
+  async createFile(suggestedName: string): Promise<Result<FileRef, FileAccessError>> {
+    try {
+      const created = await this.plugin.createDocument({ name: suggestedName });
+      return created.id === undefined ? err('cancelled') : ok({ id: created.id, name: created.name ?? suggestedName });
+    } catch {
+      return err('write-failed');
+    }
+  }
+
   async saveCopy(suggestedName: string, bytes: Uint8Array): Promise<Result<void, FileAccessError>> {
     let id: string | undefined;
     try {

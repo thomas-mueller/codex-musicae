@@ -51,6 +51,8 @@ export class DocumentStore {
   readonly readOnly = signal(false);
   /** FIL-016: writing needs a permission the browser can only ask for in a user gesture; the next click on the tab asks. */
   readonly needsWriteAccess = signal(false);
+  /** FIL-034: the autosave waits for the answer to the overwrite question, or was declined; nothing is written. */
+  readonly saveHeld = signal(false);
   /** FIL-010: the last save failed; shown as the error icon. */
   readonly saveFailed = signal(false);
   readonly needsReopen = signal(false);

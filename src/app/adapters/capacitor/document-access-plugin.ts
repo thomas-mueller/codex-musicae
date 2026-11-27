@@ -25,8 +25,8 @@ export interface DocumentAccessApi {
   /** Copies the temp file over the target in one native loop (LIM-011). */
   commitWrite(options: { handle: string }): Promise<void>;
   abortWrite(options: { handle: string }): Promise<void>;
-  /** No `id` means the user cancelled. */
-  createDocument(options: { name: string }): Promise<{ id?: string }>;
+  /** No `id` means the user cancelled. Read and write access to the new document is kept; `name` is its file name. */
+  createDocument(options: { name: string }): Promise<{ id?: string; name?: string }>;
   isPersisted(options: { id: string }): Promise<{ persisted: boolean }>;
   forget(options: { id: string }): Promise<void>;
   /** Files queued by VIEW intents; the queue is emptied. */

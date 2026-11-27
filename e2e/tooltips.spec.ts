@@ -138,7 +138,6 @@ async function checkEdges(page: Page, texts: Texts): Promise<void> {
     { key: 'settings', at: { top: true, right: true } },
     { key: 'previous', at: { bottom: true, left: true } },
     { key: compact ? 'overflow' : 'showLess', at: { bottom: true, right: true } },
-    ...(compact ? [] : [{ key: 'saveCopy', at: { top: true, right: false } } as const]),
     { key: compact ? 'toolFab' : 'pen', at: { left: true } },
   ] as const;
   for (const { key, at } of edges) {

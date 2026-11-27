@@ -14,6 +14,13 @@ import type { DocChange, DocumentStore } from './document.store';
  */
 type SaveRunner = (signal: AbortSignal) => Promise<boolean | 'readOnly' | 'needsAccess'>;
 
+interface SaveHooks {
+  /** FIL-034: asked before every autosave; false means that nothing may be written now. */
+  readonly permit?: () => Promise<boolean>;
+  /** FIL-039: a file that cannot be written has changes that a save would be due for. */
+  readonly onUnwritable?: () => void;
+}
+
 /**
  * SAV-008, SAV-009, FIL-010: one per tab. Feeds the pure autosave state machine with the tab's changes, arms the idle
  * timer and starts saves through the runner. Read-only tabs never save by themselves.
@@ -41,6 +48,7 @@ export class SaveService {
     injector: Injector,
     /** EDN-001: false in the free edition: changes stay in memory and are never saved (the modified marker still shows). */
     private readonly saveEnabled = true,
+    private readonly hooks: SaveHooks = {},
   ) {
     this.subscription = doc.changes.subscribe((change) => this.onDocChange(change));
     this.effects = [
@@ -64,6 +72,40 @@ export class SaveService {
       await this.current;
     }
     return !this.failed();
+  }
+
+  /** The overwrite question was answered with yes: the waiting changes are saved now. */
+  resume(): void {
+    this.doc.saveHeld.set(false);
+    this.dispatch({ type: 'force' });
+    this.evaluate();
+  }
+
+  /**
+   * "Save as new file" (FIL-037): runs `runner` as the save of this moment, whatever the state of the autosave. Changes
+   * made while it runs stay unsaved. Resolves to false when it failed.
+   */
+  async saveNow(runner: (signal: AbortSignal) => Promise<boolean>): Promise<boolean> {
+    while (this.current !== null) {
+      await this.current;
+    }
+    this.cancelTimer?.();
+    this.cancelTimer = null;
+    let saved = false;
+    const run = async (): Promise<void> => {
+      this.dispatch({ type: 'force' }); // clears an earlier failure
+      this.dispatch({ type: 'saveStarted' });
+      const abort = new AbortController();
+      this.abort = abort;
+      saved = await runner(abort.signal).catch(() => false);
+      this.abort = null;
+      this.dispatch({ type: 'saveFinished', ok: saved, t: this.clock.now() });
+    };
+    this.current = run();
+    await this.current;
+    this.current = null;
+    this.evaluate();
+    return saved;
   }
 
   /**
@@ -129,7 +171,8 @@ export class SaveService {
         const complete = this.doc.detectionComplete();
         const finished = previous === false && complete;
         previous = complete;
-        if (finished) {
+        // SAV-012: only a file that can be written has something to save after detection
+        if (finished && this.saveEnabled && !untracked(() => this.doc.readOnly())) {
           untracked(() => this.markChanged());
         }
       },
@@ -152,7 +195,16 @@ export class SaveService {
   private evaluate(): void {
     this.cancelTimer?.();
     this.cancelTimer = null;
-    if (this.disposed || !this.saveEnabled || this.doc.readOnly() || this.doc.needsWriteAccess()) {
+    if (this.disposed || !this.saveEnabled) {
+      return;
+    }
+    if (this.doc.readOnly()) {
+      if (this.state().dirty && !this.state().strokeInProgress) {
+        this.hooks.onUnwritable?.();
+      }
+      return;
+    }
+    if (this.doc.needsWriteAccess() || this.doc.saveHeld()) {
       return;
     }
     const now = this.clock.now();
@@ -162,12 +214,23 @@ export class SaveService {
         this.cancelTimer = null;
         this.evaluate();
       });
-    } else if (decision.action === 'save') {
+    } else if (decision.action === 'save' && this.current === null) {
       this.current = this.startSave();
     }
   }
 
   private async startSave(): Promise<void> {
+    if (this.hooks.permit) {
+      // FIL-034: asked before the save counts as started, so the modified marker stays while the user has not answered
+      const permitted = await this.hooks.permit().catch(() => false);
+      if (this.disposed || !permitted || this.state().strokeInProgress) {
+        if (!permitted) {
+          this.doc.saveHeld.set(true);
+        }
+        this.current = null; // the end of a stroke evaluates again
+        return;
+      }
+    }
     this.dispatch({ type: 'saveStarted' });
     const abort = new AbortController();
     this.abort = abort;

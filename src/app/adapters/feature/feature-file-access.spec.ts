@@ -32,6 +32,13 @@ describe('FeatureFileAccess', () => {
     expect(writeOnly.write).toHaveBeenCalledTimes(1);
   });
 
+  it('EDN-001 FIL-037 creating a new file needs saveCopy', async () => {
+    const inner = fakeFileAccess();
+    expect(await new FeatureFileAccess(inner, OFF).createFile('a.pdf')).toEqual({ ok: false, error: 'unsupported' });
+    expect(inner.createFile).not.toHaveBeenCalled();
+    expect((await new FeatureFileAccess(inner, { ...OFF, saveCopy: true }).createFile('a.pdf')).ok).toBe(true);
+  });
+
   it.each(['recentFiles', 'sessionRestore', 'persistFileChoices'] as const)('EDN-005 %s alone keeps stored handles usable', async (name) => {
     const inner = fakeFileAccess();
     const access = new FeatureFileAccess(inner, { ...OFF, [name]: true });

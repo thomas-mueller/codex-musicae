@@ -9,6 +9,8 @@ import type { OpenedFile } from '../app/ports/file-access';
 import { PREFERENCES } from '../app/ports/preferences';
 import { IncomingFilesService } from '../app/state/incoming-files.service';
 import { FeaturePreferences } from '../app/adapters/feature/feature-preferences';
+import { FilePrompts } from '../app/state/file-prompts';
+import type { FilePrompt } from '../app/state/file-prompts';
 import { SessionStore } from '../app/state/session.store';
 import { SessionPersistence } from '../app/state/session-persistence';
 import { fakeFileAccess, memoryPreferences } from '../app/state/testing/fake-ports';
@@ -39,19 +41,26 @@ describe('free edition behavior', () => {
     TestBed.tick();
     expect(session.activeDocument()?.strokes()).toHaveLength(1);
     expect(session.activeTab()?.unsaved).toBe(true);
-    expect(await session.closeTab(session.activeTabId() ?? '')).toBe(true);
+    // FIL-046: closing a changed file asks; discarding closes it
+    expect(await session.closeTab(session.activeTabId() ?? '')).toBe(false);
+    const prompts = TestBed.inject(FilePrompts);
+    const prompt = prompts.current();
+    expect(prompt?.kind).toBe('close');
+    await session.answerClose(prompt as FilePrompt & { kind: 'close' }, 'discard');
+    expect(session.tabs()).toHaveLength(0);
     expect(files.write).not.toHaveBeenCalled();
     expect(files.saveCopy).not.toHaveBeenCalled();
     expect(files.requestWriteAccess).not.toHaveBeenCalled();
   });
 
-  it('EDN-001 EDN-011 saving a copy and asking for write access do nothing', async () => {
+  it('EDN-001 EDN-011 saving as a new file and asking for write access do nothing', async () => {
     const { files, session } = setup(FREE);
     await session.openFiles([FILE]);
     await settle();
-    expect((await session.saveCopy()).ok).toBe(false);
+    expect(await session.saveAsNewFile()).toBe('failed');
     expect(await session.grantWriteAccess(session.activeTabId() ?? '')).toBe(false);
     expect(files.saveCopy).not.toHaveBeenCalled();
+    expect(files.createFile).not.toHaveBeenCalled();
     expect(files.requestWriteAccess).not.toHaveBeenCalled();
   });
 
@@ -91,7 +100,8 @@ describe('free edition behavior', () => {
   });
 
   it('EDN-008 EDN-001 with every switch on the same file is saved by closing the tab', async () => {
-    const { files, session } = setup(ALL_FEATURES_ON);
+    // FIL-038: with the overwrite question switched off
+    const { files, session } = setup(ALL_FEATURES_ON, memoryPreferences({ overwrite: { all: true, names: [] } }));
     await session.openFiles([FILE]);
     await settle();
     session.activeDocument()?.addStroke(STROKE);

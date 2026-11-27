@@ -280,6 +280,30 @@ export class WebFileAccess implements FileAccess {
     }
   }
 
+  /** FIL-037: the save-as picker gives a handle that can be written again; Safari and Firefox have none. */
+  async createFile(suggestedName: string): Promise<Result<FileRef, FileAccessError>> {
+    const picker = this.getSavePicker();
+    if (!picker) {
+      return err('unsupported');
+    }
+    try {
+      // before any await: the picker needs the user gesture
+      const handle = await picker({
+        suggestedName,
+        types: [{ accept: { [TUNABLES.files.pdfMimeType]: [TUNABLES.files.pdfExtension] } }],
+      });
+      const id = this.newId();
+      await this.handleStore.put(id, handle);
+      return ok({ id, name: handle.name });
+    } catch (e) {
+      const name = errorName(e);
+      if (name === 'AbortError') {
+        return err('cancelled');
+      }
+      return err(name === 'SecurityError' || name === 'NotAllowedError' ? 'unsupported' : writeError(e));
+    }
+  }
+
   /** SAV-011, PLT-010: save-as through the picker where it exists, else a download. */
   async saveCopy(suggestedName: string, bytes: Uint8Array): Promise<Result<void, FileAccessError>> {
     const picker = this.getSavePicker();

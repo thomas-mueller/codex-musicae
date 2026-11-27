@@ -3,6 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { FIT_VIEW } from '../core';
 import { AspectRatioService } from '../state/aspect-ratio.service';
+import { FilePrompts } from '../state/file-prompts';
 import { OrgViewStore } from '../state/org-view.store';
 import { PresentationPlatform } from '../state/presentation-platform';
 import { SessionStore } from '../state/session.store';
@@ -25,6 +26,7 @@ export class NavigationHandler {
   private readonly aspect = inject(AspectRatioService);
   private readonly gate = inject(StrokeGate);
   private readonly platform = inject(PresentationPlatform);
+  private readonly prompts = inject(FilePrompts);
   private previousMode = this.ui.mode();
 
   constructor() {
@@ -161,12 +163,19 @@ export class NavigationHandler {
 
   /** NAV-018: the first applicable step wins. Returns whether one applied (the Android back button minimizes the app otherwise, PLT-007). */
   handleBack(): boolean {
-    if (this.ui.pendingReset()) {
+    const prompt = this.prompts.current();
+    const notice = this.prompts.notice();
+    if (prompt !== null) {
+      // Escape and Back answer a save question with Cancel (DEC-166)
+      void (prompt.kind === 'overwrite' ? this.session.answerOverwrite(prompt, 'cancel') : this.session.answerClose(prompt, 'cancel'));
+    } else if (this.ui.pendingReset()) {
       this.ui.cancelReset();
     } else if (this.ui.pendingLevel() !== null) {
       this.ui.cancelLevel();
     } else if (this.ui.popup() !== null) {
       this.ui.closePopup();
+    } else if (notice !== null) {
+      this.prompts.dismissNotice(notice);
     } else if (this.ui.pickingTarget() !== null) {
       this.ui.cancelPicking();
     } else if (this.ui.selection() !== null) {

@@ -9,7 +9,7 @@ export function persistsFileHandles(flags: FeatureFlags): boolean {
 }
 
 /**
- * EDN-001, EDN-005, EDN-008: wraps the file access. Writing needs `autosave`, saving a copy needs `saveCopy`; otherwise the
+ * EDN-001, EDN-005, EDN-008: wraps the file access. Writing needs `autosave`; saving a copy and creating a new file need `saveCopy`; otherwise the
  * inner adapter is never called and the answer is 'unsupported'. Without a handle-persisting switch nothing can be reopened
  * and nothing is forgotten. Picking and `isSame` always pass through (open tabs need them). With every switch on it is a
  * pass-through.
@@ -34,6 +34,10 @@ export class FeatureFileAccess implements FileAccess {
 
   requestWriteAccess(ref: FileRef): Promise<Result<void, FileAccessError>> {
     return this.flags.autosave ? this.inner.requestWriteAccess(ref) : Promise.resolve(err('unsupported'));
+  }
+
+  createFile(suggestedName: string): Promise<Result<FileRef, FileAccessError>> {
+    return this.flags.saveCopy ? this.inner.createFile(suggestedName) : Promise.resolve(err('unsupported'));
   }
 
   saveCopy(suggestedName: string, bytes: Uint8Array): Promise<Result<void, FileAccessError>> {

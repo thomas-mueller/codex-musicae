@@ -355,6 +355,29 @@ describe('WebFileAccess.write', () => {
   });
 });
 
+describe('WebFileAccess.createFile', () => {
+  it('FIL-037 the save picker gives a new reference whose handle is stored, so that write() writes into it', async () => {
+    const writable = fakeWritable();
+    const handle = { ...fakeHandle(), name: 'new.pdf', createWritable: () => Promise.resolve(writable) };
+    const savePicker = vi.fn(() => Promise.resolve(handle));
+    const { access } = makeAccess({ savePicker });
+    const created = await access.createFile('x (annotated).pdf');
+    expect(savePicker).toHaveBeenCalledWith(expect.objectContaining({ suggestedName: 'x (annotated).pdf' }));
+    expect(created).toMatchObject({ ok: true, value: { name: 'new.pdf' } });
+    if (!created.ok) return;
+    expect((await access.write(created.value, new Uint8Array([7]))).ok).toBe(true);
+    expect(writable.chunks).toEqual([[7]]);
+  });
+
+  it('FIL-037 PLT-010 without a save picker, or when it is refused, creating is unsupported; dismissing it is cancelled', async () => {
+    expect(await makeAccess({}).access.createFile('x.pdf')).toEqual({ ok: false, error: 'unsupported' });
+    const refused = makeAccess({ savePicker: () => Promise.reject(new NamedError('SecurityError')) });
+    expect(await refused.access.createFile('x.pdf')).toEqual({ ok: false, error: 'unsupported' });
+    const dismissed = makeAccess({ savePicker: () => Promise.reject(new NamedError('AbortError')) });
+    expect(await dismissed.access.createFile('x.pdf')).toEqual({ ok: false, error: 'cancelled' });
+  });
+});
+
 describe('WebFileAccess.saveCopy', () => {
   it('SAV-011 PLT-010 writes through the save picker under the suggested name', async () => {
     const writable = fakeWritable();

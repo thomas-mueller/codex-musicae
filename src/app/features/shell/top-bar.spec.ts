@@ -1,17 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 
 import { TUNABLES } from '../../../config/tunables';
-import { ALL_FEATURES_ON, provideTestPorts } from '../../../testing/provide-test-ports';
+import { provideTestPorts } from '../../../testing/provide-test-ports';
 import { provideTestTransloco, translate } from '../../../testing/transloco';
-import { FEATURE_FLAGS } from '../../ports/feature-flags';
-import type { FeatureFlags } from '../../ports/feature-flags';
-import { FILE_ACCESS } from '../../ports/file-access';
 import { SessionStore } from '../../state/session.store';
-import type { fakeFileAccess } from '../../state/testing/fake-ports';
 import { UiStore } from '../../state/ui.store';
 import { TopBar } from './top-bar';
 
-const FREE: FeatureFlags = Object.fromEntries(Object.keys(ALL_FEATURES_ON).map((key) => [key, false])) as unknown as FeatureFlags;
 const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 const SIZES = {
   compact: { width: TUNABLES.layout.compactMaxWidthPx - 1, height: TUNABLES.layout.compactMaxHeightPx + 100 },
@@ -19,8 +14,8 @@ const SIZES = {
   expanded: { width: TUNABLES.layout.compactMaxWidthPx + 100, height: TUNABLES.layout.compactMaxHeightPx + 100 },
 } as const;
 
-async function render(size: keyof typeof SIZES, flags: FeatureFlags = ALL_FEATURES_ON) {
-  TestBed.configureTestingModule({ providers: [provideTestTransloco(), provideTestPorts(), { provide: FEATURE_FLAGS, useValue: flags }] });
+async function render(size: keyof typeof SIZES) {
+  TestBed.configureTestingModule({ providers: [provideTestTransloco(), provideTestPorts()] });
   const ui = TestBed.inject(UiStore);
   ui.setViewport(SIZES[size].width, SIZES[size].height);
   const fixture = TestBed.createComponent(TopBar);
@@ -34,21 +29,17 @@ async function render(size: keyof typeof SIZES, flags: FeatureFlags = ALL_FEATUR
     ui.hasDocument.set(true);
     await fixture.whenStable();
   };
-  return { fixture, find, labels, open, files: TestBed.inject(FILE_ACCESS) as ReturnType<typeof fakeFileAccess> };
+  return { fixture, find, labels, open };
 }
 
 describe('TopBar', () => {
-  it('UIX-036 the expanded top bar has no overflow button; save a copy sits next to the settings button', async () => {
-    const { find, labels } = await render('expanded');
-    expect(find('overflow')).toBeNull();
-    expect(labels().slice(-2)).toEqual([translate('a11y.saveCopy'), translate('a11y.settings')]);
-  });
-
-  for (const size of ['compact', 'landscapePhone'] as const) {
-    it(`UIX-036 ${size}: the compact top bar has neither save a copy nor an overflow button`, async () => {
-      const { find } = await render(size);
-      expect(find('saveCopy')).toBeNull();
+  for (const size of ['compact', 'landscapePhone', 'expanded'] as const) {
+    it(`UIX-036 ${size}: the top bar has neither an overflow button nor a button that saves a copy`, async () => {
+      const { find, labels, open } = await render(size);
+      await open();
       expect(find('overflow')).toBeNull();
+      expect(labels().at(-1)).toBe(translate('a11y.settings'));
+      expect(labels().filter((label) => /cop(y|ie)/i.test(label ?? ''))).toEqual([]);
     });
   }
 
@@ -62,31 +53,5 @@ describe('TopBar', () => {
     const wide = await render('landscapePhone');
     expect(wide.find('modeSwitch')).toBeNull();
     expect(wide.find('modeAnnotation')).not.toBeNull();
-  });
-
-  it('SAV-011 PLT-010 UIX-036 save a copy is disabled without a document and saves the current file with one', async () => {
-    const { find, open, files } = await render('expanded');
-    expect(find('saveCopy')!.getAttribute('aria-disabled')).toBe('true');
-    await open();
-    expect(find('saveCopy')!.getAttribute('aria-disabled')).toBeNull();
-    find('saveCopy')!.click();
-    await settle();
-    expect(files.saveCopy).toHaveBeenCalledWith('a (annotated).pdf', expect.any(Uint8Array));
-  });
-
-  it('EDN-003 EDN-011 UIX-036 in the free edition save a copy stays visible and disabled, and a click makes no write call', async () => {
-    const { find, open, files } = await render('expanded', FREE);
-    await open();
-    expect(find('saveCopy')!.getAttribute('aria-disabled')).toBe('true');
-    find('saveCopy')!.click();
-    await settle();
-    expect(files.saveCopy).not.toHaveBeenCalled();
-    expect(files.write).not.toHaveBeenCalled();
-  });
-
-  it('EDN-008 UIX-036 with the saveCopy switch on the button is enabled', async () => {
-    const { find, open } = await render('expanded', { ...FREE, saveCopy: true });
-    await open();
-    expect(find('saveCopy')!.getAttribute('aria-disabled')).toBeNull();
   });
 });

@@ -7,7 +7,7 @@ import { InjectionToken } from '@angular/core';
 export interface FeatureFlags {
   /** Saves changes into the PDF automatically. */
   readonly autosave: boolean;
-  /** Save a copy / export of the PDF with notes. */
+  /** Save as a new file: the PDF with notes written elsewhere (a download where no file can be chosen). */
   readonly saveCopy: boolean;
   /** Send to other apps. */
   readonly sendTo: boolean;

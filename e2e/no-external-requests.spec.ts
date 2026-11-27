@@ -11,7 +11,7 @@ test.use({ baseURL: PAID_URL });
 
 // The production build (the default base URL) makes no request that leaves the app's own origin (NFR-017, NFR-018, R-8d): the whole
 // working flow is recorded, not just the start page.
-desktopTest('NFR-017 NFR-018 open, detect, switch modes, draw and save a copy: no request leaves the app origin', async ({ page }) => {
+desktopTest('NFR-017 NFR-018 open, detect, switch modes, draw and save as a new file: no request leaves the app origin', async ({ page }) => {
   await forceFilePaths(page);
   const requests = recordRequests(page);
   await page.goto('/');

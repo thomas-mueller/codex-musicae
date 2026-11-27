@@ -70,6 +70,7 @@ export const TUNABLES = {
     minTouchTargetPx: 44, // UIX-007
     fileEntryGapPx: 8, // FIL-021: padding inside the file entry and the rows of lists
     unsavedMarkText: '*', // FIL-022: appended to the name of a file with unsaved changes
+    saveDialogWidthPx: 440, // FIL-036: the save dialogs are at most this wide, so their texts stay together on wide screens
     filePillHeightPx: 36, // FIL-021: height of the pill behind the current file; the touch targets in it stay larger
     compactMaxWidthPx: 600, // UIX-003: compact if width < this ...
     compactMaxHeightPx: 480, // ... or height < this
@@ -148,7 +149,6 @@ export const TUNABLES = {
     nextFile: 'arrow_forward', // FIL-024
     closeTab: 'close',
     save: 'save',
-    saveCopy: 'file_download',
     readOnly: 'lock',
     error: 'error',
     processing: 'sync',
@@ -394,9 +394,11 @@ export const TUNABLES = {
     sessionDebounceMs: 500, // FIL-011: delay before the session snapshot is written
     sessionKey: 'session', // FIL-011: preference key of the session snapshot
     // EDN-005: which feature switch (config/features.*.ts) guards a preference key; a key is matched by `name` or `name.` prefix.
+    overwriteKey: 'overwrite', // FIL-038, FIL-041: the stored "do not ask again" choices
     switchByKeyPrefix: {
       recent: 'recentFiles', // EDN-005: the list of recent files
       session: 'sessionRestore', // EDN-005: the session snapshot (open tabs and positions)
+      overwrite: 'persistFileChoices', // FIL-038: "do not ask again" before overwriting a file
     },
     defaultKeySwitch: 'persistSettings', // EDN-005: every other preference key (tool settings, stylus, aspect ratios) is a setting
   },

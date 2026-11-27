@@ -287,7 +287,11 @@ public class DocumentAccessPlugin extends Plugin {
         Intent data = result.getData();
         if (result.getResultCode() == Activity.RESULT_OK && data != null && data.getData() != null) {
             Uri uri = data.getData();
-            response.put("id", remember(getContext(), uri));
+            // FIL-037: the new document may become an open file, so its access is kept for later saves and restarts
+            boolean writable = persist(getContext(), uri);
+            String id = remember(getContext(), uri);
+            response.put("id", id);
+            response.put("name", describe(getContext(), id, uri, writable).getString("name"));
         }
         call.resolve(response);
     }

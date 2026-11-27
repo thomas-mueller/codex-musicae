@@ -5,7 +5,7 @@
  */
 export const FEATURES = {
   autosave: false, // Saves changes into the PDF automatically; off in the free edition.
-  saveCopy: false, // Save a copy / export of the PDF with notes; off in the free edition.
+  saveCopy: false, // Save as a new file (the PDF with notes, written elsewhere); off in the free edition.
   sendTo: false, // Send to other apps; off in the free edition.
   recentFiles: false, // Remember and list recently opened files; off on the web.
   sessionRestore: false, // Reopen the previous tabs at startup; off on the web.

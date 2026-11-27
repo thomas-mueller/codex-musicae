@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 
-import { FEATURE_FLAGS } from '../../ports/feature-flags';
 import type { FileRef } from '../../ports/file-access';
 import { AspectRatioService } from '../../state/aspect-ratio.service';
 import { OrgViewStore } from '../../state/org-view.store';
@@ -41,7 +40,6 @@ export class PopupHost {
   protected readonly aspect = inject(AspectRatioService);
   protected readonly session = inject(SessionStore);
   protected readonly preferences = inject(PreferencesStore);
-  protected readonly flags = inject(FEATURE_FLAGS);
   protected readonly levels = LEVEL_ENTRIES;
   protected readonly ids = {
     overflowBottom: POPUP_OVERFLOW_BOTTOM,
@@ -63,12 +61,6 @@ export class PopupHost {
   protected readonly sliderValue = computed(() => (this.annotation() ? this.nav.shown() : this.view.currentPage()) + 1);
   protected readonly showMoreDisabled = computed(() => !this.nav.active() || !this.aspect.canShowMore());
   protected readonly showLessDisabled = computed(() => !this.nav.active() || !this.aspect.canShowLess());
-  /** SAV-011: save a copy of the active tab, then close the menu. */
-  protected saveCopy(): void {
-    void this.session.saveCopy();
-    this.store.closePopup();
-  }
-
   protected readonly noDocument = computed(() => !this.store.hasDocument());
   protected readonly settingsTool = computed<StyledTool | null>(() => {
     const tool = this.store.tool();
@@ -86,6 +78,9 @@ export class PopupHost {
     }
     if (id === this.ids.toolSettings && (this.settingsTool() === null || !this.compact())) {
       return null; // expanded layouts open the settings beside the tool button (ToolButton); no pen/highlighter, no settings
+    }
+    if (id === this.ids.overflowBottom && !(this.compact() && this.annotation())) {
+      return null; // the More menu belongs to the compact annotation layout
     }
     if (id === this.ids.files && this.session.tabs().length === 0) {
       return null; // the last file was closed from the list

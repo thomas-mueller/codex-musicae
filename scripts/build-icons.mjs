@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 
 // Names in tunables.icons that the package ships under a different file name.
-const aliases = { file_download: 'download' };
+const aliases = {};
 
 const packageDir = 'node_modules/@material-symbols/svg-400/outlined';
 const output = 'src/assets/icons/sprite.svg';

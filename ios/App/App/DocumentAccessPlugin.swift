@@ -140,7 +140,7 @@ public class DocumentAccessPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPicker
                 }
             }
             if let id = DocumentAccessPlugin.remember(url) {
-                state.call.resolve(["id": id])
+                state.call.resolve(["id": id, "name": url.lastPathComponent]) // UNVERIFIED(ios): FIL-037
             } else {
                 state.call.reject(Failure.denied.code, Failure.denied.code)
             }
