@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test';
 
 import { desktopTest } from './support/desktop';
-import { forceFilePaths } from './support/saving';
+import { forceFilePaths, openMoreIfCompact } from './support/saving';
 import { label, openScore, forceFileInput, waitForFinalSlideCount } from './support/score';
 
 // V2-M3 S2, default base URL: the free web build (every paid switch off).
@@ -14,7 +14,7 @@ desktopTest('EDN-001 EDN-003 EDN-011 free edition: save a copy is visible but di
   await page.goto('/');
   await openScore(page);
   await waitForFinalSlideCount(page);
-  await page.getByRole('button', { name: label('overflow'), exact: true }).click();
+  await openMoreIfCompact(page);
   const copy = page.getByRole('button', { name: label('saveCopy'), exact: true });
   await expect(copy).toBeVisible();
   await expect(copy).toHaveAttribute('aria-disabled', 'true');
@@ -29,5 +29,5 @@ desktopTest('EDN-005 free edition: a reload starts empty, without restored tabs 
   await openScore(page);
   await waitForFinalSlideCount(page);
   await page.reload();
-  await expect(page.locator('app-tab-bar .name')).toHaveCount(0);
+  await expect(page.locator('app-file-item')).toHaveCount(0);
 });

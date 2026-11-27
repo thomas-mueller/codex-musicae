@@ -65,4 +65,11 @@ describe('LongPressDirective', () => {
     vi.advanceTimersByTime(TUNABLES.layout.longPressMs * 2);
     expect(host.count).toBe(1); // unchanged: the cancelled press did not fire
   });
+
+  it('UIX-022 holding another button than the primary one never fires', () => {
+    const { host, button } = setup();
+    button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 2 }));
+    vi.advanceTimersByTime(TUNABLES.layout.longPressMs * 2);
+    expect(host.count).toBe(0);
+  });
 });

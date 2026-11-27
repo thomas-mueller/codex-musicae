@@ -2,6 +2,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 
 import { TUNABLES } from '../src/config/tunables';
 import { readTranslations, serveLongTexts, type Translations } from './support/fit';
+import { clickMode } from './support/modes';
 import { forceFileInput, scoreBytes, waitForFinalSlideCount } from './support/score';
 import { FILE_CHOOSER_TIMEOUT_MS } from './support/timing';
 
@@ -98,7 +99,7 @@ async function openScoreIn(page: Page, texts: Texts): Promise<void> {
   await waitForFinalSlideCount(page);
 }
 
-/** Every control of every screen of this window size: three modes, the compact tool popup and the overflow popup. */
+/** Every control of every screen of this window size: three modes, the compact tool and More popups, the narrow mode popup. */
 async function checkScreens(page: Page, texts: Texts): Promise<void> {
   const button = (key: string) => page.getByRole('button', { name: texts.a11y[key], exact: true });
   const compact = (await page.locator('app-shell').getAttribute('data-size-class')) === 'compact';
@@ -108,10 +109,18 @@ async function checkScreens(page: Page, texts: Texts): Promise<void> {
     report.push(...(await checkAll(page, 'app-tool-area [data-popup]')));
     await button('toolFab').click();
   }
-  await button('overflow').click();
-  report.push(...(await checkAll(page, 'app-popup-host')));
-  await button('overflow').click();
-  await button('modeOrganization').click();
+  if (compact) {
+    await button('overflow').click();
+    report.push(...(await checkAll(page, 'app-popup-host')));
+    await button('overflow').click();
+  }
+  if ((await button('modeSwitch').count()) > 0) {
+    await button('modeSwitch').click();
+    report.push(...(await checkAll(page, 'app-popup-host')));
+    await button('modeSwitch').click();
+    await expect(page.locator('app-popup-host .popup')).toHaveCount(0); // or the next click could hit the closing popup
+  }
+  await clickMode(page, 'modeOrganization', (key) => texts.a11y[key]!);
   await expect(page.getByTestId('org-viewer')).toBeVisible();
   report.push(...(await checkAll(page, 'app-shell')));
   await button('settings').click();
@@ -129,6 +138,7 @@ async function checkEdges(page: Page, texts: Texts): Promise<void> {
     { key: 'settings', at: { top: true, right: true } },
     { key: 'previous', at: { bottom: true, left: true } },
     { key: compact ? 'overflow' : 'showLess', at: { bottom: true, right: true } },
+    ...(compact ? [] : [{ key: 'saveCopy', at: { top: true, right: false } } as const]),
     { key: compact ? 'toolFab' : 'pen', at: { left: true } },
   ] as const;
   for (const { key, at } of edges) {

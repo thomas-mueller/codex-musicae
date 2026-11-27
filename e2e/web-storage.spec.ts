@@ -2,7 +2,7 @@ import { expect, test, type BrowserContext, type Locator, type Page } from '@pla
 
 import { TUNABLES } from '../src/config/tunables';
 import { desktopTest } from './support/desktop';
-import { drag, enterAnnotation, enterOrganization, strokeLine, tool, waitForDrawnSlide } from './support/saving';
+import { drag, enterAnnotation, enterOrganization, openMoreIfCompact, strokeLine, tool, waitForDrawnSlide } from './support/saving';
 import { label, openScoreInAnnotation } from './support/score';
 
 // V2-M3 S3, default base URL = the production web build (EDN-014): whatever the user does, the browser keeps nothing.
@@ -47,14 +47,14 @@ desktopTest('EDN-014 EDN-016 the web build stores no cookie, localStorage, sessi
   await enterOrganization(page);
   await enterAnnotation(page);
   await page.getByRole('button', { name: label('zoomIn'), exact: true }).click();
-  await page.getByRole('button', { name: label('overflow'), exact: true }).click();
+  await openMoreIfCompact(page);
   await page.waitForTimeout(TUNABLES.persistence.sessionDebounceMs * 3); // longer than any debounced write would take
 
   expect(await storedState(context, page)).toEqual({ cookies: [], local: 0, session: 0, databases: [] });
 
   // the next start is empty: no restored tab, still nothing stored
   await page.reload();
-  await expect(page.locator('app-tab-bar .name')).toHaveCount(0);
+  await expect(page.locator('app-file-item')).toHaveCount(0);
   expect(await storedState(context, page)).toEqual({ cookies: [], local: 0, session: 0, databases: [] });
 });
 

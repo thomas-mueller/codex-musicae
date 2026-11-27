@@ -40,6 +40,9 @@ export class LongPressDirective {
     this.startY = event.clientY;
     this.fired = false;
     this.cancel();
+    if (event.button > 0) {
+      return; // UIX-022: only the primary button is the desktop equivalent of a long press
+    }
     this.timer = setTimeout(() => {
       this.timer = undefined;
       this.fired = true;

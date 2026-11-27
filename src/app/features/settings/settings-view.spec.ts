@@ -93,6 +93,15 @@ describe('SettingsView', () => {
     expect(control<HTMLInputElement>('flag').disabled).toBe(true);
   });
 
+  it('UIX-035 the version string closes the view, below the groups and labelled', async () => {
+    setup();
+    const { el } = await render();
+    const version = el.querySelector('.content')!.lastElementChild!;
+    expect(version.textContent).toBe('v0.0.0-test');
+    expect(version.getAttribute('aria-label')).toBe(translate('a11y.versionInfo'));
+    expect(version.closest('section')).toBeNull();
+  });
+
   it('UIX-023 General ends with the translated reset button, which asks and resets nothing yet', async () => {
     const registry = setup();
     const flag = registry.register({ id: 'flag', group: 'general', labelKey: 'a11y.settings', persist: true, type: 'boolean', defaultValue: false });

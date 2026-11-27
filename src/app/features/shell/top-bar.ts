@@ -1,24 +1,28 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 
+import { FEATURE_FLAGS } from '../../ports/feature-flags';
+import { SessionStore } from '../../state/session.store';
 import { UiStore } from '../../state/ui.store';
-import { OpenFileDirective } from '../tabs/open-file.directive';
-import { TabBar } from '../tabs/tab-bar';
-import { TabSwitcher } from '../tabs/tab-switcher';
+import { FileBar } from '../files/file-bar';
 import { ModeSwitch } from '../toolbar/mode-switch';
 import { IconButton } from './icon-button';
 
-export const POPUP_OVERFLOW_TOP = 'overflow-top';
-
-/** Compact: tabs, open, mode, settings. Expanded: open + tab bar, mode, overflow, settings. UIX-004, 005, 006, 025, 034 */
+/** File bar, mode switch (one button when narrow), "save a copy" (expanded only), settings. UIX-025, 034, 036, 037 */
 @Component({
   selector: 'app-top-bar',
-  imports: [IconButton, ModeSwitch, OpenFileDirective, TabBar, TabSwitcher, TranslocoPipe],
+  imports: [FileBar, IconButton, ModeSwitch],
   templateUrl: './top-bar.html',
   styleUrl: './bars.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TopBar {
   protected readonly store = inject(UiStore);
-  protected readonly popupId = POPUP_OVERFLOW_TOP;
+  private readonly session = inject(SessionStore);
+  private readonly flags = inject(FEATURE_FLAGS);
+  protected readonly saveCopyDisabled = computed(() => !this.store.hasDocument() || !this.flags.saveCopy);
+
+  /** SAV-011: save a copy of the current file. */
+  protected saveCopy(): void {
+    void this.session.saveCopy();
+  }
 }

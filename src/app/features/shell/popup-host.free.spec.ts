@@ -20,7 +20,7 @@ async function open(flags: FeatureFlags) {
   await TestBed.inject(SessionStore).openFiles([{ ref: { id: 'a', name: 'a.pdf' }, bytes: new Uint8Array([1]), writable: true }]);
   await settle();
   store.hasDocument.set(true);
-  store.openPopup('overflow-top');
+  store.openPopup('overflow-bottom');
   await fixture.whenStable();
   const el = fixture.nativeElement as HTMLElement;
   const button = el.querySelector(`button[aria-label="${translate('a11y.saveCopy')}"]`) as HTMLButtonElement;

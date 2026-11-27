@@ -20,3 +20,11 @@ export const sizeClassCases: ReadonlyArray<{ id: string; req: string; width: num
   { id: 'SZ9', req: 'UIX-003', width: 2560, height: 1440, expected: 'expanded' },
   { id: 'SZ10', req: 'UIX-003', width: 600, height: 480, expected: 'expanded' },
 ];
+
+export const narrowCases: ReadonlyArray<{ id: string; req: string; width: number; expected: boolean }> = [
+  { id: 'NW1', req: 'UIX-037', width: 0, expected: false },
+  { id: 'NW2', req: 'UIX-037', width: 320, expected: true },
+  { id: 'NW3', req: 'UIX-037', width: 599, expected: true },
+  { id: 'NW4', req: 'UIX-037', width: 600, expected: false },
+  { id: 'NW5', req: 'UIX-037', width: 800, expected: false },
+];

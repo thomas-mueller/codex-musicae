@@ -1,0 +1,118 @@
+:host {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--cm-touch-target);
+  box-sizing: border-box;
+  color: var(--cm-icon);
+}
+
+/* The current file lies on a pale pill, in the top bar and in the file list. It is drawn behind the controls, which keep
+   their full touch height. */
+:host(.active) {
+  position: relative;
+}
+
+/* Positioned like the pill and later in the source, so painted above it. No z-index and no "isolation" here: either would
+   trap the tooltips of these controls in a layer below the page canvas (UIX-027). */
+:host(.active) > * {
+  position: relative;
+}
+
+/* Rows of the file list keep their pill off the edges of the screen. */
+:host(:not(.in-bar)) {
+  --cm-pill-inset: 1;
+  padding-inline: calc(var(--cm-file-entry-gap) / 2);
+}
+
+:host(.active)::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  margin-inline: calc(var(--cm-file-entry-gap) / 2 * var(--cm-pill-inset, 0));
+  top: calc(50% - var(--cm-file-pill-height) / 2);
+  height: var(--cm-file-pill-height);
+  border-radius: var(--cm-file-pill-height);
+  background: var(--cm-current-file);
+}
+
+.name,
+.rest,
+button.marker {
+  display: flex;
+  align-items: center;
+  min-height: var(--cm-touch-target);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.name {
+  flex: 0 1 auto;
+  min-width: 0;
+  padding-inline-start: calc(var(--cm-file-entry-gap) * 1.5); /* clear of the pill's round end */
+  text-align: start;
+}
+
+.rest {
+  flex: 1 0 auto; /* its content keeps its width: only the name is shortened */
+  align-self: stretch;
+}
+
+.rest > * {
+  margin-inline-start: var(--cm-file-entry-gap);
+}
+
+
+/* FIL-027: the ellipsis appears only when the name does not fit; the "*" and the lock stay visible. */
+.text {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.marker {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+
+/* Directly at the end of the name. Not bold: its tooltip, a child, would inherit that. */
+.unsaved {
+  color: var(--cm-unsaved-mark);
+}
+
+/* One space after the name and as tall as its letters; the control keeps the width of an icon and the full height. */
+button.lock {
+  min-width: var(--cm-icon-size);
+  padding-inline-start: 0.3em;
+}
+
+.lock app-icon {
+  width: 1em;
+  height: 1em;
+}
+
+.close {
+  flex: none;
+}
+
+/* EDN-003: a marker whose action the edition blocks stays visible but disabled. */
+.marker.disabled {
+  opacity: var(--cm-disabled-opacity);
+  cursor: default;
+}
+
+/* UIX-027: as for the icon buttons, only the icon stays dimmed while the tooltip is shown. */
+.marker.disabled.cm-tooltip-open {
+  opacity: 1;
+}
+
+.marker.disabled.cm-tooltip-open app-icon {
+  opacity: var(--cm-disabled-opacity);
+}

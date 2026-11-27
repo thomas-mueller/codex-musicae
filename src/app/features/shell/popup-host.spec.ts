@@ -18,14 +18,15 @@ describe('PopupHost', () => {
     });
     const fixture = TestBed.createComponent(PopupHost);
     const store = TestBed.inject(UiStore);
-    store.openPopup('info');
+    store.openPopup('overflow-bottom');
     await fixture.whenStable();
     return { fixture, store, el: fixture.nativeElement as HTMLElement };
   }
 
-  it('UIX-015 the info popover shows the version string only', async () => {
+  it('UIX-035 the overflow menu has no version info', async () => {
     const { el } = await setup();
-    expect(el.querySelector('.version')?.textContent).toBe('v0.0.0-test');
+    expect(el.textContent).not.toContain('v0.0.0-test');
+    expect(el.querySelector(`[aria-label="${translate('a11y.versionInfo')}"]`)).toBeNull();
   });
 
   it('UIX-013 a pointer-down outside closes the popup, one inside does not', async () => {
@@ -47,7 +48,7 @@ describe('PopupHost', () => {
 
   it('SAV-011 PLT-010 the overflow menu offers save a copy once a document is open', async () => {
     const { fixture, store, el } = await setup();
-    store.openPopup('overflow-top');
+    store.openPopup('overflow-bottom');
     await fixture.whenStable();
     const button = (): HTMLButtonElement => el.querySelector(`button[aria-label="${translate('a11y.saveCopy')}"]`) as HTMLButtonElement;
     expect(button().getAttribute('aria-disabled')).toBe('true');

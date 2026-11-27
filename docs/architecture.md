@@ -44,7 +44,7 @@ src/
     state/                      signal stores and services
     input/                      keymap, gesture recognizers, command bus
     features/                   standalone OnPush components per area
-      shell/ tabs/ toolbar/ organization/ slides/ presentation/ annotation/
+      shell/ files/ toolbar/ organization/ slides/ presentation/ annotation/
   assets/i18n/en.json           translation file
 ```
 
@@ -132,7 +132,7 @@ Port methods return `Result<T, E>` with a closed set of error codes per port; ad
 ## Testing strategy
 
 - **Unit (Vitest):** all of `core/` first (M4 writes the tests from the spec tables, M5/M6 make them pass), then stores with fake ports.
-- **Component tests:** shell, toolbar, tabs with fake ports.
+- **Component tests:** shell, toolbar, files with fake ports.
 - **E2E (Playwright, Chromium/Firefox/WebKit):** open a PDF, navigate, switch modes, draw, save a copy.
 - **Golden detection corpus** and **PDF round trip** (M17); **performance budgets** against a large reference PDF (M17).
 - **Corpus suites (V2-M3b, DEC-152):** every real PDF of `e2e/corpus/` belongs to the `detection` suite (systems per page against the owner's reviewed counts, run under the profiles of `profiles.json` on each engine of the entry, differences recorded as `deviations`), the `load` suite (Chromium: detection and navigation in parallel, `T:budgets`, cache and canvas invariants, fails the `perf` job) or both. A change of detection algorithm or settings is a new profile.

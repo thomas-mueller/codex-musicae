@@ -38,7 +38,7 @@ import type { SystemInfo } from '../../core';
       overflow: hidden;
       white-space: nowrap;
       line-height: 1;
-      font-family: sans-serif;
+      font-family: var(--cm-font);
       font-weight: var(--cm-system-label-weight);
       color: var(--cm-org-bar-tint);
       opacity: var(--cm-org-bar-opacity);

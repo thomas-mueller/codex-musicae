@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import { TUNABLES } from '../../src/config/tunables';
-import { label } from '../support/score';
+import { clickMode } from '../support/modes';
 import { MIN_PERF_SLIDE_CHANGES } from '../../scripts/lib/corpus-files.mjs';
 import {
   DEV_URL, detectionTimeoutMs, openReference, PERF_WAIT_MS, realPdfs, report, summary, waitForDetectionComplete,
@@ -144,7 +144,7 @@ for (const viewport of VIEWPORTS) {
         await waitForFirstSlideDrawn(page);
         await waitForDetectionComplete(page);
         if (mode === 'presentation') {
-          await page.getByLabel(label('modePresentation'), { exact: true }).click();
+          await clickMode(page, 'modePresentation');
           await expect(page.locator('app-shell')).toHaveAttribute('data-mode', 'presentation');
         }
         // The slide view of the new mode paints once its first render is done (seconds on a large scan); the canvas keeps the 300x150 default until then.

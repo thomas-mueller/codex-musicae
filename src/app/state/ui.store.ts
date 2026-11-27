@@ -1,7 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 
 import { TUNABLES } from '../../config/tunables';
-import { sizeClassOf } from '../core';
+import { isNarrow, sizeClassOf } from '../core';
 import type { Mode } from '../core';
 import { PresentationPlatform } from './presentation-platform';
 
@@ -30,7 +30,7 @@ interface Viewport {
 export class UiStore {
   private readonly platform = inject(PresentationPlatform);
   /** UIX-025: where leaving the settings mode goes back to. */
-  private modeBeforeSettings: Mode = 'annotation';
+  private readonly modeBeforeSettings = signal<Mode>('annotation');
   readonly mode = signal<Mode>('annotation');
   readonly tool = signal<Tool | null>(null);
   readonly popup = signal<Popup | null>(null);
@@ -50,6 +50,10 @@ export class UiStore {
   readonly sizeClass = computed(() =>
     sizeClassOf(this.viewport().width, this.viewport().height, TUNABLES.layout),
   );
+  /** UIX-037: the top bar has no room for three mode buttons. */
+  readonly narrow = computed(() => isNarrow(this.viewport().width, TUNABLES.layout));
+  /** The mode in use; in the settings mode the one that leaving it returns to. */
+  readonly workMode = computed(() => (this.mode() === 'settings' ? this.modeBeforeSettings() : this.mode()));
 
   setMode(mode: Mode): void {
     if (mode === 'presentation' && !this.hasDocument()) {
@@ -57,7 +61,7 @@ export class UiStore {
     }
     const previous = this.mode();
     if (mode === 'settings' && previous !== 'settings') {
-      this.modeBeforeSettings = previous;
+      this.modeBeforeSettings.set(previous);
       this.popup.set(null);
     }
     this.mode.set(mode);
@@ -88,7 +92,7 @@ export class UiStore {
   closeSettings(): void {
     if (this.mode() === 'settings') {
       this.popup.set(null);
-      this.setMode(this.modeBeforeSettings);
+      this.setMode(this.modeBeforeSettings());
     }
   }
 

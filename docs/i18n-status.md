@@ -24,11 +24,5 @@ Keys whose value may equal the English one in a translated file. This list is pe
 
 - `app.placeholder` (empty)
 - `settings.language.names.*` (every language is shown under its own name)
-- `a11y.info` (German "Info")
-- `tooltip.info` (German "Info")
-- `a11y.tabSwitcher` (German "Tabs")
-- `tooltip.tabSwitcher` (German "Tabs")
-- `a11y.tabBar` (German "Tabs")
-- `tooltip.tabBar` (German "Tabs")
 - `a11y.versionInfo` (German "Version")
 - `tooltip.versionInfo` (German "Version")

@@ -1,10 +1,21 @@
-@for (entry of entries; track entry.mode) {
+@if (collapsed()) {
   <button
     appIconButton
-    [icon]="entry.icon"
-    [labelKey]="entry.labelKey"
-    [toggled]="store.mode() === entry.mode"
-    [disabled]="isDisabled(entry.mode)"
-    (pressed)="store.setMode(entry.mode)"
+    data-popup-trigger
+    [icon]="currentIcon()"
+    labelKey="modeSwitch"
+    [toggled]="store.popup()?.id === popupId"
+    (pressed)="store.togglePopup(popupId)"
   ></button>
+} @else {
+  @for (entry of entries; track entry.mode) {
+    <button
+      appIconButton
+      [icon]="entry.icon"
+      [labelKey]="entry.labelKey"
+      [toggled]="store.mode() === entry.mode"
+      [disabled]="isDisabled(entry.mode)"
+      (pressed)="choose(entry.mode)"
+    ></button>
+  }
 }

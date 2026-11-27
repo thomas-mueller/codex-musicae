@@ -85,14 +85,14 @@ V2 terms (target `v2` entries):
 - **FIL-018** [v1·todo·M16] The Android app is offered for PDF `VIEW` intents ("Open with…") and opens the file in a tab, requesting write access.
 - **FIL-019** [v1·done·M16] The PWA manifest registers a PDF file handler. _P: effective only in desktop Chromium._
 - **FIL-020** [v2·todo·M6] There is no Save button; files are saved by autosave only (SAV-008 triggers).
-- **FIL-021** [v2·todo·M6] The top bar shows one entry for the current file containing, in this order, the file name, a status marker and a close icon.
-- **FIL-022** [v2·todo·M6] The status marker of the file entry shows modified (unsaved changes), error, read-only lock or needs-re-open, always at the same position; in free and web it is the only change indicator.
-- **FIL-023** [v2·todo·M6] A click on the file entry opens the list of all open files; there is no tab bar in any layout.
-- **FIL-024** [v2·todo·M6] Previous-file and next-file buttons without labels sit left and right of the file entry; each is disabled at the first or last open file.
-- **FIL-025** [v2·todo·M6] A "+" button right of the next-file button opens the file picker; it replaces the V1 open-file control.
-- **FIL-026** [v2·todo·M6] A long press on "+" opens the recent-files list (FIL-008 contents and behavior); in free and web the list is switched off (EDN feature switch).
-- **FIL-027** [v2·todo·M6] The file entry takes the remaining top-bar width and the file list is full width; a name is shortened with an ellipsis only when it does not fit.
-- **FIL-028** [v2·todo·M6] Open files are listed in opening order and cannot be reordered.
+- **FIL-021** [v2·done·M6] The top bar shows one entry for the current file containing, in this order, the file name, its status markers and a close icon; on narrow screens (UIX-037) the entry has no close icon, and files are closed from the file list, whose rows each have one. The entry lies on a pale blue pill without a border, and so does the current row of the file list.
+- **FIL-022** [v2·done·M6] Unsaved changes show as a red "*" directly at the end of the file name; in free and web it is the only change indicator. A read-only file shows a lock after the name and a space, as tall as the name's text; the lock is a control that saves a copy (disabled where that is switched off). Load error, failed save, "allow saving" and needs-re-open are icons after these, in this order of importance. Every marker that applies is shown, except that the narrow top bar (UIX-037) shows only the most important of these four icons, and a tap on it opens the file list.
+- **FIL-023** [v2·done·M6] A click on the file entry opens the list of all open files; there is no tab bar in any layout.
+- **FIL-024** [v2·done·M6] Previous-file and next-file buttons without labels sit left and right of the file entry; each is disabled at the first or last open file. Narrow screens (UIX-037) have neither; files are switched through the file list.
+- **FIL-025** [v2·done·M6] An open-file button with a file-opening icon, left of the previous-file button, opens the file picker; it replaces the V1 open-file control.
+- **FIL-026** [v2·done·M6] A long press on the open-file button opens the recent-files list (FIL-008 contents and behavior); in free and web the list is switched off (EDN feature switch).
+- **FIL-027** [v2·done·M6] The file entry takes the remaining top-bar width and the file list is full width; a name is shortened with an ellipsis only when it does not fit, and only then is the full name its hover text, on the name itself, so that it never shows together with the tooltip of a marker.
+- **FIL-028** [v2·done·M6] Open files are listed in opening order and cannot be reordered.
 - **FIL-029** [v2·todo·M6] The Android app accepts PDFs shared through `SEND` intents (share sheet) in addition to `VIEW` and opens them like picked files.
 - **FIL-030** [v2·todo·M6] The iOS app accepts PDFs from the share sheet and "Open with" through the URL-open event (`UNVERIFIED(ios)`).
 - **FIL-031** [v2·todo·M6] There is no limit on the number of open files and no automatic closing or eviction of open files.
@@ -356,7 +356,7 @@ V2 terms (target `v2` entries):
 ## UIX — Layout and modes
 
 - **UIX-001** [v1·changed·M7] The modes are organization, annotation and presentation; the current mode is global state. *(Changed in V2 → UIX-025, V2-M5.)*
-- **UIX-002** [v1·done·M7] A segmented three-icon control switches modes, in the same place in both layouts; the active mode is filled, the others outlined; it is hidden in presentation mode.
+- **UIX-002** [v1·changed·M7] A segmented three-icon control switches modes, in the same place in both layouts; the active mode is filled, the others outlined; it is hidden in presentation mode. *(Changed in V2 → UIX-037, V2-M6.)*
 - **UIX-003** [v1·done·M7] The layout is compact if viewport width < `T:layout.compactMaxWidthPx` or height < `compactMaxHeightPx`, else expanded.
 - **UIX-004** [v1·changed·M7] Compact annotation layout: top bar with tab switcher, open-file, mode switch, undo, redo; bottom bar with previous, "slide x of n", next, zoom −, zoom +, zoom reset; one floating button expands to pen, highlighter, eraser; aspect-ratio buttons and the version info sit in the overflow menu. *(Changed in V2 → FIL-021, V2-M6; undo and redo → UIX-033/034, V2-M7.)*
 - **UIX-005** [v1·changed·M7] Expanded annotation layout: tab bar on top; vertical tool strip on `T:layout.toolStripSide` with pen, highlighter, eraser, undo, redo; popup next to it; the same bottom bar plus the aspect-ratio buttons. *(Changed in V2 → FIL-021, V2-M6; undo and redo → UIX-033, V2-M7.)*
@@ -376,7 +376,7 @@ V2 terms (target `v2` entries):
 - **UIX-019** [v1·done·M13] In presentation mode the mouse cursor hides after `T:layout.cursorHideMs` without movement.
 - **UIX-020** [v1·done·M13] A green line of `T:layout.progressLineHeightPx` at the bottom edge shows progress = index / (n − 1) of the current slide (100% when n = 1); it is not interactive.
 - **UIX-021** [v2·done·M5] Settings in the settings mode are abstract and non-technical; algorithm parameters are tunables (exception: the detection popup, DET-030).
-- **UIX-022** [v2·todo·M6] Wherever a long press is specified, holding the mouse button for `T:layout.longPressMs` is the desktop equivalent; no control has a right-click action.
+- **UIX-022** [v2·done·M6] Wherever a long press is specified, holding the mouse button for `T:layout.longPressMs` is the desktop equivalent; no control has a right-click action.
 - **UIX-023** [v2·done·M5] "Reset all settings" in the General group resets, after confirmation, all user settings: palette colors, thicknesses, language, highlight mode, marks visibility, dead time, suppressed warnings, per-file choices and first-run hints.
 - **UIX-024** [v2·done·M5] "Reset all settings" never changes file content (marks, annotations).
 - **UIX-025** [v2·done·M5] Settings is a fourth mode, opened by the rightmost top-bar button (three lines icon).
@@ -389,8 +389,10 @@ V2 terms (target `v2` entries):
 - **UIX-032** [v2·todo·M14] A test places tooltips at all four screen edges in organization, annotation and settings mode and asserts they stay inside the screen.
 - **UIX-033** [v2·todo·M7] Undo and redo buttons belong to the tool area in annotation and organization mode: in the tool strip in expanded layout, in the expanded tool popup (FAB group) next to the tools in compact layout. They are disabled when their history is empty (ANN-016).
 - **UIX-034** [v2·done·M5] The top bar contains no undo or redo button in any layout.
-- **UIX-035** [v2·todo·M6] The settings mode shows the version string (PIP-018) below its groups, in every layout; there is no info popover.
-- **UIX-036** [v2·todo·M6] The expanded layout has no overflow button in the top bar; "save a copy" is a top-bar button next to the settings button, disabled without a document or when its feature switch is off.
+- **UIX-035** [v2·done·M6] The settings mode shows the version string (PIP-018) below its groups, in every layout; there is no info popover.
+- **UIX-036** [v2·done·M6] The expanded layout has no overflow button in the top bar; "save a copy" is a top-bar button next to the settings button, disabled without a document or when its feature switch is off.
+- **UIX-037** [v2·done·M6] The top bar switches modes with a segmented three-icon control (the active mode filled); below `T:layout.compactMaxWidthPx` width it is one button with the current mode's icon that opens the three. It is hidden in presentation mode.
+- **UIX-038** [v2·done·M6] All text of the app uses one modern sans-serif font of the device (`T:typography.fontFamily`); no font file is loaded.
 
 ## PLT — Platforms
 

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { TUNABLES } from '../src/config/tunables';
 import { scoreBytes } from './support/score';
+import { clickMode } from './support/modes';
 import { scaled } from './support/timing';
 
 const en = JSON.parse(readFileSync('src/assets/i18n/en.json', 'utf8')) as { a11y: Record<string, string> };
@@ -43,7 +44,7 @@ async function openCopy(page: Page, name: string): Promise<void> {
   const chooser = page.waitForEvent('filechooser', { timeout: FILE_CHOOSER_TIMEOUT_MS });
   await page.getByRole('button', { name: en.a11y['openFile'] as string, exact: true }).click();
   await (await chooser).setFiles({ name, mimeType: 'application/pdf', buffer: scoreBytes });
-  await page.getByLabel(en.a11y['modeOrganization'] as string, { exact: true }).click();
+  await clickMode(page, 'modeOrganization');
   await expect(page.locator('app-organization-viewer canvas[style*="visibility: visible"]').first()).toBeVisible();
 }
 
@@ -61,9 +62,9 @@ test.describe('development build with the debug hook', () => {
     expect(totalBytes).toBeGreaterThan(0);
     expect(totalBytes).toBeLessThanOrEqual(budgetBytes);
     for (let i = 0; i < OPEN_COUNT; i++) {
-      await page.getByRole('button', { name: en.a11y['closeTab'] as string }).last().click();
+      await page.getByRole('button', { name: en.a11y['closeTab'] as string }).click();
     }
-    await expect(page.locator('app-tab-bar .name')).toHaveCount(0);
+    await expect(page.locator('app-file-item')).toHaveCount(0);
     expect((await probe(page)).totalBytes).toBe(0);
   });
 
@@ -76,7 +77,7 @@ test.describe('development build with the debug hook', () => {
       const { totalBytes, budgetBytes } = await probe(page);
       expect(totalBytes).toBeLessThanOrEqual(budgetBytes);
       await page.getByRole('button', { name: en.a11y['closeTab'] as string }).click();
-      await expect(page.locator('app-tab-bar .name')).toHaveCount(0);
+      await expect(page.locator('app-file-item')).toHaveCount(0);
     }
     expect((await probe(page)).totalBytes).toBe(0);
     expect(errors).toEqual([]);

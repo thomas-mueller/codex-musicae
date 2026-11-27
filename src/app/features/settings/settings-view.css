@@ -68,3 +68,8 @@ select:disabled {
   font: inherit;
   cursor: pointer;
 }
+
+.version {
+  margin: var(--cm-settings-gap) 0 0;
+  text-align: center;
+}
