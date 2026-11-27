@@ -375,16 +375,16 @@ V2 terms (target `v2` entries):
 - **UIX-018** [v1·done·M13] Entering presentation mode keeps the current slide; it deactivates the drawing tool and resets zoom.
 - **UIX-019** [v1·done·M13] In presentation mode the mouse cursor hides after `T:layout.cursorHideMs` without movement.
 - **UIX-020** [v1·done·M13] A green line of `T:layout.progressLineHeightPx` at the bottom edge shows progress = index / (n − 1) of the current slide (100% when n = 1); it is not interactive.
-- **UIX-021** [v2·todo·M5] Settings in the settings mode are abstract and non-technical; algorithm parameters are tunables (exception: the detection popup, DET-030).
+- **UIX-021** [v2·done·M5] Settings in the settings mode are abstract and non-technical; algorithm parameters are tunables (exception: the detection popup, DET-030).
 - **UIX-022** [v2·todo·M6] Wherever a long press is specified, holding the mouse button for `T:layout.longPressMs` is the desktop equivalent; no control has a right-click action.
 - **UIX-023** [v2·done·M5] "Reset all settings" in the General group resets, after confirmation, all user settings: palette colors, thicknesses, language, highlight mode, marks visibility, dead time, suppressed warnings, per-file choices and first-run hints.
 - **UIX-024** [v2·done·M5] "Reset all settings" never changes file content (marks, annotations).
 - **UIX-025** [v2·done·M5] Settings is a fourth mode, opened by the rightmost top-bar button (three lines icon).
 - **UIX-026** [v2·done·M5] The settings mode groups its settings into General, Display, Slide mode and Files.
-- **UIX-027** [v2·todo·M5] Tooltips stay completely inside the screen at every edge.
-- **UIX-028** [v2·todo·M5] Tooltips may wrap to several lines up to a maximum width in tunables.
-- **UIX-029** [v2·todo·M5] Every icon name used by the app is in `T:icons` and exists in the generated sprite; a test checks both.
-- **UIX-030** [v2·todo·M5] `docs/icons.md` describes where icons live, how to replace one and which test covers it.
+- **UIX-027** [v2·done·M5] Tooltips stay completely inside the screen at every edge.
+- **UIX-028** [v2·done·M5] Tooltips may wrap to several lines up to a maximum width in tunables.
+- **UIX-029** [v2·done·M5] Every icon name used by the app is in `T:icons` and exists in the generated sprite; a test checks both.
+- **UIX-030** [v2·done·M5] `docs/icons.md` describes where icons live, how to replace one and which test covers it.
 - **UIX-031** [v2·todo·M14] Desktop browsers show no page-level scroll bar at the right edge; scroll bars inside the PDF area stay.
 - **UIX-032** [v2·todo·M14] A test places tooltips at all four screen edges in organization, annotation and settings mode and asserts they stay inside the screen.
 - **UIX-033** [v2·todo·M7] Undo and redo buttons belong to the tool area in annotation and organization mode: in the tool strip in expanded layout, in the expanded tool popup (FAB group) next to the tools in compact layout. They are disabled when their history is empty (ANN-016).

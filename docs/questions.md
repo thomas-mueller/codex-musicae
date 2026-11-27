@@ -200,3 +200,9 @@ Update (2026-11-24, same section) — reproduction and what does not work. Repro
 1. *Who writes German:* the agent drafts it, formal "Sie" (infinitives on buttons), and the owner reviews it. This amends DEC-134.
 2. *The picker:* "System language" (the default) and the seven languages under their own names.
 3. *The five untranslated languages* are offered now and show English until V2-M16.
+
+## V2-M05 S4 — Tooltips and icons (UIX-027…UIX-030)
+
+**Decided (2026-11-27, owner), asked during planning; recorded as DEC-163:** a tooltip whose normal side (below; above in the bottom bar) has no room flips to the other side of its control, so it never covers the control. Only pushing it inside would have done so.
+
+**Suspected flawed test (found 2026-11-27, V2-M05 S4; owner decision: leave it unchanged):** `e2e/shell-controls.spec.ts`, "FIL-007 expanded document controls are disabled", reads the disabled controls once, straight after `page.goto`, without waiting for the expanded layout to render. It then reports `undo` as not disabled. It failed in 3 of 8 solo WebKit runs and, in the serial rerun of the full suite, on `webkit` and `webkit-iphone`. A temporary probe showed only part of the controls at that moment (13 buttons, 18 a moment later) and Undo disabled once it had appeared. A possible fix is to wait for Undo to be disabled before collecting the controls. Not checked: which change introduced the timing.
