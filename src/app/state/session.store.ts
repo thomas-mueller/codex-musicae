@@ -64,8 +64,23 @@ interface TabEntry {
   reopening: boolean;
 }
 
-/** What `SessionPersistence` needs of a tab. */
-interface SessionEntry {
+/** FIL-045: how files are added without becoming the current one. */
+interface OpenOptions {
+  /** The current file stays current. */
+  readonly background?: boolean;
+  /** False for a file the app opens by itself: it keeps its place in the recent list. */
+  readonly remember?: boolean;
+}
+
+/** A file that has just been closed. */
+export interface ClosedFile {
+  readonly id: string;
+  readonly name: string;
+}
+
+/** What `SessionPersistence` and the cross-file services need of a tab. */
+export interface SessionEntry {
+  readonly id: string;
   readonly ref: FileRef;
   readonly document: DocumentStore;
   readonly pendingSystem: number | null;
@@ -118,8 +133,9 @@ export class SessionStore {
   readonly restored = this.restoredSignal.asReadonly();
   /** For `SessionPersistence`: every tab with its document, in tab order. */
   readonly sessionEntries = computed<readonly SessionEntry[]>(() =>
-    this.entries().map((e) => ({ ref: e.ref(), document: e.document, pendingSystem: e.pendingSystem() })),
+    this.entries().map((e) => ({ id: e.id, ref: e.ref(), document: e.document, pendingSystem: e.pendingSystem() })),
   );
+  private readonly closeListeners: ((closed: ClosedFile) => void)[] = [];
   readonly activeTabId = this.activeIdSignal.asReadonly();
   readonly activeTab = computed(() => this.tabs().find((t) => t.id === this.activeIdSignal()) ?? null);
   readonly activeDocument = computed(() => this.entries().find((e) => e.id === this.activeIdSignal())?.document ?? null);
@@ -160,11 +176,16 @@ export class SessionStore {
     }));
   }
 
+  /** `listener` runs after a file has been removed, when it no longer is one of the open files. */
+  onClosed(listener: (closed: ClosedFile) => void): void {
+    this.closeListeners.push(listener);
+  }
+
   /** FIL-002: a file that is already open only focuses its tab. Calls are processed in order. */
-  openFiles(opened: readonly OpenedFile[]): Promise<void> {
+  openFiles(opened: readonly OpenedFile[], options: OpenOptions = {}): Promise<void> {
     this.opening = this.opening.then(async () => {
       for (const file of opened) {
-        await this.openOne(file);
+        await this.openOne(file, options);
       }
     });
     return this.opening;
@@ -429,6 +450,18 @@ export class SessionStore {
     this.bitmaps.releaseTab(entry.id);
     this.detection.stop(entry.document);
     void entry.document.dispose();
+    for (const listener of this.closeListeners) {
+      listener({ id: entry.id, name: entry.ref().name });
+    }
+  }
+
+  /**
+   * FIL-043: re-opens a restored file that waits for the user, without making it the current one. Must be called inside the
+   * tap: the re-open is the first thing that happens.
+   */
+  reopenInBackground(id: string): Promise<void> {
+    const entry = this.entries().find((e) => e.id === id);
+    return entry?.document.needsReopen() ? this.reopenTab(entry) : Promise.resolve();
   }
 
   setActive(id: string): void {
@@ -440,6 +473,17 @@ export class SessionStore {
       if (entry.document.needsWriteAccess()) {
         void this.grantWriteAccess(id); // the click that selects the tab is a user gesture
       }
+      this.forceSave(this.activeIdSignal(), id);
+      this.activeIdSignal.set(id);
+    }
+  }
+
+  /**
+   * FIL-051, FIL-052: the player moves into another open file. Unlike `setActive` this is a page turn, so it asks for nothing:
+   * no re-open and no write permission.
+   */
+  show(id: string): void {
+    if (this.entries().some((e) => e.id === id)) {
       this.forceSave(this.activeIdSignal(), id);
       this.activeIdSignal.set(id);
     }
@@ -521,10 +565,12 @@ export class SessionStore {
     }
   }
 
-  private async openOne(file: OpenedFile): Promise<void> {
+  private async openOne(file: OpenedFile, options: OpenOptions): Promise<void> {
     for (const entry of this.entries()) {
       if (await this.files.isSame(entry.ref(), file.ref)) {
-        this.activeIdSignal.set(entry.id);
+        if (!options.background) {
+          this.activeIdSignal.set(entry.id);
+        }
         if (entry.ref().id !== file.ref.id) {
           await this.files.forget(file.ref);
         }
@@ -532,9 +578,14 @@ export class SessionStore {
       }
     }
     const entry = this.addEntry(file.ref);
-    this.forceSave(this.activeIdSignal(), entry.id);
-    this.activeIdSignal.set(entry.id);
-    this.attachFile(entry, file);
+    // with nothing else open there is no current file to keep
+    if (options.background && this.activeIdSignal() !== null) {
+      entry.document.shown = false; // NFR-020: nothing rendered is kept of it from the start
+    } else {
+      this.forceSave(this.activeIdSignal(), entry.id);
+      this.activeIdSignal.set(entry.id);
+    }
+    this.attachFile(entry, file, options.remember ?? true);
   }
 
   private addEntry(ref: FileRef): TabEntry {
@@ -546,7 +597,7 @@ export class SessionStore {
   }
 
   /** Gives a tab its file: save pipeline, autosave, load, and what the file itself remembers (SAV-005, DET-023). */
-  private attachFile(entry: TabEntry, file: OpenedFile): void {
+  private attachFile(entry: TabEntry, file: OpenedFile, remember = true): void {
     const { document } = entry;
     document.readOnly.set(!file.writable);
     entry.pipeline = new SavePipeline(document, file.ref, file.bytes, this.files, this.writer, this.scheduler, this.appVersion);
@@ -560,7 +611,9 @@ export class SessionStore {
         void this.restoreFromFile(entry, file.bytes);
       }
     });
-    void this.preferences.addRecent(file.ref, (refId) => this.entries().some((e) => e.ref().id === refId));
+    if (remember) {
+      void this.preferences.addRecent(file.ref, (refId) => this.entries().some((e) => e.ref().id === refId));
+    }
   }
 
   /**

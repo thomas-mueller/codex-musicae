@@ -33,6 +33,8 @@ Accepted on purpose. They are not bugs; do not "fix" them in a v1 milestone.
 - **LIM-032** File identity for cross-file marks and per-file choices is the file name only (D-1): two different files with the same name in different folders share per-file choices, and renaming a referenced file breaks its cross-file marks (they count as unresolved). (V2: FIL-041, MRK-012)
 - **LIM-033** On displays whose slide bitmap is larger than the working raster allows (4K, or any stage that needs more than about 4.9 pixels per point on an A4 page), the first view of each slide is a direct render from the PDF and takes longer on scans with large images; slides of a page that is still warm (NFR-026) are faster. (V2-M2b, DEC-148)
 - **LIM-034** A file whose save keeps failing for another reason than missing write access (for example a storage provider that rejects the write) cannot be closed: closing saves again, and when that fails the file stays open with the error icon (FIL-006, D-6). Since "save a copy" was removed (DEC-167) there is no way to write its changes elsewhere. Owner decision (2026-11-27): no close question in this case. (V2-M6 S2)
+- **LIM-035** A referenced file is found only among the open files and the recent list (at most `T:resources.recentFilesMax` files; in free and web only those of the current run). Otherwise the user opens it by hand (FIL-042, FIL-043, DEC-171).
+- **LIM-036** Nothing rendered is kept of a file that is not current (NFR-020), so the first slide after a jump into another file is drawn only at the page turn; on large scans that takes a moment.
 - **LIM-023** Samsung Internet is treated as covered by Chromium and verified on a real device only.
 
 ## Future versions (backlog)

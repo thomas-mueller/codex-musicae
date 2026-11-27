@@ -395,6 +395,7 @@ export const TUNABLES = {
     sessionKey: 'session', // FIL-011: preference key of the session snapshot
     // EDN-005: which feature switch (config/features.*.ts) guards a preference key; a key is matched by `name` or `name.` prefix.
     overwriteKey: 'overwrite', // FIL-038, FIL-041: the stored "do not ask again" choices
+    crossFileCloseKey: 'crossFileClose', // FIL-044: "don't show again" of the warning about closing a referenced file
     switchByKeyPrefix: {
       recent: 'recentFiles', // EDN-005: the list of recent files
       session: 'sessionRestore', // EDN-005: the session snapshot (open tabs and positions)

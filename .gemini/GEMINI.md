@@ -47,7 +47,7 @@ Angular (standalone, signals, zoneless, OnPush, strict TypeScript), Capacitor, p
 - Lint: `npm run lint`
 - Lint self-test: `npm run lint:selftest`
 - Unit tests: `npm test -- --watch=false`
-- E2E: `npx playwright test --project=chromium` (locally only at the end of a milestone, see "E2E tests")
+- E2E: `npx playwright test --project=chromium`, then `npx playwright test --project=chromium-galaxy-tablet --grep @smoke` (locally only at the end of a milestone, see "E2E tests")
 - Production build: `npm run build`
 - Capacitor sync: `npm run cap:sync`
 - Android debug APK: `npm run android:debug`
@@ -69,8 +69,8 @@ E2E runs take too long locally to run in every step (CPU-bound detection on real
 
 - **Do not run Playwright in a step** that is not the last step of its milestone, not even single specs. A milestone without steps counts as one last step.
 - In every step still **write and update the E2E specs** the milestone asks for, and keep them passing `npm run lint`. Do not report them as passing: say that they have not run.
-- **After the last step** of the milestone, run the E2E suite locally **on the desktop `chromium` project only** and fix what it finds, for all steps of the milestone. This is where "E2E green" in the acceptance criteria is met locally.
-- Do not run the Firefox, WebKit, phone or tablet projects locally, also where a milestone file names them: the GitHub `e2e` workflow runs them, and it runs only on a pull request to `main`, on a `v*` tag or when the owner starts it by hand (`docs/ci.md`). Their specs are still written as the milestone asks (WebKit tests for WebKit-only code included). Say in the summary that they have not run locally.
+- **After the last step** of the milestone, run E2E locally **on two projects only** and fix what it finds, for all steps of the milestone: the whole suite on desktop `chromium`, and the `@smoke` tests on the Chromium tablet (`chromium-galaxy-tablet`). This is where "E2E green" in the acceptance criteria is met locally.
+- Do not run the Firefox, WebKit or phone projects or the other tablets locally, also where a milestone file names them: the GitHub `e2e` workflow runs them, and it runs only on a pull request to `main`, on a `v*` tag or when the owner starts it by hand (`docs/ci.md`). Their specs are still written as the milestone asks (WebKit tests for WebKit-only code included). Say in the summary that they have not run locally.
 - Note in the step summary what is still to be confirmed by that run; keep known failures in the milestone file under "Open for the E2E run".
 - Run E2E earlier only when the owner asks for it.
 - A run that is cut off can leave `serve-static` processes behind, and a later local run then tests the old build: check for them first.

@@ -6,12 +6,12 @@ import { TUNABLES } from '../../config/tunables';
 import {
   EMPTY_SYSTEM_MARKS, EMPTY_UNDO, FIT_VIEW, addJump, clearJunction, computeBars, computePaddings, derivePlayingOrderInput, findEntryForSystem,
   flattenSystems, forcedBreaks, CURRENT_SCHEMA_VERSION, applyAction, generatePlayingOrder, isComplete, isProvisional, junctionCount,
-  junctionView, markPositions, migrateMarksV1, packSlides, paddedArea, pushAction, redoStep, referenceWidth, removeJump, slideIndexOfEntry, systemNumbers,
+  junctionView, markPositions, migrateMarksV1, packSlides, paddedArea, printIndex, pushAction, redoStep, referenceWidth, removeJump, slideIndexOfEntry, systemNumbers,
   toggleBreak, toggleStop, undoStep, updateJump, usablePrefix,
 } from '../core';
 import type {
-  DetectedPage, EmbeddedMetadata, InkStroke, MetadataPage, Jump, Orientation, Point, SlidePlan, SystemGeom, SystemMarks, UndoAction,
-  UndoState, V1Marks, ViewState,
+  DetectedPage, EmbeddedMetadata, InkStroke, MetadataPage, Jump, Orientation, Point, SlidePlan, SystemGeom, SystemMarks, SystemRef,
+  UndoAction, UndoState, V1Marks, ViewState,
 } from '../core';
 import type { PdfDocumentHandle, PdfOpenError, PdfPageInfo, PdfRenderer } from '../ports/pdf-renderer';
 import { DetectionRun } from './detection-run';
@@ -134,9 +134,23 @@ export class DocumentStore {
   readonly marksPending = computed(() => this.pendingV1Signal() !== null && this.migratedV1Marks() === null);
   /** What the V1 organization chips show: the marks as junctions (until V2-M10). */
   readonly marks = computed(() => junctionView(this.systemMarks(), this.pageSystemCounts()));
-  private readonly orderInput = computed(() =>
-    derivePlayingOrderInput(this.systemMarks(), this.pageSystemCounts(), TUNABLES.playingOrder.maxLength),
-  );
+  /**
+   * FIL-051: while the player is here through a jump from another file, the playing order starts at its target instead of
+   * the start mark. Set by the cross-file playback only; never saved.
+   */
+  readonly arrival = signal<SystemRef | null>(null);
+  private readonly orderInput = computed(() => {
+    const counts = this.pageSystemCounts();
+    const input = derivePlayingOrderInput(this.systemMarks(), counts, TUNABLES.playingOrder.maxLength);
+    const arrival = this.arrival();
+    const target = arrival === null ? null : printIndex(arrival, counts);
+    return target === null ? input : { ...input, startJunction: target - 1 };
+  });
+  /** MRK-016: systems per page of the pages read so far, from the first page on: what a reference into this file sees. */
+  readonly knownSystemCounts = computed<readonly number[]>(() => {
+    const pages = this.detection.pages();
+    return Array.from({ length: usablePrefix(this.detection.states()) }, (_, i) => pages[i]?.systems.length ?? 0);
+  });
   /** Transient: set to a fresh object on every rejected edit so the UI can flash an error icon; no text. */
   private readonly lastRejectedSignal = signal<{ readonly seq: number } | null>(null);
   readonly lastRejected = this.lastRejectedSignal.asReadonly();

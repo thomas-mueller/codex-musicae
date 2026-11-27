@@ -80,6 +80,7 @@
     "overwriteDialog": "Datei überschreiben",
     "closeDialog": "Ohne Speichern schließen",
     "saveNotice": "Datei kann nicht gespeichert werden",
+    "crossFileNotice": "Hinweis zu einer verwiesenen Datei",
     "dismissNotice": "Hinweis schließen"
   },
   "tooltip": {
@@ -179,6 +180,15 @@
         "nl": "Nederlands"
       }
     }
+  },
+  "crossFile": {
+    "missingFile": "Diese verwiesene Datei ist nicht geöffnet.",
+    "ambiguous": "Mehrere Dateien haben diesen Namen, deshalb wird keine davon verwendet.",
+    "noAccess": "Die App darf diese verwiesene Datei nicht selbst öffnen.",
+    "missingSystem": "Die verwiesene Notenzeile ist in dieser Datei nicht mehr vorhanden.",
+    "openFile": "Diese Datei öffnen",
+    "closed": "ist geschlossen. Diese geöffneten Dateien verweisen darauf: {{referrers}}",
+    "dontShowAgain": "Nicht mehr anzeigen"
   },
   "save": {
     "overwrite": {

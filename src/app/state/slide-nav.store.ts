@@ -3,6 +3,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { TUNABLES } from '../../config/tunables';
 import { clampPan, FIT_VIEW, fitScale, zoomAround } from '../core';
 import type { Point, Size } from '../core';
+import { CrossFilePlayback } from './cross-file-playback.service';
 import { SessionStore } from './session.store';
 import { StrokeGate } from './stroke-gate';
 import { UiStore } from './ui.store';
@@ -16,6 +17,7 @@ export class SlideNavStore {
   private readonly session = inject(SessionStore);
   private readonly ui = inject(UiStore);
   private readonly gate = inject(StrokeGate);
+  private readonly playback = inject(CrossFilePlayback);
   private readonly scrubSignal = signal<number | null>(null);
   private frame: number | null = null;
 
@@ -28,8 +30,10 @@ export class SlideNavStore {
   readonly count = computed(() => this.document()?.slideCount() ?? 0);
   /** The slide on display, or the one the slider is being dragged to. */
   readonly shown = computed(() => this.scrubSignal() ?? this.document()?.currentSlideIndex() ?? 0);
-  readonly canPrevious = computed(() => this.active() && this.count() > 0 && this.shown() > 0);
-  readonly canNext = computed(() => this.active() && this.shown() < this.count() - 1);
+  /** FIL-052: at the first slide of an arrival there is a file to go back to. */
+  readonly canPrevious = computed(() => this.active() && this.count() > 0 && (this.shown() > 0 || this.playback.canReturn()));
+  /** FIL-051: at the last slide a cross-file jump may lead on. */
+  readonly canNext = computed(() => this.active() && (this.shown() < this.count() - 1 || this.playback.canContinue()));
   readonly canSlide = computed(() => this.active() && this.count() > 0);
   /** Size of the area the slide is shown in; reported by `SlideView`. */
   readonly stage = signal<Size>({ width: 0, height: 0 });
@@ -100,11 +104,19 @@ export class SlideNavStore {
 
   /** ANN-013: buttons and slider wait for a stroke in progress, like the navigation commands. */
   previous(): void {
-    this.gate.run(() => this.goTo(this.shown() - 1));
+    this.gate.run(() => this.turn(-1));
   }
 
   next(): void {
-    this.gate.run(() => this.goTo(this.shown() + 1));
+    this.gate.run(() => this.turn(1));
+  }
+
+  private turn(direction: 1 | -1): void {
+    const dragged = this.scrubSignal();
+    if (dragged !== null) {
+      this.goTo(dragged);
+    }
+    this.playback.step(direction);
   }
 
   goTo(index: number): void {

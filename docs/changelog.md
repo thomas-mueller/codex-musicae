@@ -63,6 +63,9 @@ To implement changes, tell the agent: "Implement the requirement changes listed 
 | 2026-11-27 | FIL-026; EDN-017 (+1 `v2` ID) | Free and paid differ only in saving and persisting. Old FIL-026: "…in free and web the list is switched off (EDN feature switch)." The switches `shareIn` and `crossFileAutoOpen` are removed (DEC-169) | Owner decisions | V2-M6 S3 |
 | 2026-11-27 | FIL-029, FIL-030, FIL-031, FIL-040, NFR-020, EDN-017 | V2-M6 S3 is built: share-in, and inactive files release their rendered data (DEC-170); `done` on unit tests with the E2E specs written, to be confirmed after S4. FIL-032 stays `todo` until S4 | V2-M6 S3 | V2-M6 |
 | 2026-11-27 | Tests (V2-M6 S3) | Changed existing tests: `free-edition.spec` (incoming files open in free), `files.spec` unit and E2E (recent list in free), `feature-file-access.spec` (reopen and forget pass through), `session.store.spec` (NFR-010 case now checks the release on leaving). New: cases in `features.spec`, `platform-rules.spec`, `working-resolution-renderer.spec`, `region-renderer.spec`, `detection.service.spec`, `session.store.spec`; E2E `memory.spec` | Same | V2-M6 S3 |
+| 2026-11-27 | PLY-017, FIL-051, FIL-052, MRK-016 | V2-M6 S4: a cross-file jump ends the order of its file; the next page turn continues in the other file at the target line, and turning back returns one jump at a time. MRK-016 now covers every case in which the jump cannot lead on. Fixture G03 of `playing-order-start.cases` now expects a cross-file jump as an exit instead of ignoring it | Owner decision ("continue in file B", DEC-171) | M6 S4; `core/playing-order`, `core/cross-file`, `state/cross-file*`, `e2e/cross-file.spec` |
+| 2026-11-27 | FIL-032, FIL-042–FIL-045, MRK-015, MRK-017 | Built: referenced files open in the background from the open and recent files; warnings as notices below the top bar; the "don't show again" of the close warning is a setting | V2-M6 S4 (DEC-171) | `features/saving/cross-file-notice` |
+| 2026-11-27 | DEC-168 | The local E2E run at the end of a milestone also runs the `@smoke` tests on the Chromium tablet (`chromium-galaxy-tablet`) | Owner decision | `AGENTS.md`, `docs/roadmap-v2.md` |
 
 ## V2 changes to V1 requirements
 
@@ -391,3 +394,4 @@ From the identifiers of `docs/v2-requirements.md` (`R-xxx`, `D-n`, idea `#n`) to
 | Owner decision (V2-M6 S1, 2026-11-27) | UIX-037 (V2-M6), UIX-038 (V2-M6) |
 | Owner decision (V2-M6 S2, 2026-11-27) | FIL-049 (V2-M6), FIL-050 (V2-M6) |
 | Owner decision (V2-M6 S3, 2026-11-27) | EDN-017 (V2-M6) |
+| Owner decision (V2-M6 S4, 2026-11-27) | PLY-017 (V2-M6), FIL-051 (V2-M6), FIL-052 (V2-M6) |

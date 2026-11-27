@@ -163,7 +163,8 @@ Overview of the structural changes of V2 (`docs/roadmap-v2.md`); the milestone f
 ### Cross-file references (DEC-128, V2-M4, V2-M6)
 
 - A reference is `{ fileName, page, systemOnPage }` and is stored only in the embedded metadata of the file where the mark was created (MRK-012).
-- Resolution runs in `state/`: the file is looked up by name among the open files and the files with persisted access through `FileAccess`; none or several matches leave the reference unresolved (FIL-042, FIL-043). An unresolved reference stays stored, and slide mode stops at it (MRK-016).
+- Resolution runs in `state/` (`CrossFileService`, DEC-171) over the pure rules of `core/cross-file`: the file is looked up by name among the open files and then the recent list, the files the app keeps access to through `FileAccess`; none or several matches leave the reference unresolved (FIL-042, FIL-043). Referenced files open in the background (`SessionStore.openFiles` with `background`, FIL-045). The state of a reference is derived from the open files and never stored; an unresolved reference stays in the metadata.
+- In the playing order a cross-file jump is an exit (PLY-017). `CrossFilePlayback` carries the player over: it sets the target's temporary start (`DocumentStore.arrival`), keeps the chain of jumps in memory and routes next and previous, so buttons, keys, pedal, taps and swipes behave alike (FIL-051, FIL-052). While a target is not resolved, slide mode stops at the exit (MRK-016).
 
 ## Angular guideline conformance
 

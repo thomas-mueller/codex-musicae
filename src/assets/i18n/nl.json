@@ -80,6 +80,7 @@
     "overwriteDialog": "Overwrite the file",
     "closeDialog": "Close without saving",
     "saveNotice": "File can't be saved",
+    "crossFileNotice": "Referenced file",
     "dismissNotice": "Dismiss notice"
   },
   "tooltip": {
@@ -179,6 +180,15 @@
         "nl": "Nederlands"
       }
     }
+  },
+  "crossFile": {
+    "missingFile": "This referenced file is not open.",
+    "ambiguous": "Several files have this name, so none of them is used.",
+    "noAccess": "The app may not open this referenced file by itself.",
+    "missingSystem": "The referenced line is no longer in this file.",
+    "openFile": "Open this file",
+    "closed": "is closed. These open files refer to it: {{referrers}}",
+    "dontShowAgain": "Don't show again"
   },
   "save": {
     "overwrite": {

@@ -96,7 +96,7 @@ V2 terms (target `v2` entries):
 - **FIL-029** [v2·done·M6] The Android app accepts PDFs shared through `SEND` intents (share sheet) in addition to `VIEW` and opens them like picked files.
 - **FIL-030** [v2·done·M6] The iOS app accepts PDFs from the share sheet and "Open with" through the URL-open event (`UNVERIFIED(ios)`).
 - **FIL-031** [v2·done·M6] There is no limit on the number of open files and no automatic closing or eviction of open files.
-- **FIL-032** [v2·todo·M6] Files opened because they are referenced look and behave like every other open file.
+- **FIL-032** [v2·done·M6] Files opened because they are referenced look and behave like every other open file.
 - **FIL-033** [v2·done·M6] Before the first write of a file in a session an overwrite dialog is shown; it appears at most once per file per session.
 - **FIL-034** [v2·done·M6] Until the overwrite dialog is answered nothing is written; the changes stay in memory and the modified marker stays.
 - **FIL-035** [v2·done·M6] The save scheduled after detection (SAV-012) also waits for the overwrite dialog.
@@ -106,15 +106,17 @@ V2 terms (target `v2` entries):
 - **FIL-039** [v2·done·M6] A file that cannot be written shows one notice per file per session, offering "Save as new file": a bar below the top bar, where the file list opens, that blocks nothing (where there is a tool strip it starts beside it); the modified marker stays.
 - **FIL-040** [v2·done·M6] A shared-in copy without write access opens read-only.
 - **FIL-041** [v2·done·M6] Per-file choices are identified by the file name only, stored in the local settings and cleared by "Reset all settings".
-- **FIL-042** [v2·todo·M6] Opening a file with cross-file marks tries to open every referenced file, looked up by file name among the open files and the files with persisted access (Android URI permission, iOS bookmark, web handle where persistence is on).
-- **FIL-043** [v2·todo·M6] When a referenced file cannot be opened (no match, several matches or no file access), a warning appears, the metadata stays unchanged and the user can open the file manually.
-- **FIL-044** [v2·todo·M6] Closing a file that is referenced by another open file keeps the marks and shows a warning at once with "Don't show again" (persisted, cleared by "Reset all settings").
-- **FIL-045** [v2·todo·M6] Referenced files open in the background; the current file stays current.
+- **FIL-042** [v2·done·M6] Opening a file with cross-file marks tries to open every referenced file, looked up by file name among the open files and the files with persisted access (Android URI permission, iOS bookmark, web handle where persistence is on).
+- **FIL-043** [v2·done·M6] When a referenced file cannot be opened (no match, several matches or no file access), a warning appears, the metadata stays unchanged and the user can open the file manually.
+- **FIL-044** [v2·done·M6] Closing a file that is referenced by another open file keeps the marks and shows a warning at once with "Don't show again" (persisted, cleared by "Reset all settings").
+- **FIL-045** [v2·done·M6] Referenced files open in the background; the current file stays current.
 - **FIL-046** [v2·done·M6] In free and web, closing a modified file asks for confirmation every time; confirming drops the changes.
 - **FIL-047** [v2·done·M6] A file without unsaved changes, including a read-only one, closes without asking.
 - **FIL-048** [v2·todo·M16] A newly opened file without embedded systems opens in organization mode; a file with embedded systems opens in annotation mode.
 - **FIL-049** [v2·done·M6] Whenever closing a file would lose changes (free and web, a read-only file, or after Cancel to the overwrite question), a dialog offers Save as new file, Discard changes and Cancel; where "save as new file" is switched off it is visible and disabled.
 - **FIL-050** [v2·done·M6] No save question and no save notice appears in presentation mode or while a stroke is drawn; they wait.
+- **FIL-051** [v2·done·M6] At the end of an order that a cross-file jump ended, a page turn forward continues in the referenced file at the target line, which plays with its own marks from there; the other file becomes current without any question, and the slide count is that of the current file.
+- **FIL-052** [v2·done·M6] At the first slide reached through a cross-file jump, a page turn back returns to the slide the jump was made from; several jumps are undone one by one. Choosing or closing a file, or entering the organization or settings mode, ends this chain, and every file shows its own playing order again. First and last slide stay in the current file.
 
 ## SAV — Saving and embedded data
 
@@ -193,6 +195,7 @@ V2 terms (target `v2` entries):
 - **PLY-014** [v2·done·M4] Junctions are derived from system sides: the right side of system k is junction k and the left side of system k is junction k−1; the replay of PLY-002…PLY-008 runs on these junctions.
 - **PLY-015** [v2·done·M4] The replay starts at the left side of the system holding the start mark; this start counts as the first arrival there, and systems before it are not played. Without a start mark it starts at junction 0.
 - **PLY-016** [v2·done·M4] A jump starts on the right side of a system and targets the left side of a system; it may start on the right side of the last system and target the left side of the first system.
+- **PLY-017** [v2·done·M6] A cross-file jump takes part in the replay: when it fires, on its pass and by the same rules as every jump (PLY-006, PLY-008), the playing order of its file ends there. The order of a file does not depend on whether the other file is available.
 
 ## ORG — Organization mode
 
@@ -555,9 +558,9 @@ V2 terms (target `v2` entries):
 - **MRK-012** [v2·done·M4] A cross-file reference is stored in the source file and holds the target file name, page and system on page; the file name is the only file identity. A jump target may be such a reference; a bookmark sits on a system of its own file and may hold one as its target.
 - **MRK-013** [v2·done·M4] Deleting a system deletes the marks stored on both its sides; marks on other systems stay.
 - **MRK-014** [v2·done·M4] A page rerun keeps that page's marks only if the page's system count is unchanged; otherwise the marks of that page are deleted.
-- **MRK-015** [v2·todo·M6] A cross-file reference whose target system no longer exists is kept and counts as unresolved; edits in the target file never modify the source file.
-- **MRK-016** [v2·todo·M6] In slide mode an unresolved cross-file jump ends the presentation at that position.
-- **MRK-017** [v2·todo·M6] Cross-file marks exist in every edition; in free and web they live only in the session.
+- **MRK-015** [v2·done·M6] A cross-file reference whose target system no longer exists is kept and counts as unresolved; edits in the target file never modify the source file.
+- **MRK-016** [v2·done·M6] In slide mode a cross-file jump that cannot lead on (no or several files of the name, no access, the target line gone, or the target file still being read) ends the presentation at that position; once the target is available, the next page turn continues.
+- **MRK-017** [v2·done·M6] Cross-file marks exist in every edition; in free and web they live only in the session.
 - **MRK-018** [v2·todo·M10] Mark tools act on systems, not on bars.
 - **MRK-019** [v2·todo·M10] The active areas of a system are its left and right ends, each a tunable ratio of the system width (start value 0.2).
 - **MRK-020** [v2·todo·M10] The right end takes jump start, stop and slide break; the left end takes jump target, start mark and bookmark; a tap on the wrong end does nothing.

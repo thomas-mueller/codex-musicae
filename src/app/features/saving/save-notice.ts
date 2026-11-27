@@ -1,13 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 
-import { TUNABLES } from '../../../config/tunables';
 import { FEATURE_FLAGS } from '../../ports/feature-flags';
 import { FilePrompts } from '../../state/file-prompts';
 import { SessionStore } from '../../state/session.store';
-import { UiStore } from '../../state/ui.store';
 import { Icon } from '../shell/icon';
 import { IconButton } from '../shell/icon-button';
+import { noticeStrip } from './notice-strip';
 import { fileName } from './prompted-file';
 
 /**
@@ -36,11 +35,7 @@ export class SaveNotice {
   private readonly session = inject(SessionStore);
   protected readonly canSaveAs = inject(FEATURE_FLAGS).saveCopy;
   protected readonly name = fileName(() => this.prompts.notice());
-  private readonly ui = inject(UiStore);
-  /** The side of the tool strip where there is one (expanded, not in the settings): the notice leaves its buttons free. */
-  protected readonly strip = computed(() =>
-    this.ui.sizeClass() === 'expanded' && this.ui.mode() !== 'settings' ? TUNABLES.layout.toolStripSide : null,
-  );
+  protected readonly strip = noticeStrip();
 
   protected saveAs(tabId: string): void {
     if (!this.canSaveAs) {
