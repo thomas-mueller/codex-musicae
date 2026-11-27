@@ -369,7 +369,7 @@ V2 terms (target `v2` entries):
 - **UIX-012** [v1·done·M7] Disabled controls use `T:layout.disabledOpacity` and cannot be focused.
 - **UIX-013** [v1·done·M7] Popups close on outside tap, Esc or Android back.
 - **UIX-014** [v1·done·M7] Tooltips appear after `T:layout.tooltipHoverDelayMs` hover or `longPressMs` long press.
-- **UIX-015** [v1·done·M7] An info icon shows the version string (PIP-005) in a small popover.
+- **UIX-015** [v1·changed·M7] An info icon shows the version string (PIP-005) in a small popover. *(Changed in V2 → UIX-035, V2-M6.)*
 - **UIX-016** [v1·done·M7] The layout works from `T:layout.minSupportedWidthPx` to `maxSupportedWidthPx` without page-level horizontal scrolling.
 - **UIX-017** [v1·done·M7] Bars respect safe-area insets; the orientation follows the OS and is never locked.
 - **UIX-018** [v1·done·M13] Entering presentation mode keeps the current slide; it deactivates the drawing tool and resets zoom.
@@ -389,6 +389,8 @@ V2 terms (target `v2` entries):
 - **UIX-032** [v2·todo·M14] A test places tooltips at all four screen edges in organization, annotation and settings mode and asserts they stay inside the screen.
 - **UIX-033** [v2·todo·M7] Undo and redo buttons belong to the tool area in annotation and organization mode: in the tool strip in expanded layout, in the expanded tool popup (FAB group) next to the tools in compact layout. They are disabled when their history is empty (ANN-016).
 - **UIX-034** [v2·done·M5] The top bar contains no undo or redo button in any layout.
+- **UIX-035** [v2·todo·M6] The settings mode shows the version string (PIP-018) below its groups, in every layout; there is no info popover.
+- **UIX-036** [v2·todo·M6] The expanded layout has no overflow button in the top bar; "save a copy" is a top-bar button next to the settings button, disabled without a document or when its feature switch is off.
 
 ## PLT — Platforms
 
