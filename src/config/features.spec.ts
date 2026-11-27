@@ -34,6 +34,12 @@ describe('feature configuration files', () => {
     }
   });
 
+  it('EDN-017 the shared switches are those for saving and for keeping data between app starts, and no others', () => {
+    expect(Object.keys(NATIVE).sort()).toEqual(
+      ['autosave', 'saveCopy', 'sendTo', 'recentFiles', 'sessionRestore', 'persistSettings', 'persistFileChoices', 'restoreZoom'].sort(),
+    );
+  });
+
   it('EDN-009 the web-only switch exists in the web file only', () => {
     expect(Object.keys(WEB)).toContain('webOrganizational');
     expect(Object.keys(NATIVE)).not.toContain('webOrganizational');

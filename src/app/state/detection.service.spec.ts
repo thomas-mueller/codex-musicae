@@ -270,3 +270,19 @@ describe('DetectionService', () => {
     expect([...new Set(doc.bars().map((b) => b.pageIndex))]).toEqual([0, 2]);
   });
 });
+
+describe('DetectionService: a document that is not shown (NFR-020)', () => {
+  for (const shown of [false, true]) {
+    it(`NFR-020 detection goes on in a ${shown ? 'shown' : 'left'} file and ${shown ? 'keeps' : 'releases after every page'} what the renderer holds`, async () => {
+      const { service, open } = setup();
+      const doc = await open();
+      const releaseRendered = vi.fn();
+      doc.handle()!.releaseRendered = releaseRendered;
+      doc.shown = shown;
+      service.start(doc);
+      await until(() => doc.detectionComplete());
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(releaseRendered.mock.calls.length).toBe(shown ? 0 : PAGES);
+    });
+  }
+});

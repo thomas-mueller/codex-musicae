@@ -51,6 +51,12 @@ export class DocumentStore {
   readonly readOnly = signal(false);
   /** FIL-016: writing needs a permission the browser can only ask for in a user gesture; the next click on the tab asks. */
   readonly needsWriteAccess = signal(false);
+  /**
+   * NFR-020: false while another file is the current one; then nothing rendered of this document is kept. Set by
+   * `SessionStore`, the one place that knows the current file.
+   */
+  shown = true;
+
   /** FIL-034: the autosave waits for the answer to the overwrite question, or was declined; nothing is written. */
   readonly saveHeld = signal(false);
   /** FIL-010: the last save failed; shown as the error icon. */
@@ -450,6 +456,11 @@ export class DocumentStore {
 
   clearRejected(): void {
     this.lastRejectedSignal.set(null);
+  }
+
+  /** NFR-020: frees what the renderer keeps of this document. */
+  releaseRendered(): void {
+    this.handleSignal()?.releaseRendered?.();
   }
 
   async dispose(): Promise<void> {

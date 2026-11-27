@@ -149,6 +149,9 @@ export class DetectionService {
         continue;
       }
       const result = await this.scheduler.submit('detection', (taskSignal) => this.step(doc, run, AbortSignal.any([taskSignal, runSignal])));
+      if (!doc.shown) {
+        doc.releaseRendered(); // NFR-020: detection goes on in an inactive file but keeps nothing rendered of it
+      }
       if (!result.ok) {
         // Cancelled by a visible render (or dropped): give the foreground work room instead of resubmitting in a tight loop.
         await new Promise<void>((resolve) => this.clock.schedule(TUNABLES.detection.cancelRetryDelayMs, resolve));

@@ -37,6 +37,7 @@ Angular (standalone, signals, zoneless, OnPush, strict TypeScript), Capacitor, p
 - Free every OpenCV object in `finally`. Release bitmaps and canvases after use. Respect the cache budget and canvas pixel cap.
 - Metadata schema changes only through a new `schemaVersion` with a migration; existing files must keep opening.
 - No network requests except the app's own assets. No analytics, no CDN at runtime.
+- Editions (EDN-017): free and paid differ **only** in saving changes into files and in keeping data between app starts. Every other feature is the same in both and gets **no** feature switch; add a switch only for saving or persisting (web-only switches excepted, EDN-009). If an older document or an existing switch says otherwise, tell the owner what you would remove before removing it.
 - When something is ambiguous, contradictory or untestable: write it to `docs/questions.md` and stop. Do not guess.
 
 ## Commands

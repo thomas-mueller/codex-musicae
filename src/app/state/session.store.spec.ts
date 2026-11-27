@@ -170,23 +170,27 @@ describe('SessionStore', () => {
     expect(preferences.recentFiles().map((r) => r.name)).toEqual(['b.pdf', 'a.pdf']);
   });
 
-  it('NFR-010 at the highest level inactive tabs release their bitmaps, the active tab keeps them', async () => {
+  it('NFR-020 NFR-010 leaving a file frees its bitmaps at once; the current file keeps them, also at the highest pressure level', async () => {
     const { session, bitmaps, governor, clock } = setup();
     await session.openFiles([file('a.pdf'), file('b.pdf')]);
-    const [a, b] = session.tabs();
-    const inactive = fakeBitmap();
-    const active = fakeBitmap();
-    bitmaps.set(`${a?.id}|x`, inactive);
-    bitmaps.set(`${b?.id}|x`, active);
     TestBed.tick();
-    expect(inactive.close).not.toHaveBeenCalled();
+    const [a, b] = session.tabs();
+    const left = fakeBitmap();
+    const current = fakeBitmap();
+    session.setActive(a!.id);
+    TestBed.tick();
+    bitmaps.set(`${a?.id}|x`, left);
+    session.setActive(b!.id);
+    bitmaps.set(`${b?.id}|x`, current);
+    TestBed.tick();
+    expect(left.close).toHaveBeenCalledTimes(1);
+    expect(current.close).not.toHaveBeenCalled();
     for (let i = 0; i < TUNABLES.resources.governorMaxLevel; i++) {
       governor.reportFailure();
       clock.advance(TUNABLES.resources.governorEscalateCooldownMs);
     }
     TestBed.tick();
-    expect(inactive.close).toHaveBeenCalledTimes(1);
-    expect(active.close).not.toHaveBeenCalled();
+    expect(current.close).not.toHaveBeenCalled();
   });
 });
 
@@ -603,5 +607,49 @@ describe('SessionStore picker and recents', () => {
       await settle();
       expect(start).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('SessionStore: rendered data of inactive files (V2-M6 S3)', () => {
+  it('NFR-020 switching, opening and closing release the file that stops being current, once, and never the current one', async () => {
+    const { session } = setup();
+    await session.openFiles([file('a.pdf')]);
+    await settle();
+    TestBed.tick();
+    const documents = () => session.sessionEntries().map((entry) => entry.document);
+    const a = documents()[0]!;
+    const released = vi.spyOn(a, 'releaseRendered');
+    expect(a.shown).toBe(true);
+    await session.openFiles([file('b.pdf')]); // opening
+    await settle();
+    TestBed.tick();
+    expect(a.shown).toBe(false);
+    expect(released).toHaveBeenCalledTimes(1);
+    const b = documents()[1]!;
+    const releasedB = vi.spyOn(b, 'releaseRendered');
+    session.setActive(session.tabs()[0]!.id); // switching
+    TestBed.tick();
+    expect([a.shown, b.shown]).toEqual([true, false]);
+    expect(releasedB).toHaveBeenCalledTimes(1);
+    expect(released).toHaveBeenCalledTimes(1);
+    await session.closeTab(session.activeTabId()!); // closing: the neighbor is current
+    TestBed.tick();
+    expect(b.shown).toBe(true);
+    expect(releasedB).toHaveBeenCalledTimes(1);
+  });
+
+  it('FIL-031 NFR-020 thirty open files all stay open, in order, and only the current one keeps rendered data', async () => {
+    const { session, bitmaps } = setup();
+    const names = Array.from({ length: 30 }, (_, i) => `score-${i}.pdf`);
+    for (const name of names) {
+      await session.openFiles([file(name)]);
+      await settle();
+      bitmaps.set(`${session.activeTabId()}|page`, fakeBitmap());
+      TestBed.tick();
+    }
+    expect(session.tabs().map((tab) => tab.name)).toEqual(names);
+    const rendered = session.renderedBytes();
+    expect(rendered.filter((entry) => !entry.active).every((entry) => entry.cacheBytes === 0)).toBe(true);
+    expect(rendered.find((entry) => entry.active)!.cacheBytes).toBeGreaterThan(0);
   });
 });

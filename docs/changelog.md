@@ -60,6 +60,9 @@ To implement changes, tell the agent: "Implement the requirement changes listed 
 | 2026-11-27 | Tests (V2-M6 S2) | Changed existing tests: `testing/provide-test-ports` (overwrite question off by default), `session.store.spec` (its preferences likewise; the read-only close answers the close question), `free-edition.spec` (closing a changed file asks), `feature-persistence.spec` (per-file choices persist), `files.spec` and `file-item.free.spec` (the lock shows the notice), `reset-confirm.spec` (the question is switched off again after the reset). New: `save-rules`, `file-prompts`, `overwrite-choices`, `session.saving`, `features/saving/saving` specs, cases in `save.service` and the file adapters, E2E `save-dialogs` | Same | V2-M6 S2 |
 | 2026-11-27 | Process (no requirement) | Local E2E runs only after the last step of a milestone, on desktop Chromium only; when a requirement may be marked `done` before that (DEC-168) | Owner: the E2E runs take too long | `AGENTS.md` and its generated copies, `docs/roadmap-v2.md`, `docs/milestones/V2-M06.md` |
 | 2026-11-27 | FIL-020, FIL-033…FIL-039, FIL-041, FIL-046, FIL-047, FIL-049, FIL-050 | V2-M6 S2 is built; `done` on unit tests with the E2E specs written, to be confirmed by the E2E run after S4 (DEC-168). FIL-040 stays `todo` until S3 | V2-M6 S2 | V2-M6 |
+| 2026-11-27 | FIL-026; EDN-017 (+1 `v2` ID) | Free and paid differ only in saving and persisting. Old FIL-026: "…in free and web the list is switched off (EDN feature switch)." The switches `shareIn` and `crossFileAutoOpen` are removed (DEC-169) | Owner decisions | V2-M6 S3 |
+| 2026-11-27 | FIL-029, FIL-030, FIL-031, FIL-040, NFR-020, EDN-017 | V2-M6 S3 is built: share-in, and inactive files release their rendered data (DEC-170); `done` on unit tests with the E2E specs written, to be confirmed after S4. FIL-032 stays `todo` until S4 | V2-M6 S3 | V2-M6 |
+| 2026-11-27 | Tests (V2-M6 S3) | Changed existing tests: `free-edition.spec` (incoming files open in free), `files.spec` unit and E2E (recent list in free), `feature-file-access.spec` (reopen and forget pass through), `session.store.spec` (NFR-010 case now checks the release on leaving). New: cases in `features.spec`, `platform-rules.spec`, `working-resolution-renderer.spec`, `region-renderer.spec`, `detection.service.spec`, `session.store.spec`; E2E `memory.spec` | Same | V2-M6 S3 |
 
 ## V2 changes to V1 requirements
 
@@ -387,3 +390,4 @@ From the identifiers of `docs/v2-requirements.md` (`R-xxx`, `D-n`, idea `#n`) to
 | Owner decision (V2-M6 preparation, 2026-11-27) | UIX-035 (V2-M6), UIX-036 (V2-M6) |
 | Owner decision (V2-M6 S1, 2026-11-27) | UIX-037 (V2-M6), UIX-038 (V2-M6) |
 | Owner decision (V2-M6 S2, 2026-11-27) | FIL-049 (V2-M6), FIL-050 (V2-M6) |
+| Owner decision (V2-M6 S3, 2026-11-27) | EDN-017 (V2-M6) |

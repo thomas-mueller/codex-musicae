@@ -3,16 +3,16 @@ import type { FileAccess, FileAccessError, FileRef, OpenedFile } from '../../por
 import { err } from '../../ports/result';
 import type { Result } from '../../ports/result';
 
-/** True when stored file handles are in use: recent files, session restore or per-file choices need `reopen`. */
+/** True when file handles are stored between app starts: recent files, session restore or per-file choices need that. */
 export function persistsFileHandles(flags: FeatureFlags): boolean {
   return flags.recentFiles || flags.sessionRestore || flags.persistFileChoices;
 }
 
 /**
- * EDN-001, EDN-005, EDN-008: wraps the file access. Writing needs `autosave`; saving a copy and creating a new file need `saveCopy`; otherwise the
- * inner adapter is never called and the answer is 'unsupported'. Without a handle-persisting switch nothing can be reopened
- * and nothing is forgotten. Picking and `isSame` always pass through (open tabs need them). With every switch on it is a
- * pass-through.
+ * EDN-001, EDN-005, EDN-008: wraps the file access. Writing needs `autosave`; creating a new file and downloading a copy
+ * need `saveCopy`; otherwise the inner adapter is never called and the answer is 'unsupported'. Picking, reopening,
+ * forgetting and `isSame` always pass through (EDN-017): the recent list of the current run needs them in every edition.
+ * Whether file handles are stored between runs is decided where the adapter is built (`persistsFileHandles`).
  */
 export class FeatureFileAccess implements FileAccess {
   constructor(
@@ -25,7 +25,7 @@ export class FeatureFileAccess implements FileAccess {
   }
 
   reopen(ref: FileRef): Promise<Result<OpenedFile, FileAccessError>> {
-    return persistsFileHandles(this.flags) ? this.inner.reopen(ref) : Promise.resolve(err('not-found'));
+    return this.inner.reopen(ref);
   }
 
   write(ref: FileRef, bytes: Uint8Array): Promise<Result<void, FileAccessError>> {
@@ -49,6 +49,6 @@ export class FeatureFileAccess implements FileAccess {
   }
 
   forget(ref: FileRef): Promise<void> {
-    return persistsFileHandles(this.flags) ? this.inner.forget(ref) : Promise.resolve();
+    return this.inner.forget(ref);
   }
 }

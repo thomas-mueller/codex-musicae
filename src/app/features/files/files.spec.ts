@@ -367,14 +367,14 @@ describe('OpenFileDirective', () => {
     expect(TestBed.inject(UiStore).popup()).toBeNull();
   });
 
-  it('FIL-026 with recent files switched off a long press opens no list and counts as a tap', () => {
+  it('EDN-017 FIL-026 with the list not stored between runs a long press opens it all the same', () => {
     recentFiles = false;
     const el = button();
     el.dispatchEvent(pointer('pointerdown', 0));
-    vi.advanceTimersByTime(TUNABLES.layout.longPressMs * 2);
-    el.dispatchEvent(pointer('pointerup', TUNABLES.layout.longPressMs * 2));
+    vi.advanceTimersByTime(TUNABLES.layout.longPressMs);
+    el.dispatchEvent(pointer('pointerup', TUNABLES.layout.longPressMs));
     el.click();
-    expect(TestBed.inject(UiStore).popup()).toBeNull();
-    expect(pick).toHaveBeenCalledTimes(1);
+    expect(TestBed.inject(UiStore).popup()?.id).toBe('recent');
+    expect(pick).not.toHaveBeenCalled();
   });
 });

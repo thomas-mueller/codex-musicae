@@ -32,8 +32,6 @@ export const ALL_FEATURES_ON: FeatureFlags = {
   persistSettings: true,
   persistFileChoices: true,
   restoreZoom: true,
-  crossFileAutoOpen: true,
-  shareIn: true,
 };
 
 /** Fake platform ports for specs that render the shell or use the stores. */

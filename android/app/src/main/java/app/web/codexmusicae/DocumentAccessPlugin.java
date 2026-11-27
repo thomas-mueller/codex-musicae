@@ -322,7 +322,7 @@ public class DocumentAccessPlugin extends Plugin {
         call.resolve();
     }
 
-    /** Returns the files queued by VIEW intents and empties the queue. */
+    /** Returns the files queued by VIEW and SEND intents and empties the queue. */
     @PluginMethod
     public void getPendingIncoming(PluginCall call) {
         JSArray files = new JSArray();
@@ -337,14 +337,31 @@ public class DocumentAccessPlugin extends Plugin {
         call.resolve(response);
     }
 
-    // --- "Open with" -----------------------------------------------------------------------------------------------
+    // --- "Open with" and the share sheet ---------------------------------------------------------------------------
 
-    /** Called by MainActivity for the launch intent and every new intent (FIL-018). */
-    static void handleViewIntent(Context context, Intent intent) {
-        if (intent == null || !Intent.ACTION_VIEW.equals(intent.getAction()) || intent.getData() == null) {
+    /**
+     * The PDF an intent hands over: the data of VIEW, the stream of SEND; null for any other intent. A shared address must
+     * be a `content:` one, so that no other app can name a file of this app's private storage.
+     */
+    @SuppressWarnings("deprecation") // the typed getParcelableExtra needs API 33
+    private static Uri incomingUri(Intent intent) {
+        if (Intent.ACTION_VIEW.equals(intent.getAction())) {
+            return intent.getData();
+        }
+        if (Intent.ACTION_SEND.equals(intent.getAction())) {
+            Uri shared = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+            return shared != null && "content".equals(shared.getScheme()) ? shared : null;
+        }
+        return null;
+    }
+
+    /** Called by MainActivity for the launch intent and every new intent (FIL-018, FIL-029). */
+    static void handleIncomingIntent(Context context, Intent intent) {
+        Uri uri = intent == null ? null : incomingUri(intent);
+        if (uri == null) {
             return;
         }
-        Uri uri = intent.getData();
+        // A share usually grants reading only: such a file opens read-only (FIL-040).
         boolean writable = false;
         if ("content".equals(uri.getScheme())) {
             writable = persist(context, uri);
@@ -361,7 +378,9 @@ public class DocumentAccessPlugin extends Plugin {
         if (instance != null) {
             instance.notifyListeners("incomingFile", new JSObject());
         }
+        // consumed: recreating the activity must not open the file again
         intent.setData(null);
+        intent.removeExtra(Intent.EXTRA_STREAM);
     }
 
     // --- helpers -------------------------------------------------------------------------------------------------

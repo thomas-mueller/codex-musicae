@@ -47,15 +47,15 @@ describe('FeatureFileAccess', () => {
     expect(inner.forget).toHaveBeenCalledWith(REF);
   });
 
-  it('EDN-005 without a handle-persisting switch nothing is reopened or forgotten', async () => {
+  it('EDN-017 EDN-005 without a handle-persisting switch reopening and forgetting still reach the adapter; no handle is stored between runs', async () => {
     const inner = fakeFileAccess();
     const reopen = vi.spyOn(inner, 'reopen');
     const access = new FeatureFileAccess(inner, OFF);
     expect(persistsFileHandles(OFF)).toBe(false);
-    expect(await access.reopen(REF)).toEqual({ ok: false, error: 'not-found' });
+    await access.reopen(REF);
     await access.forget(REF);
-    expect(reopen).not.toHaveBeenCalled();
-    expect(inner.forget).not.toHaveBeenCalled();
+    expect(reopen).toHaveBeenCalledWith(REF);
+    expect(inner.forget).toHaveBeenCalledWith(REF);
   });
 
   it('EDN-008 EDN-002 picking and comparing files work in every configuration', async () => {

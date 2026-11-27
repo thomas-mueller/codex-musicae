@@ -11,6 +11,7 @@ import { IncomingFilesService } from '../app/state/incoming-files.service';
 import { FeaturePreferences } from '../app/adapters/feature/feature-preferences';
 import { FilePrompts } from '../app/state/file-prompts';
 import type { FilePrompt } from '../app/state/file-prompts';
+import { PreferencesStore } from '../app/state/preferences.store';
 import { SessionStore } from '../app/state/session.store';
 import { SessionPersistence } from '../app/state/session-persistence';
 import { fakeFileAccess, memoryPreferences } from '../app/state/testing/fake-ports';
@@ -85,18 +86,29 @@ describe('free edition behavior', () => {
     expect(prefs.data.size).toBe(0);
   });
 
-  it('EDN-001 files handed over by the system are ignored', () => {
-    const onIncomingFiles = vi.fn(() => () => undefined);
-    setup(FREE, memoryPreferences(), onIncomingFiles);
-    TestBed.inject(IncomingFilesService);
-    expect(onIncomingFiles).not.toHaveBeenCalled();
-  });
+  for (const [edition, flags] of [['free', FREE], ['paid', ALL_FEATURES_ON]] as const) {
+    it(`EDN-017 FIL-029 FIL-040 in the ${edition} edition files handed over by the system open, read-only without write access`, async () => {
+      let deliver: (files: readonly OpenedFile[]) => void = () => undefined;
+      const { session } = setup(flags, memoryPreferences(), vi.fn((callback: typeof deliver) => {
+        deliver = callback;
+        return () => undefined;
+      }) as never);
+      TestBed.inject(IncomingFilesService);
+      deliver([{ ...FILE, writable: false }]);
+      await settle();
+      await settle();
+      expect(session.tabs().map((tab) => [tab.name, tab.readOnly])).toEqual([['a.pdf', true]]);
+    });
+  }
 
-  it('EDN-008 with shareIn on the incoming files are subscribed', () => {
-    const onIncomingFiles = vi.fn(() => () => undefined);
-    setup(ALL_FEATURES_ON, memoryPreferences(), onIncomingFiles);
-    TestBed.inject(IncomingFilesService);
-    expect(onIncomingFiles).toHaveBeenCalledTimes(1);
+  it('EDN-017 EDN-005 FIL-026 free: the recent list of the current run is there and nothing of it is stored', async () => {
+    const { prefs, session } = setup(FREE);
+    await session.openFiles([FILE]);
+    await settle();
+    const preferences = TestBed.inject(PreferencesStore);
+    await preferences.ready;
+    expect(preferences.recentFiles().map((ref) => ref.name)).toEqual(['a.pdf']);
+    expect(prefs.data.size).toBe(0);
   });
 
   it('EDN-008 EDN-001 with every switch on the same file is saved by closing the tab', async () => {

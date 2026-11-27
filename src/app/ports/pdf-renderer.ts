@@ -40,6 +40,13 @@ export interface PdfDocumentHandle {
    * Optional: a renderer without a working raster does not offer it and callers render the region they need.
    */
   renderWorkingRaster?(pageIndex: number, signal: AbortSignal): Promise<Result<WorkingRaster, PdfRenderError>>;
+  /**
+   * NFR-020: frees the rendered data the renderer keeps of this document (page rasters, decoded page content); renders that
+   * run are not disturbed and later ones build it again. Optional: a renderer that keeps nothing does not offer it.
+   */
+  releaseRendered?(): void;
+  /** Bytes of the page rasters kept for this document (development debug hook). */
+  renderedBytes?(): number;
   destroy(): Promise<void>;
 }
 

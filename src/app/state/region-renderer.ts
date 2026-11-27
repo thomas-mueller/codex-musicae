@@ -78,9 +78,12 @@ export class RegionRenderer {
     if (!rendered.ok) {
       return rendered;
     }
-    // The tab may have been closed while rendering: never put a bitmap of a disposed document into the cache.
-    if (signal.aborted || doc.handle() !== handle) {
+    // The file may have been closed or left while rendering: never cache a bitmap of a disposed or inactive one (NFR-020).
+    if (signal.aborted || doc.handle() !== handle || !doc.shown) {
       rendered.value.close();
+      if (!doc.shown) {
+        doc.releaseRendered(); // the render may have built a raster after the file was left
+      }
       return err('cancelled');
     }
     // A bitmap above the whole budget is closed by the cache and reported to the governor there.

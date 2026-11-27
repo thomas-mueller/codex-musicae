@@ -22,7 +22,6 @@ import { OverwriteChoices } from './overwrite-choices';
 import type { DocumentErrorCode, DocumentStatus } from './document.store';
 import { PreferencesStore } from './preferences.store';
 import { RatioDefaultsProvider } from './ratio-defaults';
-import { ResourceGovernor } from './resource-governor';
 import { loadInk } from './loaded-ink';
 import { SavePipeline } from './save-pipeline';
 import { SaveService } from './save.service';
@@ -72,14 +71,13 @@ interface SessionEntry {
   readonly pendingSystem: number | null;
 }
 
-/** Open tabs and the active one. FIL-001, FIL-002, FIL-005, FIL-009, NFR-009, NFR-010 */
+/** Open tabs and the active one. FIL-001, FIL-002, FIL-005, FIL-009, FIL-031, NFR-020 */
 @Injectable({ providedIn: 'root' })
 export class SessionStore {
   private readonly renderer = inject(PDF_RENDERER);
   private readonly files = inject(FILE_ACCESS);
   private readonly preferences = inject(PreferencesStore);
   private readonly bitmaps = inject(BitmapCache);
-  private readonly governor = inject(ResourceGovernor);
   private readonly detection = inject(DetectionService);
   private readonly ratioDefaults = inject(RatioDefaultsProvider);
   private readonly clock = inject(CLOCK);
@@ -135,17 +133,31 @@ export class SessionStore {
         }
       }
     });
-    // NFR-010, last step: under the heaviest memory pressure inactive tabs give up their bitmaps.
+    // NFR-020: a file that stops being the current one gives up everything rendered of it, whatever made it so.
     effect(() => {
-      if (this.governor.level() >= TUNABLES.resources.governorMaxLevel) {
-        const active = this.activeIdSignal();
-        for (const entry of this.entries()) {
-          if (entry.id !== active) {
+      const active = this.activeIdSignal();
+      const entries = this.entries();
+      untracked(() => {
+        for (const entry of entries) {
+          const shown = entry.id === active;
+          if (!shown && entry.document.shown) {
             this.bitmaps.releaseTab(entry.id);
+            entry.document.releaseRendered();
           }
+          entry.document.shown = shown;
         }
-      }
+      });
     });
+  }
+
+  /** What is kept rendered of every open file (development debug hook, NFR-020 E2E). */
+  renderedBytes(): readonly { readonly name: string; readonly active: boolean; readonly cacheBytes: number; readonly rasterBytes: number }[] {
+    return this.entries().map((entry) => ({
+      name: entry.ref().name,
+      active: entry.id === this.activeIdSignal(),
+      cacheBytes: this.bitmaps.bytesOf(entry.id),
+      rasterBytes: entry.document.handle()?.renderedBytes?.() ?? 0,
+    }));
   }
 
   /** FIL-002: a file that is already open only focuses its tab. Calls are processed in order. */

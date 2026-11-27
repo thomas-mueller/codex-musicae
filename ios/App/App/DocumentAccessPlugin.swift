@@ -340,6 +340,8 @@ public class DocumentAccessPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPicker
 
     // MARK: "Open in…"
 
+    /// UNVERIFIED(ios): FIL-030. "Open with" and "Copy to" of the share sheet both arrive here, through the PDF document
+    /// type of Info.plist; there is no share extension.
     /// Called by `AppDelegate` for every URL the system hands to the app. The web side answers the `incomingFile` ping by calling
     /// `getPendingIncoming`; a file queued before the page listens is picked up at startup.
     @objc public static func handleIncoming(url: URL) {

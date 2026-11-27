@@ -29,6 +29,8 @@ interface DebugHook {
   readonly directRenders?: () => number;
   /** What the raster probe found and did (NFR-028): transparent and flat rasters seen, rebuilds made. */
   readonly rasterFaults?: () => { readonly lost: number; readonly flat: number; readonly retries: number };
+  /** What is kept rendered of every open file: cached bitmaps and page rasters (NFR-020 E2E). */
+  readonly renderedBytes?: () => readonly { readonly name: string; readonly active: boolean; readonly cacheBytes: number; readonly rasterBytes: number }[];
   /** The most scheduler tasks that ran at once per class since the page loaded (TST-025 load suite). */
   readonly schedulerPeak?: () => Readonly<Record<string, number>>;
   /** The strokes of the active document, in model order (TST-003 property test). */

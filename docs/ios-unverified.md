@@ -40,6 +40,7 @@ Every Swift file carries the marker `// UNVERIFIED(ios)` in its first line. The 
 | `DocumentAccessPlugin.swift` — references | A file picked once can be reopened later without the picker (bookmark); a moved or deleted file reports "needs re-open". | 3, 11 | picker asked every time; stale file opens empty |
 | `DocumentAccessPlugin.swift` — "save as new file" | Shows the export dialog (an empty file is exported first, then filled); cancelling changes nothing. | 5 | no dialog; empty or damaged PDF |
 | `DocumentAccessPlugin.swift` — new file as open file (FIL-037) | `createDocument` also answers the file name; the new file stays open, is saved to again after a further change and reopens after a restart. | 5 | the entry keeps the old name; later saves fail |
+| `DocumentAccessPlugin.swift` — share sheet (FIL-030) | "Open with" and "Copy to CodexMusicae" of the share sheet open the PDF, with the app closed and running. | 5 | the app is missing from the sheet, or opens without the file |
 | `DocumentAccessPlugin.swift` — "Open in…" queue | Files handed to the app are queued, the web side is told, and read-only sources open read-only. | 4 | nothing opens; wrong lock state |
 | `ios/App/App/AppDelegate.swift` | Passes every URL the system hands to the app to the plugin above (and still to Capacitor). | 4 | "Open in…" does nothing |
 | `ios/App/App/BridgeViewController.swift` | Registers the two native plugins; hides the status bar and the home indicator while presenting. | 1, 6 | picker never appears (plugins not registered); bars stay visible |

@@ -7,9 +7,9 @@ import type { DocumentAccessApi, NativeFile } from './document-access-plugin';
 type IncomingReader = (file: NativeFile) => Promise<OpenedFile | null>;
 
 /**
- * FIL-018: files handed over by an Android VIEW intent. The native side queues them; this adapter drains the queue when a
+ * FIL-018, FIL-029, FIL-030: files handed over by an Android VIEW or SEND intent, or by iOS. The native side queues them; this adapter drains the queue when a
  * listener registers (cold start) and again whenever the `incomingFile` event says a new one arrived.
- * UNVERIFIED(device): needs a device ("Open with" from the Files app).
+ * UNVERIFIED(device): needs a device ("Open with" from the Files app, sharing from another app).
  */
 export class CapOpenWith implements OpenWith {
   private readonly callbacks = new Set<(files: readonly OpenedFile[]) => void>();

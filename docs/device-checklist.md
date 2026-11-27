@@ -38,6 +38,8 @@ PLT-006 and PLT-007 stay `todo` in `docs/requirements.md` until every item above
 | V2-6.1 | Overwrite question (paid build): draw in a picked file and wait; the question appears and the file is unchanged until it is answered. Overwrite writes into the same file; Cancel writes nothing, and closing then asks. | FIL-033, FIL-034, FIL-036, FIL-049 | todo |
 | V2-6.2 | "Do not ask again", force-stop, start again: the stored choice still holds; "Reset all settings" brings the question back. | FIL-038, FIL-041 | todo |
 | V2-6.3 | A read-only file ("Open with" from a mail attachment): after drawing, the notice shows below the top bar; "Save as new file" continues in the new file. | FIL-039, FIL-040 | todo |
+| V2-6.4 | Share a PDF from another app (mail, file manager) into the free and the paid app, once while the app is closed and once while it runs: it opens, read-only unless the sender grants writing; sharing it again switches to the open file. | FIL-029, FIL-040, EDN-017 | todo |
+| V2-6.5 | Open several large scans and switch back and forth: no crash; a file switched to shows its page again after a moment. | NFR-020, FIL-031 | todo |
 
 PLT-008 and FIL-018 stay `todo` in `docs/requirements.md` until every Android item above is `ok`.
 

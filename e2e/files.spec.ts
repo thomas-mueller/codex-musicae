@@ -221,15 +221,14 @@ test.describe('expanded', () => {
     }
   });
 
-  test('FIL-026 UIX-022 free edition: holding the open button opens no recent list and a right click does nothing', async ({ page }) => {
+  test('EDN-017 FIL-026 UIX-022 free edition: holding the open button shows the files of this run; a right click does nothing', async ({ page }, testInfo) => {
+    test.skip(!['chromium', 'firefox', 'webkit'].includes(testInfo.project.name), 'mouse input: desktop projects');
     await openFiles(page, SCORE);
     await expect(currentName(page)).toHaveText(SCORE_NAME);
     await button(page, 'openFile').click({ button: 'right' });
     await expect(popup(page)).toHaveCount(0);
-    const chooser = page.waitForEvent('filechooser', { timeout: FILE_CHOOSER_TIMEOUT_MS });
-    await holdOpen(page); // counts as a tap: the picker opens
-    await chooser;
-    await expect(popup(page)).toHaveCount(0);
+    await holdOpen(page);
+    await expect(page.locator('[data-popup] .row')).toHaveText([SCORE_NAME]);
   });
 });
 

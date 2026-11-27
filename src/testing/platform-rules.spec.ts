@@ -56,4 +56,26 @@ describe('platform and architecture rules', () => {
       expect(text, path).not.toMatch(/localStorage|sessionStorage|indexedDB/);
     }
   });
+
+  it('FIL-018 FIL-029 the Android app is offered for viewing and for sharing PDFs, and takes shared content addresses only', () => {
+    const manifest = read('android/app/src/main/AndroidManifest.xml');
+    const filters = [...manifest.matchAll(/<intent-filter>([\s\S]*?)<\/intent-filter>/g)].map((match) => match[1] ?? '');
+    for (const action of ['VIEW', 'SEND']) {
+      const filter = filters.find((text) => text.includes(`android.intent.action.${action}"`));
+      expect(filter, action).toBeDefined();
+      expect(filter, action).toContain('android.intent.category.DEFAULT');
+      expect(filter, action).toContain('android:mimeType="application/pdf"');
+    }
+    const plugin = read('android/app/src/main/java/app/web/codexmusicae/DocumentAccessPlugin.java');
+    expect(plugin).toContain('Intent.EXTRA_STREAM');
+    expect(plugin).toContain('"content".equals(shared.getScheme()) ? shared : null');
+    expect(plugin).toContain('intent.removeExtra(Intent.EXTRA_STREAM)');
+  });
+
+  it('FIL-030 the iOS app declares PDF as a document type and hands opened URLs to the plugin', () => {
+    const plist = read('ios/App/App/Info.plist');
+    expect(plist).toMatch(/CFBundleDocumentTypes[\s\S]*com\.adobe\.pdf/);
+    expect(read('ios/App/App/AppDelegate.swift')).toContain('DocumentAccessPlugin.handleIncoming(url: url)');
+    expect(read('ios/App/App/DocumentAccessPlugin.swift')).toContain('UNVERIFIED(ios): FIL-030');
+  });
 });

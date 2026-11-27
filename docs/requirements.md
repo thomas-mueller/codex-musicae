@@ -90,12 +90,12 @@ V2 terms (target `v2` entries):
 - **FIL-023** [v2·done·M6] A click on the file entry opens the list of all open files; there is no tab bar in any layout.
 - **FIL-024** [v2·done·M6] Previous-file and next-file buttons without labels sit left and right of the file entry; each is disabled at the first or last open file. Narrow screens (UIX-037) have neither; files are switched through the file list.
 - **FIL-025** [v2·done·M6] An open-file button with a file-opening icon, left of the previous-file button, opens the file picker; it replaces the V1 open-file control.
-- **FIL-026** [v2·done·M6] A long press on the open-file button opens the recent-files list (FIL-008 contents and behavior); in free and web the list is switched off (EDN feature switch).
+- **FIL-026** [v2·done·M6] A long press on the open-file button opens the recent-files list (FIL-008 contents and behavior); in free and web the list covers the current run only and nothing of it is stored (EDN-017).
 - **FIL-027** [v2·done·M6] The file entry takes the remaining top-bar width and the file list is full width; a name is shortened with an ellipsis only when it does not fit, and only then is the full name its hover text, on the name itself, so that it never shows together with the tooltip of a marker.
 - **FIL-028** [v2·done·M6] Open files are listed in opening order and cannot be reordered.
-- **FIL-029** [v2·todo·M6] The Android app accepts PDFs shared through `SEND` intents (share sheet) in addition to `VIEW` and opens them like picked files.
-- **FIL-030** [v2·todo·M6] The iOS app accepts PDFs from the share sheet and "Open with" through the URL-open event (`UNVERIFIED(ios)`).
-- **FIL-031** [v2·todo·M6] There is no limit on the number of open files and no automatic closing or eviction of open files.
+- **FIL-029** [v2·done·M6] The Android app accepts PDFs shared through `SEND` intents (share sheet) in addition to `VIEW` and opens them like picked files.
+- **FIL-030** [v2·done·M6] The iOS app accepts PDFs from the share sheet and "Open with" through the URL-open event (`UNVERIFIED(ios)`).
+- **FIL-031** [v2·done·M6] There is no limit on the number of open files and no automatic closing or eviction of open files.
 - **FIL-032** [v2·todo·M6] Files opened because they are referenced look and behave like every other open file.
 - **FIL-033** [v2·done·M6] Before the first write of a file in a session an overwrite dialog is shown; it appears at most once per file per session.
 - **FIL-034** [v2·done·M6] Until the overwrite dialog is answered nothing is written; the changes stay in memory and the modified marker stays.
@@ -104,7 +104,7 @@ V2 terms (target `v2` entries):
 - **FIL-037** [v2·done·M6] "Save as new file" writes to a new location chosen by the user, which then becomes the file of that entry. _P: Safari and Firefox cannot choose a file to keep writing to; there a copy is downloaded and the open file stays as it was._
 - **FIL-038** [v2·done·M6] The overwrite dialog can be switched off for the current file or for all files; the choice persists across sessions where persistence is switched on.
 - **FIL-039** [v2·done·M6] A file that cannot be written shows one notice per file per session, offering "Save as new file": a bar below the top bar, where the file list opens, that blocks nothing (where there is a tool strip it starts beside it); the modified marker stays.
-- **FIL-040** [v2·todo·M6] A shared-in copy without write access opens read-only.
+- **FIL-040** [v2·done·M6] A shared-in copy without write access opens read-only.
 - **FIL-041** [v2·done·M6] Per-file choices are identified by the file name only, stored in the local settings and cleared by "Reset all settings".
 - **FIL-042** [v2·todo·M6] Opening a file with cross-file marks tries to open every referenced file, looked up by file name among the open files and the files with persisted access (Android URI permission, iOS bookmark, web handle where persistence is on).
 - **FIL-043** [v2·todo·M6] When a referenced file cannot be opened (no match, several matches or no file access), a warning appears, the metadata stays unchanged and the user can open the file manually.
@@ -436,7 +436,7 @@ V2 terms (target `v2` entries):
 - **NFR-017** [v2·done·M1] No library, font or other resource is loaded from a third-party host at runtime.
 - **NFR-018** [v2·done·M1] An E2E test on the production build fails when the app requests anything whose origin is not its own (except `data:` and `blob:`), in Chromium, Firefox and WebKit.
 - **NFR-019** [v2·done·M1] Production builds are minified and contain no source maps.
-- **NFR-020** [v2·todo·M6] When a file becomes inactive its rendered bitmaps are released at once, not only under memory pressure; a memory test with 30 real PDFs checks it.
+- **NFR-020** [v2·done·M6] When a file becomes inactive its rendered bitmaps are released at once, not only under memory pressure; a memory test with 30 real PDFs checks it.
 - **NFR-021** [v2·todo·M14] After every zoom, tiles are re-rendered and placed correctly in all three modes.
 - **NFR-022** [v2·todo·M14] Visible pages and tiles are never left blank after scrolling, zooming, page jumps or mode changes.
 - **NFR-023** [v2·todo·M14] Rendering keeps visible-first priority, cancels stale requests and uses a bounded queue.
@@ -537,6 +537,7 @@ V2 terms (target `v2` entries):
 - **EDN-014** [v2·done·M3] The web build with its default configuration stores no cookies, localStorage, sessionStorage or IndexedDB data; a test on the production web build checks this in Chromium, Firefox and WebKit.
 - **EDN-015** [v2·done·M3] The PWA service worker may cache the app's own files.
 - **EDN-016** [v2·done·M3] The web app starts empty on every start: session restore, recent files and permission re-grant are off.
+- **EDN-017** [v2·done·M6] The free and the paid edition differ only in saving changes into files and in keeping data between app starts. Every other feature is the same in every edition and has no feature switch (the web-only switches of EDN-009 excepted).
 
 ## MRK — Marks, labels and bookmarks
 
