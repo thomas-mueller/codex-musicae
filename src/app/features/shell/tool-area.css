@@ -16,10 +16,12 @@
 
 :host([data-variant='fab'][data-side='left']) {
   left: var(--cm-fab-inset);
+  align-items: flex-start; /* the wider popup must not move the button */
 }
 
 :host([data-variant='fab'][data-side='right']) {
   right: var(--cm-fab-inset);
+  align-items: flex-end;
 }
 
 :host([data-variant='strip'][data-side='right']) {
@@ -37,9 +39,18 @@
 
 .fab-tools {
   display: flex;
-  flex-direction: column;
+  align-items: flex-end;
   background: var(--cm-bar-bg);
   border-radius: var(--cm-popup-radius);
+}
+
+:host([data-side='right']) .fab-tools {
+  flex-direction: row-reverse;
+}
+
+.fab-column {
+  display: flex;
+  flex-direction: column;
 }
 
 /* The marks list opens beside its button, on the side of the strip, and never over the viewer's scroll bar. */

@@ -24,3 +24,12 @@
   opacity: var(--cm-disabled-opacity);
   cursor: default;
 }
+
+/* UIX-027: opacity on the button would trap its tooltip in the button's layer, dimmed and behind later controls. */
+:host(.disabled.cm-tooltip-open) {
+  opacity: 1;
+}
+
+:host(.disabled.cm-tooltip-open) app-icon {
+  opacity: var(--cm-disabled-opacity);
+}

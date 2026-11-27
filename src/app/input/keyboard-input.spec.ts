@@ -2,6 +2,7 @@ import { DOCUMENT } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
 
 import { TUNABLES } from '../../config/tunables';
+import { UiStore } from '../state/ui.store';
 import { CommandBus } from './command-bus';
 import type { Command } from './command-bus';
 import { commandForKey, KeyboardInput } from './keyboard-input';
@@ -85,5 +86,26 @@ describe('KeyboardInput', () => {
     expect(commands).toEqual([{ type: 'Next' }]);
     text.remove();
     range.remove();
+  });
+});
+
+describe('KeyboardInput in the settings mode', () => {
+  it('UIX-025 NAV-018 only Back is mapped; every other key keeps its default for the controls and for scrolling', () => {
+    const commands: Command[] = [];
+    TestBed.inject(CommandBus).commands$.subscribe((c) => commands.push(c));
+    TestBed.inject(KeyboardInput);
+    TestBed.inject(UiStore).setMode('settings');
+    const body = TestBed.inject(DOCUMENT).body;
+    const press = (code: string): KeyboardEvent => {
+      const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, code });
+      body.dispatchEvent(event);
+      return event;
+    };
+    for (const code of ['Space', 'ArrowDown', 'PageDown', 'Home']) {
+      expect(press(code).defaultPrevented, code).toBe(false);
+    }
+    expect(commands).toEqual([]);
+    expect(press('Escape').defaultPrevented).toBe(true);
+    expect(commands).toEqual([{ type: 'Back' }]);
   });
 });

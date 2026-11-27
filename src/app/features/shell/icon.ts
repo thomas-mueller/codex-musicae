@@ -4,9 +4,7 @@ import { TUNABLES } from '../../../config/tunables';
 
 export type IconKey = keyof typeof TUNABLES.icons;
 
-const SPRITE_URL = 'assets/icons/sprite.svg';
-
-/** One glyph of the self-hosted Material Symbols sprite. UIX-010 */
+/** One glyph of the self-hosted Material Symbols sprite, which the app start puts into the document. UIX-010 */
 @Component({
   selector: 'app-icon',
   template: '<svg aria-hidden="true" focusable="false"><use [attr.href]="href()" /></svg>',
@@ -18,5 +16,5 @@ const SPRITE_URL = 'assets/icons/sprite.svg';
 })
 export class Icon {
   readonly name = input.required<IconKey>();
-  protected readonly href = computed(() => `${SPRITE_URL}#${TUNABLES.icons[this.name()]}`);
+  protected readonly href = computed(() => `#${TUNABLES.iconSprite.idPrefix}${TUNABLES.icons[this.name()]}`);
 }

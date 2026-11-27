@@ -2,18 +2,20 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@a
 
 import { SessionStore } from '../../state/session.store';
 import { UiStore } from '../../state/ui.store';
+import { SettingsView } from '../settings/settings-view';
 import { BottomBar } from './bottom-bar';
 import { CanvasArea } from './canvas-area';
 import { LevelConfirm } from './level-confirm';
 import { PopupHost } from './popup-host';
+import { ResetConfirm } from './reset-confirm';
 import { ToolArea } from './tool-area';
 import { TopBar } from './top-bar';
 import { ViewportObserverDirective } from './resize-observer.directive';
 
-/** Three-row frame: top bar, canvas, bottom bar; presentation shows the canvas only. UIX-001, UIX-008 */
+/** Three-row frame: top bar, canvas, bottom bar; presentation shows the canvas only, settings the top bar and its view. UIX-001, UIX-008, UIX-025 */
 @Component({
   selector: 'app-shell',
-  imports: [BottomBar, CanvasArea, LevelConfirm, PopupHost, ToolArea, TopBar],
+  imports: [BottomBar, CanvasArea, LevelConfirm, PopupHost, ResetConfirm, SettingsView, ToolArea, TopBar],
   hostDirectives: [ViewportObserverDirective],
   templateUrl: './app-shell.html',
   styleUrl: './app-shell.css',
@@ -27,6 +29,7 @@ export class AppShell {
   protected readonly store = inject(UiStore);
   private readonly session = inject(SessionStore);
   protected readonly presentation = computed(() => this.store.mode() === 'presentation');
+  protected readonly settings = computed(() => this.store.mode() === 'settings');
 
   constructor() {
     // Controls that need a document follow the active tab (FIL-007): the one place that mirrors it into UiStore.

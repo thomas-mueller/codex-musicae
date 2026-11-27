@@ -1,0 +1,70 @@
+:host {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--cm-bar-bg);
+  color: var(--cm-icon);
+}
+
+.content {
+  max-width: var(--cm-settings-max-width);
+  margin: 0 auto;
+  padding: var(--cm-settings-gap);
+}
+
+section {
+  margin-bottom: var(--cm-settings-gap);
+}
+
+h2 {
+  margin: var(--cm-settings-gap) 0;
+  font-size: inherit;
+  font-weight: bold;
+}
+
+label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cm-settings-gap);
+  min-height: var(--cm-touch-target);
+}
+
+input,
+select {
+  min-height: var(--cm-touch-target);
+  font: inherit;
+}
+
+select {
+  max-width: 100%;
+}
+
+input[type='checkbox'] {
+  width: var(--cm-touch-target);
+  margin: 0;
+  accent-color: var(--cm-accent);
+}
+
+input:disabled,
+select:disabled {
+  opacity: var(--cm-disabled-opacity);
+}
+
+.reset {
+  position: relative; /* anchors the tooltip */
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cm-settings-gap);
+  min-height: var(--cm-touch-target);
+  padding: 0 var(--cm-settings-gap);
+  border: 1px solid currentColor;
+  border-radius: var(--cm-popup-radius);
+  background: transparent;
+  color: var(--cm-icon);
+  font: inherit;
+  cursor: pointer;
+}

@@ -3,6 +3,8 @@
     "placeholder": ""
   },
   "a11y": {
+    "settingsView": "Settings",
+    "resetConfirm": "Confirm resetting the settings",
     "modeOrganization": "Organization mode",
     "modeAnnotation": "Annotation mode",
     "modePresentation": "Presentation mode",
@@ -40,6 +42,8 @@
     "levelSelector": "Detection level",
     "markList": "Marks",
     "overflow": "More",
+    "settings": "Settings",
+    "resetSettings": "Reset all settings",
     "info": "Info",
     "cancel": "Cancel",
     "confirm": "Confirm",
@@ -113,6 +117,8 @@
     "levelSelector": "Detection level",
     "markList": "Marks",
     "overflow": "More",
+    "settings": "Settings",
+    "resetSettings": "Reset all settings",
     "info": "Info",
     "cancel": "Cancel",
     "confirm": "Confirm",
@@ -147,5 +153,30 @@
     "tabList": "Open tabs",
     "toolColor": "Color",
     "toolWidth": "Line width"
+  },
+  "settings": {
+    "groups": {
+      "general": "General",
+      "display": "Display",
+      "slideMode": "Slide mode",
+      "files": "Files"
+    },
+    "reset": {
+      "button": "Reset all settings",
+      "question": "Reset all settings? Your files are not changed."
+    },
+    "language": {
+      "label": "Language",
+      "system": "System language",
+      "names": {
+        "en": "English",
+        "de": "Deutsch",
+        "es": "Español",
+        "fr": "Français",
+        "it": "Italiano",
+        "pt-BR": "Português (Brasil)",
+        "nl": "Nederlands"
+      }
+    }
   }
 }

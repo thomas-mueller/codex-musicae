@@ -223,3 +223,40 @@ describe('NavigationHandler', () => {
     expect(doc.slideView()).toEqual(FIT_VIEW);
   });
 });
+
+describe('NavigationHandler in the settings mode', () => {
+  it('UIX-025 navigation commands change no slide in the settings mode', async () => {
+    const { doc, ui, send } = await setup();
+    send('Next');
+    ui.setMode('settings');
+    for (const type of ['Next', 'Previous', 'First', 'Last'] as const) {
+      send(type);
+      expect(doc.currentSlideIndex(), type).toBe(1);
+    }
+  });
+
+  it('NAV-018 UIX-025 Back closes a popup first, then leaves the settings mode for the mode before it', async () => {
+    const { ui, send } = await setup();
+    ui.setMode('organization');
+    ui.toggleSettings();
+    ui.openPopup('info');
+    send('Back');
+    expect(ui.popup()).toBeNull();
+    expect(ui.mode()).toBe('settings');
+    send('Back');
+    expect(ui.mode()).toBe('organization');
+  });
+});
+
+describe('NavigationHandler with the reset dialog', () => {
+  it('NAV-018 UIX-023 Back closes the reset dialog first and stays in the settings', async () => {
+    const { ui, send } = await setup();
+    ui.setMode('settings');
+    ui.requestReset();
+    send('Back');
+    expect(ui.pendingReset()).toBe(false);
+    expect(ui.mode()).toBe('settings');
+    send('Back');
+    expect(ui.mode()).toBe('annotation');
+  });
+});

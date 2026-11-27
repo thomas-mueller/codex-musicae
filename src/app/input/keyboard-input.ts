@@ -2,6 +2,7 @@ import { DOCUMENT } from '@angular/common';
 import { DestroyRef, inject, Injectable } from '@angular/core';
 
 import { TUNABLES } from '../../config/tunables';
+import { UiStore } from '../state/ui.store';
 import { CommandBus } from './command-bus';
 import type { Command } from './command-bus';
 
@@ -58,6 +59,7 @@ function isTypingTarget(target: EventTarget | null, code: string): boolean {
 @Injectable({ providedIn: 'root' })
 export class KeyboardInput {
   private readonly bus = inject(CommandBus);
+  private readonly ui = inject(UiStore);
 
   constructor() {
     const doc = inject(DOCUMENT);
@@ -71,7 +73,8 @@ export class KeyboardInput {
       return;
     }
     const command = commandForKey(event);
-    if (command !== null) {
+    // UIX-025: in the settings mode the other keys stay with the focused control and with scrolling.
+    if (command !== null && (this.ui.mode() !== 'settings' || command.type === 'Back')) {
       event.preventDefault();
       this.bus.dispatch(command);
     }

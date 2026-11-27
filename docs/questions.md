@@ -172,3 +172,37 @@ Update (2026-11-24, same section) — reproduction and what does not work. Repro
 
 **Still open, no change made:**
 - A hand-edited schema 1 file with duplicate jump ids is upgraded; the schema 2 data saved from it is then rejected on the next open (S2 note). The app never wrote duplicates.
+
+## V2-M05 S1 — Settings mode (UIX-025, UIX-026)
+
+**Decided (2026-11-26, owner), asked during planning; recorded as DEC-158 and DEC-159:**
+
+1. *Compact top bar at 320 to 351 px:* with the settings button the annotation bar needs 352 px. Undo and redo move out of the top bar now (planned for V2-M7).
+2. *Feature switch for the settings mode:* none. The owner also removed the rule that every new feature needs a switch.
+3. *`e2e/shell-controls.spec.ts`:* may be edited.
+4. *UIX-022* (no right-click action) has no step in V2-M5: moved to V2-M6.
+
+**Decided during implementation (2026-11-26, owner):** the setup of the ink-control tests in `features/shell/app-shell.spec.ts` may be fixed (`docs/changelog.md`).
+
+**Choices of the approved plan:** the four groups are empty until later work registers settings (the only V1 toggle, finger drawing, stays in the pen popup and is removed in V2-M11); the new strings are in `en.json` only until S3 creates `de.json`.
+
+## V2-M05 S2 — Reset all settings (UIX-023, UIX-024)
+
+**Decided (2026-11-26, owner), asked during planning; recorded as DEC-160:**
+
+1. *Default aspect ratio per orientation* (captured at the first presentation, not named in UIX-023): reset keeps it.
+2. *Stylus values* (finger-drawing toggle and "pen was seen", removed in V2-M11): reset leaves both.
+
+## V2-M05 S3 — Languages (I18-003, I18-004)
+
+**Decided (2026-11-26, owner), asked during planning; recorded as DEC-162:**
+
+1. *Who writes German:* the agent drafts it, formal "Sie" (infinitives on buttons), and the owner reviews it. This amends DEC-134.
+2. *The picker:* "System language" (the default) and the seven languages under their own names.
+3. *The five untranslated languages* are offered now and show English until V2-M16.
+
+## V2-M05 S4 — Tooltips and icons (UIX-027…UIX-030)
+
+**Decided (2026-11-27, owner), asked during planning; recorded as DEC-163:** a tooltip whose normal side (below; above in the bottom bar) has no room flips to the other side of its control, so it never covers the control. Only pushing it inside would have done so.
+
+**Suspected flawed test (found 2026-11-27, V2-M05 S4; owner decision: leave it unchanged):** `e2e/shell-controls.spec.ts`, "FIL-007 expanded document controls are disabled", reads the disabled controls once, straight after `page.goto`, without waiting for the expanded layout to render. It then reports `undo` as not disabled. It failed in 3 of 8 solo WebKit runs and, in the serial rerun of the full suite, on `webkit` and `webkit-iphone`. A temporary probe showed only part of the controls at that moment (13 buttons, 18 a moment later) and Undo disabled once it had appeared. A possible fix is to wait for Undo to be disabled before collecting the controls. Not checked: which change introduced the timing.

@@ -10,6 +10,9 @@
 - **NFR-014** The Angular build budget (`angular.json`, `T:budgets.initialBundleKbGzip`) fails `npm run build`, which `lint-test` runs on every push.
 - **ARC-007** A rule for later changes (a change to layers, ports or the import matrix needs a decision entry first); V2-M1 changes none (DEC-141), and the layers are enforced by `npm run lint` and `lint:selftest`.
 
+- **UIX-021** A rule for every setting a later milestone adds (abstract and non-technical, algorithm parameters stay tunables), judged in review; at the end of V2-M5 the only setting is the language. A test that lists the allowed settings would have to be edited by each of those milestones.
+- **UIX-030** `docs/icons.md` is a document the owner reads; the tests it names are checked by running them.
+
 ## Pipeline, repository and process facts (verified by running them)
 
 - **GEN-004** Repository visibility and the absence of a license file are repository settings, checked by the owner.

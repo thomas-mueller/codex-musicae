@@ -2,10 +2,6 @@
   <div class="grow" role="group" [attr.aria-label]="'a11y.tabSwitcher' | transloco"><app-tab-switcher /></div>
   <button appIconButton appOpenFile icon="openFile" labelKey="openFile"></button>
   <app-mode-switch />
-  @if (store.mode() === 'annotation') {
-    <button appIconButton icon="undo" labelKey="undo" [disabled]="!canUndo()" (pressed)="session.activeDocument()?.undo()"></button>
-    <button appIconButton icon="redo" labelKey="redo" [disabled]="!canRedo()" (pressed)="session.activeDocument()?.redo()"></button>
-  }
 } @else {
   <button appIconButton appOpenFile icon="openFile" labelKey="openFile"></button>
   <div class="grow" role="group" [attr.aria-label]="'a11y.tabBar' | transloco"><app-tab-bar /></div>
@@ -19,3 +15,4 @@
     (pressed)="store.togglePopup(popupId)"
   ></button>
 }
+<button appIconButton icon="settings" labelKey="settings" [toggled]="store.mode() === 'settings'" (pressed)="store.toggleSettings()"></button>

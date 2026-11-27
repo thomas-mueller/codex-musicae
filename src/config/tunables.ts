@@ -55,6 +55,8 @@ export const TUNABLES = {
     pageBadgeInsetPx: 6, // DET-016: distance of the per-page processing icon from the page's top-right corner
     tooltipPaddingPx: 8, // UIX-014
     tooltipRadiusPx: 4, // UIX-014
+    tooltipMaxWidthPx: 240, // UIX-028: longer tooltips wrap to several lines (D-2, DEC-163)
+    tooltipEdgeGapPx: 4, // UIX-027: the least distance of a tooltip from the edge of the screen (D-2, DEC-163)
     popupAnimationMs: 150, // UIX-013: sheet slide-in
     popupRadiusPx: 12, // UIX-013
     fabInsetPx: 16, // UIX-004: distance of the tool button from the canvas edge
@@ -105,15 +107,33 @@ export const TUNABLES = {
     markPanelMaxHeightVh: 70, // ORG-021: the marks list scrolls inside this share of the window height
     scrollbarGapPx: 20, // ORG-021: a panel on a right-hand strip keeps this distance so it never covers the scroll bar
     chipMaxButtons: 4, // ORG-014: jump, slide break, stop, delete (sizes the chip for its placement)
+    settingsMaxWidthPx: 640, // UIX-026: the settings stay a readable column on wide screens
+    settingsGapPx: 8, // UIX-026: padding and spacing in the settings view
+  },
+
+  i18n: {
+    // I18-003: one translation file per language in src/assets/i18n/
+    languages: ['en', 'de', 'es', 'fr', 'it', 'pt-BR', 'nl'],
+    fallback: 'en', // I18-004: when no language of the system is available
+    systemChoice: 'system', // I18-004: the value of the language setting that follows the system
+  },
+
+  /** The sprite of the icons below: loaded once and put into the document (UIX-010). */
+  iconSprite: {
+    url: 'assets/icons/sprite.svg',
+    elementId: 'cm-icon-sprite',
+    idPrefix: 'cm-icon-', // before each symbol id in the document
   },
 
   /** Material Symbols (Outlined) names. The agent verifies each exists in the bundled set. UIX-010 */
   icons: {
-    modeOrganization: 'description',
+    modeOrganization: 'book_5',
     modeAnnotation: 'draw',
-    modePresentation: 'slideshow',
-    pen: 'edit',
-    highlighter: 'ink_highlighter',
+    modePresentation: 'piano',
+    settings: 'menu', // UIX-025: three lines
+    resetSettings: 'restart_alt', // UIX-023
+    pen: 'edit_line', // 'stylus_note'
+    highlighter: 'format_ink_highlighter',  // 'stylus_highlighter',
     eraser: 'ink_eraser',
     undo: 'undo',
     redo: 'redo',
@@ -129,22 +149,22 @@ export const TUNABLES = {
     zoomReset: 'fit_screen',
     previous: 'chevron_left',
     next: 'chevron_right',
-    showMore: 'unfold_more', // taller slide = lower aspect ratio
-    showLess: 'unfold_less', // wider slide = higher aspect ratio
-    jump: 'alt_route', // ORG-018: also the start marker of a jump, rotated by markerRotationDeg
-    jumpEnd: 'merge', // ORG-018: the end marker of a jump (arrows merge), rotated by markerRotationDeg
+    showMore: 'fit_page_height', // taller slide = lower aspect ratio
+    showLess: 'fit_page_width', // wider slide = higher aspect ratio
+    jump: 'call_split', // ORG-018: also the start marker of a jump, rotated by markerRotationDeg
+    jumpEnd: 'call_merge', // ORG-018: the end marker of a jump (arrows merge), rotated by markerRotationDeg
     pass: 'counter_1', // ORG-020: chip button that opens the pass stepper
     changeTarget: 'ads_click', // ORG-020
     plus: 'add', // ORG-016
     minus: 'remove', // ORG-016
     slideBreak: 'content_cut',
-    stop: 'stop_circle',
+    stop: 'last_page',
     delete: 'delete',
     levelSelector: 'tune',
     levelFast: 'bolt', // DET-013: one icon per detection level
     levelStandard: 'balance',
     levelFine: 'grain',
-    markList: 'list', // ORG-021: button that opens the marks list (jumps, slide breaks, stops)
+    markList: 'list_alt', // ORG-021: button that opens the marks list (jumps, slide breaks, stops)
     overflow: 'more_vert',
     info: 'info',
     cancel: 'close',
@@ -376,6 +396,7 @@ export const TUNABLES = {
   },
 
   testing: {
+    longTextExtraRatio: 0.4, // I18-006: the fit tests lengthen every German text by this share
     unitTestTimeoutMs: 10_000, // TST-008 (ms): Vitest timeout for tests and hooks; real-PDF specs are heavy in the parallel run (Vitest default 5000)
   },
 

@@ -31,7 +31,6 @@ Angular (standalone, signals, zoneless, OnPush, strict TypeScript), Capacitor, p
 
 - No hard-coded user-visible strings: use the translation layer. UI is icon-first.
 - No magic numbers, colors, icon names or key bindings: they live in `src/config/tunables.ts`.
-- New features carry a feature switch in the feature-configuration files and a test per configuration (`docs/roadmap-v2.md`, "Rules that hold in every V2 milestone").
 - Tests contain the requirement ID in their name (`it('PLY-008 …')`). Mark a requirement `done` only when its tests pass.
 - Do not edit existing tests to make code pass unless the milestone says so; report a suspected wrong test instead.
 - Code that exists only for Safari/WebKit needs a Playwright WebKit test. Unverifiable platform code (iOS) is marked `// UNVERIFIED(ios)`.

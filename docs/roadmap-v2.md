@@ -18,8 +18,7 @@ As V1: a **step** is one agent session — one layer or feature area, about 15 r
 ## Rules that hold in every V2 milestone
 
 - R-14b: no significant change to V1 code or architecture unless the milestone says so and gives the reason. Clean, minimal code, no leftovers, existing libraries.
-- Every new feature gets its on/off switch in the feature-configuration files (from M3 on, R-22e) and a test per configuration.
-- Every new user-visible string is a translation key, added in `en` and `de` in the milestone that introduces it; the other five languages are completed in M16.
+- Every new user-visible string is a translation key, added in `en` and `de` in the milestone that introduces it. The other five files get the English text under the same key (they are listed as copies in `docs/i18n-status.md`, and a test requires every key in all files); they are completed in M16.
 - Every new number, color, icon name or key binding goes into `src/config/tunables.ts` with a unit comment (R-12c).
 - Where a milestone has to change V1 behavior, it names the existing tests it may edit. No other existing test is edited (`AGENTS.md`).
 - Anything ambiguous goes to `docs/questions.md`; the agent stops.
@@ -54,7 +53,7 @@ As V1: a **step** is one agent session — one layer or feature area, about 15 r
 
 ### Why this order
 
-1. **M1–M3 first.** Every later feature then has quality gates, real PDFs to test with and a place for its feature switch.
+1. **M1–M3 first.** Every later feature then has quality gates, real PDFs to test with and the feature configuration of the editions.
 2. **M4 before everything that creates marks.** Marks move from gaps to systems; storage, playing order and labels change, and existing files must keep opening. The riskiest logic milestone gets the strongest model and the contracts-first routine of V1-M4.
 3. **M5 before features that add settings** (highlight modes, dead time, hints switch, finger/stylus options).
 4. **M7 (undo) before M9 and M10**, which create undoable edits.

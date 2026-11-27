@@ -72,3 +72,12 @@ button[appIconButton] {
   opacity: var(--cm-disabled-opacity);
   cursor: default;
 }
+
+/* UIX-027: as for the icon buttons, only the icon stays dimmed while the tooltip is shown. */
+.marker.disabled.cm-tooltip-open {
+  opacity: 1;
+}
+
+.marker.disabled.cm-tooltip-open app-icon {
+  opacity: var(--cm-disabled-opacity);
+}

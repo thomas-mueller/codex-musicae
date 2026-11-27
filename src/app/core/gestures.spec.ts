@@ -63,3 +63,11 @@ describe('pointerPolicy', () => {
     });
   }
 });
+
+describe('pointerPolicy in the settings mode', () => {
+  it('UIX-025 the settings mode takes no pointer: no drawing, panning, tap zones or swipes', () => {
+    for (const { ctx } of pointerPolicyCases) {
+      expect(pointerPolicy({ ...ctx, mode: 'settings' })).toEqual({ role: 'none', pan: false, tapZones: false, swipes: false });
+    }
+  });
+});

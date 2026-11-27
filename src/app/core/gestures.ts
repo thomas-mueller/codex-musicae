@@ -5,7 +5,7 @@
 
 const HALF_TURN_DEG = 180;
 
-type Mode = 'organization' | 'annotation' | 'presentation';
+export type Mode = 'organization' | 'annotation' | 'presentation' | 'settings';
 
 export interface PointerSample {
   readonly x: number;
@@ -190,10 +190,11 @@ export interface PointerPolicy {
  *                  otherwise -> { gestures, pan = zoomed, tapZones true, swipes = !zoomed }
  *                  (toolActive with the stylus exception gives the same 'gestures' result)
  *  pointerCount 0 -> { none, false, false, false } in every mode.
+ *  settings: { none, false, false, false } (UIX-025: the settings view has no stage).
  */
 export function pointerPolicy(ctx: PointerContext): PointerPolicy {
   const none: PointerPolicy = { role: 'none', pan: false, tapZones: false, swipes: false };
-  if (ctx.pointerCount <= 0) {
+  if (ctx.pointerCount <= 0 || ctx.mode === 'settings') {
     return none;
   }
   if (ctx.mode === 'presentation') {
