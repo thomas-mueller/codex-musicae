@@ -8,7 +8,7 @@
  * input itself when nothing changes); inputs are never mutated. Marks the view does not show (start mark, bookmarks,
  * cross-file jumps, marks without effect) survive every edit.
  */
-import { addMark, printIndex, refAt } from './marks';
+import { addMark, printIndex, refAt, removeMark } from './marks';
 import type { PointMark, SystemMarks } from './marks';
 import type { Jump } from './model';
 import { derivePlayingOrderInput, isValidMarkJunction, junctionJumps } from './playing-order';
@@ -57,7 +57,7 @@ export function addJump(marks: SystemMarks, jump: Jump, counts: readonly number[
 
 /** Removes the jump with this id; unknown id -> unchanged marks. */
 export function removeJump(marks: SystemMarks, id: number): SystemMarks {
-  return marks.jumps.some((j) => j.id === id) ? { ...marks, jumps: marks.jumps.filter((j) => j.id !== id) } : marks;
+  return removeMark(marks, { kind: 'jump', id });
 }
 
 /**

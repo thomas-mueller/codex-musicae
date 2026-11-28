@@ -5,6 +5,7 @@
  * composition.ts / geometry.ts.
  */
 import { displayToUser, userToDisplay } from './geometry';
+import { pushEntry, redoEntry, undoEntry } from './history';
 import type { PageBox, Point, Rect } from './geometry';
 import type { SlideComposition } from './composition';
 
@@ -150,29 +151,21 @@ export interface UndoState {
   readonly redo: readonly UndoAction[];
 }
 
-export const EMPTY_UNDO: UndoState = { undo: [], redo: [] };
-
 /** Appends to `undo`, clears `redo`, and drops the OLDEST entries so that undo.length <= depth. */
 export function pushAction(state: UndoState, action: UndoAction, depth: number): UndoState {
-  return { undo: [...state.undo, action].slice(Math.max(0, state.undo.length + 1 - Math.max(0, depth))), redo: [] };
+  return pushEntry(state, action, depth);
 }
 
 /** Pops the newest undo action onto `redo`. Empty undo: same state and action null. */
 export function undoStep(state: UndoState): { state: UndoState; action: UndoAction | null } {
-  const action = state.undo[state.undo.length - 1];
-  if (action === undefined) {
-    return { state, action: null };
-  }
-  return { state: { undo: state.undo.slice(0, -1), redo: [...state.redo, action] }, action };
+  const { history, entry } = undoEntry(state);
+  return { state: history, action: entry };
 }
 
 /** Pops the newest redo action back onto `undo`. Empty redo: same state and action null. */
 export function redoStep(state: UndoState): { state: UndoState; action: UndoAction | null } {
-  const action = state.redo[state.redo.length - 1];
-  if (action === undefined) {
-    return { state, action: null };
-  }
-  return { state: { undo: [...state.undo, action], redo: state.redo.slice(0, -1) }, action };
+  const { history, entry } = redoEntry(state);
+  return { state: history, action: entry };
 }
 
 /**

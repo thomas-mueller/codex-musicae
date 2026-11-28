@@ -206,3 +206,31 @@ Update (2026-11-24, same section) — reproduction and what does not work. Repro
 **Decided (2026-11-27, owner), asked during planning; recorded as DEC-163:** a tooltip whose normal side (below; above in the bottom bar) has no room flips to the other side of its control, so it never covers the control. Only pushing it inside would have done so.
 
 **Suspected flawed test (found 2026-11-27, V2-M05 S4; owner decision: leave it unchanged):** `e2e/shell-controls.spec.ts`, "FIL-007 expanded document controls are disabled", reads the disabled controls once, straight after `page.goto`, without waiting for the expanded layout to render. It then reports `undo` as not disabled. It failed in 3 of 8 solo WebKit runs and, in the serial rerun of the full suite, on `webkit` and `webkit-iphone`. A temporary probe showed only part of the controls at that moment (13 buttons, 18 a moment later) and Undo disabled once it had appeared. A possible fix is to wait for Undo to be disabled before collecting the controls. Not checked: which change introduced the timing.
+
+## V2-M07 S1 — History core
+
+**Found during planning, for the later steps (no decision yet; none blocks S1):**
+
+- **S2, blocks it:** the milestone names the M4 API `addMark` and `removeMark`, but `removeMark` does not exist. `core/marks.ts` has `addMark`, `removeMarksOfSystem` and `rerunPage`; `removeJump` is in the temporary `core/edits.ts`; nothing removes only a bookmark or the start mark. `addMark` can also remove a stop or a break, or replace the start, so undoing it is not simply a removal.
+- **S2:** undoing a system deletion needs more than the deleted marks, because later systems on the page are renumbered and the creation order must be kept.
+- **S2:** a history entry that a page rerun invalidates must be dropped. Open: whether older entries that depend on it must go too. `core/history.ts` cannot remove single entries yet.
+- **S3:** the milestone says `T:keys`, but the tunable is `keymap`. It also puts the platform detection into `input/`, where lint bans `navigator`, and `input/` may not import `ports/`.
+
+## V2-M07 S2 — Store integration
+
+**The S2 points found in S1 are settled (2026-11-28, DEC-172):**
+
+- *`removeMark`:* added to `core/marks.ts`. The S1 note overstated this: deleting marks already worked through the chip methods of `DocumentStore`; only the general function that V2-M10 will call was missing. It did not block S2.
+- *System deletion:* a step records every mark the deletion removed or renumbered.
+- *Page re-run (owner decision):* only the affected steps are dropped, with the steps on the same marks.
+- *`e2e/shell-controls.spec.ts` (owner decision):* the UIX-006 list may gain undo and redo.
+
+**Open for the end of the milestone:** ANN-014 and ANN-017 stay `todo`. ANN-014 includes system refinements, and ANN-017 the restore of the system itself; both exist only from V2-M9. The marks half of ANN-017 is built and tested. The owner decides whether the two move to V2-M9.
+
+## V2-M07 S3 — Keyboard
+
+**Settled (2026-11-28):**
+
+- *`T:keys`* in the milestone file is the tunable `keymap`. The platform detection decides in `input/`; only the name is read behind a port (DEC-173).
+- *ANN-014 and ANN-017* (owner decision): moved to V2-M9. This closes the point left open in S2.
+- The NAV-002 and NAV-003 tests, which the milestone allows to change, did not need a change.

@@ -1,3 +1,6 @@
+/** Undo steps kept per history (ANN-006, ANN-015). */
+const UNDO_DEPTH = 200; // steps
+
 /**
  * CodexMusicae tunables.
  *
@@ -211,6 +214,9 @@ export const TUNABLES = {
     first: ['Home'],
     last: ['End'],
     back: ['Escape'],
+    // NAV-021: not codes but the letters on the keys, held with Cmd (macOS, iOS) or Ctrl (elsewhere), optional "Shift+" prefix
+    undo: ['z'],
+    redo: ['Shift+z'],
   },
 
   navigation: {
@@ -273,7 +279,11 @@ export const TUNABLES = {
     highlighterOpacity: 0.35, // ANN-004
     eraserHitRadiusPx: 8, // ANN-005
     simplifyEpsilonPt: 0.3, // ANN-011 (Ramer-Douglas-Peucker)
-    undoDepth: 200, // ANN-006
+    undoDepth: UNDO_DEPTH, // ANN-006; the same value as history.depth, which the app reads
+  },
+
+  history: {
+    depth: UNDO_DEPTH, // ANN-015: steps kept per document and mode
   },
 
   saving: {
@@ -344,6 +354,7 @@ export const TUNABLES = {
 
   platforms: {
     android: 'android', // PLT-007, PLT-013: the only Capacitor platform with a system back button
+    appleNamePrefixes: ['Mac', 'iPhone', 'iPad', 'iPod'], // NAV-021: starts of `navigator.platform` where Cmd replaces Ctrl
   },
 
   ios: {

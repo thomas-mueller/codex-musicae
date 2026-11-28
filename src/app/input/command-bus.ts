@@ -16,6 +16,8 @@ export type Command =
   | { readonly type: 'ToggleMode' }
   | { readonly type: 'ExitPresentation' }
   | { readonly type: 'Back' }
+  | { readonly type: 'Undo' }
+  | { readonly type: 'Redo' }
   | { readonly type: 'ZoomBy'; readonly factor: number; readonly anchor: Point }
   | { readonly type: 'ZoomReset' }
   /** Content displacement in px (a finger moving right is positive dx). */

@@ -66,6 +66,8 @@ To implement changes, tell the agent: "Implement the requirement changes listed 
 | 2026-11-27 | PLY-017, FIL-051, FIL-052, MRK-016 | V2-M6 S4: a cross-file jump ends the order of its file; the next page turn continues in the other file at the target line, and turning back returns one jump at a time. MRK-016 now covers every case in which the jump cannot lead on. Fixture G03 of `playing-order-start.cases` now expects a cross-file jump as an exit instead of ignoring it | Owner decision ("continue in file B", DEC-171) | M6 S4; `core/playing-order`, `core/cross-file`, `state/cross-file*`, `e2e/cross-file.spec` |
 | 2026-11-27 | FIL-032, FIL-042–FIL-045, MRK-015, MRK-017 | Built: referenced files open in the background from the open and recent files; warnings as notices below the top bar; the "don't show again" of the close warning is a setting | V2-M6 S4 (DEC-171) | `features/saving/cross-file-notice` |
 | 2026-11-27 | DEC-168 | The local E2E run at the end of a milestone also runs the `@smoke` tests on the Chromium tablet (`chromium-galaxy-tablet`) | Owner decision | `AGENTS.md`, `docs/roadmap-v2.md` |
+| 2026-11-28 | Tests (V2-M7 S2) | One existing test changed, approved by the owner: `e2e/shell-controls.spec`, UIX-006 expanded: the expected tool strip of organization mode ends in undo and redo (UIX-033). Existing unit tests are unchanged; tests were added to `core/history.spec` and `state/detection-redetect.spec`. |
+| 2026-11-28 | ANN-014, ANN-017 | Moved from V2-M7 to V2-M9: both include editing and deleting systems, which arrive there. V2-M7 built the histories and the mark half of a system deletion | Owner decision (V2-M7 S3 planning) | `docs/milestones/V2-M07.md`, `docs/milestones/V2-M09.md` |
 
 ## V2 changes to V1 requirements
 
@@ -327,7 +329,7 @@ From the identifiers of `docs/v2-requirements.md` (`R-xxx`, `D-n`, idea `#n`) to
 | R-54e | PLT-017 (V2-M17) |
 | R-54f | FIL-039 (V2-M6), FIL-040 (V2-M6) |
 | R-54h-k | FIL-041 (V2-M6) |
-| R-55a | NAV-021 (V2-M7), NAV-022 (V2-M7), ANN-014 (V2-M7), ANN-015 (V2-M7), ANN-016 (V2-M7), ANN-017 (V2-M7) |
+| R-55a | NAV-021 (V2-M7), NAV-022 (V2-M7), ANN-014 (V2-M9), ANN-015 (V2-M7), ANN-016 (V2-M7), ANN-017 (V2-M9) |
 | R-57a | PLT-004, PLT-016 (V1, unchanged) |
 | R-57b | PLT-004, PLT-016 (V1, unchanged) |
 | R-58a | NFR-022 (V2-M14) |
@@ -365,7 +367,7 @@ From the identifiers of `docs/v2-requirements.md` (`R-xxx`, `D-n`, idea `#n`) to
 | D-21 | ANN-037 (V2-M12), ANN-038 (V2-M12), DEC (M0 S2, Bravura dependency) |
 | D-22 | TST-016 (V2-M2) |
 | D-23 | TST-009 (V2-M1), TST-019 (V2-M17) |
-| D-24 | ANN-017 (V2-M7), MRK-013 (V2-M4), MRK-014 (V2-M4), MRK-015 (V2-M6) |
+| D-24 | ANN-017 (V2-M9), MRK-013 (V2-M4), MRK-014 (V2-M4), MRK-015 (V2-M6) |
 | D-25 | FIL-048 (V2-M16) |
 | D-26 | MRK-011 (V2-M4), MRK-032 (V2-M10) |
 | D-27 | ORG-046 (V2-M12) |

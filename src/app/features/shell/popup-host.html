@@ -51,6 +51,7 @@
           ></button>
         }
         <button appIconButton icon="markList" labelKey="markList" [disabled]="noDocument()" (pressed)="store.openPopup(ids.markList)"></button>
+        <app-history-buttons />
       }
       @case (ids.markList) {
         <app-mark-list />

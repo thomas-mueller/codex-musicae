@@ -15,6 +15,7 @@ import { MarkList, POPUP_MARK_LIST } from '../organization/mark-list';
 import { FileItem, POPUP_FILES } from '../files/file-item';
 import { POPUP_RECENT } from '../files/open-file.directive';
 import { ModeSwitch, POPUP_MODES } from '../toolbar/mode-switch';
+import { HistoryButtons } from './history-buttons';
 import { Icon } from './icon';
 import { IconButton } from './icon-button';
 import { LEVEL_ENTRIES, POPUP_ORG } from './tool-area';
@@ -25,7 +26,7 @@ const POPUP_SELECTOR = '[data-popup], [data-popup-trigger]';
 /** Renders at most one popup: a sheet (compact) or a side panel (expanded). UIX-013, 015 */
 @Component({
   selector: 'app-popup-host',
-  imports: [FileItem, Icon, IconButton, MarkList, ModeSwitch, ToolPopup, TranslocoPipe],
+  imports: [FileItem, HistoryButtons, Icon, IconButton, MarkList, ModeSwitch, ToolPopup, TranslocoPipe],
   templateUrl: './popup-host.html',
   styleUrl: './popup-host.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -5,8 +5,9 @@ import { TUNABLES } from '../../config/tunables';
 import { UiStore } from '../state/ui.store';
 import { CommandBus } from './command-bus';
 import type { Command } from './command-bus';
-import { commandForKey, KeyboardInput } from './keyboard-input';
-import type { KeyEventLike } from './keyboard-input';
+import { commandForKey, commandModifier, KeyboardInput } from './keyboard-input';
+import type { CommandModifier, KeyEventLike } from './keyboard-input';
+import { HostPlatform } from '../state/host-platform';
 
 const key = (code: string, extra: Partial<KeyEventLike> = {}): KeyEventLike => ({
   code, shiftKey: false, ctrlKey: false, altKey: false, metaKey: false, repeat: false, ...extra,
@@ -107,5 +108,106 @@ describe('KeyboardInput in the settings mode', () => {
     expect(commands).toEqual([]);
     expect(press('Escape').defaultPrevented).toBe(true);
     expect(commands).toEqual([{ type: 'Back' }]);
+  });
+});
+
+describe('commandModifier', () => {
+  const platforms: ReadonlyArray<[string, CommandModifier]> = [
+    ['MacIntel', 'meta'], ['iPhone', 'meta'], ['iPad', 'meta'], ['iPod', 'meta'],
+    ['Win32', 'ctrl'], ['Linux x86_64', 'ctrl'], ['Linux armv8l', 'ctrl'], ['', 'ctrl'],
+  ];
+  for (const [platform, modifier] of platforms) {
+    it(`NAV-021 "${platform}" uses ${modifier}`, () => {
+      expect(commandModifier(platform)).toBe(modifier);
+    });
+  }
+});
+
+describe('commandForKey: undo and redo', () => {
+  const MAPPINGS = [
+    { modifier: 'meta', held: { metaKey: true }, wrong: { ctrlKey: true } },
+    { modifier: 'ctrl', held: { ctrlKey: true }, wrong: { metaKey: true } },
+  ] as const;
+
+  for (const { modifier, held, wrong } of MAPPINGS) {
+    const z = (extra: Partial<KeyEventLike> = {}) => key('KeyZ', { key: 'z', ...extra });
+
+    it(`NAV-021 ${modifier}+Z is undo and ${modifier}+Shift+Z is redo`, () => {
+      expect(commandForKey(z(held), modifier)).toEqual({ type: 'Undo' });
+      // with Shift held the browser reports the capital letter
+      expect(commandForKey(z({ ...held, key: 'Z', shiftKey: true }), modifier)).toEqual({ type: 'Redo' });
+    });
+
+    it(`NAV-021 ${modifier}: the other modifier, both, Alt, no modifier, other letters and repeats give nothing`, () => {
+      for (const event of [
+        z(wrong), z({ ...held, ...wrong }), z({ ...held, altKey: true }), z({ altKey: true }), z(),
+        key('KeyY', { key: 'y', ...held }), key('KeyA', { key: 'a', ...held }), key('ArrowRight', { key: 'ArrowRight', ...held }),
+        key('Space', { key: ' ', ...held }), z({ ...held, repeat: true }),
+      ]) {
+        expect(commandForKey(event, modifier), JSON.stringify(event)).toBeNull();
+      }
+    });
+  }
+
+  it('NAV-021 the letter on the key counts, not its position (German layout)', () => {
+    expect(commandForKey(key('KeyY', { key: 'z', ctrlKey: true }))).toEqual({ type: 'Undo' });
+    expect(commandForKey(key('KeyZ', { key: 'y', ctrlKey: true }))).toBeNull();
+  });
+
+  it('NAV-021 a layout without Latin letters uses the position of the key', () => {
+    expect(commandForKey(key('KeyZ', { key: '\u044f', ctrlKey: true }))).toEqual({ type: 'Undo' });
+    expect(commandForKey(key('KeyZ', { key: '\u042f', ctrlKey: true, shiftKey: true }))).toEqual({ type: 'Redo' });
+  });
+
+  it('NAV-021 on a Latin layout, a key that types no basic letter is ignored, wherever it is', () => {
+    // `KeyZ` types ";" and ":" on Dvorak; a dead key; Latin letters beyond A to Z
+    for (const [typed, shiftKey] of [[';', false], [':', true], ['Dead', false], ['\u00df', false], ['\u00e9', false]] as const) {
+      expect(commandForKey(key('KeyZ', { key: typed, shiftKey, ctrlKey: true })), typed).toBeNull();
+    }
+  });
+});
+
+describe('KeyboardInput: undo and redo', () => {
+  function setup(platform: string) {
+    TestBed.configureTestingModule({ providers: [{ provide: HostPlatform, useValue: { name: platform } }] });
+    const commands: Command[] = [];
+    TestBed.inject(CommandBus).commands$.subscribe((c) => commands.push(c));
+    TestBed.inject(KeyboardInput);
+    const body = TestBed.inject(DOCUMENT).body;
+    const press = (init: KeyboardEventInit, target: HTMLElement = body): KeyboardEvent => {
+      const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, code: 'KeyZ', key: 'z', ...init });
+      target.dispatchEvent(event);
+      return event;
+    };
+    return { commands, press, body, ui: TestBed.inject(UiStore) };
+  }
+
+  it('NAV-021 on macOS the platform decides: Cmd acts, Ctrl keeps its default', () => {
+    const { commands, press } = setup('MacIntel');
+    expect(press({ ctrlKey: true }).defaultPrevented).toBe(false);
+    expect(press({ metaKey: true }).defaultPrevented).toBe(true);
+    expect(commands).toEqual([{ type: 'Undo' }]);
+  });
+
+  it('NAV-022 the shortcuts act in annotation and organization mode only', () => {
+    const { commands, press, ui } = setup('Win32');
+    ui.hasDocument.set(true);
+    for (const [mode, acts] of [['annotation', true], ['organization', true], ['presentation', false], ['settings', false]] as const) {
+      ui.setMode(mode);
+      commands.length = 0;
+      expect(press({ ctrlKey: true }).defaultPrevented, mode).toBe(acts);
+      expect(press({ ctrlKey: true, shiftKey: true }).defaultPrevented, mode).toBe(acts);
+      expect(commands, mode).toEqual(acts ? [{ type: 'Undo' }, { type: 'Redo' }] : []);
+    }
+  });
+
+  it('NAV-022 a text field keeps the shortcuts', () => {
+    const { commands, press, body } = setup('Win32');
+    const fields = [body.appendChild(body.ownerDocument.createElement('input')), body.appendChild(body.ownerDocument.createElement('textarea'))];
+    for (const field of fields) {
+      expect(press({ ctrlKey: true }, field).defaultPrevented).toBe(false);
+      field.remove();
+    }
+    expect(commands).toEqual([]);
   });
 });

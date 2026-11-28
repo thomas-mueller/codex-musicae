@@ -244,4 +244,26 @@ describe('DetectionService re-run: marks page by page', () => {
     expect(doc.marksPending()).toBe(false);
     expect(doc.systemMarks().stops).toStrictEqual([{ at: { pageIndex: 1, system: 1 } }]);
   });
+
+  it('ANN-015 a re-run drops the history steps on a changed page and keeps those on the other pages', async () => {
+    const { service, open } = setup([1, 2]);
+    const doc = await open();
+    doc.addMark({ kind: 'bookmark', at: { pageIndex: 0, system: 1 } });
+    doc.addMark({ kind: 'bookmark', at: { pageIndex: 1, system: 1 } });
+    await rerun(service, doc);
+    expect(doc.edits.organization.history().undo.map((step) => step.pages)).toEqual([[0]]);
+    doc.edits.organization.undo();
+    expect(doc.systemMarks().bookmarks).toEqual([]);
+  });
+
+  it('ANN-015 a re-run with unchanged system counts keeps every history step', async () => {
+    const { service, open } = setup(1);
+    const doc = await open();
+    doc.addMark({ kind: 'bookmark', at: { pageIndex: 0, system: 1 } });
+    doc.addMark({ kind: 'bookmark', at: { pageIndex: 1, system: 1 } });
+    await rerun(service, doc);
+    expect(doc.edits.organization.history().undo).toHaveLength(2);
+    doc.edits.organization.undo();
+    expect(doc.systemMarks().bookmarks).toHaveLength(1);
+  });
 });
