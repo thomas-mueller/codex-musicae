@@ -1,6 +1,6 @@
 name: e2e
 
-# End-to-end tests (Playwright): the whole suite on the three desktop engines, the @smoke subset (open, navigate, draw, save a copy)
+# End-to-end tests (Playwright): the whole suite on the three desktop engines, the @smoke subset (open, navigate, draw, save as a new file)
 # on every phone and tablet profile (PLT-011). Temporarily optional: this workflow is not
 # referenced by deploy-web or android, so a red run here never blocks a deployment or an APK (PIP-001, DEC-100).
 #

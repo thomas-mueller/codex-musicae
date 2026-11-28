@@ -11,10 +11,10 @@ Accepted on purpose. They are not bugs; do not "fix" them in a v1 milestone.
 - **LIM-005** Marks in the middle of a system (repeat signs, coda) cannot be represented; whole systems only.
 - **LIM-006** No manual editing of detected boxes; the level is the only correction. *Lifted by V2 → ORG-034…ORG-040 (refine and delete tools, V2-M9).*
 - **LIM-007** If embedded data is missing or stripped (for example by another PDF editor), detection reruns and manual jumps, breaks, stops and ratio overrides are lost.
-- **LIM-008** Browsers other than Chromium cannot save in place; they offer "save a copy".
+- **LIM-008** Browsers other than Chromium cannot save in place; "save as new file" downloads a copy there.
 - **LIM-009** iPhone Safari has no Fullscreen API; only the app UI is hidden (installing as a home-screen PWA gets closer).
 - **LIM-010** Chromium on the web needs one tap to re-grant file permission after a restart; other browsers need a re-pick.
-- **LIM-011** Android in-place writing is a truncating write, not atomic; a crash during the write can corrupt the file. The in-memory state is kept for "save a copy".
+- **LIM-011** Android in-place writing is a truncating write, not atomic; a crash during the write can corrupt the file. The in-memory state is kept while the app runs.
 - **LIM-012** External changes to an open file are not detected.
 - **LIM-013** Saving rewrites the whole PDF in memory; very large scanned PDFs may fail to save. The app shows the error icon and keeps working.
 - **LIM-014** Other viewers clip strokes at the page edge.
@@ -32,6 +32,9 @@ Accepted on purpose. They are not bugs; do not "fix" them in a v1 milestone.
 - **LIM-027** A jump, slide break or stop that is never reached in the playing order has no playing-order numbers: it is listed at the end of the marks list, dimmed, with the placeholder `T:layout.unknownNumber` (ORG-018, ORG-021).
 - **LIM-032** File identity for cross-file marks and per-file choices is the file name only (D-1): two different files with the same name in different folders share per-file choices, and renaming a referenced file breaks its cross-file marks (they count as unresolved). (V2: FIL-041, MRK-012)
 - **LIM-033** On displays whose slide bitmap is larger than the working raster allows (4K, or any stage that needs more than about 4.9 pixels per point on an A4 page), the first view of each slide is a direct render from the PDF and takes longer on scans with large images; slides of a page that is still warm (NFR-026) are faster. (V2-M2b, DEC-148)
+- **LIM-034** A file whose save keeps failing for another reason than missing write access (for example a storage provider that rejects the write) cannot be closed: closing saves again, and when that fails the file stays open with the error icon (FIL-006, D-6). Since "save a copy" was removed (DEC-167) there is no way to write its changes elsewhere. Owner decision (2026-11-27): no close question in this case. (V2-M6 S2)
+- **LIM-035** A referenced file is found only among the open files and the recent list (at most `T:resources.recentFilesMax` files; in free and web only those of the current run). Otherwise the user opens it by hand (FIL-042, FIL-043, DEC-171).
+- **LIM-036** Nothing rendered is kept of a file that is not current (NFR-020), so the first slide after a jump into another file is drawn only at the page turn; on large scans that takes a moment.
 - **LIM-023** Samsung Internet is treated as covered by Chromium and verified on a real device only.
 
 ## Future versions (backlog)
@@ -64,6 +67,6 @@ Ideas not yet refined into requirements. To promote an item: create a requiremen
 - **BKL-024** Password-protected PDFs. 
 - **BKL-025** Keyboard shortcuts beyond undo and redo, and their mapping and remapping (idea #55). *V3 (D-28).*
 - **LIM-028** Ink annotations that are direct dictionaries inside `/Annots` (not indirect objects) are not listed by `PdfWriter.listInk` because they have no object number to erase; with pdf.js annotations disabled they are not drawn by the app but stay in the file. Extremely rare in practice. (M15 S2)
-- **LIM-029** Closing a read-only tab (or one whose file turned out not to be writable) drops its unsaved in-memory changes without asking; "save a copy" is the way to keep them. (FIL-016, M15 S3)
+- **LIM-029** *Lifted in V2-M6 S2 (FIL-049): closing a file whose changes would be lost, read-only ones included, now asks first.*
 - **LIM-030** Annotations of other apps that are not ink (highlights, notes, stamps, links, form widgets) are not shown in the app, because pdf.js renders without annotations so that ink is never drawn twice; they stay in the file untouched (SAV-013). Ink with a name (`/NM`) that another ink annotation already uses is also not shown (it stays in the file). (M15 S4) *Partly lifted by V2: the app's own text and stamps are shown (V2-M12); annotations of other apps stay as described.*
 - **LIM-031** If the browser or an enterprise policy (for example in Edge on Windows) refuses the Fullscreen API for the page, presentation mode opens windowed after one retry on the next gesture; F11 is the workaround. The reason is in the DevTools console (`fullscreen denied`). (PLT-016)

@@ -158,3 +158,21 @@ describe('RegionRenderer.renderRegionCached', () => {
     expect(regions.estimatedBytes(REGION, 1)).toBeLessThan(full);
   });
 });
+
+describe('RegionRenderer: a document that is not shown (NFR-020)', () => {
+  it('NFR-020 a render that ends after its file was left is closed, not cached, and the renderer releases what it kept', async () => {
+    const { doc, handle, regions, cache } = await setup();
+    const releaseRendered = vi.fn();
+    handle.releaseRendered = releaseRendered;
+    const late = fakeBitmap();
+    handle.renderRegion.mockImplementation(() => {
+      doc.shown = false; // the user switches files while the page renders
+      return Promise.resolve(ok(late));
+    });
+    const result = await regions.renderRegionCached(doc, { pageIndex: 0, region: REGION, scale: 1 }, signal());
+    expect(result).toEqual(err('cancelled'));
+    expect(late.close).toHaveBeenCalled();
+    expect(cache.totalBytes).toBe(0);
+    expect(releaseRendered).toHaveBeenCalled();
+  });
+});

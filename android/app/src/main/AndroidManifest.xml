@@ -31,6 +31,13 @@
                 <data android:mimeType="application/pdf" android:scheme="file" />
             </intent-filter>
 
+            <!-- A PDF shared from another app (share sheet, FIL-029). -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/pdf" />
+            </intent-filter>
+
         </activity>
 
         <provider

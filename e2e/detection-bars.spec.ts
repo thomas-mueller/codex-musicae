@@ -1,7 +1,8 @@
 import { expect, test } from '@playwright/test';
 
 import { TUNABLES } from '../src/config/tunables';
-import { enterOrganization, label, openScore, SCORE_BARS, SCORE_PAGES } from './support/score';
+import { enterOrganization, openScore, SCORE_BARS, SCORE_PAGES } from './support/score';
+import { clickMode } from './support/modes';
 import { DETECTION_TIMEOUT_MS, scaled } from './support/timing';
 
 const DEV_URL = 'http://127.0.0.1:4174';
@@ -26,7 +27,7 @@ test('ORG-008 DET-016 DET-019 the standard score gets its bars, progress disappe
     }).observe({ type: 'longtask', buffered: true });
   });
   await page.goto('/');
-  await page.getByLabel(label('modeOrganization'), { exact: true }).click();
+  await clickMode(page, 'modeOrganization');
   await page.evaluate(() => ((globalThis as unknown as { __longTasks: number[] }).__longTasks.length = 0));
   await openScore(page);
   await enterOrganization(page);

@@ -3,6 +3,7 @@ import { TUNABLES } from '../src/config/tunables';
 import { desktopTest } from './support/desktop';
 import { PAID_URL } from './support/editions';
 import { readTranslations } from './support/fit';
+import { clickMode, type ModeKey } from './support/modes';
 import { label, openScore, openScoreInAnnotation, waitForFinalSlideCount } from './support/score';
 
 const shell = (page: Page): Locator => page.locator('app-shell');
@@ -97,7 +98,7 @@ test.describe('reset dialog at the minimum supported width', () => {
 
 test('UIX-025 UIX-026 the settings button opens the four groups and returns to the previous mode', { tag: '@smoke' }, async ({ page }) => {
   await page.goto('/');
-  await button(page, 'modeOrganization').click();
+  await clickMode(page, 'modeOrganization');
   await button(page, 'settings').click();
   await expect(shell(page)).toHaveAttribute('data-mode', 'settings');
   await expect(page.locator('app-settings-view section h2')).toHaveCount(GROUPS.length);
@@ -128,7 +129,7 @@ test.describe('at the minimum supported width', () => {
   test('UIX-016 UIX-025 UIX-034 every top-bar button is fully visible and touch-sized in every mode', async ({ page }) => {
     await page.goto('/');
     for (const mode of ['modeAnnotation', 'modeOrganization', 'settings']) {
-      await button(page, mode).click();
+      await (mode === 'settings' ? button(page, mode).click() : clickMode(page, mode as ModeKey));
       const boxes = await page.locator('[data-area="top"] button').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().toJSON() as DOMRect));
       expect(boxes.length, mode).toBeGreaterThan(0);
       for (const box of boxes) {

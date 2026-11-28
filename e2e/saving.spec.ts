@@ -70,6 +70,7 @@ desktopTest('SAV-001 SAV-004 SAV-006 SAV-011 PLT-010 ANN-005 a saved copy holds 
   const middle = (line.from.x + line.to.x) / 2;
   await drag(page, { x: middle, y: line.from.y - 30 }, { x: middle, y: line.from.y + 30 });
   await expect.poll(() => inkedPixelsNear(penInk(page), RED, COLOR_TOLERANCE)).toBe(0);
+  await page.getByTestId('notice-dismiss').click(); // FIL-039: the notice of the read-only file lies over the top of the slide
   await expect.poll(() => redPixelsOnSlide(page)).toBe(0);
 });
 

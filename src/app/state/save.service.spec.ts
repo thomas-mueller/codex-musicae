@@ -223,3 +223,107 @@ describe('SaveService (M15 S1)', () => {
     expect(run).not.toHaveBeenCalled();
   });
 });
+
+describe('SaveService: asking before a write (V2-M6 S2)', () => {
+  async function gated({ enabled = true } = {}) {
+    const doc = new DocumentStore('t1', fakeRenderer(), undefined, () => clock.now());
+    await doc.load(new Uint8Array([1]));
+    const clock = new FakeClock();
+    const run = vi.fn(() => Promise.resolve(true));
+    const answer = { permitted: false };
+    const permit = vi.fn(() => Promise.resolve(answer.permitted));
+    const onUnwritable = vi.fn();
+    const saver = new SaveService(doc, clock, run, IDLE, TestBed.inject(Injector), enabled, { permit, onUnwritable });
+    TestBed.tick();
+    return { doc, clock, run, saver, permit, answer, onUnwritable };
+  }
+
+  it('FIL-034 while the answer is missing nothing is written, the marker stays and no timer asks again', async () => {
+    const { doc, clock, run, saver, permit } = await gated();
+    doc.addStroke(STROKE);
+    clock.advance(IDLE);
+    await settle();
+    expect(permit).toHaveBeenCalledTimes(1);
+    expect(run).not.toHaveBeenCalled();
+    expect(doc.unsaved()).toBe(true);
+    expect(doc.saveHeld()).toBe(true);
+    editMarks(doc);
+    TestBed.tick();
+    clock.advance(IDLE * 3);
+    await saver.force();
+    expect(permit).toHaveBeenCalledTimes(1);
+    expect(run).not.toHaveBeenCalled();
+    expect(saver.dirty()).toBe(true);
+  });
+
+  it('FIL-033 after the answer resume saves the waiting changes, and later saves run', async () => {
+    const { doc, clock, run, saver, answer } = await gated();
+    doc.addStroke(STROKE);
+    clock.advance(IDLE);
+    await settle();
+    answer.permitted = true;
+    saver.resume();
+    await settle();
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(doc.unsaved()).toBe(false);
+    editMarks(doc);
+    TestBed.tick();
+    clock.advance(IDLE);
+    await settle();
+    expect(run).toHaveBeenCalledTimes(2);
+  });
+
+  it('FIL-035 the save due after detection asks as well', async () => {
+    const { doc, clock, run, permit } = await gated();
+    doc.detection.reset(1);
+    TestBed.tick();
+    doc.detection.finish(0, 'done', { pageIndex: 0, width: 1, height: 1, systems: [] });
+    TestBed.tick();
+    clock.advance(IDLE);
+    await settle();
+    expect(permit).toHaveBeenCalledTimes(1);
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  for (const [what, enabled, readOnly] of [['a read-only file', true, true], ['a build that does not save', false, false]] as const) {
+    it(`FIL-047 SAV-012 detection alone does not mark ${what} as changed`, async () => {
+      const { doc, saver, onUnwritable } = await gated({ enabled });
+      doc.readOnly.set(readOnly);
+      doc.detection.reset(1);
+      TestBed.tick();
+      doc.detection.finish(0, 'done', { pageIndex: 0, width: 1, height: 1, systems: [] });
+      TestBed.tick();
+      expect(saver.dirty()).toBe(false);
+      expect(doc.unsaved()).toBe(false);
+      expect(onUnwritable).not.toHaveBeenCalled();
+    });
+  }
+
+  it('FIL-039 a change of a read-only file reports it, after the stroke, and writes nothing', async () => {
+    const { doc, clock, run, onUnwritable } = await gated();
+    doc.readOnly.set(true);
+    doc.strokeStarted();
+    expect(onUnwritable).not.toHaveBeenCalled();
+    doc.addStroke(STROKE);
+    doc.strokeEnded();
+    expect(onUnwritable).toHaveBeenCalled();
+    clock.advance(IDLE * 3);
+    await settle();
+    expect(run).not.toHaveBeenCalled();
+    expect(doc.unsaved()).toBe(true);
+  });
+
+  it('FIL-037 saveNow runs its own save although the autosave is held; a failure keeps the changes', async () => {
+    const { doc, clock, run, saver } = await gated();
+    doc.addStroke(STROKE);
+    clock.advance(IDLE);
+    await settle();
+    await expect(saver.saveNow(() => Promise.resolve(false))).resolves.toBe(false);
+    expect(saver.dirty()).toBe(true);
+    expect(doc.saveFailed()).toBe(true);
+    await expect(saver.saveNow(() => Promise.resolve(true))).resolves.toBe(true);
+    expect(saver.dirty()).toBe(false);
+    expect(doc.saveFailed()).toBe(false);
+    expect(run).not.toHaveBeenCalled();
+  });
+});

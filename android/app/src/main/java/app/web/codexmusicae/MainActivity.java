@@ -11,14 +11,14 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(ImmersivePlugin.class);
         registerPlugin(DocumentAccessPlugin.class);
         super.onCreate(savedInstanceState);
-        DocumentAccessPlugin.handleViewIntent(this, getIntent());
+        DocumentAccessPlugin.handleIncomingIntent(this, getIntent());
     }
 
-    /** "Open with" while the app is running (launchMode singleTask). FIL-018 */
+    /** "Open with" or a share while the app is running (launchMode singleTask). FIL-018, FIL-029 */
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        DocumentAccessPlugin.handleViewIntent(this, intent);
+        DocumentAccessPlugin.handleIncomingIntent(this, intent);
     }
 
     @Override

@@ -37,13 +37,16 @@ export const deriveInputCases: ReadonlyArray<{
     expected: { systemCount: 5, startJunction: 3, jumps: [], stops: [], breaks: [], maxLength: MAX },
   },
   {
-    id: 'G03', req: 'PLY-014', name: 'missing systems and cross-file jumps are left out', counts: [3, 0, 2],
+    id: 'G03', req: 'PLY-014, PLY-017', name: 'missing systems are left out; a cross-file jump takes part as an exit', counts: [3, 0, 2],
     marks: marks({
       jumps: [J(1, s(0, 2), { file: 'Coda.pdf', pageIndex: 0, system: 1 }), J(2, s(1, 1), s(0, 1)), J(3, s(2, 1), s(0, 9))],
       stops: [{ at: s(1, 1) }],
       breaks: [{ at: s(3, 1) }],
     }),
-    expected: { systemCount: 5, startJunction: 0, jumps: [], stops: [], breaks: [], maxLength: MAX },
+    expected: {
+      systemCount: 5, startJunction: 0, stops: [], breaks: [], maxLength: MAX,
+      jumps: [{ origin: 2, target: 2, pass: 1, exit: { jumpId: 1, to: { file: 'Coda.pdf', pageIndex: 0, system: 1 } } }],
+    },
   },
   {
     id: 'G04', req: 'PLY-015', name: 'a start mark on a missing system counts as absent', counts: [3],

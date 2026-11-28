@@ -44,7 +44,7 @@ src/
     state/                      signal stores and services
     input/                      keymap, gesture recognizers, command bus
     features/                   standalone OnPush components per area
-      shell/ tabs/ toolbar/ organization/ slides/ presentation/ annotation/
+      shell/ files/ toolbar/ organization/ slides/ presentation/ annotation/
   assets/i18n/en.json           translation file
 ```
 
@@ -74,7 +74,7 @@ Signatures are fixed in the milestone files (M4); this table fixes responsibilit
 | `PdfRenderer` | open a document from bytes; page count; page geometry in display space; render a region or tile to an `ImageBitmap` with cancellation | pdf.js | M8 |
 | `PdfWriter` | read embedded metadata and existing ink; produce new file bytes with ink annotations and metadata (runs in a worker); V2: text and stamp annotations with appearance streams (V2-M12), flattened export copy (V2-M15) | pdf-lib | M15 |
 | `DetectionEngine` | binarize one page's bitmap (rendered at a level's scale) with the level's adaptive threshold and return its connected components (rectangle and pixel area); V2: a parameter set (width and height limits, dpi) replaces the levels, and the component boxes are returned for refinement (V2-M8) | OpenCV.js worker | M10 |
-| `FileAccess` | pick files; read bytes; check writability; write in place; save a copy; persist and restore file references | web (File System Access / download), Android (SAF plugin) | M8, M15, M16 |
+| `FileAccess` | pick files; read bytes; check writability; write in place; create a new file; download a copy; persist and restore file references | web (File System Access / download), Android (SAF plugin) | M8, M15, M16 |
 | `Preferences` | small JSON key-value store for UI state and file references | localStorage + IndexedDB, Capacitor Preferences | M8 |
 | `AppLifecycle` | signals for hidden/visible, pause/resume, battery saver where detectable | web, Capacitor | M10, M15 |
 | `Fullscreen` | enter/exit true fullscreen, report exits | Fullscreen API, Android immersive | M16 |
@@ -132,8 +132,8 @@ Port methods return `Result<T, E>` with a closed set of error codes per port; ad
 ## Testing strategy
 
 - **Unit (Vitest):** all of `core/` first (M4 writes the tests from the spec tables, M5/M6 make them pass), then stores with fake ports.
-- **Component tests:** shell, toolbar, tabs with fake ports.
-- **E2E (Playwright, Chromium/Firefox/WebKit):** open a PDF, navigate, switch modes, draw, save a copy.
+- **Component tests:** shell, toolbar, files with fake ports.
+- **E2E (Playwright, Chromium/Firefox/WebKit):** open a PDF, navigate, switch modes, draw, save as a new file.
 - **Golden detection corpus** and **PDF round trip** (M17); **performance budgets** against a large reference PDF (M17).
 - **Corpus suites (V2-M3b, DEC-152):** every real PDF of `e2e/corpus/` belongs to the `detection` suite (systems per page against the owner's reviewed counts, run under the profiles of `profiles.json` on each engine of the entry, differences recorded as `deviations`), the `load` suite (Chromium: detection and navigation in parallel, `T:budgets`, cache and canvas invariants, fails the `perf` job) or both. A change of detection algorithm or settings is a new profile.
   - **Profiles:** `e2e/corpus/profiles.json` names the ways to run detection (today `v1-fast`, `v1-standard` (default), `v1-fine`); `runProfile` in `e2e/support/corpus.ts` is the only place that turns a profile into a call of the debug hook. An entry is asserted under the default profiles plus its own `profiles`; `expectedFor(entry, profile, engine)` (`scripts/lib/corpus-files.mjs`) picks the matching `deviation` or the reviewed counts.
@@ -163,7 +163,8 @@ Overview of the structural changes of V2 (`docs/roadmap-v2.md`); the milestone f
 ### Cross-file references (DEC-128, V2-M4, V2-M6)
 
 - A reference is `{ fileName, page, systemOnPage }` and is stored only in the embedded metadata of the file where the mark was created (MRK-012).
-- Resolution runs in `state/`: the file is looked up by name among the open files and the files with persisted access through `FileAccess`; none or several matches leave the reference unresolved (FIL-042, FIL-043). An unresolved reference stays stored, and slide mode stops at it (MRK-016).
+- Resolution runs in `state/` (`CrossFileService`, DEC-171) over the pure rules of `core/cross-file`: the file is looked up by name among the open files and then the recent list, the files the app keeps access to through `FileAccess`; none or several matches leave the reference unresolved (FIL-042, FIL-043). Referenced files open in the background (`SessionStore.openFiles` with `background`, FIL-045). The state of a reference is derived from the open files and never stored; an unresolved reference stays in the metadata.
+- In the playing order a cross-file jump is an exit (PLY-017). `CrossFilePlayback` carries the player over: it sets the target's temporary start (`DocumentStore.arrival`), keeps the chain of jumps in memory and routes next and previous, so buttons, keys, pedal, taps and swipes behave alike (FIL-051, FIL-052). While a target is not resolved, slide mode stops at the exit (MRK-016).
 
 ## Angular guideline conformance
 

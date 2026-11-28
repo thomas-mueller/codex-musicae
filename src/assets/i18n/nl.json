@@ -14,9 +14,10 @@
     "undo": "Undo",
     "redo": "Redo",
     "openFile": "Open file",
-    "closeTab": "Close tab",
+    "previousFile": "Previous file",
+    "nextFile": "Next file",
+    "closeTab": "Close file",
     "save": "Save",
-    "saveCopy": "Save a copy",
     "readOnly": "Read-only",
     "error": "Error",
     "processing": "Processing",
@@ -44,7 +45,6 @@
     "overflow": "More",
     "settings": "Settings",
     "resetSettings": "Reset all settings",
-    "info": "Info",
     "cancel": "Cancel",
     "confirm": "Confirm",
     "levelConfirm": "Re-run detection at this level",
@@ -56,8 +56,6 @@
     "pageSlider": "Page position",
     "slideIndicator": "Slide number",
     "pageIndicator": "Page number",
-    "tabSwitcher": "Tabs",
-    "tabBar": "Tabs",
     "toolFab": "Tools",
     "orgFab": "Organization tools",
     "modeSwitch": "Mode",
@@ -75,9 +73,15 @@
     "grantWriteAccess": "Allow saving",
     "needsReopen": "Open the file again",
     "recentFiles": "Recent files",
-    "tabList": "Open tabs",
     "toolColor": "Color",
-    "toolWidth": "Line width"
+    "toolWidth": "Line width",
+    "fileBar": "Files",
+    "fileList": "Open files",
+    "overwriteDialog": "Overwrite the file",
+    "closeDialog": "Close without saving",
+    "saveNotice": "File can't be saved",
+    "crossFileNotice": "Referenced file",
+    "dismissNotice": "Dismiss notice"
   },
   "tooltip": {
     "modeOrganization": "Organization mode",
@@ -89,9 +93,10 @@
     "undo": "Undo",
     "redo": "Redo",
     "openFile": "Open file",
-    "closeTab": "Close tab",
+    "previousFile": "Previous file",
+    "nextFile": "Next file",
+    "closeTab": "Close file",
     "save": "Save",
-    "saveCopy": "Save a copy",
     "readOnly": "Read-only",
     "error": "Error",
     "processing": "Processing",
@@ -119,7 +124,6 @@
     "overflow": "More",
     "settings": "Settings",
     "resetSettings": "Reset all settings",
-    "info": "Info",
     "cancel": "Cancel",
     "confirm": "Confirm",
     "levelConfirm": "Re-run detection at this level",
@@ -131,8 +135,6 @@
     "pageSlider": "Page position",
     "slideIndicator": "Slide number",
     "pageIndicator": "Page number",
-    "tabSwitcher": "Tabs",
-    "tabBar": "Tabs",
     "toolFab": "Tools",
     "orgFab": "Organization tools",
     "modeSwitch": "Mode",
@@ -150,9 +152,9 @@
     "grantWriteAccess": "Allow saving",
     "needsReopen": "Open the file again",
     "recentFiles": "Recent files",
-    "tabList": "Open tabs",
     "toolColor": "Color",
-    "toolWidth": "Line width"
+    "toolWidth": "Line width",
+    "dismissNotice": "Dismiss notice"
   },
   "settings": {
     "groups": {
@@ -177,6 +179,35 @@
         "pt-BR": "Português (Brasil)",
         "nl": "Nederlands"
       }
+    }
+  },
+  "crossFile": {
+    "missingFile": "This referenced file is not open.",
+    "ambiguous": "Several files have this name, so none of them is used.",
+    "noAccess": "The app may not open this referenced file by itself.",
+    "missingSystem": "The referenced line is no longer in this file.",
+    "openFile": "Open this file",
+    "closed": "is closed. These open files refer to it: {{referrers}}",
+    "dontShowAgain": "Don't show again"
+  },
+  "save": {
+    "overwrite": {
+      "question": "Overwrite this file with your changes?",
+      "overwrite": "Overwrite",
+      "saveAs": "Save as new file",
+      "cancel": "Cancel",
+      "silenceFile": "Don't ask again for this file",
+      "silenceAll": "Don't ask again for any file"
+    },
+    "close": {
+      "question": "This file has changes that are not saved.",
+      "saveAs": "Save as new file",
+      "discard": "Discard changes",
+      "cancel": "Cancel"
+    },
+    "notice": {
+      "text": "This file can't be saved.",
+      "saveAs": "Save as new file"
     }
   }
 }

@@ -1,4 +1,5 @@
 import { TUNABLES } from '../../../config/tunables';
+import { BITMAP_BYTES_PER_PIXEL } from '../../core/prefetch-budget';
 import { classifyRaster, fitScaleToPixelCap } from '../../core';
 import type { RasterVerdict } from '../../core';
 import type { PdfDocumentHandle, PdfOpenError, PdfPageInfo, PdfRenderError, PdfRenderer, RenderRequest, WorkingRaster } from '../../ports/pdf-renderer';
@@ -164,6 +165,8 @@ interface RasterEntry {
   settled: boolean;
   /** The source render has begun: it is not cancelled any more, so a page is not rendered twice (NFR-025). */
   started: boolean;
+  /** Size of the built raster; 0 until it is built. */
+  bytes: number;
 }
 
 class WorkingResolutionHandle implements PdfDocumentHandle {
@@ -245,6 +248,35 @@ class WorkingResolutionHandle implements PdfDocumentHandle {
     }
   }
 
+  /**
+   * NFR-020: drops every raster and what the source keeps of the pages. A build somebody waits for still finishes, and its
+   * raster is closed only after that caller has drawn from it; a later request builds the page again.
+   */
+  releaseRendered(): void {
+    for (const pageIndex of [...this.rasters.keys()]) {
+      this.discard(pageIndex);
+    }
+    this.source.releaseRendered?.();
+  }
+
+  renderedBytes(): number {
+    return [...this.rasters.values()].reduce((sum, entry) => sum + entry.bytes, 0);
+  }
+
+  /**
+   * Forgets a raster and closes it once it is built. The close waits for a new task: callers waiting for the build draw
+   * from the raster in the microtasks that follow it.
+   */
+  private discard(pageIndex: number): void {
+    const entry = this.rasters.get(pageIndex);
+    this.rasters.delete(pageIndex);
+    void entry?.pending.then((raster) => {
+      if (raster.ok) {
+        setTimeout(() => raster.value.bitmap.close());
+      }
+    });
+  }
+
   async destroy(): Promise<void> {
     this.lifetime.abort();
     const rasters = [...this.rasters.values()];
@@ -292,8 +324,10 @@ class WorkingResolutionHandle implements PdfDocumentHandle {
       waiters: 0,
       settled: false,
       started: false,
+      bytes: 0,
       pending: this.build(pageIndex, width, height, scale, controller.signal, () => (entry.started = true)).then((result) => {
         entry.settled = true;
+        entry.bytes = result.ok ? result.value.bitmap.width * result.value.bitmap.height * BITMAP_BYTES_PER_PIXEL : 0;
         this.lifetime.signal.removeEventListener('abort', abort);
         if (!result.ok && this.rasters.get(pageIndex) === entry) {
           this.rasters.delete(pageIndex); // failures are not cached

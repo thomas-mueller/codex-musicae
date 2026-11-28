@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { clickMode } from './support/modes';
 import { label, openScoreInAnnotation } from './support/score';
 
 test.use({ viewport: { width: 1280, height: 800 } });
@@ -54,7 +55,7 @@ test('NAV-018 NAV-019 presentation mode: keys turn slides and Esc returns to ann
   const n = await openScoreInAnnotation(page);
   await page.keyboard.press('PageDown');
   await expect(indicator(page)).toHaveText(`2 / ${n}`);
-  await page.getByLabel(label('modePresentation'), { exact: true }).click();
+  await clickMode(page, 'modePresentation');
   await expect(shell(page)).toHaveAttribute('data-mode', 'presentation');
   await expect(page.locator('app-bottom-bar')).toBeHidden(); // UIX-009
   const second = await progressWidth(page);

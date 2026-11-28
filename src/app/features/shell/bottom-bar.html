@@ -46,7 +46,7 @@
   <button appIconButton icon="showMore" labelKey="showMore" [disabled]="showMoreDisabled()" (pressed)="aspect.showMore()"></button>
   <button appIconButton icon="showLess" labelKey="showLess" [disabled]="showLessDisabled()" (pressed)="aspect.showLess()"></button>
 }
-@if (compact()) {
+@if (compact() && annotation()) {
   <button
     appIconButton
     data-popup-trigger

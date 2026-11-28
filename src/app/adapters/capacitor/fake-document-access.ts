@@ -84,10 +84,10 @@ export function fakeDocumentAccess(): FakeDocumentAccess {
       writers.delete(handle);
       return Promise.resolve();
     },
-    createDocument: () => {
+    createDocument: ({ name }) => {
       fake.calls.push('createDocument');
       if (fake.created !== undefined) fake.files.set(fake.created, { bytes: new Uint8Array(), writable: true });
-      return Promise.resolve(fake.created === undefined ? {} : { id: fake.created });
+      return Promise.resolve(fake.created === undefined ? {} : { id: fake.created, name });
     },
     isPersisted: ({ id }) => Promise.resolve({ persisted: fake.files.has(id) }),
     forget: ({ id }) => {

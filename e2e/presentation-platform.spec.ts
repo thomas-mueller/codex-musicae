@@ -11,7 +11,7 @@ const shell = (page: Page) => page.locator('app-shell');
 test('PLT-004 PLT-005 chromium: a click enters fullscreen; Esc leaves it and returns to annotation mode', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium', 'Fullscreen API with a synthetic click: Chromium');
   await openScoreInAnnotation(page);
-  await modeButton(page, 'modePresentation').click();
+  await (await modeButton(page, 'modePresentation')).click();
   await expect(shell(page)).toHaveAttribute('data-mode', 'presentation');
   await expect.poll(() => isFullscreen(page)).toBe(true);
   await leavePresentationWithEscape(page);
@@ -21,7 +21,7 @@ test('PLT-004 PLT-005 chromium: a click enters fullscreen; Esc leaves it and ret
 test('PLT-004 chromium: the center tap leaves fullscreen', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium', 'Fullscreen API with a synthetic click: Chromium');
   await openScoreInAnnotation(page);
-  await modeButton(page, 'modePresentation').click();
+  await (await modeButton(page, 'modePresentation')).click();
   await expect.poll(() => isFullscreen(page)).toBe(true);
   const box = (await page.locator('app-canvas-area .content').boundingBox())!;
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
@@ -32,7 +32,7 @@ test('PLT-004 chromium: the center tap leaves fullscreen', async ({ page }, test
 desktopTest('PLT-005 the wake lock is acquired on entering presentation and released on leaving', async ({ page }) => {
   await recordWakeLock(page);
   await openScoreInAnnotation(page);
-  await modeButton(page, 'modePresentation').click();
+  await (await modeButton(page, 'modePresentation')).click();
   await expect(shell(page)).toHaveAttribute('data-mode', 'presentation');
   await expect.poll(() => wakeLog(page)).toEqual(['acquire']);
   await leavePresentationWithEscape(page);
@@ -42,7 +42,7 @@ desktopTest('PLT-005 the wake lock is acquired on entering presentation and rele
 desktopTest('PLT-004 PLT-005 without Fullscreen and Wake Lock APIs presentation mode still opens', async ({ page }) => {
   await removeFullscreenAndWakeLock(page);
   await openScoreInAnnotation(page);
-  await modeButton(page, 'modePresentation').click();
+  await (await modeButton(page, 'modePresentation')).click();
   await expect(shell(page)).toHaveAttribute('data-mode', 'presentation');
   await leavePresentationWithEscape(page);
 });
@@ -60,7 +60,7 @@ test('PLT-016 chromium: a refused options request falls back to the plain reques
   test.skip(testInfo.project.name !== 'chromium', 'Fullscreen API with a synthetic click: Chromium');
   await rejectFullscreenRequests(page, { onlyWithOptions: true });
   await openScoreInAnnotation(page);
-  await modeButton(page, 'modePresentation').click();
+  await (await modeButton(page, 'modePresentation')).click();
   await expect(shell(page)).toHaveAttribute('data-mode', 'presentation');
   await expect.poll(() => isFullscreen(page)).toBe(true);
   await leavePresentationWithEscape(page);
@@ -71,7 +71,7 @@ test('PLT-016 chromium: a fully refused entry is retried on the next gesture and
   test.skip(testInfo.project.name !== 'chromium', 'Fullscreen API with a synthetic click: Chromium');
   await rejectFullscreenRequests(page, { rejectCalls: 3 });
   await openScoreInAnnotation(page);
-  await modeButton(page, 'modePresentation').click();
+  await (await modeButton(page, 'modePresentation')).click();
   await expect(shell(page)).toHaveAttribute('data-mode', 'presentation');
   await expect.poll(() => isFullscreen(page)).toBe(false);
   await page.keyboard.press('ArrowRight');

@@ -3,6 +3,9 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { FIT_VIEW } from '../core';
 import { AspectRatioService } from '../state/aspect-ratio.service';
+import { CrossFilePlayback } from '../state/cross-file-playback.service';
+import { CrossFileService } from '../state/cross-file.service';
+import { FilePrompts } from '../state/file-prompts';
 import { OrgViewStore } from '../state/org-view.store';
 import { PresentationPlatform } from '../state/presentation-platform';
 import { SessionStore } from '../state/session.store';
@@ -25,6 +28,9 @@ export class NavigationHandler {
   private readonly aspect = inject(AspectRatioService);
   private readonly gate = inject(StrokeGate);
   private readonly platform = inject(PresentationPlatform);
+  private readonly prompts = inject(FilePrompts);
+  private readonly playback = inject(CrossFilePlayback);
+  private readonly crossFile = inject(CrossFileService);
   private previousMode = this.ui.mode();
 
   constructor() {
@@ -116,7 +122,7 @@ export class NavigationHandler {
     return doc?.status() === 'ready' ? doc : null;
   }
 
-  /** NAV-003: clamped, no wrap. NAV-005: organization mode moves by page. */
+  /** NAV-003: clamped, no wrap. NAV-005: organization mode moves by page. FIL-051, FIL-052: a turn may change the file. */
   private step(direction: 1 | -1): void {
     const mode = this.ui.mode();
     if (mode === 'settings') {
@@ -125,10 +131,7 @@ export class NavigationHandler {
     if (mode === 'organization') {
       return direction === 1 ? this.org.next() : this.org.previous();
     }
-    const doc = this.readyDocument();
-    if (doc && doc.slideCount() > 0) {
-      doc.goToSlide(doc.currentSlideIndex() + direction);
-    }
+    this.playback.step(direction);
   }
 
   private jump(which: 'first' | 'last'): void {
@@ -161,12 +164,22 @@ export class NavigationHandler {
 
   /** NAV-018: the first applicable step wins. Returns whether one applied (the Android back button minimizes the app otherwise, PLT-007). */
   handleBack(): boolean {
-    if (this.ui.pendingReset()) {
+    const prompt = this.prompts.current();
+    const notice = this.prompts.notice();
+    const crossFile = this.crossFile.notice();
+    if (prompt !== null) {
+      // Escape and Back answer a save question with Cancel (DEC-166)
+      void (prompt.kind === 'overwrite' ? this.session.answerOverwrite(prompt, 'cancel') : this.session.answerClose(prompt, 'cancel'));
+    } else if (this.ui.pendingReset()) {
       this.ui.cancelReset();
     } else if (this.ui.pendingLevel() !== null) {
       this.ui.cancelLevel();
     } else if (this.ui.popup() !== null) {
       this.ui.closePopup();
+    } else if (notice !== null) {
+      this.prompts.dismissNotice(notice);
+    } else if (crossFile !== null) {
+      this.crossFile.dismiss(crossFile);
     } else if (this.ui.pickingTarget() !== null) {
       this.ui.cancelPicking();
     } else if (this.ui.selection() !== null) {

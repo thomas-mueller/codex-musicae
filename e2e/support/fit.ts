@@ -48,7 +48,7 @@ export async function serveLongTexts(page: Page, language: string): Promise<Tran
 export function cutTexts(page: Page, root: string): Promise<string[]> {
   return page.locator(root).evaluateAll((roots) => {
     const TOLERANCE = 1;
-    const IGNORED = '.name, app-tab-switcher, [role="tooltip"], svg, option, select';
+    const IGNORED = '.name, [role="tooltip"], svg, option, select';
     const cut: string[] = [];
     const outside = (rect: DOMRect, element: Element): boolean => {
       const page = element.ownerDocument;

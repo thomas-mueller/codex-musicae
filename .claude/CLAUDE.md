@@ -31,12 +31,13 @@ Angular (standalone, signals, zoneless, OnPush, strict TypeScript), Capacitor, p
 
 - No hard-coded user-visible strings: use the translation layer. UI is icon-first.
 - No magic numbers, colors, icon names or key bindings: they live in `src/config/tunables.ts`.
-- Tests contain the requirement ID in their name (`it('PLY-008 …')`). Mark a requirement `done` only when its tests pass.
+- Tests contain the requirement ID in their name (`it('PLY-008 …')`). Mark a requirement `done` only when its tests pass. In a step before the last one of a milestone, "its tests pass" means that its unit tests pass and its E2E tests are written; the E2E run at the end of the milestone confirms it, and a failure there sets the requirement back to `todo` until it is fixed. A requirement that only E2E tests cover stays `todo` until that run.
 - Do not edit existing tests to make code pass unless the milestone says so; report a suspected wrong test instead.
 - Code that exists only for Safari/WebKit needs a Playwright WebKit test. Unverifiable platform code (iOS) is marked `// UNVERIFIED(ios)`.
 - Free every OpenCV object in `finally`. Release bitmaps and canvases after use. Respect the cache budget and canvas pixel cap.
 - Metadata schema changes only through a new `schemaVersion` with a migration; existing files must keep opening.
 - No network requests except the app's own assets. No analytics, no CDN at runtime.
+- Editions (EDN-017): free and paid differ **only** in saving changes into files and in keeping data between app starts. Every other feature is the same in both and gets **no** feature switch; add a switch only for saving or persisting (web-only switches excepted, EDN-009). If an older document or an existing switch says otherwise, tell the owner what you would remove before removing it.
 - When something is ambiguous, contradictory or untestable: write it to `docs/questions.md` and stop. Do not guess.
 
 ## Commands
@@ -46,7 +47,7 @@ Angular (standalone, signals, zoneless, OnPush, strict TypeScript), Capacitor, p
 - Lint: `npm run lint`
 - Lint self-test: `npm run lint:selftest`
 - Unit tests: `npm test -- --watch=false`
-- E2E: `npx playwright test`
+- E2E: `npx playwright test --project=chromium`, then `npx playwright test --project=chromium-galaxy-tablet --grep @smoke` (locally only at the end of a milestone, see "E2E tests")
 - Production build: `npm run build`
 - Capacitor sync: `npm run cap:sync`
 - Android debug APK: `npm run android:debug`
@@ -56,11 +57,24 @@ Angular (standalone, signals, zoneless, OnPush, strict TypeScript), Capacitor, p
 ## Workflow
 
 - One fresh session per milestone (V1 and V2); plan first, wait for approval.
-- Work on the branch the owner has checked out; run lint and tests yourself and fix failures. The owner alone creates branches and chooses their names: never create, rename, switch or delete a branch.
+- Work on the branch the owner has checked out; run lint, unit tests and the build yourself and fix failures (E2E: see "E2E tests"). The owner alone creates branches and chooses their names: never create, rename, switch or delete a branch.
 - At the end of each step, stop editing and give the owner a summary of the changed files and a suggested commit message (with test counts where the milestone asks for them). The owner commits.
 - Do not touch layers or files outside the milestone's scope; follow its "do not" list.
 - Stop at the end of the milestone. The owner reviews, commits, pushes, tags and merges.
 - Never change GitHub secrets.
+
+## E2E tests: only at the end of a milestone
+
+E2E runs take too long locally to run in every step (CPU-bound detection on real scans; the full suite on one engine takes about half an hour on the owner's machine).
+
+- **Do not run Playwright in a step** that is not the last step of its milestone, not even single specs. A milestone without steps counts as one last step.
+- In every step still **write and update the E2E specs** the milestone asks for, and keep them passing `npm run lint`. Do not report them as passing: say that they have not run.
+- **After the last step** of the milestone, run E2E locally **on two projects only** and fix what it finds, for all steps of the milestone: the whole suite on desktop `chromium`, and the `@smoke` tests on the Chromium tablet (`chromium-galaxy-tablet`). This is where "E2E green" in the acceptance criteria is met locally.
+- Do not run the Firefox, WebKit or phone projects or the other tablets locally, also where a milestone file names them: the GitHub `e2e` workflow runs them, and it runs only on a pull request to `main`, on a `v*` tag or when the owner starts it by hand (`docs/ci.md`). Their specs are still written as the milestone asks (WebKit tests for WebKit-only code included). Say in the summary that they have not run locally.
+- Note in the step summary what is still to be confirmed by that run; keep known failures in the milestone file under "Open for the E2E run".
+- Run E2E earlier only when the owner asks for it.
+- A run that is cut off can leave `serve-static` processes behind, and a later local run then tests the old build: check for them first.
+- This is about local runs only; the GitHub `e2e` workflow is unchanged.
 
 ## Git: the owner commits and pushes
 

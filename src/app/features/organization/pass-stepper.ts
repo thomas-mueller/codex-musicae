@@ -22,7 +22,7 @@ export function stepPass(pass: number, delta: number): number {
   `,
   styles: `
     :host { display: inline-flex; align-items: center; gap: var(--cm-stepper-gap); padding: var(--cm-chip-padding); border-radius: var(--cm-chip-radius); background: var(--cm-bar-bg); box-shadow: 0 1px 4px rgb(0 0 0 / 0.3); }
-    .value { min-width: 1.5em; text-align: center; font-family: monospace; color: var(--cm-icon); }
+    .value { min-width: 1.5em; text-align: center; font-variant-numeric: tabular-nums; color: var(--cm-icon); }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { role: 'group', '[attr.aria-label]': 'label()', 'data-popup': '', 'data-testid': 'pass-stepper' },

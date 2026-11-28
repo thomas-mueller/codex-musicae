@@ -164,6 +164,7 @@ export const appConfig: ApplicationConfig = {
             const stats = renderer instanceof WorkingResolutionRenderer ? renderer.stats : null;
             return { lost: stats?.lostRasters ?? 0, flat: stats?.flatRasters ?? 0, retries: stats?.rasterRetries ?? 0 };
           },
+          renderedBytes: () => session.renderedBytes(),
           schedulerPeak: () => scheduler.maxRunningPerClass(),
           startedOrder: () => session.activeDocument()?.detection.startedOrder ?? [],
           detectionState: () => {

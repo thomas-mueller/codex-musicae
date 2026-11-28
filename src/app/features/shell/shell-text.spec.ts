@@ -22,8 +22,8 @@ describe('visible text (GEN-009)', () => {
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
       const text = node.textContent?.trim() ?? '';
       const element = node.parentElement;
-      // the tab bar and the tab switcher show the user's file name; scripts and styles are not visible text
-      if (text !== '' && element && !element.closest('.name, app-tab-switcher, script, style') && !NUMBERS_ONLY.test(text)) {
+      // the file entry shows the user's file name; scripts and styles are not visible text
+      if (text !== '' && element && !element.closest('.name, script, style') && !NUMBERS_ONLY.test(text)) {
         words.push(text);
       }
     }

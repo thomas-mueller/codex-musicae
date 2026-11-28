@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { expect, type Page } from '@playwright/test';
 
 import { DETECTION_TIMEOUT_MS, FILE_CHOOSER_TIMEOUT_MS, RETRY_TIMEOUT_MS } from './timing';
+import { clickMode } from './modes';
 
 const en = JSON.parse(readFileSync('src/assets/i18n/en.json', 'utf8')) as { a11y: Record<string, string> };
 
@@ -40,7 +41,7 @@ export async function openScore(page: Page, name = 'score.pdf'): Promise<void> {
 // The click can land before the app reacts (WebKit); repeat it until the viewer shows. Selecting the mode is idempotent.
 export async function enterOrganization(page: Page): Promise<void> {
   await expect(async () => {
-    await page.getByLabel(label('modeOrganization'), { exact: true }).click();
+    await clickMode(page, 'modeOrganization');
     await expect(page.getByTestId('org-viewer')).toBeVisible({ timeout: RETRY_TIMEOUT_MS });
   }).toPass();
 }

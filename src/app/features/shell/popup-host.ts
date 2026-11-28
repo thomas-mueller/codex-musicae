@@ -1,8 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 
-import { FEATURE_FLAGS } from '../../ports/feature-flags';
-import { APP_VERSION } from '../../ports/app-version';
 import type { FileRef } from '../../ports/file-access';
 import { AspectRatioService } from '../../state/aspect-ratio.service';
 import { OrgViewStore } from '../../state/org-view.store';
@@ -14,22 +12,20 @@ import { UiStore } from '../../state/ui.store';
 import { ToolPopup } from '../annotation/tool-popup';
 import { POPUP_OVERFLOW_BOTTOM, POPUP_SLIDER } from './bottom-bar';
 import { MarkList, POPUP_MARK_LIST } from '../organization/mark-list';
-import { POPUP_RECENT } from '../tabs/open-file.directive';
-import { POPUP_TABS } from '../tabs/tab-switcher';
-import { TabItem } from '../tabs/tab-item';
+import { FileItem, POPUP_FILES } from '../files/file-item';
+import { POPUP_RECENT } from '../files/open-file.directive';
+import { ModeSwitch, POPUP_MODES } from '../toolbar/mode-switch';
 import { Icon } from './icon';
 import { IconButton } from './icon-button';
 import { LEVEL_ENTRIES, POPUP_ORG } from './tool-area';
 import { POPUP_TOOL_SETTINGS } from './tool-button';
-import { POPUP_OVERFLOW_TOP } from './top-bar';
 
-const POPUP_INFO = 'info';
 const POPUP_SELECTOR = '[data-popup], [data-popup-trigger]';
 
 /** Renders at most one popup: a sheet (compact) or a side panel (expanded). UIX-013, 015 */
 @Component({
   selector: 'app-popup-host',
-  imports: [Icon, IconButton, MarkList, TabItem, ToolPopup, TranslocoPipe],
+  imports: [FileItem, Icon, IconButton, MarkList, ModeSwitch, ToolPopup, TranslocoPipe],
   templateUrl: './popup-host.html',
   styleUrl: './popup-host.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -42,19 +38,16 @@ export class PopupHost {
   protected readonly view = inject(OrgViewStore);
   protected readonly nav = inject(SlideNavStore);
   protected readonly aspect = inject(AspectRatioService);
-  protected readonly version = inject(APP_VERSION);
   protected readonly session = inject(SessionStore);
   protected readonly preferences = inject(PreferencesStore);
-  protected readonly flags = inject(FEATURE_FLAGS);
   protected readonly levels = LEVEL_ENTRIES;
   protected readonly ids = {
-    overflowTop: POPUP_OVERFLOW_TOP,
     overflowBottom: POPUP_OVERFLOW_BOTTOM,
     slider: POPUP_SLIDER,
     org: POPUP_ORG,
-    info: POPUP_INFO,
     recent: POPUP_RECENT,
-    tabs: POPUP_TABS,
+    files: POPUP_FILES,
+    modes: POPUP_MODES,
     markList: POPUP_MARK_LIST,
     toolSettings: POPUP_TOOL_SETTINGS,
   };
@@ -68,16 +61,15 @@ export class PopupHost {
   protected readonly sliderValue = computed(() => (this.annotation() ? this.nav.shown() : this.view.currentPage()) + 1);
   protected readonly showMoreDisabled = computed(() => !this.nav.active() || !this.aspect.canShowMore());
   protected readonly showLessDisabled = computed(() => !this.nav.active() || !this.aspect.canShowLess());
-  /** SAV-011: save a copy of the active tab, then close the menu. */
-  protected saveCopy(): void {
-    void this.session.saveCopy();
-    this.store.closePopup();
-  }
-
   protected readonly noDocument = computed(() => !this.store.hasDocument());
   protected readonly settingsTool = computed<StyledTool | null>(() => {
     const tool = this.store.tool();
     return tool === 'pen' || tool === 'highlighter' ? tool : null;
+  });
+  /** The file list and the mode choice hang below the top bar across the full width, in every layout. FIL-027, UIX-037 */
+  protected readonly below = computed(() => {
+    const id = this.store.popup()?.id;
+    return id === this.ids.files || id === this.ids.modes;
   });
   protected readonly popupId = computed(() => {
     const id = this.store.popup()?.id;
@@ -86,6 +78,12 @@ export class PopupHost {
     }
     if (id === this.ids.toolSettings && (this.settingsTool() === null || !this.compact())) {
       return null; // expanded layouts open the settings beside the tool button (ToolButton); no pen/highlighter, no settings
+    }
+    if (id === this.ids.overflowBottom && !(this.compact() && this.annotation())) {
+      return null; // the More menu belongs to the compact annotation layout
+    }
+    if (id === this.ids.files && this.session.tabs().length === 0) {
+      return null; // the last file was closed from the list
     }
     return id !== undefined && Object.values(this.ids).includes(id) ? id : null;
   });

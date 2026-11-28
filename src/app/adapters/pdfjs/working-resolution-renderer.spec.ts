@@ -251,3 +251,62 @@ describe('WorkingResolutionRenderer (NFR-025)', () => {
     expect(src.requests).toHaveLength(1); // the page is rendered once
   });
 });
+
+describe('WorkingResolutionRenderer: releasing an inactive document (NFR-020)', () => {
+  /** A source that records the rasters it built and whether it was asked to release its own page data. */
+  function recording(delay = 0) {
+    const src = source(delay);
+    const built: Bitmap[] = [];
+    const render = src.handle.renderRegion;
+    src.handle.renderRegion = async (req, signal) => {
+      const result = await render(req, signal);
+      if (result.ok) {
+        built.push(result.value as unknown as Bitmap);
+      }
+      return result;
+    };
+    const releaseRendered = vi.fn();
+    Object.assign(src.handle, { releaseRendered });
+    const inner: PdfRenderer = { open: () => Promise.resolve(ok(src.handle)) };
+    return { inner, built, releaseRendered };
+  }
+  // two turns: the close is scheduled in a microtask of the release, after a timer the caller starts right away
+  const nextTask = () => new Promise((resolve) => setTimeout(() => setTimeout(resolve, 0), 0));
+  const view = (pageIndex: number) => ({ pageIndex, region: region(0, 0, 50, 50), scale: 1 });
+
+  it('NFR-020 NFR-026 releaseRendered closes every raster once, releases the pages of the source and a later render builds again', async () => {
+    const { inner, built, releaseRendered } = recording();
+    const { handle } = await open(inner);
+    await handle.renderRegion(view(0), NEVER);
+    await handle.renderRegion(view(1), NEVER);
+    expect(handle.renderedBytes!()).toBeGreaterThan(0);
+    handle.releaseRendered!();
+    handle.releaseRendered!();
+    expect(handle.renderedBytes!()).toBe(0);
+    await nextTask();
+    expect(built.map((b) => b.close.mock.calls.length)).toEqual([1, 1]);
+    expect(releaseRendered).toHaveBeenCalled();
+    expect((await handle.renderRegion(view(0), NEVER)).ok).toBe(true);
+    expect(built).toHaveLength(3);
+    await handle.destroy();
+  });
+
+  it('NFR-020 a render that runs while the document is released draws from an open raster; the raster is closed afterwards', async () => {
+    const { inner, built } = recording(5);
+    const { handle, draws } = await open(inner);
+    const closedAtDraw: number[] = [];
+    const push = draws.push.bind(draws);
+    draws.push = (...entries: unknown[][]) => {
+      closedAtDraw.push(built[0]!.close.mock.calls.length);
+      return push(...entries);
+    };
+    const running = handle.renderRegion(view(0), NEVER);
+    await Promise.resolve();
+    await Promise.resolve();
+    handle.releaseRendered!();
+    expect((await running).ok).toBe(true);
+    expect(closedAtDraw).toEqual([0]);
+    await nextTask();
+    expect(built[0]!.close).toHaveBeenCalledTimes(1);
+  });
+});

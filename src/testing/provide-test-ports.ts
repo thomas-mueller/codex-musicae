@@ -2,6 +2,8 @@ import type { Provider } from '@angular/core';
 
 import { signal } from '@angular/core';
 
+import { TUNABLES } from '../config/tunables';
+
 import { APP_LIFECYCLE } from '../app/ports/app-lifecycle';
 import { DETECTION_ENGINE } from '../app/ports/detection-engine';
 import { ok } from '../app/ports/result';
@@ -30,8 +32,6 @@ export const ALL_FEATURES_ON: FeatureFlags = {
   persistSettings: true,
   persistFileChoices: true,
   restoreZoom: true,
-  crossFileAutoOpen: true,
-  shareIn: true,
 };
 
 /** Fake platform ports for specs that render the shell or use the stores. */
@@ -39,7 +39,8 @@ export function provideTestPorts(fullscreen = fakeFullscreen()): Provider[] {
   return [
     { provide: PDF_RENDERER, useValue: fakeRenderer() },
     { provide: FILE_ACCESS, useValue: fakeFileAccess() },
-    { provide: PREFERENCES, useValue: memoryPreferences() },
+    // FIL-038: specs that are not about the overwrite question start with it switched off for all files
+    { provide: PREFERENCES, useValue: memoryPreferences({ [TUNABLES.persistence.overwriteKey]: { all: true, names: [] } }) },
     { provide: FULLSCREEN, useValue: fullscreen },
     { provide: WAKE_LOCK, useValue: fakeWakeLock() },
     ...provideTestDetectionPorts(),

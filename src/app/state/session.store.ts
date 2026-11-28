@@ -2,7 +2,7 @@ import { computed, effect, inject, Injectable, Injector, signal, untracked } fro
 import type { WritableSignal } from '@angular/core';
 
 import { TUNABLES } from '../../config/tunables';
-import { parseMetadata, parseSession, reconcileMetadata } from '../core';
+import { closeStep, parseMetadata, parseSession, reconcileMetadata } from '../core';
 import { APP_LIFECYCLE } from '../ports/app-lifecycle';
 import { APP_VERSION_FULL } from '../ports/app-version';
 import { FEATURE_FLAGS } from '../ports/feature-flags';
@@ -11,16 +11,17 @@ import type { FileAccessError, FileRef, OpenedFile } from '../ports/file-access'
 import { PDF_RENDERER } from '../ports/pdf-renderer';
 import { PDF_WRITER } from '../ports/pdf-writer';
 import { PREFERENCES } from '../ports/preferences';
-import { err } from '../ports/result';
 import type { Result } from '../ports/result';
 import { BitmapCache } from './bitmap-cache';
 import { CLOCK } from './clock';
 import { DetectionService } from './detection.service';
 import { DocumentStore } from './document.store';
+import { FilePrompts } from './file-prompts';
+import type { FilePrompt } from './file-prompts';
+import { OverwriteChoices } from './overwrite-choices';
 import type { DocumentErrorCode, DocumentStatus } from './document.store';
 import { PreferencesStore } from './preferences.store';
 import { RatioDefaultsProvider } from './ratio-defaults';
-import { ResourceGovernor } from './resource-governor';
 import { loadInk } from './loaded-ink';
 import { SavePipeline } from './save-pipeline';
 import { SaveService } from './save.service';
@@ -38,6 +39,12 @@ export interface Tab {
   readonly readOnly: boolean;
   readonly needsReopen: boolean;
 }
+
+/** The answers of the two save questions. */
+export type OverwriteReply = 'overwrite' | 'saveAs' | 'cancel';
+export type CloseReply = 'saveAs' | 'discard' | 'cancel';
+/** 'copied': there is no way to choose a file to continue in, so a copy was downloaded and the entry stays as it was. */
+type SaveAsOutcome = 'saved' | 'copied' | 'cancelled' | 'failed';
 
 type OpenOutcome = 'opened' | 'cancelled' | 'failed' | 'repick';
 
@@ -57,21 +64,35 @@ interface TabEntry {
   reopening: boolean;
 }
 
-/** What `SessionPersistence` needs of a tab. */
-interface SessionEntry {
+/** FIL-045: how files are added without becoming the current one. */
+interface OpenOptions {
+  /** The current file stays current. */
+  readonly background?: boolean;
+  /** False for a file the app opens by itself: it keeps its place in the recent list. */
+  readonly remember?: boolean;
+}
+
+/** A file that has just been closed. */
+export interface ClosedFile {
+  readonly id: string;
+  readonly name: string;
+}
+
+/** What `SessionPersistence` and the cross-file services need of a tab. */
+export interface SessionEntry {
+  readonly id: string;
   readonly ref: FileRef;
   readonly document: DocumentStore;
   readonly pendingSystem: number | null;
 }
 
-/** Open tabs and the active one. FIL-001, FIL-002, FIL-005, FIL-009, NFR-009, NFR-010 */
+/** Open tabs and the active one. FIL-001, FIL-002, FIL-005, FIL-009, FIL-031, NFR-020 */
 @Injectable({ providedIn: 'root' })
 export class SessionStore {
   private readonly renderer = inject(PDF_RENDERER);
   private readonly files = inject(FILE_ACCESS);
   private readonly preferences = inject(PreferencesStore);
   private readonly bitmaps = inject(BitmapCache);
-  private readonly governor = inject(ResourceGovernor);
   private readonly detection = inject(DetectionService);
   private readonly ratioDefaults = inject(RatioDefaultsProvider);
   private readonly clock = inject(CLOCK);
@@ -82,6 +103,8 @@ export class SessionStore {
   private readonly appVersion = inject(APP_VERSION_FULL);
   private readonly prefs = inject(PREFERENCES);
   private readonly flags = inject(FEATURE_FLAGS);
+  private readonly choices = inject(OverwriteChoices);
+  private readonly prompts = inject(FilePrompts);
   private readonly entries = signal<readonly TabEntry[]>([]);
   private readonly activeIdSignal = signal<string | null>(null);
   private readonly repickSignal = signal<ReadonlySet<string>>(new Set());
@@ -110,8 +133,9 @@ export class SessionStore {
   readonly restored = this.restoredSignal.asReadonly();
   /** For `SessionPersistence`: every tab with its document, in tab order. */
   readonly sessionEntries = computed<readonly SessionEntry[]>(() =>
-    this.entries().map((e) => ({ ref: e.ref(), document: e.document, pendingSystem: e.pendingSystem() })),
+    this.entries().map((e) => ({ id: e.id, ref: e.ref(), document: e.document, pendingSystem: e.pendingSystem() })),
   );
+  private readonly closeListeners: ((closed: ClosedFile) => void)[] = [];
   readonly activeTabId = this.activeIdSignal.asReadonly();
   readonly activeTab = computed(() => this.tabs().find((t) => t.id === this.activeIdSignal()) ?? null);
   readonly activeDocument = computed(() => this.entries().find((e) => e.id === this.activeIdSignal())?.document ?? null);
@@ -125,24 +149,43 @@ export class SessionStore {
         }
       }
     });
-    // NFR-010, last step: under the heaviest memory pressure inactive tabs give up their bitmaps.
+    // NFR-020: a file that stops being the current one gives up everything rendered of it, whatever made it so.
     effect(() => {
-      if (this.governor.level() >= TUNABLES.resources.governorMaxLevel) {
-        const active = this.activeIdSignal();
-        for (const entry of this.entries()) {
-          if (entry.id !== active) {
+      const active = this.activeIdSignal();
+      const entries = this.entries();
+      untracked(() => {
+        for (const entry of entries) {
+          const shown = entry.id === active;
+          if (!shown && entry.document.shown) {
             this.bitmaps.releaseTab(entry.id);
+            entry.document.releaseRendered();
           }
+          entry.document.shown = shown;
         }
-      }
+      });
     });
   }
 
+  /** What is kept rendered of every open file (development debug hook, NFR-020 E2E). */
+  renderedBytes(): readonly { readonly name: string; readonly active: boolean; readonly cacheBytes: number; readonly rasterBytes: number }[] {
+    return this.entries().map((entry) => ({
+      name: entry.ref().name,
+      active: entry.id === this.activeIdSignal(),
+      cacheBytes: this.bitmaps.bytesOf(entry.id),
+      rasterBytes: entry.document.handle()?.renderedBytes?.() ?? 0,
+    }));
+  }
+
+  /** `listener` runs after a file has been removed, when it no longer is one of the open files. */
+  onClosed(listener: (closed: ClosedFile) => void): void {
+    this.closeListeners.push(listener);
+  }
+
   /** FIL-002: a file that is already open only focuses its tab. Calls are processed in order. */
-  openFiles(opened: readonly OpenedFile[]): Promise<void> {
+  openFiles(opened: readonly OpenedFile[], options: OpenOptions = {}): Promise<void> {
     this.opening = this.opening.then(async () => {
       for (const file of opened) {
-        await this.openOne(file);
+        await this.openOne(file, options);
       }
     });
     return this.opening;
@@ -172,8 +215,9 @@ export class SessionStore {
   }
 
   /**
-   * FIL-006: a tab with unsaved changes saves first; when that fails it stays open (error icon) and this resolves false.
-   * A tab with nothing to save closes at once.
+   * FIL-006, FIL-046, FIL-047, FIL-049: closes a file without unsaved changes at once. Otherwise it saves first where it
+   * may; where it may not, or the overwrite question is open, the file stays and the user is asked. A failed save keeps it
+   * open (error icon). Resolves to true when the file is closed.
    */
   closeTab(id: string): Promise<boolean> {
     const entry = this.entries().find((e) => e.id === id);
@@ -189,17 +233,176 @@ export class SessionStore {
         return saved;
       });
     }
-    const saver = entry.saver;
-    if (!saver || (!saver.dirty() && !saver.saving())) {
+    if (!this.modified(entry)) {
       this.remove(entry);
       return Promise.resolve(true);
     }
-    return saver.force().then((saved) => {
-      if (saved) {
-        this.remove(entry);
+    return this.closeModified(entry);
+  }
+
+  /** The answer to the overwrite question. Must be called inside the tap: saving may need a browser permission or picker. */
+  async answerOverwrite(prompt: FilePrompt & { kind: 'overwrite' }, reply: OverwriteReply, silence: 'file' | 'all' | null = null): Promise<void> {
+    const entry = this.entries().find((e) => e.id === prompt.tabId);
+    if (!entry) {
+      this.prompts.drop(prompt.tabId);
+      return;
+    }
+    if (reply === 'saveAs') {
+      await this.saveAsAndClose(entry, prompt.closing);
+      return;
+    }
+    this.prompts.dismiss(entry.id);
+    if (reply === 'cancel') {
+      this.choices.answer(entry.ref(), 'declined');
+      entry.document.saveHeld.set(true);
+      return;
+    }
+    this.choices.answer(entry.ref(), 'allowed');
+    // "Do not ask again" belongs to Overwrite only (DEC-166)
+    const stored = silence === null ? Promise.resolve() : this.choices.silence(silence, entry.ref().name);
+    this.proceed(entry, prompt.closing);
+    await stored;
+    await this.answerSilenced();
+  }
+
+  /** The answer to the question of a close that would lose changes. FIL-046, FIL-049 */
+  async answerClose(prompt: FilePrompt & { kind: 'close' }, reply: CloseReply): Promise<void> {
+    const entry = this.entries().find((e) => e.id === prompt.tabId);
+    if (!entry || reply === 'cancel') {
+      this.prompts.dismiss(prompt.tabId);
+    } else if (reply === 'discard') {
+      this.remove(entry);
+    } else {
+      await this.saveAsAndClose(entry, true);
+    }
+  }
+
+  /**
+   * FIL-037: the user chooses a new file, which then is the file of this entry. Must be called inside the tap: the picker is
+   * the first thing that happens.
+   */
+  async saveAsNewFile(id: string | null = this.activeIdSignal()): Promise<SaveAsOutcome> {
+    const entry = this.entries().find((e) => e.id === id);
+    const pipeline = entry?.pipeline;
+    const saver = entry?.saver;
+    if (!this.flags.saveCopy || !entry || !pipeline || !saver) {
+      return 'failed'; // EDN-001
+    }
+    const created = await this.files.createFile(pipeline.suggestedName());
+    if (!created.ok) {
+      if (created.error === 'unsupported') {
+        return (await pipeline.saveCopy(new AbortController().signal)).ok ? 'copied' : 'failed';
       }
-      return saved;
+      return created.error === 'cancelled' ? 'cancelled' : this.saveAsFailed(entry);
+    }
+    const target = created.value;
+    for (const other of this.entries()) {
+      if (other !== entry && (await this.files.isSame(other.ref(), target))) {
+        return this.saveAsFailed(entry); // two entries would write into one file
+      }
+    }
+    this.choices.answer(target, 'allowed'); // the user has just chosen this file: no overwrite question for it
+    const saved = await saver.saveNow(async (signal) => {
+      const written = await pipeline.writeTo(target, signal);
+      if (written) {
+        entry.ref.set(target);
+        entry.document.readOnly.set(false);
+        entry.document.needsWriteAccess.set(false);
+        entry.document.saveHeld.set(false);
+      }
+      return written;
     });
+    if (!saved) {
+      await this.files.forget(target);
+      return 'failed';
+    }
+    this.prompts.drop(entry.id);
+    void this.preferences.addRecent(target, (refId) => this.entries().some((e) => e.ref().id === refId));
+    return 'saved';
+  }
+
+  private modified(entry: TabEntry): boolean {
+    return entry.saver !== null && (entry.saver.dirty() || entry.saver.saving());
+  }
+
+  private async closeModified(entry: TabEntry): Promise<boolean> {
+    const canWrite = this.flags.autosave && !entry.document.readOnly();
+    const verdict = canWrite ? await this.choices.verdict(entry.ref()) : 'hold';
+    if (!this.entries().includes(entry)) {
+      return true;
+    }
+    const step = closeStep({ modified: this.modified(entry), canWrite, verdict });
+    if (step === 'askOverwrite') {
+      this.prompts.ask({ kind: 'overwrite', tabId: entry.id, closing: true });
+      return false;
+    }
+    if (step === 'askDiscard') {
+      this.prompts.ask({ kind: 'close', tabId: entry.id });
+      return false;
+    }
+    if (step === 'save') {
+      entry.document.saveHeld.set(false);
+      if (!(await entry.saver!.force()) || entry.document.needsWriteAccess()) {
+        return false;
+      }
+      if (this.modified(entry)) {
+        // the file turned out not to be writable while saving
+        if (entry.document.readOnly()) {
+          this.prompts.ask({ kind: 'close', tabId: entry.id });
+        }
+        return false;
+      }
+    }
+    this.remove(entry);
+    return true;
+  }
+
+  private async saveAsAndClose(entry: TabEntry, closing: boolean): Promise<void> {
+    const outcome = await this.saveAsNewFile(entry.id);
+    if (outcome === 'saved' && closing) {
+      await this.closeTab(entry.id);
+    }
+    // a cancelled picker, a failure or a downloaded copy leaves the question open: the entry's file is still unsaved
+  }
+
+  private proceed(entry: TabEntry, closing: boolean): void {
+    if (closing) {
+      void this.closeTab(entry.id);
+    } else {
+      entry.saver?.resume();
+    }
+  }
+
+  /** After "do not ask again", waiting questions that need no answer any more are answered with Overwrite. */
+  private async answerSilenced(): Promise<void> {
+    for (const prompt of this.prompts.waiting()) {
+      const entry = this.entries().find((e) => e.id === prompt.tabId);
+      if (prompt.kind === 'overwrite' && entry && (await this.choices.verdict(entry.ref())) === 'write') {
+        this.prompts.dismiss(entry.id);
+        this.proceed(entry, prompt.closing);
+      }
+    }
+  }
+
+  private saveAsFailed(entry: TabEntry): 'failed' {
+    entry.document.saveFailed.set(true);
+    return 'failed';
+  }
+
+  /** FIL-034: before an autosave writes. Asks when the answer is not known yet. */
+  private async permit(entry: TabEntry): Promise<boolean> {
+    const verdict = await this.choices.verdict(entry.ref());
+    if (verdict === 'ask' && this.entries().includes(entry)) {
+      this.prompts.ask({ kind: 'overwrite', tabId: entry.id, closing: false });
+    }
+    return verdict === 'write';
+  }
+
+  /** FIL-039: once per file and session. */
+  private async warnUnwritable(entry: TabEntry): Promise<void> {
+    if ((await this.choices.firstWarning(entry.ref())) && this.entries().includes(entry)) {
+      this.prompts.showNotice(entry.id);
+    }
   }
 
   /**
@@ -231,15 +434,6 @@ export class SessionStore {
     });
   }
 
-  /** SAV-011, PLT-010: saves a copy of a tab (default: the active one) as "<name> (annotated).pdf". */
-  saveCopy(id: string | null = this.activeIdSignal()): Promise<Result<void, FileAccessError | 'failed'>> {
-    const entry = this.entries().find((e) => e.id === id);
-    if (!this.flags.saveCopy) {
-      return Promise.resolve(err('failed')); // EDN-001: no copy in the free edition
-    }
-    return entry?.pipeline ? entry.pipeline.saveCopy(new AbortController().signal) : Promise.resolve(err('failed'));
-  }
-
   private remove(entry: TabEntry): void {
     const list = this.entries();
     const index = list.indexOf(entry);
@@ -251,10 +445,23 @@ export class SessionStore {
     if (this.activeIdSignal() === entry.id) {
       this.activeIdSignal.set(remaining[index]?.id ?? remaining[index - 1]?.id ?? null);
     }
+    this.prompts.drop(entry.id);
     entry.saver?.dispose();
     this.bitmaps.releaseTab(entry.id);
     this.detection.stop(entry.document);
     void entry.document.dispose();
+    for (const listener of this.closeListeners) {
+      listener({ id: entry.id, name: entry.ref().name });
+    }
+  }
+
+  /**
+   * FIL-043: re-opens a restored file that waits for the user, without making it the current one. Must be called inside the
+   * tap: the re-open is the first thing that happens.
+   */
+  reopenInBackground(id: string): Promise<void> {
+    const entry = this.entries().find((e) => e.id === id);
+    return entry?.document.needsReopen() ? this.reopenTab(entry) : Promise.resolve();
   }
 
   setActive(id: string): void {
@@ -266,6 +473,17 @@ export class SessionStore {
       if (entry.document.needsWriteAccess()) {
         void this.grantWriteAccess(id); // the click that selects the tab is a user gesture
       }
+      this.forceSave(this.activeIdSignal(), id);
+      this.activeIdSignal.set(id);
+    }
+  }
+
+  /**
+   * FIL-051, FIL-052: the player moves into another open file. Unlike `setActive` this is a page turn, so it asks for nothing:
+   * no re-open and no write permission.
+   */
+  show(id: string): void {
+    if (this.entries().some((e) => e.id === id)) {
       this.forceSave(this.activeIdSignal(), id);
       this.activeIdSignal.set(id);
     }
@@ -347,10 +565,12 @@ export class SessionStore {
     }
   }
 
-  private async openOne(file: OpenedFile): Promise<void> {
+  private async openOne(file: OpenedFile, options: OpenOptions): Promise<void> {
     for (const entry of this.entries()) {
       if (await this.files.isSame(entry.ref(), file.ref)) {
-        this.activeIdSignal.set(entry.id);
+        if (!options.background) {
+          this.activeIdSignal.set(entry.id);
+        }
         if (entry.ref().id !== file.ref.id) {
           await this.files.forget(file.ref);
         }
@@ -358,9 +578,14 @@ export class SessionStore {
       }
     }
     const entry = this.addEntry(file.ref);
-    this.forceSave(this.activeIdSignal(), entry.id);
-    this.activeIdSignal.set(entry.id);
-    this.attachFile(entry, file);
+    // with nothing else open there is no current file to keep
+    if (options.background && this.activeIdSignal() !== null) {
+      entry.document.shown = false; // NFR-020: nothing rendered is kept of it from the start
+    } else {
+      this.forceSave(this.activeIdSignal(), entry.id);
+      this.activeIdSignal.set(entry.id);
+    }
+    this.attachFile(entry, file, options.remember ?? true);
   }
 
   private addEntry(ref: FileRef): TabEntry {
@@ -372,18 +597,23 @@ export class SessionStore {
   }
 
   /** Gives a tab its file: save pipeline, autosave, load, and what the file itself remembers (SAV-005, DET-023). */
-  private attachFile(entry: TabEntry, file: OpenedFile): void {
+  private attachFile(entry: TabEntry, file: OpenedFile, remember = true): void {
     const { document } = entry;
     document.readOnly.set(!file.writable);
     entry.pipeline = new SavePipeline(document, file.ref, file.bytes, this.files, this.writer, this.scheduler, this.appVersion);
-    entry.saver = new SaveService(document, this.clock, entry.pipeline.run, TUNABLES.saving.autosaveIdleMs, this.injector, this.flags.autosave);
+    entry.saver = new SaveService(document, this.clock, entry.pipeline.run, TUNABLES.saving.autosaveIdleMs, this.injector, this.flags.autosave, {
+      permit: () => this.permit(entry),
+      onUnwritable: () => void this.warnUnwritable(entry),
+    });
     this.applyPendingPosition(entry);
     void document.load(file.bytes).then(() => {
       if (document.status() === 'ready') {
         void this.restoreFromFile(entry, file.bytes);
       }
     });
-    void this.preferences.addRecent(file.ref, (refId) => this.entries().some((e) => e.ref().id === refId));
+    if (remember) {
+      void this.preferences.addRecent(file.ref, (refId) => this.entries().some((e) => e.ref().id === refId));
+    }
   }
 
   /**

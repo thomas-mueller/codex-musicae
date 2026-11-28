@@ -230,10 +230,12 @@ class PdfJsDocumentHandle implements PdfDocumentHandle {
     }
   }
 
-  /**
-   * NFR-026: releases the pdf.js state of every warm page.
-   * NFR-020: V2-M6 must call it where an inactive tab drops its bitmaps; that needs an optional method on the `PdfDocumentHandle` port.
-   */
+  /** NFR-020: all this handle keeps of rendered pages is the pdf.js state of the warm ones. */
+  releaseRendered(): void {
+    this.releaseWarmPages();
+  }
+
+  /** NFR-026: releases the pdf.js state of every warm page. */
   releaseWarmPages(): void {
     const pages = this.warm;
     this.warm = [];

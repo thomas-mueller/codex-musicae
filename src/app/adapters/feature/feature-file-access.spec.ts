@@ -32,6 +32,13 @@ describe('FeatureFileAccess', () => {
     expect(writeOnly.write).toHaveBeenCalledTimes(1);
   });
 
+  it('EDN-001 FIL-037 creating a new file needs saveCopy', async () => {
+    const inner = fakeFileAccess();
+    expect(await new FeatureFileAccess(inner, OFF).createFile('a.pdf')).toEqual({ ok: false, error: 'unsupported' });
+    expect(inner.createFile).not.toHaveBeenCalled();
+    expect((await new FeatureFileAccess(inner, { ...OFF, saveCopy: true }).createFile('a.pdf')).ok).toBe(true);
+  });
+
   it.each(['recentFiles', 'sessionRestore', 'persistFileChoices'] as const)('EDN-005 %s alone keeps stored handles usable', async (name) => {
     const inner = fakeFileAccess();
     const access = new FeatureFileAccess(inner, { ...OFF, [name]: true });
@@ -40,15 +47,15 @@ describe('FeatureFileAccess', () => {
     expect(inner.forget).toHaveBeenCalledWith(REF);
   });
 
-  it('EDN-005 without a handle-persisting switch nothing is reopened or forgotten', async () => {
+  it('EDN-017 EDN-005 without a handle-persisting switch reopening and forgetting still reach the adapter; no handle is stored between runs', async () => {
     const inner = fakeFileAccess();
     const reopen = vi.spyOn(inner, 'reopen');
     const access = new FeatureFileAccess(inner, OFF);
     expect(persistsFileHandles(OFF)).toBe(false);
-    expect(await access.reopen(REF)).toEqual({ ok: false, error: 'not-found' });
+    await access.reopen(REF);
     await access.forget(REF);
-    expect(reopen).not.toHaveBeenCalled();
-    expect(inner.forget).not.toHaveBeenCalled();
+    expect(reopen).toHaveBeenCalledWith(REF);
+    expect(inner.forget).toHaveBeenCalledWith(REF);
   });
 
   it('EDN-008 EDN-002 picking and comparing files work in every configuration', async () => {

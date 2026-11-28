@@ -42,7 +42,19 @@ export class BitmapCache {
     return this.cache.peek(key) === bitmap;
   }
 
-  /** NFR-009: frees every bitmap of one tab. */
+  /** Bytes the bitmaps of one tab take in the cache. */
+  bytesOf(tabId: string): number {
+    const prefix = tabId + TAB_SEPARATOR;
+    return this.cache
+      .keys()
+      .filter((key) => key.startsWith(prefix))
+      .reduce((sum, key) => {
+        const bitmap = this.cache.peek(key)!;
+        return sum + bitmap.width * bitmap.height * BITMAP_BYTES_PER_PIXEL;
+      }, 0);
+  }
+
+  /** NFR-009, NFR-020: frees every bitmap of one tab. */
   releaseTab(tabId: string): void {
     const prefix = tabId + TAB_SEPARATOR;
     for (const key of this.cache.keys()) {

@@ -1,18 +1,3 @@
-@if (store.sizeClass() === 'compact') {
-  <div class="grow" role="group" [attr.aria-label]="'a11y.tabSwitcher' | transloco"><app-tab-switcher /></div>
-  <button appIconButton appOpenFile icon="openFile" labelKey="openFile"></button>
-  <app-mode-switch />
-} @else {
-  <button appIconButton appOpenFile icon="openFile" labelKey="openFile"></button>
-  <div class="grow" role="group" [attr.aria-label]="'a11y.tabBar' | transloco"><app-tab-bar /></div>
-  <app-mode-switch />
-  <button
-    appIconButton
-    data-popup-trigger
-    icon="overflow"
-    labelKey="overflow"
-    [toggled]="store.popup()?.id === popupId"
-    (pressed)="store.togglePopup(popupId)"
-  ></button>
-}
+<app-file-bar class="grow" />
+<app-mode-switch [collapsed]="store.narrow()" />
 <button appIconButton icon="settings" labelKey="settings" [toggled]="store.mode() === 'settings'" (pressed)="store.toggleSettings()"></button>

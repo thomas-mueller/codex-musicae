@@ -14,9 +14,10 @@
     "undo": "Rückgängig",
     "redo": "Wiederholen",
     "openFile": "Datei öffnen",
-    "closeTab": "Tab schließen",
+    "previousFile": "Vorherige Datei",
+    "nextFile": "Nächste Datei",
+    "closeTab": "Datei schließen",
     "save": "Speichern",
-    "saveCopy": "Kopie speichern",
     "readOnly": "Schreibgeschützt",
     "error": "Fehler",
     "processing": "Wird verarbeitet",
@@ -44,7 +45,6 @@
     "overflow": "Mehr",
     "settings": "Einstellungen",
     "resetSettings": "Alle Einstellungen zurücksetzen",
-    "info": "Info",
     "cancel": "Abbrechen",
     "confirm": "Bestätigen",
     "levelConfirm": "Erkennung mit dieser Stufe neu ausführen",
@@ -56,8 +56,6 @@
     "pageSlider": "Seitenposition",
     "slideIndicator": "Foliennummer",
     "pageIndicator": "Seitennummer",
-    "tabSwitcher": "Tabs",
-    "tabBar": "Tabs",
     "toolFab": "Werkzeuge",
     "orgFab": "Organisationswerkzeuge",
     "modeSwitch": "Modus",
@@ -75,9 +73,15 @@
     "grantWriteAccess": "Speichern erlauben",
     "needsReopen": "Datei erneut öffnen",
     "recentFiles": "Zuletzt geöffnet",
-    "tabList": "Offene Tabs",
     "toolColor": "Farbe",
-    "toolWidth": "Linienstärke"
+    "toolWidth": "Linienstärke",
+    "fileBar": "Dateien",
+    "fileList": "Geöffnete Dateien",
+    "overwriteDialog": "Datei überschreiben",
+    "closeDialog": "Ohne Speichern schließen",
+    "saveNotice": "Datei kann nicht gespeichert werden",
+    "crossFileNotice": "Hinweis zu einer verwiesenen Datei",
+    "dismissNotice": "Hinweis schließen"
   },
   "tooltip": {
     "modeOrganization": "Organisationsmodus",
@@ -89,9 +93,10 @@
     "undo": "Rückgängig",
     "redo": "Wiederholen",
     "openFile": "Datei öffnen",
-    "closeTab": "Tab schließen",
+    "previousFile": "Vorherige Datei",
+    "nextFile": "Nächste Datei",
+    "closeTab": "Datei schließen",
     "save": "Speichern",
-    "saveCopy": "Kopie speichern",
     "readOnly": "Schreibgeschützt",
     "error": "Fehler",
     "processing": "Wird verarbeitet",
@@ -119,7 +124,6 @@
     "overflow": "Mehr",
     "settings": "Einstellungen",
     "resetSettings": "Alle Einstellungen zurücksetzen",
-    "info": "Info",
     "cancel": "Abbrechen",
     "confirm": "Bestätigen",
     "levelConfirm": "Erkennung mit dieser Stufe neu ausführen",
@@ -131,8 +135,6 @@
     "pageSlider": "Seitenposition",
     "slideIndicator": "Foliennummer",
     "pageIndicator": "Seitennummer",
-    "tabSwitcher": "Tabs",
-    "tabBar": "Tabs",
     "toolFab": "Werkzeuge",
     "orgFab": "Organisationswerkzeuge",
     "modeSwitch": "Modus",
@@ -150,9 +152,9 @@
     "grantWriteAccess": "Speichern erlauben",
     "needsReopen": "Datei erneut öffnen",
     "recentFiles": "Zuletzt geöffnet",
-    "tabList": "Offene Tabs",
     "toolColor": "Farbe",
-    "toolWidth": "Linienstärke"
+    "toolWidth": "Linienstärke",
+    "dismissNotice": "Hinweis schließen"
   },
   "settings": {
     "groups": {
@@ -177,6 +179,35 @@
         "pt-BR": "Português (Brasil)",
         "nl": "Nederlands"
       }
+    }
+  },
+  "crossFile": {
+    "missingFile": "Diese verwiesene Datei ist nicht geöffnet.",
+    "ambiguous": "Mehrere Dateien haben diesen Namen, deshalb wird keine davon verwendet.",
+    "noAccess": "Die App darf diese verwiesene Datei nicht selbst öffnen.",
+    "missingSystem": "Die verwiesene Notenzeile ist in dieser Datei nicht mehr vorhanden.",
+    "openFile": "Diese Datei öffnen",
+    "closed": "ist geschlossen. Diese geöffneten Dateien verweisen darauf: {{referrers}}",
+    "dontShowAgain": "Nicht mehr anzeigen"
+  },
+  "save": {
+    "overwrite": {
+      "question": "Möchten Sie diese Datei mit Ihren Änderungen überschreiben?",
+      "overwrite": "Überschreiben",
+      "saveAs": "Als neue Datei speichern",
+      "cancel": "Abbrechen",
+      "silenceFile": "Für diese Datei nicht mehr fragen",
+      "silenceAll": "Für keine Datei mehr fragen"
+    },
+    "close": {
+      "question": "Diese Datei enthält nicht gespeicherte Änderungen.",
+      "saveAs": "Als neue Datei speichern",
+      "discard": "Änderungen verwerfen",
+      "cancel": "Abbrechen"
+    },
+    "notice": {
+      "text": "Diese Datei kann nicht gespeichert werden.",
+      "saveAs": "Als neue Datei speichern"
     }
   }
 }

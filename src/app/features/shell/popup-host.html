@@ -1,20 +1,9 @@
 @if (popupId(); as id) {
-  <div class="popup" [class.sheet]="compact() && id !== ids.tabs" [class.top]="compact() && id === ids.tabs" [class.panel]="!compact()" data-popup>
+  <div class="popup" [class.sheet]="compact() && !below()" [class.top]="below()" [class.panel]="!compact() && !below()" data-popup>
     @switch (id) {
-      @case (ids.overflowTop) {
-        <button appIconButton icon="saveCopy" labelKey="saveCopy" [disabled]="noDocument() || !flags.saveCopy" (pressed)="saveCopy()"></button>
-        <button appIconButton icon="info" labelKey="info" (pressed)="store.openPopup(ids.info)"></button>
-      }
       @case (ids.overflowBottom) {
-        @if (annotation() && compact()) {
-          <button appIconButton icon="showMore" labelKey="showMore" [disabled]="showMoreDisabled()" (pressed)="aspect.showMore()"></button>
-          <button appIconButton icon="showLess" labelKey="showLess" [disabled]="showLessDisabled()" (pressed)="aspect.showLess()"></button>
-        }
-        <button appIconButton icon="info" labelKey="info" (pressed)="store.openPopup(ids.info)"></button>
-        <button appIconButton icon="saveCopy" labelKey="saveCopy" [disabled]="noDocument() || !flags.saveCopy" (pressed)="saveCopy()"></button>
-      }
-      @case (ids.info) {
-        <span class="version" [attr.aria-label]="'a11y.versionInfo' | transloco" [textContent]="version"></span>
+        <button appIconButton icon="showMore" labelKey="showMore" [disabled]="showMoreDisabled()" (pressed)="aspect.showMore()"></button>
+        <button appIconButton icon="showLess" labelKey="showLess" [disabled]="showLessDisabled()" (pressed)="aspect.showLess()"></button>
       }
       @case (ids.slider) {
         <input
@@ -40,12 +29,15 @@
           }
         </div>
       }
-      @case (ids.tabs) {
-        <div class="list" [attr.aria-label]="'a11y.tabList' | transloco">
+      @case (ids.files) {
+        <div class="list" role="list" [attr.aria-label]="'a11y.fileList' | transloco">
           @for (tab of session.tabs(); track tab.id) {
-            <app-tab-item [tab]="tab" [active]="tab.id === session.activeTabId()" />
+            <app-file-item role="listitem" [tab]="tab" [active]="tab.id === session.activeTabId()" />
           }
         </div>
+      }
+      @case (ids.modes) {
+        <app-mode-switch />
       }
       @case (ids.org) {
         @for (entry of levels; track entry.level) {

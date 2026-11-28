@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { TUNABLES } from '../src/config/tunables';
 import { cutTexts, serveLongTexts } from './support/fit';
+import { clickMode, type ModeKey } from './support/modes';
 
 type Texts = { a11y: Record<string, string>; settings: { reset: { question: string } } };
 
@@ -25,7 +26,7 @@ async function expectInsideWindow(page: Page, selector: string): Promise<void> {
 async function checkEveryScreen(page: Page): Promise<void> {
   const { long, button } = await start(page);
   for (const mode of ['modeAnnotation', 'modeOrganization', 'settings']) {
-    await button(mode).click();
+    await (mode === 'settings' ? button(mode).click() : clickMode(page, mode as ModeKey, (key) => long.a11y[key]!));
     await expectInsideWindow(page, '[data-area="top"] button');
     expect(await cutTexts(page, '[data-area="top"]'), `top bar in ${mode}`).toEqual([]);
   }

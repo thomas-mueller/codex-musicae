@@ -119,7 +119,7 @@ export function isSwipeLeft(dx: number, dy: number): boolean {
   styles: `
     :host { display: block; width: 100%; }
     .list { display: flex; flex-direction: column; max-height: calc(100% - var(--cm-bar-height) * 2); overflow-y: auto; }
-    .entry { display: flex; align-items: center; gap: var(--cm-tab-gap); min-height: var(--cm-touch-target); padding: 0 var(--cm-tab-gap); font-family: monospace; touch-action: pan-y; }
+    .entry { display: flex; align-items: center; gap: var(--cm-file-entry-gap); min-height: var(--cm-touch-target); padding: 0 var(--cm-file-entry-gap); font-variant-numeric: tabular-nums; touch-action: pan-y; }
     .entry.unreached { opacity: var(--cm-unreached-opacity); }
     .dot { flex: none; width: var(--cm-dot); height: var(--cm-dot); border-radius: 50%; }
     .mark-icon { display: inline-flex; color: var(--cm-icon); }

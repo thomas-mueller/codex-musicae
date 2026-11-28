@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 
 import { createPreferences } from '../app/adapters/feature/feature-preferences';
 import { SettingsView } from '../app/features/settings/settings-view';
+import { APP_VERSION } from '../app/ports/app-version';
 import { FEATURE_FLAGS } from '../app/ports/feature-flags';
 import type { FeatureFlags } from '../app/ports/feature-flags';
 import { PREFERENCES } from '../app/ports/preferences';
@@ -20,6 +21,7 @@ async function run(flags: FeatureFlags, store: ReturnType<typeof memoryPreferenc
   TestBed.configureTestingModule({
     providers: [
       provideTestTransloco(),
+      { provide: APP_VERSION, useValue: 'v-test' },
       { provide: FEATURE_FLAGS, useValue: flags },
       { provide: PREFERENCES, useValue: createPreferences(flags, () => store) },
     ],

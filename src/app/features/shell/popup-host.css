@@ -27,6 +27,9 @@
 .top {
   left: 0;
   right: 0;
+  justify-content: center;
+  /* a long file list scrolls inside the popup */
+  max-height: calc(100% - var(--cm-bar-height) - env(safe-area-inset-top));
   top: calc(var(--cm-bar-height) + env(safe-area-inset-top));
   border-radius: 0 0 var(--cm-popup-radius) var(--cm-popup-radius);
   animation: slide-down var(--cm-popup-duration) ease-out;
@@ -42,13 +45,6 @@
 .slider {
   flex: 1;
   height: var(--cm-touch-target);
-}
-
-.version {
-  min-height: var(--cm-touch-target);
-  display: inline-flex;
-  align-items: center;
-  padding: 0 var(--cm-tooltip-padding);
 }
 
 @keyframes slide-up {
@@ -73,20 +69,23 @@
   overflow-y: auto;
 }
 
-/* Tab rows in the list fill the width instead of sharing it. */
-.list app-tab-item {
+/* The file list takes the height of its popup and scrolls there. */
+.top .list {
+  align-self: stretch;
+  min-height: 0;
+  max-height: none;
+}
+
+.list app-file-item {
   flex: none;
-  width: 100%;
-  max-width: none;
-  border-radius: 0;
 }
 
 .row {
   display: flex;
   align-items: center;
-  gap: var(--cm-tab-gap);
+  gap: var(--cm-file-entry-gap);
   min-height: var(--cm-touch-target);
-  padding: 0 var(--cm-tab-gap);
+  padding: 0 var(--cm-file-entry-gap);
   border: 0;
   background: transparent;
   color: inherit;

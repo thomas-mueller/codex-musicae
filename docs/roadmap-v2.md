@@ -13,7 +13,7 @@ Input: `docs/v2-requirements.md` (final, decisions D-1…D-32). Milestone files 
 
 ## Sizing rule
 
-As V1: a **step** is one agent session — one layer or feature area, about 15 requirement IDs at most, ending with passing tests and a suggested commit message. Dense milestones (M6, M8, M10, M12) are split into steps `S1…Sn` inside their file; the owner commits after each step and tags after the last.
+As V1: a **step** is one agent session — one layer or feature area, about 15 requirement IDs at most, ending with passing lint, unit tests and build and a suggested commit message (E2E tests are written in the step but run locally only after the last step of the milestone, on desktop Chromium plus the smoke tests on the Chromium tablet, `AGENTS.md`). Dense milestones (M6, M8, M10, M12) are split into steps `S1…Sn` inside their file; the owner commits after each step and tags after the last.
 
 ## Rules that hold in every V2 milestone
 

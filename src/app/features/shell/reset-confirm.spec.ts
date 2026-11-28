@@ -4,6 +4,7 @@ import { TUNABLES } from '../../../config/tunables';
 import { provideTestPorts } from '../../../testing/provide-test-ports';
 import { provideTestTransloco, translate } from '../../../testing/transloco';
 import { FILE_ACCESS } from '../../ports/file-access';
+import { OverwriteChoices } from '../../state/overwrite-choices';
 import { SessionStore } from '../../state/session.store';
 import { SettingsRegistry } from '../../state/settings-registry';
 import type { fakeFileAccess } from '../../state/testing/fake-ports';
@@ -115,6 +116,8 @@ describe('ResetConfirm', () => {
     expect(files.write).not.toHaveBeenCalled();
     expect(doc.unsaved()).toBe(false);
     // control: a change of the document is saved within the same time
+    // FIL-041: the reset brought the overwrite question back, so it is switched off again here
+    await TestBed.inject(OverwriteChoices).silence('all', 'a.pdf');
     doc.addStroke({ id: 's', pageIndex: 0, points: [{ x: 0, y: 0 }, { x: 1, y: 1 }], color: TUNABLES.colors.penPresets[0] as string, widthPt: 1, opacity: 1, multiply: false });
     await vi.advanceTimersByTimeAsync(2 * TUNABLES.saving.autosaveIdleMs);
     expect(files.write).toHaveBeenCalled();

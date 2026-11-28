@@ -4,10 +4,7 @@ import { provideTestPorts } from '../../../testing/provide-test-ports';
 import { provideTestTransloco, translate } from '../../../testing/transloco';
 import { CommandBus } from '../../input/command-bus';
 import { NavigationHandler } from '../../input/navigation-handler';
-import { FILE_ACCESS } from '../../ports/file-access';
 import { APP_VERSION } from '../../ports/app-version';
-import { SessionStore } from '../../state/session.store';
-import type { fakeFileAccess } from '../../state/testing/fake-ports';
 import { UiStore } from '../../state/ui.store';
 import { PopupHost } from './popup-host';
 
@@ -18,14 +15,15 @@ describe('PopupHost', () => {
     });
     const fixture = TestBed.createComponent(PopupHost);
     const store = TestBed.inject(UiStore);
-    store.openPopup('info');
+    store.openPopup('overflow-bottom');
     await fixture.whenStable();
     return { fixture, store, el: fixture.nativeElement as HTMLElement };
   }
 
-  it('UIX-015 the info popover shows the version string only', async () => {
+  it('UIX-035 the overflow menu has no version info', async () => {
     const { el } = await setup();
-    expect(el.querySelector('.version')?.textContent).toBe('v0.0.0-test');
+    expect(el.textContent).not.toContain('v0.0.0-test');
+    expect(el.querySelector(`[aria-label="${translate('a11y.versionInfo')}"]`)).toBeNull();
   });
 
   it('UIX-013 a pointer-down outside closes the popup, one inside does not', async () => {
@@ -45,21 +43,13 @@ describe('PopupHost', () => {
     expect(store.popup()).toBeNull();
   });
 
-  it('SAV-011 PLT-010 the overflow menu offers save a copy once a document is open', async () => {
+  it('UIX-036 the More menu holds the two slide-ratio buttons only, and shows in the compact annotation layout only', async () => {
     const { fixture, store, el } = await setup();
-    store.openPopup('overflow-top');
+    const labels = () => Array.from(el.querySelectorAll('button'), (b) => b.getAttribute('aria-label'));
+    expect(labels()).toEqual([translate('a11y.showMore'), translate('a11y.showLess')]);
+    store.setMode('organization');
+    store.openPopup('overflow-bottom');
     await fixture.whenStable();
-    const button = (): HTMLButtonElement => el.querySelector(`button[aria-label="${translate('a11y.saveCopy')}"]`) as HTMLButtonElement;
-    expect(button().getAttribute('aria-disabled')).toBe('true');
-    await TestBed.inject(SessionStore).openFiles([{ ref: { id: 'a', name: 'a.pdf' }, bytes: new Uint8Array([1]), writable: true }]);
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    store.hasDocument.set(true);
-    await fixture.whenStable();
-    expect(button().getAttribute('aria-disabled')).toBeNull();
-    button().click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    const files = TestBed.inject(FILE_ACCESS) as ReturnType<typeof fakeFileAccess>;
-    expect(files.saveCopy).toHaveBeenCalledWith('a (annotated).pdf', expect.any(Uint8Array));
-    expect(store.popup()).toBeNull();
+    expect(el.querySelector('.popup')).toBeNull();
   });
 });

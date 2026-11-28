@@ -23,6 +23,8 @@ export const TUNABLES = {
     barBackground: '#F1F3F4', // UIX-007
     progressLine: '#2E9E4F', // UIX-020
     breakLine: '#D32F2F', // ORG-022
+    unsavedMark: '#D32F2F', // FIL-022: the "*" after the name of a changed file
+    currentFile: '#E3EDFC', // FIL-021: pale blue pill behind the current file, in the top bar and in the file list
     orgBar: {
       tint: '#00897B', // ORG-010
       opacity: 0.3, // 0..1 alpha of an unselected bar
@@ -44,6 +46,11 @@ export const TUNABLES = {
     highlighterPresets: ['#FDD835', '#9CCC65', '#FFA726', '#F06292', '#4FC3F7', '#BA68C8'], // ANN-004
   },
 
+  typography: {
+    // UIX-038: the device's own modern sans-serif (San Francisco, Segoe UI, Roboto, …); no font file is loaded
+    fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Helvetica Neue', Arial, sans-serif",
+  },
+
   layout: {
     barHeightPx: 48, // UIX-007
     indicatorPlaceholder: '– / –', // UIX-004: shown instead of "x / n" while no document is open
@@ -61,10 +68,10 @@ export const TUNABLES = {
     popupRadiusPx: 12, // UIX-013
     fabInsetPx: 16, // UIX-004: distance of the tool button from the canvas edge
     minTouchTargetPx: 44, // UIX-007
-    tabGapPx: 8, // FIL-003: padding inside a tab
-    tabMaxWidthPx: 200, // FIL-004: a tab never grows beyond this; tabs share the free width equally and shrink together
-    tabMinWidthPx: 44, // FIL-004: tabs shrink to this, then the tab bar shows the overflow button
-    tabRadiusPx: 8, // FIL-004: rounded top corners
+    fileEntryGapPx: 8, // FIL-021: padding inside the file entry and the rows of lists
+    unsavedMarkText: '*', // FIL-022: appended to the name of a file with unsaved changes
+    saveDialogWidthPx: 440, // FIL-036: the save dialogs are at most this wide, so their texts stay together on wide screens
+    filePillHeightPx: 36, // FIL-021: height of the pill behind the current file; the touch targets in it stay larger
     compactMaxWidthPx: 600, // UIX-003: compact if width < this ...
     compactMaxHeightPx: 480, // ... or height < this
     toolStripSide: 'left' as 'left' | 'right', // UIX-005
@@ -137,13 +144,14 @@ export const TUNABLES = {
     eraser: 'ink_eraser',
     undo: 'undo',
     redo: 'redo',
-    openFile: 'folder_open',
+    openFile: 'file_open', // FIL-025
+    previousFile: 'arrow_back', // FIL-024
+    nextFile: 'arrow_forward', // FIL-024
     closeTab: 'close',
     save: 'save',
-    saveCopy: 'file_download',
     readOnly: 'lock',
     error: 'error',
-    processing: 'sync',
+    processing: 'hourglass_top', // 'sync'
     zoomIn: 'zoom_in',
     zoomOut: 'zoom_out',
     zoomReset: 'fit_screen',
@@ -166,13 +174,11 @@ export const TUNABLES = {
     levelFine: 'grain',
     markList: 'list_alt', // ORG-021: button that opens the marks list (jumps, slide breaks, stops)
     overflow: 'more_vert',
-    info: 'info',
     cancel: 'close',
     confirm: 'check', // DET-014: confirmation dialog
     fullscreen: 'fullscreen',
     fullscreenExit: 'fullscreen_exit',
     fingerDrawing: 'touch_app', // STY-003
-    unsaved: 'circle', // FIL-003: unsaved dot
     needsReopen: 'sync_problem', // FIL-003: access lost, file must be opened again
     recentFiles: 'history', // FIL-008
   },
@@ -388,9 +394,12 @@ export const TUNABLES = {
     sessionDebounceMs: 500, // FIL-011: delay before the session snapshot is written
     sessionKey: 'session', // FIL-011: preference key of the session snapshot
     // EDN-005: which feature switch (config/features.*.ts) guards a preference key; a key is matched by `name` or `name.` prefix.
+    overwriteKey: 'overwrite', // FIL-038, FIL-041: the stored "do not ask again" choices
+    crossFileCloseKey: 'crossFileClose', // FIL-044: "don't show again" of the warning about closing a referenced file
     switchByKeyPrefix: {
       recent: 'recentFiles', // EDN-005: the list of recent files
       session: 'sessionRestore', // EDN-005: the session snapshot (open tabs and positions)
+      overwrite: 'persistFileChoices', // FIL-038: "do not ask again" before overwriting a file
     },
     defaultKeySwitch: 'persistSettings', // EDN-005: every other preference key (tool settings, stylus, aspect ratios) is a setting
   },

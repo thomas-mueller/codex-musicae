@@ -123,7 +123,7 @@ interface MarkerGroup {
     .group { position: absolute; left: 0; right: 0; display: flex; align-items: center; gap: var(--cm-marker-gap); padding: 0 var(--cm-marker-gap); pointer-events: none; --cm-icon-size: var(--cm-bar-row-icon); }
     .group.start { flex-direction: row-reverse; }
     .group.end { flex-direction: row; }
-    .marker { display: inline-flex; align-items: center; gap: var(--cm-marker-gap); padding: var(--cm-marker-padding); border: 0; border-radius: var(--cm-marker-radius); color: var(--cm-on-accent); font-family: monospace; font-size: var(--cm-marker-font); cursor: pointer; pointer-events: auto; }
+    .marker { display: inline-flex; align-items: center; gap: var(--cm-marker-gap); padding: var(--cm-marker-padding); border: 0; border-radius: var(--cm-marker-radius); color: var(--cm-on-accent); font-variant-numeric: tabular-nums; font-size: var(--cm-marker-font); cursor: pointer; pointer-events: auto; }
     .marker.selected { outline: var(--cm-break-line-px) solid var(--cm-icon); }
     /* The split points toward the end of the PDF, the merge arrows come from its beginning. */
     .icon { transform: rotate(var(--cm-marker-rotation)); }

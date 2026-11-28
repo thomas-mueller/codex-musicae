@@ -82,6 +82,15 @@ describe('CapFileAccess', () => {
     expect(plugin.calls).toContain('forget:copy');
   });
 
+  it('FIL-037 createFile returns the reference of the new document and keeps it; cancel answers cancelled', async () => {
+    const { plugin, access } = setup();
+    expect(await access.createFile('x.pdf')).toEqual({ ok: false, error: 'cancelled' });
+    plugin.created = 'new';
+    expect(await access.createFile('x.pdf')).toEqual({ ok: true, value: { id: 'new', name: 'x.pdf' } });
+    expect((await access.write({ id: 'new', name: 'x.pdf' }, bytesOf(5))).ok).toBe(true);
+    expect(plugin.calls).not.toContain('forget:new');
+  });
+
   it('PLT-008 requestWriteAccess is unsupported; isSame compares ids, then name size and date; forget calls the plugin', async () => {
     const { plugin, access } = setup();
     expect(await access.requestWriteAccess()).toEqual({ ok: false, error: 'unsupported' });

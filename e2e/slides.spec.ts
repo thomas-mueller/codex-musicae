@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import { TUNABLES } from '../src/config/tunables';
+import { clickMode } from './support/modes';
 import { label, openScoreInAnnotation, slideCount, waitForBars, waitForFinalSlideCount } from './support/score';
 import { DETECTION_TIMEOUT_MS, SCROLL_TIMEOUT_MS, scaled } from './support/timing';
 
@@ -20,7 +21,7 @@ const slide = (page: Page) => page.getByTestId('slide');
 /** The mode click can land before the app reacts (WebKit): repeat until the expected state shows. */
 async function enterMode(page: Page, key: 'modeAnnotation' | 'modeOrganization', visible: string): Promise<void> {
   await expect(async () => {
-    await page.getByLabel(label(key), { exact: true }).click();
+    await clickMode(page, key);
     await expect(page.getByTestId(visible)).toBeVisible({ timeout: 1_000 });
   }).toPass();
 }

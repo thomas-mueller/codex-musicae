@@ -85,7 +85,7 @@ describe('changing the language', () => {
     const { el, show } = await render();
     await show('de');
     vi.useFakeTimers();
-    const button = el.querySelector<HTMLButtonElement>('[data-area="top"] button')!;
+    const button = el.querySelector<HTMLButtonElement>(`[data-area="top"] button[aria-label="${read('de').a11y['openFile']}"]`)!;
     button.dispatchEvent(new Event('pointerenter'));
     vi.advanceTimersByTime(TUNABLES.layout.tooltipHoverDelayMs);
     expect(button.querySelector('[role="tooltip"]')?.textContent).toBe(read('de').tooltip['openFile']);
@@ -101,6 +101,7 @@ describe('changing the language', () => {
       const collect = (value: unknown): void =>
         typeof value === 'string' ? void known.add(value) : Object.values(value as object).forEach(collect);
       collect(read(language));
+      known.add('v-test'); // GEN-013 allows the version string (UIX-035)
       const walker = el.ownerDocument.createTreeWalker(el.querySelector('.middle')!, NodeFilter.SHOW_TEXT);
       const dialog = el.ownerDocument.createTreeWalker(el.querySelector('app-reset-confirm')!, NodeFilter.SHOW_TEXT);
       const shown: string[] = [];

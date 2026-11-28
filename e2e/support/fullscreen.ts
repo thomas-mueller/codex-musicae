@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 
-import { label } from './score';
+import { revealMode } from './modes';
 
 /** The browser-side objects the specs poke at (the lint rules keep bare platform globals out of e2e code). */
 interface BrowserGlobals {
@@ -76,4 +76,4 @@ export async function leavePresentationWithEscape(page: Page): Promise<void> {
 }
 const ESCAPE_RETRY_MS = 1000;
 
-export const modeButton = (page: Page, key: 'modePresentation' | 'modeAnnotation') => page.getByLabel(label(key), { exact: true });
+export const modeButton = (page: Page, key: 'modePresentation' | 'modeAnnotation') => revealMode(page, key);

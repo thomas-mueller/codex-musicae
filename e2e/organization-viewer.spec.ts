@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 
 import { enterOrganization, SCORE_PAGES, scoreBytes } from './support/score';
+import { switchTo } from './support/files';
+import { clickMode } from './support/modes';
 
 const en = JSON.parse(readFileSync('src/assets/i18n/en.json', 'utf8')) as { a11y: Record<string, string> };
 const label = (key: string) => en.a11y[key] as string;
@@ -20,17 +22,6 @@ async function openFile(page: Page, name: string): Promise<void> {
   const chooser = page.waitForEvent('filechooser');
   await page.getByRole('button', { name: label('openFile'), exact: true }).click();
   await (await chooser).setFiles(named(name));
-}
-
-// Expanded layouts show the tab bar; compact ones the tab switcher popup (FIL-004).
-async function switchTo(page: Page, name: string): Promise<void> {
-  const bar = page.locator('app-tab-bar .name', { hasText: name });
-  if (await bar.isVisible()) {
-    await bar.click();
-    return;
-  }
-  await page.locator('app-tab-switcher button.current').click();
-  await page.locator('[data-popup] app-tab-item .name', { hasText: name }).click();
 }
 
 test('ORG-001 organization mode shows all pages stacked in a scroll container', async ({ page }) => {
@@ -233,7 +224,7 @@ test('NFR-008 coming back from another mode and going to the previous page shows
   await expect(indicator(page)).toHaveText(`2 / ${PAGES}`);
   await next.click();
   await expect(indicator(page)).toHaveText(`3 / ${PAGES}`);
-  await page.getByLabel(label('modeAnnotation'), { exact: true }).click();
+  await clickMode(page, 'modeAnnotation');
   await expect(page.getByTestId('org-viewer')).toHaveCount(0);
   await enterOrganization(page);
   await expect(indicator(page)).toHaveText(`3 / ${PAGES}`);

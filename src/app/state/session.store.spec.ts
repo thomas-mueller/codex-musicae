@@ -20,6 +20,8 @@ import { CLOCK } from './clock';
 import { DetectionService } from './detection.service';
 import { PreferencesStore } from './preferences.store';
 import { ResourceGovernor } from './resource-governor';
+import { FilePrompts } from './file-prompts';
+import type { FilePrompt } from './file-prompts';
 import { SessionStore } from './session.store';
 import { fakeBitmap } from './testing/fake-bitmap';
 import { FakeClock } from './testing/fake-clock';
@@ -61,7 +63,8 @@ function setup(lifecycle = pausableLifecycle()) {
     providers: [
       { provide: PDF_RENDERER, useValue: fakeRenderer('invalid') },
       { provide: FILE_ACCESS, useValue: files },
-      { provide: PREFERENCES, useValue: memoryPreferences() },
+      // FIL-038: these specs are not about the overwrite question, so it is switched off for all files
+      { provide: PREFERENCES, useValue: memoryPreferences({ overwrite: { all: true, names: [] } }) },
       ...provideTestDetectionPorts(),
       ...provideTestSavePorts(),
       { provide: APP_LIFECYCLE, useValue: lifecycle.value },
@@ -167,23 +170,27 @@ describe('SessionStore', () => {
     expect(preferences.recentFiles().map((r) => r.name)).toEqual(['b.pdf', 'a.pdf']);
   });
 
-  it('NFR-010 at the highest level inactive tabs release their bitmaps, the active tab keeps them', async () => {
+  it('NFR-020 NFR-010 leaving a file frees its bitmaps at once; the current file keeps them, also at the highest pressure level', async () => {
     const { session, bitmaps, governor, clock } = setup();
     await session.openFiles([file('a.pdf'), file('b.pdf')]);
-    const [a, b] = session.tabs();
-    const inactive = fakeBitmap();
-    const active = fakeBitmap();
-    bitmaps.set(`${a?.id}|x`, inactive);
-    bitmaps.set(`${b?.id}|x`, active);
     TestBed.tick();
-    expect(inactive.close).not.toHaveBeenCalled();
+    const [a, b] = session.tabs();
+    const left = fakeBitmap();
+    const current = fakeBitmap();
+    session.setActive(a!.id);
+    TestBed.tick();
+    bitmaps.set(`${a?.id}|x`, left);
+    session.setActive(b!.id);
+    bitmaps.set(`${b?.id}|x`, current);
+    TestBed.tick();
+    expect(left.close).toHaveBeenCalledTimes(1);
+    expect(current.close).not.toHaveBeenCalled();
     for (let i = 0; i < TUNABLES.resources.governorMaxLevel; i++) {
       governor.reportFailure();
       clock.advance(TUNABLES.resources.governorEscalateCooldownMs);
     }
     TestBed.tick();
-    expect(inactive.close).toHaveBeenCalledTimes(1);
-    expect(active.close).not.toHaveBeenCalled();
+    expect(current.close).not.toHaveBeenCalled();
   });
 });
 
@@ -313,7 +320,12 @@ describe('SessionStore picker and recents', () => {
       await session.openFiles([{ ...file('a.pdf'), writable: false }]);
       await settle();
       session.activeDocument()?.addStroke(STROKE);
-      expect(await session.closeTab(session.activeTabId() ?? '')).toBe(true);
+      // FIL-049: closing would lose the stroke, so the user is asked
+      expect(await session.closeTab(session.activeTabId() ?? '')).toBe(false);
+      const prompts = TestBed.inject(FilePrompts);
+      expect(prompts.current()?.kind).toBe('close');
+      await session.answerClose(prompts.current() as FilePrompt & { kind: 'close' }, 'discard');
+      expect(session.tabs()).toHaveLength(0);
       expect(files.write).not.toHaveBeenCalled();
     });
 
@@ -331,17 +343,17 @@ describe('SessionStore picker and recents', () => {
       expect(files.write).toHaveBeenCalledTimes(1);
     });
 
-    it('SAV-011 PLT-010 save a copy works for writable and read-only tabs and keeps the changes unsaved', async () => {
+    it('FIL-037 PLT-010 without a file chooser "save as new file" downloads a copy of writable and read-only files and keeps the changes unsaved', async () => {
       const { session, files } = setup();
+      files.createFile.mockResolvedValue(err('unsupported'));
       await session.openFiles([file('a.pdf'), { ...file('b.pdf'), writable: false }]);
       await settle();
       session.activeDocument()?.addStroke(STROKE);
-      expect((await session.saveCopy()).ok).toBe(true);
+      expect(await session.saveAsNewFile()).toBe('copied');
       expect(files.saveCopy).toHaveBeenLastCalledWith('b (annotated).pdf', expect.any(Uint8Array));
-      expect((await session.saveCopy(session.tabs()[0]?.id)).ok).toBe(true);
+      expect(await session.saveAsNewFile(session.tabs()[0]!.id)).toBe('copied');
       expect(files.saveCopy).toHaveBeenLastCalledWith('a (annotated).pdf', expect.any(Uint8Array));
-      expect(session.tabs()[1]?.unsaved).toBe(true);
-      expect(files.write).not.toHaveBeenCalled();
+      expect(session.activeTab()?.unsaved).toBe(true);
     });
   });
 
@@ -595,5 +607,49 @@ describe('SessionStore picker and recents', () => {
       await settle();
       expect(start).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('SessionStore: rendered data of inactive files (V2-M6 S3)', () => {
+  it('NFR-020 switching, opening and closing release the file that stops being current, once, and never the current one', async () => {
+    const { session } = setup();
+    await session.openFiles([file('a.pdf')]);
+    await settle();
+    TestBed.tick();
+    const documents = () => session.sessionEntries().map((entry) => entry.document);
+    const a = documents()[0]!;
+    const released = vi.spyOn(a, 'releaseRendered');
+    expect(a.shown).toBe(true);
+    await session.openFiles([file('b.pdf')]); // opening
+    await settle();
+    TestBed.tick();
+    expect(a.shown).toBe(false);
+    expect(released).toHaveBeenCalledTimes(1);
+    const b = documents()[1]!;
+    const releasedB = vi.spyOn(b, 'releaseRendered');
+    session.setActive(session.tabs()[0]!.id); // switching
+    TestBed.tick();
+    expect([a.shown, b.shown]).toEqual([true, false]);
+    expect(releasedB).toHaveBeenCalledTimes(1);
+    expect(released).toHaveBeenCalledTimes(1);
+    await session.closeTab(session.activeTabId()!); // closing: the neighbor is current
+    TestBed.tick();
+    expect(b.shown).toBe(true);
+    expect(releasedB).toHaveBeenCalledTimes(1);
+  });
+
+  it('FIL-031 NFR-020 thirty open files all stay open, in order, and only the current one keeps rendered data', async () => {
+    const { session, bitmaps } = setup();
+    const names = Array.from({ length: 30 }, (_, i) => `score-${i}.pdf`);
+    for (const name of names) {
+      await session.openFiles([file(name)]);
+      await settle();
+      bitmaps.set(`${session.activeTabId()}|page`, fakeBitmap());
+      TestBed.tick();
+    }
+    expect(session.tabs().map((tab) => tab.name)).toEqual(names);
+    const rendered = session.renderedBytes();
+    expect(rendered.filter((entry) => !entry.active).every((entry) => entry.cacheBytes === 0)).toBe(true);
+    expect(rendered.find((entry) => entry.active)!.cacheBytes).toBeGreaterThan(0);
   });
 });

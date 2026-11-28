@@ -1,16 +1,25 @@
 /**
  * core/playing-order — playing-order replay, stops, numbering, forced slide breaks.
- * Requirements: PLY-002..PLY-016.
+ * Requirements: PLY-002..PLY-017.
  */
 import { isCrossFile, printIndex } from './marks';
-import type { SystemMarks, SystemRef } from './marks';
+import type { FileRef, SystemMarks, SystemRef } from './marks';
 import type { Jump } from './model';
+
+/** PLY-017: where the order of this file ends because a cross-file jump fired: that jump and its target. */
+interface CrossExit {
+  readonly jumpId: number;
+  readonly to: FileRef;
+}
+
+/** A jump of the replay; with `exit` it leaves the file (its `target` then has no meaning and equals its origin). */
+type OrderJump = Jump & { readonly exit?: CrossExit };
 
 export interface PlayingOrderInput {
   /** N, the number of systems. Junctions are 0..N. */
   readonly systemCount: number;
   /** In creation order: when several jumps share origin and pass, the FIRST in this array wins. */
-  readonly jumps: readonly Jump[];
+  readonly jumps: readonly OrderJump[];
   /** Junctions 1..N-1. Order does not matter. */
   readonly stops: readonly number[];
   /** Safety cap on the number of entries (PLY-005). */
@@ -30,6 +39,8 @@ export interface PlayingOrder {
   readonly between: readonly (readonly number[])[];
   /** True when the cap stopped generation. */
   readonly truncatedByCap: boolean;
+  /** PLY-017: present when a cross-file jump ended the order. */
+  readonly exit?: CrossExit;
 }
 
 /**
@@ -38,6 +49,7 @@ export interface PlayingOrder {
  *   loop:
  *     arrivals[position] += 1; record the arrival event (junction = position, entriesSoFar = entries.length)
  *     if a jump has origin == position and pass == arrivals[position] (first in array order wins):
+ *         if it leaves the file (PLY-017): exit = jump.exit; stop
  *         position = jump.target; continue
  *     if position == N: stop
  *     if entries.length >= maxLength: truncatedByCap = true; stop
@@ -45,13 +57,14 @@ export interface PlayingOrder {
  * Stops (PLY-008), applied after the replay: for every stop junction that has at least one arrival event,
  * cutLength = entriesSoFar of its LAST arrival event. If any stop was reached, keep only the first
  * min(cutLength over reached stops) entries and the first (that - 1) elements of `between` (never negative).
- * A stop that was never reached has no effect. `systemCount` 0 gives an empty order.
+ * A stop that was never reached has no effect. A reached stop also discards the exit: the order ends before it.
+ * `systemCount` 0 gives an empty order.
  */
 export function generatePlayingOrder(input: PlayingOrderInput): PlayingOrder {
   const n = input.systemCount;
 
   // Jumps grouped by origin, array order preserved so the first match wins (PLY-006).
-  const jumpsByOrigin = new Map<number, Jump[]>();
+  const jumpsByOrigin = new Map<number, OrderJump[]>();
   for (const jump of input.jumps) {
     const list = jumpsByOrigin.get(jump.origin);
     if (list) {
@@ -66,12 +79,17 @@ export function generatePlayingOrder(input: PlayingOrderInput): PlayingOrder {
   const events: { readonly junction: number; readonly len: number }[] = [];
   let position = input.startJunction ?? 0;
   let truncatedByCap = false;
+  let exit: CrossExit | undefined;
 
   for (;;) {
     const arrival = (arrivals.get(position) ?? 0) + 1;
     arrivals.set(position, arrival);
     events.push({ junction: position, len: entries.length });
     const jump = jumpsByOrigin.get(position)?.find((j) => j.pass === arrival);
+    if (jump?.exit) {
+      exit = jump.exit;
+      break;
+    }
     if (jump) {
       position = jump.target;
       continue;
@@ -109,9 +127,10 @@ export function generatePlayingOrder(input: PlayingOrderInput): PlayingOrder {
   if (cut !== Number.POSITIVE_INFINITY) {
     entries = entries.slice(0, cut);
     between = between.slice(0, Math.max(0, cut - 1));
+    exit = undefined; // PLY-008: the order ends at the stop, before anything that would follow
   }
 
-  return { entries, between, truncatedByCap };
+  return { entries, between, truncatedByCap, ...(exit === undefined ? {} : { exit }) };
 }
 
 /**
@@ -178,13 +197,21 @@ export function junctionJumps(marks: SystemMarks, pageSystemCounts: readonly num
  *    like those of every other arrival.
  *  - jumps, in array order, as { origin: k(from), target: k(to) - 1, pass }.
  *  - stops, breaks: junction k of each mark, ascending, only 1..N-1 (a mark left on the last system has no effect, MRK-005).
- * Ignored: every mark whose system does not exist in the layout (a start mark then counts as absent), jumps with a cross-file
- * target (defined in M6), and jumps whose origin equals their target (possible after a system between them was deleted).
+ * A jump with a cross-file target takes part as an exit (PLY-017).
+ * Ignored: every mark whose system does not exist in the layout (a start mark then counts as absent) and jumps whose origin
+ * equals their target (possible after a system between them was deleted).
  */
 export function derivePlayingOrderInput(marks: SystemMarks, pageSystemCounts: readonly number[], maxLength: number): DerivedOrderInput {
   const systemCount = pageSystemCounts.reduce((sum, n) => sum + n, 0);
   const index = (ref: SystemRef): number | null => printIndex(ref, pageSystemCounts);
-  const jumps = junctionJumps(marks, pageSystemCounts).map(({ origin, target, pass }) => ({ origin, target, pass }));
+  // creation order (PLY-006): local jumps and exits compete for the same arrival
+  const jumps = marks.jumps.flatMap(({ id, from, to, pass }): OrderJump[] => {
+    if (isCrossFile(to)) {
+      const origin = index(from);
+      return origin === null ? [] : [{ origin, target: origin, pass, exit: { jumpId: id, to } }];
+    }
+    return junctionJumps({ ...marks, jumps: [{ id, from, to, pass }] }, pageSystemCounts).map(({ origin, target }) => ({ origin, target, pass }));
+  });
   const junctions = (list: readonly { readonly at: SystemRef }[]): number[] =>
     list
       .flatMap((mark) => {
