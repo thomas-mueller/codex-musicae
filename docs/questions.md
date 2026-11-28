@@ -206,3 +206,12 @@ Update (2026-11-24, same section) — reproduction and what does not work. Repro
 **Decided (2026-11-27, owner), asked during planning; recorded as DEC-163:** a tooltip whose normal side (below; above in the bottom bar) has no room flips to the other side of its control, so it never covers the control. Only pushing it inside would have done so.
 
 **Suspected flawed test (found 2026-11-27, V2-M05 S4; owner decision: leave it unchanged):** `e2e/shell-controls.spec.ts`, "FIL-007 expanded document controls are disabled", reads the disabled controls once, straight after `page.goto`, without waiting for the expanded layout to render. It then reports `undo` as not disabled. It failed in 3 of 8 solo WebKit runs and, in the serial rerun of the full suite, on `webkit` and `webkit-iphone`. A temporary probe showed only part of the controls at that moment (13 buttons, 18 a moment later) and Undo disabled once it had appeared. A possible fix is to wait for Undo to be disabled before collecting the controls. Not checked: which change introduced the timing.
+
+## V2-M07 S1 — History core
+
+**Found during planning, for the later steps (no decision yet; none blocks S1):**
+
+- **S2, blocks it:** the milestone names the M4 API `addMark` and `removeMark`, but `removeMark` does not exist. `core/marks.ts` has `addMark`, `removeMarksOfSystem` and `rerunPage`; `removeJump` is in the temporary `core/edits.ts`; nothing removes only a bookmark or the start mark. `addMark` can also remove a stop or a break, or replace the start, so undoing it is not simply a removal.
+- **S2:** undoing a system deletion needs more than the deleted marks, because later systems on the page are renumbered and the creation order must be kept.
+- **S2:** a history entry that a page rerun invalidates must be dropped. Open: whether older entries that depend on it must go too. `core/history.ts` cannot remove single entries yet.
+- **S3:** the milestone says `T:keys`, but the tunable is `keymap`. It also puts the platform detection into `input/`, where lint bans `navigator`, and `input/` may not import `ports/`.

@@ -32,9 +32,10 @@ src/
       mark-positions.ts         where marks are met in the playing order (labels, list order)
       slides.ts                 packing
       aspect-ratio.ts           ratio steps, orientation
+      history.ts                bounded undo/redo stack
       fixtures/                 verified test data (see docs/contracts)
       (later)                   annotation, metadata, scheduling, version
-      (V2, planned)             marks.ts, labels.ts, migrate-v1.ts (V2-M4), history.ts (V2-M7), boxes.ts (V2-M9), gestures.ts (V2-M13)
+      (V2, planned)             marks.ts, labels.ts, migrate-v1.ts (V2-M4), boxes.ts (V2-M9), gestures.ts (V2-M13)
     ports/                      interfaces + InjectionTokens (+ Result and error types)
     adapters/
       web/                      browser implementations
