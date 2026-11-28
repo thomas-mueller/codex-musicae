@@ -4,7 +4,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { currentName, switchTo } from './support/files';
 import { forceFileInput, label } from './support/score';
-import { DOCUMENT_OPEN_TIMEOUT_MS, FILE_CHOOSER_TIMEOUT_MS, scaled } from './support/timing';
+import { DETECTION_TIMEOUT_MS, DOCUMENT_OPEN_TIMEOUT_MS, FILE_CHOOSER_TIMEOUT_MS, scaled } from './support/timing';
 
 // V2-M6 S3: many real PDFs in a browser with a small JavaScript heap. NFR-020, FIL-031, R-1n.
 
@@ -55,7 +55,9 @@ test('NFR-020 FIL-031 thirty real PDFs stay open in a small heap, and a file tha
     await page.getByRole('button', { name: label('openFile'), exact: true }).click();
     await (await chooser).setFiles({ name, mimeType: 'application/pdf', buffer: pdfs[i % pdfs.length]! });
     await expect(currentName(page)).toHaveText(name, { timeout: DOCUMENT_OPEN_TIMEOUT_MS });
-    await expect(page.getByTestId('slide-canvas')).toBeVisible({ timeout: DOCUMENT_OPEN_TIMEOUT_MS });
+    // The first slide needs detection to reach a page with systems (a score may start with pages without any), while the
+    // files opened before are still being analysed too.
+    await expect(page.getByTestId('slide-canvas')).toBeVisible({ timeout: DETECTION_TIMEOUT_MS });
     // the current file has something rendered; every file left behind gives it all up
     await expect.poll(async () => (await rendered(page)).find((file) => file.active)!.cacheBytes, { timeout: DOCUMENT_OPEN_TIMEOUT_MS }).toBeGreaterThan(0);
     await expect.poll(() => holdingInactive(page), { timeout: DOCUMENT_OPEN_TIMEOUT_MS }).toEqual([]);

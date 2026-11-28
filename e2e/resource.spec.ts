@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { TUNABLES } from '../src/config/tunables';
 import { scoreBytes } from './support/score';
 import { clickMode } from './support/modes';
-import { scaled } from './support/timing';
+import { DETECTION_TIMEOUT_MS, scaled } from './support/timing';
 
 const en = JSON.parse(readFileSync('src/assets/i18n/en.json', 'utf8')) as { a11y: Record<string, string> };
 const DEV_URL = 'http://127.0.0.1:4174';
@@ -45,7 +45,8 @@ async function openCopy(page: Page, name: string): Promise<void> {
   await page.getByRole('button', { name: en.a11y['openFile'] as string, exact: true }).click();
   await (await chooser).setFiles({ name, mimeType: 'application/pdf', buffer: scoreBytes });
   await clickMode(page, 'modeOrganization');
-  await expect(page.locator('app-organization-viewer canvas[style*="visibility: visible"]').first()).toBeVisible();
+  // With other tests running beside this one, a page of the unoptimized build can take far longer than the default wait.
+  await expect(page.locator('app-organization-viewer canvas[style*="visibility: visible"]').first()).toBeVisible({ timeout: DETECTION_TIMEOUT_MS });
 }
 
 test.describe('development build with the debug hook', () => {

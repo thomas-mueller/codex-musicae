@@ -151,7 +151,7 @@ export const TUNABLES = {
     save: 'save',
     readOnly: 'lock',
     error: 'error',
-    processing: 'sync',
+    processing: 'hourglass_top', // 'sync'
     zoomIn: 'zoom_in',
     zoomOut: 'zoom_out',
     zoomReset: 'fit_screen',
