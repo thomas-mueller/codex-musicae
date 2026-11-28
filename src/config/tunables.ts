@@ -214,6 +214,9 @@ export const TUNABLES = {
     first: ['Home'],
     last: ['End'],
     back: ['Escape'],
+    // NAV-021: not codes but the letters on the keys, held with Cmd (macOS, iOS) or Ctrl (elsewhere), optional "Shift+" prefix
+    undo: ['z'],
+    redo: ['Shift+z'],
   },
 
   navigation: {
@@ -351,6 +354,7 @@ export const TUNABLES = {
 
   platforms: {
     android: 'android', // PLT-007, PLT-013: the only Capacitor platform with a system back button
+    appleNamePrefixes: ['Mac', 'iPhone', 'iPad', 'iPod'], // NAV-021: starts of `navigator.platform` where Cmd replaces Ctrl
   },
 
   ios: {

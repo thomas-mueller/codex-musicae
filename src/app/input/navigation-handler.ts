@@ -2,6 +2,7 @@ import { DestroyRef, effect, inject, Injectable, untracked } from '@angular/core
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { FIT_VIEW } from '../core';
+import { ActiveHistory } from '../state/active-history';
 import { AspectRatioService } from '../state/aspect-ratio.service';
 import { CrossFilePlayback } from '../state/cross-file-playback.service';
 import { CrossFileService } from '../state/cross-file.service';
@@ -31,6 +32,7 @@ export class NavigationHandler {
   private readonly prompts = inject(FilePrompts);
   private readonly playback = inject(CrossFilePlayback);
   private readonly crossFile = inject(CrossFileService);
+  private readonly history = inject(ActiveHistory);
   private previousMode = this.ui.mode();
 
   constructor() {
@@ -73,6 +75,11 @@ export class NavigationHandler {
       case 'Back':
         this.handleBack();
         return;
+      // NAV-022: not deferred to the end of a stroke; like the buttons, they do nothing during one.
+      case 'Undo':
+        return this.history.undo();
+      case 'Redo':
+        return this.history.redo();
       case 'ZoomBy':
         return this.zoomBy(command.factor, command.anchor);
       case 'ZoomReset':

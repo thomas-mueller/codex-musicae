@@ -119,3 +119,68 @@ test.describe('histories', () => {
     await expectDisabled(page, true, false);
   });
 });
+
+/** The two key mappings. The platform name is set by the test, so the machine the run is on does not matter. */
+const KEY_MAPPINGS = [
+  { platform: 'MacIntel', modifier: 'Meta' },
+  { platform: 'Win32', modifier: 'Control' },
+] as const;
+
+for (const { platform, modifier } of KEY_MAPPINGS) {
+  test.describe(`keys on ${platform}`, () => {
+    test.use({ viewport: sizes.expanded });
+    test.beforeEach(async ({ page }) => {
+      await page.addInitScript((name) => {
+        Object.defineProperty(globalThis.navigator, 'platform', { get: () => name });
+      }, platform);
+    });
+
+    const undoKey = (page: Page) => page.keyboard.press(`${modifier}+z`);
+    const redoKey = (page: Page) => page.keyboard.press(`${modifier}+Shift+z`);
+
+    test(`NAV-021 NAV-022 draw a stroke, then ${modifier}+Z and ${modifier}+Shift+Z undo and redo it`, { tag: '@smoke' }, async ({ page }) => {
+      await openScoreInAnnotation(page);
+      await button(page, 'pen').click();
+      await drawStroke(page);
+      await expectDisabled(page, false, true);
+      await undoKey(page);
+      await expectDisabled(page, true, false);
+      await redoKey(page);
+      await expectDisabled(page, false, true);
+    });
+
+    test(`NAV-021 NAV-022 add a jump, then the keys of ${platform} undo and redo it`, async ({ page }) => {
+      await openScoreInOrganization(page);
+      const bars = page.getByTestId('org-bar');
+      const markers = page.getByTestId('jump-marker');
+      await bars.nth(PAGE_BOTTOM_BAR_INDEX).click();
+      await page.getByTestId('selection-chip').getByTestId('chip-jump').click();
+      await bars.nth(FIRST_BAR_INDEX).click();
+      await expect(markers).toHaveCount(2);
+      await undoKey(page);
+      await expect(markers).toHaveCount(0);
+      await redoKey(page);
+      await expect(markers).toHaveCount(2);
+    });
+
+    test(`NAV-022 the keys of ${platform} change nothing in presentation and settings mode`, async ({ page }) => {
+      await openScoreInAnnotation(page);
+      await button(page, 'pen').click();
+      await drawStroke(page);
+      await expectDisabled(page, false, true);
+
+      await clickMode(page, 'modePresentation');
+      await expect(page.locator('app-shell')).toHaveAttribute('data-mode', 'presentation');
+      await undoKey(page);
+      await page.keyboard.press('Escape');
+      await expect(page.locator('app-shell')).toHaveAttribute('data-mode', 'annotation');
+      await expectDisabled(page, false, true);
+
+      await button(page, 'settings').click();
+      await expect(page.locator('app-shell')).toHaveAttribute('data-mode', 'settings');
+      await undoKey(page);
+      await button(page, 'settings').click();
+      await expectDisabled(page, false, true);
+    });
+  });
+}

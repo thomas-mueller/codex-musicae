@@ -226,3 +226,11 @@ Update (2026-11-24, same section) — reproduction and what does not work. Repro
 - *`e2e/shell-controls.spec.ts` (owner decision):* the UIX-006 list may gain undo and redo.
 
 **Open for the end of the milestone:** ANN-014 and ANN-017 stay `todo`. ANN-014 includes system refinements, and ANN-017 the restore of the system itself; both exist only from V2-M9. The marks half of ANN-017 is built and tested. The owner decides whether the two move to V2-M9.
+
+## V2-M07 S3 — Keyboard
+
+**Settled (2026-11-28):**
+
+- *`T:keys`* in the milestone file is the tunable `keymap`. The platform detection decides in `input/`; only the name is read behind a port (DEC-173).
+- *ANN-014 and ANN-017* (owner decision): moved to V2-M9. This closes the point left open in S2.
+- The NAV-002 and NAV-003 tests, which the milestone allows to change, did not need a change.

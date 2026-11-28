@@ -26,8 +26,10 @@ import { FeatureFileAccess, persistsFileHandles } from './adapters/feature/featu
 import { createPreferences } from './adapters/feature/feature-preferences';
 import { installIconSprite } from './adapters/web/icon-sprite';
 import { showLanguage } from './adapters/web/ui-language';
+import { webHostPlatform } from './adapters/web/web-host-platform';
 import { webSystemLanguages } from './adapters/web/web-system-languages';
 import { LanguageStore } from './state/language.store';
+import { HOST_PLATFORM } from './ports/host-platform';
 import { SYSTEM_LANGUAGES } from './ports/system-languages';
 import { MemoryHandleStore } from './adapters/web/memory-handle-store';
 import { cacheBudgetFor } from './core/cache-budget';
@@ -206,6 +208,7 @@ export const appConfig: ApplicationConfig = {
     }),
     provideAppIdentity(),
     { provide: SYSTEM_LANGUAGES, useValue: webSystemLanguages },
+    { provide: HOST_PLATFORM, useValue: webHostPlatform },
     // I18-004: creating the store registers the language setting; the shown language follows it.
     provideEnvironmentInitializer(() => {
       const language = inject(LanguageStore);
