@@ -9,8 +9,7 @@
           }
         </div>
         <div class="fab-column">
-          <button appIconButton icon="undo" labelKey="undo" [disabled]="!canUndo()" (pressed)="session.activeDocument()?.undo()"></button>
-          <button appIconButton icon="redo" labelKey="redo" [disabled]="!canRedo()" (pressed)="session.activeDocument()?.redo()"></button>
+          <app-history-buttons />
         </div>
       </div>
     }
@@ -27,8 +26,7 @@
     @for (entry of tools; track entry.tool) {
       <app-tool-button [entry]="entry" [panel]="true" />
     }
-    <button appIconButton icon="undo" labelKey="undo" [disabled]="!canUndo()" (pressed)="session.activeDocument()?.undo()"></button>
-    <button appIconButton icon="redo" labelKey="redo" [disabled]="!canRedo()" (pressed)="session.activeDocument()?.redo()"></button>
+    <app-history-buttons />
   }
 } @else if (compact()) {
   <button
@@ -68,4 +66,5 @@
       </div>
     }
   </div>
+  <app-history-buttons />
 }

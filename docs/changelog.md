@@ -66,6 +66,7 @@ To implement changes, tell the agent: "Implement the requirement changes listed 
 | 2026-11-27 | PLY-017, FIL-051, FIL-052, MRK-016 | V2-M6 S4: a cross-file jump ends the order of its file; the next page turn continues in the other file at the target line, and turning back returns one jump at a time. MRK-016 now covers every case in which the jump cannot lead on. Fixture G03 of `playing-order-start.cases` now expects a cross-file jump as an exit instead of ignoring it | Owner decision ("continue in file B", DEC-171) | M6 S4; `core/playing-order`, `core/cross-file`, `state/cross-file*`, `e2e/cross-file.spec` |
 | 2026-11-27 | FIL-032, FIL-042–FIL-045, MRK-015, MRK-017 | Built: referenced files open in the background from the open and recent files; warnings as notices below the top bar; the "don't show again" of the close warning is a setting | V2-M6 S4 (DEC-171) | `features/saving/cross-file-notice` |
 | 2026-11-27 | DEC-168 | The local E2E run at the end of a milestone also runs the `@smoke` tests on the Chromium tablet (`chromium-galaxy-tablet`) | Owner decision | `AGENTS.md`, `docs/roadmap-v2.md` |
+| 2026-11-28 | Tests (V2-M7 S2) | One existing test changed, approved by the owner: `e2e/shell-controls.spec`, UIX-006 expanded: the expected tool strip of organization mode ends in undo and redo (UIX-033). Existing unit tests are unchanged; tests were added to `core/history.spec` and `state/detection-redetect.spec`. |
 
 ## V2 changes to V1 requirements
 

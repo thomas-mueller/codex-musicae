@@ -4,17 +4,18 @@ import type { Observable } from 'rxjs';
 
 import { TUNABLES } from '../../config/tunables';
 import {
-  EMPTY_SYSTEM_MARKS, EMPTY_UNDO, FIT_VIEW, addJump, clearJunction, computeBars, computePaddings, derivePlayingOrderInput, findEntryForSystem,
+  EMPTY_SYSTEM_MARKS, FIT_VIEW, addJump, addMark, applyMarkChange, clearJunction, computeBars, computePaddings, derivePlayingOrderInput, findEntryForSystem,
   flattenSystems, forcedBreaks, CURRENT_SCHEMA_VERSION, applyAction, generatePlayingOrder, isComplete, isProvisional, junctionCount,
-  junctionView, markPositions, migrateMarksV1, packSlides, paddedArea, printIndex, pushAction, redoStep, referenceWidth, removeJump, slideIndexOfEntry, systemNumbers,
-  toggleBreak, toggleStop, undoStep, updateJump, usablePrefix,
+  junctionView, markChange, markPositions, migrateMarksV1, packSlides, paddedArea, pagesOfChange, printIndex, referenceWidth, removeJump,
+  removeMark, removeMarksOfSystem, slideIndexOfEntry, systemNumbers, toggleBreak, toggleStop, updateJump, usablePrefix,
 } from '../core';
 import type {
-  DetectedPage, EmbeddedMetadata, InkStroke, MetadataPage, Jump, Orientation, Point, SlidePlan, SystemGeom, SystemMarks, SystemRef,
-  UndoAction, UndoState, V1Marks, ViewState,
+  DetectedPage, EmbeddedMetadata, InkStroke, MetadataPage, Jump, MarkKey, NewMark, Orientation, Point, SlidePlan, SystemGeom,
+  SystemMarks, SystemRef, UndoAction, V1Marks, ViewState,
 } from '../core';
 import type { PdfDocumentHandle, PdfOpenError, PdfPageInfo, PdfRenderer } from '../ports/pdf-renderer';
 import { DetectionRun } from './detection-run';
+import { EditHistoryStore } from './edit-history.store';
 import { NO_RATIO_DEFAULTS } from './ratio-defaults';
 import type { RatioDefaults } from './ratio-defaults';
 import type { ProvisionalBar } from './detection-run';
@@ -267,7 +268,8 @@ export class DocumentStore {
   }
 
   private readonly strokesSignal = signal<readonly InkStroke[]>(NO_STROKES);
-  private readonly undoSignal = signal<UndoState>(EMPTY_UNDO);
+  /** ANN-015: the undo histories of this document, one per mode, cleared on dispose. */
+  readonly edits = new EditHistoryStore(TUNABLES.history.depth);
   private readonly changeSubject = new Subject<DocChange>();
 
   /**
@@ -275,10 +277,10 @@ export class DocumentStore {
    * user space of their page, and nothing here moves a stroke to another page or changes its points. SAV-007, ANN-009
    */
   readonly strokes = this.strokesSignal.asReadonly();
-  /** ANN-006: add/erase history of this tab, cleared on dispose. */
-  readonly history = this.undoSignal.asReadonly();
-  readonly canUndo = computed(() => this.undoSignal().undo.length > 0);
-  readonly canRedo = computed(() => this.undoSignal().redo.length > 0);
+  /** ANN-006: the add/erase history, the one of annotation mode; `canUndo`, `canRedo`, `undo` and `redo` act on it. */
+  readonly history = this.edits.annotation.history;
+  readonly canUndo = this.edits.annotation.canUndo;
+  readonly canRedo = this.edits.annotation.canRedo;
   readonly strokesByPage = computed(() => {
     const byPage = new Map<number, InkStroke[]>();
     for (const stroke of this.strokesSignal()) {
@@ -335,11 +337,11 @@ export class DocumentStore {
   }
 
   undo(): void {
-    this.step(undoStep, 'undo');
+    this.edits.annotation.undo();
   }
 
   redo(): void {
-    this.step(redoStep, 'redo');
+    this.edits.annotation.redo();
   }
 
   strokeStarted(): void {
@@ -398,6 +400,24 @@ export class DocumentStore {
 
   clearJunction(junction: number): void {
     this.apply(clearJunction(this.systemMarks(), junction, this.pageSystemCounts()));
+  }
+
+  /** Adds a mark on a system (`core/marks`); false if it was rejected. One organization history step. */
+  addMark(mark: NewMark): boolean {
+    return this.apply(addMark(this.systemMarks(), mark, this.pageSystemCounts()));
+  }
+
+  /** Removes one mark; nothing to remove, no step. */
+  removeMark(key: MarkKey): void {
+    this.apply(removeMark(this.systemMarks(), key));
+  }
+
+  /**
+   * ANN-017: the mark half of deleting a system (MRK-013), as one organization history step; V2-M9 adds the system itself to
+   * the step. Until then a deletion that changes no mark records none.
+   */
+  deleteSystemMarks(deleted: SystemRef): void {
+    this.apply(removeMarksOfSystem(this.systemMarks(), deleted), [deleted.pageIndex]);
   }
 
   /** SAV-004: this tab as the JSON embedded in the PDF; `detection` only for the active, complete run. */
@@ -481,23 +501,20 @@ export class DocumentStore {
     const handle = this.handleSignal();
     this.handleSignal.set(null);
     this.strokesSignal.set(NO_STROKES);
-    this.undoSignal.set(EMPTY_UNDO);
+    this.edits.clear();
     this.changeSubject.complete();
     await handle?.destroy();
   }
 
   private record(action: UndoAction): void {
-    this.strokesSignal.update((strokes) => applyAction(strokes, action, 'redo'));
-    this.undoSignal.update((state) => pushAction(state, action, TUNABLES.annotation.undoDepth));
-    this.emit('change');
+    this.edits.annotation.record({
+      ...action,
+      do: () => this.applyInk(action, 'redo'),
+      undo: () => this.applyInk(action, 'undo'),
+    });
   }
 
-  private step(take: (state: UndoState) => { state: UndoState; action: UndoAction | null }, direction: 'undo' | 'redo'): void {
-    const { state, action } = take(this.undoSignal());
-    if (action === null) {
-      return;
-    }
-    this.undoSignal.set(state);
+  private applyInk(action: UndoAction, direction: 'undo' | 'redo'): void {
     this.strokesSignal.update((strokes) => applyAction(strokes, action, direction));
     this.emit('change');
   }
@@ -506,13 +523,21 @@ export class DocumentStore {
     this.changeSubject.next({ type, t: this.now() });
   }
 
-  /** A null result (invalid edit), or any edit while V1 marks wait, leaves the marks unchanged and flags the rejection. */
-  private apply(next: SystemMarks | null): boolean {
+  /**
+   * A null result (invalid edit), or any edit while V1 marks wait, leaves the marks unchanged and flags the rejection. An
+   * edit that changes a mark is one organization history step; `reliesOn` names pages it needs besides those of its marks.
+   */
+  private apply(next: SystemMarks | null, reliesOn: readonly number[] = []): boolean {
     if (next === null || this.marksPending()) {
       this.lastRejectedSignal.set({ seq: ++this.rejectedSeq });
       return false;
     }
-    this.replaceMarks(next);
+    const change = markChange(this.systemMarks(), next);
+    if (change !== null) {
+      const turn = (direction: 'undo' | 'redo') => () => this.replaceMarks(applyMarkChange(this.systemMarks(), change, direction));
+      const pages = [...new Set([...pagesOfChange(change), ...reliesOn])];
+      this.edits.organization.record({ change, pages, do: turn('redo'), undo: turn('undo') });
+    }
     return true;
   }
 

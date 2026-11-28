@@ -33,6 +33,7 @@ src/
       slides.ts                 packing
       aspect-ratio.ts           ratio steps, orientation
       history.ts                bounded undo/redo stack
+      mark-change.ts            what one edit removed and added; undo, redo and the steps a re-run makes stale
       fixtures/                 verified test data (see docs/contracts)
       (later)                   annotation, metadata, scheduling, version
       (V2, planned)             marks.ts, labels.ts, migrate-v1.ts (V2-M4), boxes.ts (V2-M9), gestures.ts (V2-M13)
@@ -99,7 +100,7 @@ All stores use signals; components never mutate them directly.
 - **`UiStore`:** global mode (V2-M5: also the settings mode, with the way back to the mode before it), active tool, popups, selection (junction/jump), jump-target picking, presentation flag.
 - **`PreferencesStore`:** persisted settings (tool colors and widths, ratio defaults per orientation, recent files, stylus flag) through the `Preferences` port.
 
-**V2 changes:** `SessionStore` holds the open files in opening order behind one file entry (no tabs); `DocumentStore` holds marks on system sides (instead of jumps, breaks and stops on junctions), user-edited systems and the per-page component boxes; an `EditHistoryStore` keeps one undo history per document and mode (V2-M7); a `SettingsRegistry` declares every setting with its default, group, feature switch and reset handler, and `SettingsReset` adds the tool colors and widths to "Reset all settings"; a `LanguageStore` holds the language setting and the shown language (V2-M5); a `HintService` drives the first-run hints (V2-M16).
+**V2 changes:** `SessionStore` holds the open files in opening order behind one file entry (no tabs); `DocumentStore` holds marks on system sides (instead of jumps, breaks and stops on junctions), user-edited systems and the per-page component boxes; each `DocumentStore` owns an `EditHistoryStore` with one undo history per mode; its entries are commands with `do` and `undo` that work on the stores (V2-M7, DEC-172); a `SettingsRegistry` declares every setting with its default, group, feature switch and reset handler, and `SettingsReset` adds the tool colors and widths to "Reset all settings"; a `LanguageStore` holds the language setting and the shown language (V2-M5); a `HintService` drives the first-run hints (V2-M16).
 
 ## Input layer
 

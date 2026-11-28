@@ -296,8 +296,8 @@ V2 terms (target `v2` entries):
 - **ANN-012** [v1·done·M14] A stroke on a region shown several times in a slide appears on all occurrences.
 - **ANN-013** [v1·done·M14] Navigation commands that arrive while a stroke is in progress are applied after the stroke ends.
 - **ANN-014** [v2·todo·M7] Undo and redo cover every editing tool of annotation mode and organization mode, including marks and system refinements.
-- **ANN-015** [v2·todo·M7] Each document has one history per mode (annotation, organization), each bounded by `T:annotation.undoDepth` and cleared when the document closes.
-- **ANN-016** [v2·todo·M7] Undo and redo buttons exist in annotation and organization mode and are disabled when their history has nothing to undo or redo.
+- **ANN-015** [v2·done·M7] Each document has one history per mode (annotation, organization), each bounded by `T:annotation.undoDepth` and cleared when the document closes.
+- **ANN-016** [v2·done·M7] Undo and redo buttons exist in annotation and organization mode and are disabled when their history has nothing to undo or redo.
 - **ANN-017** [v2·todo·M7] Undoing a system deletion restores the system and the marks stored on it.
 - **ANN-018** [v2·todo·M11] While a drawing tool is active, pen, finger and mouse draw; two fingers zoom and pan; palm rejection (STY-004) stays.
 - **ANN-019** [v2·todo·M11] The finger-drawing toggle and the stylus flag `stylusSeen` no longer exist; stored stylus preferences are ignored.
@@ -392,7 +392,7 @@ V2 terms (target `v2` entries):
 - **UIX-030** [v2·done·M5] `docs/icons.md` describes where icons live, how to replace one and which test covers it.
 - **UIX-031** [v2·todo·M14] Desktop browsers show no page-level scroll bar at the right edge; scroll bars inside the PDF area stay.
 - **UIX-032** [v2·todo·M14] A test places tooltips at all four screen edges in organization, annotation and settings mode and asserts they stay inside the screen.
-- **UIX-033** [v2·todo·M7] Undo and redo buttons belong to the tool area in annotation and organization mode: in the tool strip in expanded layout, in the expanded tool popup (FAB group) next to the tools in compact layout. They are disabled when their history is empty (ANN-016).
+- **UIX-033** [v2·done·M7] Undo and redo buttons belong to the tool area in annotation and organization mode: in the tool strip in expanded layout, in the expanded tool popup (FAB group) next to the tools in compact layout. They are disabled when their history is empty (ANN-016).
 - **UIX-034** [v2·done·M5] The top bar contains no undo or redo button in any layout.
 - **UIX-035** [v2·done·M6] The settings mode shows the version string (PIP-018) below its groups, in every layout; there is no info popover.
 - **UIX-036** [v2·done·M6] The expanded layout has no overflow button in the top bar, and no layout has a button that saves a copy. The More button of the compact bottom bar shows in annotation mode only (it holds the slide-ratio buttons).

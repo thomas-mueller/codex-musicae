@@ -215,3 +215,14 @@ Update (2026-11-24, same section) — reproduction and what does not work. Repro
 - **S2:** undoing a system deletion needs more than the deleted marks, because later systems on the page are renumbered and the creation order must be kept.
 - **S2:** a history entry that a page rerun invalidates must be dropped. Open: whether older entries that depend on it must go too. `core/history.ts` cannot remove single entries yet.
 - **S3:** the milestone says `T:keys`, but the tunable is `keymap`. It also puts the platform detection into `input/`, where lint bans `navigator`, and `input/` may not import `ports/`.
+
+## V2-M07 S2 — Store integration
+
+**The S2 points found in S1 are settled (2026-11-28, DEC-172):**
+
+- *`removeMark`:* added to `core/marks.ts`. The S1 note overstated this: deleting marks already worked through the chip methods of `DocumentStore`; only the general function that V2-M10 will call was missing. It did not block S2.
+- *System deletion:* a step records every mark the deletion removed or renumbered.
+- *Page re-run (owner decision):* only the affected steps are dropped, with the steps on the same marks.
+- *`e2e/shell-controls.spec.ts` (owner decision):* the UIX-006 list may gain undo and redo.
+
+**Open for the end of the milestone:** ANN-014 and ANN-017 stay `todo`. ANN-014 includes system refinements, and ANN-017 the restore of the system itself; both exist only from V2-M9. The marks half of ANN-017 is built and tested. The owner decides whether the two move to V2-M9.

@@ -5,7 +5,7 @@ import type { DetectionLevelName } from '../../config/tunables';
 import {
   fitScaleToPixelCap, nextPageToProcess, pickNext, rerunPage, selectSystems,
 } from '../core';
-import type { DetectedPage, SchedulerContext, SystemMarks } from '../core';
+import type { DetectedPage, SchedulerContext } from '../core';
 import { APP_LIFECYCLE } from '../ports/app-lifecycle';
 import { DETECTION_ENGINE } from '../ports/detection-engine';
 import type { ExtractionParams } from '../ports/detection-engine';
@@ -91,22 +91,26 @@ export class DetectionService {
   }
 
   /**
-   * MRK-014: a page keeps its marks only with an unchanged system count (failed pages count 0). A page the active run had
-   * not finished keeps them, its old count being unknown.
+   * The pages whose system count the re-run changed (failed pages count 0). A page the active run had not finished is left
+   * out, its old count being unknown.
    */
-  private marksAfterRerun(marks: SystemMarks, active: DetectionRun, candidate: DetectionRun): SystemMarks {
+  private changedPages(active: DetectionRun, candidate: DetectionRun): { pageIndex: number; before: number; after: number }[] {
     const count = (run: DetectionRun, i: number): number => run.pages()[i]?.systems.length ?? 0;
-    return active.states().reduce(
-      (kept, state, i) => (state === 'done' || state === 'failed' ? rerunPage(kept, i, count(active, i), count(candidate, i)) : kept),
-      marks,
-    );
+    return active.states().flatMap((state, i) => {
+      const change = { pageIndex: i, before: count(active, i), after: count(candidate, i) };
+      return (state === 'done' || state === 'failed') && change.before !== change.after ? [change] : [];
+    });
   }
 
   private swap(doc: DocumentStore, candidate: DetectionRun): void {
+    const changed = this.changedPages(doc.detection, candidate);
     // waiting V1 marks have no pages yet: they are migrated against whatever run completes
     if (!doc.marksPending()) {
-      doc.replaceMarks(this.marksAfterRerun(doc.systemMarks(), doc.detection, candidate));
+      // MRK-014: a page keeps its marks only with an unchanged system count
+      doc.replaceMarks(changed.reduce((marks, page) => rerunPage(marks, page.pageIndex, page.before, page.after), doc.systemMarks()));
     }
+    // ANN-015: no history step survives a re-run that changed the systems it relies on
+    doc.edits.invalidatePages(new Set(changed.map((page) => page.pageIndex)));
     doc.detection.adopt(candidate);
     this.candidates.delete(doc);
     doc.candidate.set(null);

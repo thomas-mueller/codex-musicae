@@ -82,6 +82,12 @@ export type NewMark =
   | { readonly kind: 'bookmark'; readonly at: SystemRef; readonly ref?: FileRef; readonly text?: string }
   | { readonly kind: 'start' | 'stop' | 'break'; readonly at: SystemRef; readonly text?: string };
 
+/** Addresses one stored mark: a jump or bookmark by its id, a stop or slide break by its system; a file has one start mark. */
+export type MarkKey =
+  | { readonly kind: 'jump' | 'bookmark'; readonly id: number }
+  | { readonly kind: 'stop' | 'break'; readonly at: SystemRef }
+  | { readonly kind: 'start' };
+
 /** A reference with a file name points into another file (MRK-012). */
 export function isCrossFile(ref: SystemRef | FileRef): ref is FileRef {
   return 'file' in ref;
@@ -152,6 +158,28 @@ export function addMark(marks: SystemMarks, mark: NewMark, pageSystemCounts: rea
   }
 }
 
+/** Removes the one mark `key` addresses; the next ids are unchanged. If there is no such mark, the input is returned. */
+export function removeMark(marks: SystemMarks, key: MarkKey): SystemMarks {
+  switch (key.kind) {
+    case 'jump': {
+      const jumps = marks.jumps.filter((jump) => jump.id !== key.id);
+      return jumps.length === marks.jumps.length ? marks : { ...marks, jumps };
+    }
+    case 'bookmark': {
+      const bookmarks = marks.bookmarks.filter((bookmark) => bookmark.id !== key.id);
+      return bookmarks.length === marks.bookmarks.length ? marks : { ...marks, bookmarks };
+    }
+    case 'start':
+      return marks.start === null ? marks : { ...marks, start: null };
+    case 'stop':
+    case 'break': {
+      const field = key.kind === 'stop' ? 'stops' : 'breaks';
+      const list = marks[field].filter((mark) => !sameSystem(mark.at, key.at));
+      return list.length === marks[field].length ? marks : { ...marks, [field]: list };
+    }
+  }
+}
+
 /**
  * Deletion rule (MRK-013, MRK-015): the system `deleted` of this file is removed.
  *  1. Removed: the start mark, stop, break and bookmarks on it, and every jump whose `from` is it or whose target in this
@@ -190,7 +218,8 @@ function sameSystem(a: SystemRef, b: SystemRef): boolean {
   return a.pageIndex === b.pageIndex && a.system === b.system;
 }
 
-function printOrder(a: PointMark, b: PointMark): number {
+/** Order of the stop and slide break lists. */
+export function printOrder(a: PointMark, b: PointMark): number {
   return a.at.pageIndex - b.at.pageIndex || a.at.system - b.at.system;
 }
 
