@@ -158,6 +158,13 @@ describe('commandForKey: undo and redo', () => {
     expect(commandForKey(key('KeyZ', { key: '\u044f', ctrlKey: true }))).toEqual({ type: 'Undo' });
     expect(commandForKey(key('KeyZ', { key: '\u042f', ctrlKey: true, shiftKey: true }))).toEqual({ type: 'Redo' });
   });
+
+  it('NAV-021 on a Latin layout, a key that types no basic letter is ignored, wherever it is', () => {
+    // `KeyZ` types ";" and ":" on Dvorak; a dead key; Latin letters beyond A to Z
+    for (const [typed, shiftKey] of [[';', false], [':', true], ['Dead', false], ['\u00df', false], ['\u00e9', false]] as const) {
+      expect(commandForKey(key('KeyZ', { key: typed, shiftKey, ctrlKey: true })), typed).toBeNull();
+    }
+  });
 });
 
 describe('KeyboardInput: undo and redo', () => {

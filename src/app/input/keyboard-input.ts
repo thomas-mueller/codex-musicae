@@ -73,13 +73,15 @@ function historyCommandForKey(event: KeyEventLike, modifier: CommandModifier): C
 
 /**
  * The letter printed on the key, so that the shortcut follows the layout (on a German keyboard `KeyZ` is the key labelled Y).
- * A layout without Latin letters falls back to the position of the key.
+ * A key that types a letter of another script (a layout without Latin letters) counts by its position. Every other key
+ * (punctuation, a dead key, a Latin letter beyond A to Z) is no shortcut.
  */
 function shortcutLetter({ key = '', code }: KeyEventLike): string | null {
   if (/^[a-z]$/i.test(key)) {
     return key.toLowerCase();
   }
-  return /^Key[A-Z]$/.test(code) ? code.slice('Key'.length).toLowerCase() : null;
+  const otherScript = /^\p{L}$/u.test(key) && !/\p{Script=Latin}/u.test(key);
+  return otherScript && /^Key[A-Z]$/.test(code) ? code.slice('Key'.length).toLowerCase() : null;
 }
 
 /** Text fields keep every key; a focused slider keeps its arrow keys. */
